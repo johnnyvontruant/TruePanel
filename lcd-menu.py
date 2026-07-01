@@ -4,6 +4,7 @@ import os
 import time
 import qnaplcd
 from collector import TruePanelCollector
+from truepanel.pages.fans import fan_rpm_page, fan_pwm_page
 import platform
 import subprocess
 import socket
@@ -52,11 +53,18 @@ def show_version():
     lcd.write(0, [sys_name, sys_vers])
 
 def show_truenas():
-    truenas = shell('cli -c \'system version\'')
-    truenas = truenas.split('-')
+    if os.path.exists('/.dockerenv'):
+        lines = ['TruePanel', 'Docker Mode']
+    else:
+        try:
+            truenas = shell('cli -c \'system version\'')
+            truenas = truenas.split('-')
+            lines = ['-'.join(truenas[:-1]), truenas[-1]]
+        except Exception:
+            lines = ['TruePanel', 'Native Mode']
 
     lcd.clear()
-    lcd.write(0, ['-'.join(truenas[:-1]), truenas[-1]])
+    lcd.write(0, lines)
 
 def show_uptime():
     uptime = shell('uptime').split(',')
@@ -202,6 +210,16 @@ def show_drive_temps():
     else:
         lcd.write(0, [f'Drive {drive[:10]}', f'Temp {temp} C'])
 
+
+def show_fan_rpm():
+    lcd.clear()
+    lcd.write(0, fan_rpm_page())
+
+
+def show_fan_pwm():
+    lcd.clear()
+    lcd.write(0, fan_pwm_page())
+
 #
 # Menu
 #
@@ -214,6 +232,8 @@ menu = [
     show_pool_health,
     show_zpool,
     show_drive_temps,
+    show_fan_rpm,
+    show_fan_pwm,
 ]
 
 def response_handler(command, data):
@@ -249,7 +269,7 @@ def main():
     quit = False
     while not quit:
         add_ips_to_menu()
-        add_zpools_to_menu()
+        # add_zpools_to_menu() disabled for Docker compatibility
         menu[menu_item]()
 
         print('sleep...')

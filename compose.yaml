@@ -1,0 +1,12 @@
+services:
+  truepanel:
+    build: .
+    container_name: truepanel
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/ttyS1:/dev/ttyS1
+    volumes:
+      - /sys:/sys
+    environment:
+      - TZ=America/Phoenix
