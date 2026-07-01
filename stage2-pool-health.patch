@@ -1,0 +1,25 @@
+--- lcd-menu.py
++++ lcd-menu.py
+@@ -52,6 +52,20 @@
+     lcd.clear()
+     lcd.write(0, [f'Up  : {up}', f'Load: {load[0]} {load[1]}, {load[2]}'])
+ 
++def show_pool_health():
++    out = shell('zpool status -x')
++    lcd.clear()
++
++    if 'all pools are healthy' in out.lower():
++        lcd.write(0, ['Pool Health', 'All Healthy'])
++    elif out.strip():
++        first_line = out.splitlines()[0]
++        lcd.write(0, ['Pool Alert', first_line[:16]])
++    else:
++        lcd.write(0, ['Pool Health', 'No Data'])
++
+ menu = [
+     show_truenas,
+     show_version,
+     show_uptime,
+     show_cpu_ram,
++    show_pool_health,
+ ]

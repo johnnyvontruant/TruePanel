@@ -3,7 +3,6 @@ import sys
 import os
 import time
 import qnaplcd
-from collector import TruePanelCollector
 import platform
 import subprocess
 import socket
@@ -32,19 +31,6 @@ def lcd_on():
 def shell(cmd):
     return subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
 
-
-collector = TruePanelCollector()
-
-def get_state(max_age=5):
-    last = collector.state.get("last_updated")
-    now = time.time()
-
-    if last is None or now - last > max_age:
-        collector.update()
-
-    return collector.state
-
-
 def show_version():
     sys_name = platform.node()
     sys_vers = f'{platform.system()} ({platform.machine()})'
@@ -65,36 +51,34 @@ def show_uptime():
     lcd.clear()
     lcd.write(0, [f'Up  : {up}', f'Load: {load[0]} {load[1]}, {load[2]}'])
 
-
-
-
 def show_cpu_ram():
-    state = get_state()
-    lcd.clear()
-    lcd.write(0, [
-        f'CPU: {state.get("cpu_percent", 0)}%',
-        f'RAM: {state.get("ram_percent", 0)}%'
-    ])
+    load = os.getloadavg()[0]
 
+    mem = {}
+    with open('/proc/meminfo') as f:
+        for line in f:
+            key, value = line.split(':')
+            mem[key] = int(value.split()[0])
+
+    total = mem.get('MemTotal', 1)
+    available = mem.get('MemAvailable', 0)
+    used_percent = int((total - available) / total * 100)
+
+    lcd.clear()
+    lcd.write(0, [f'CPU Load: {load:.2f}', f'RAM Used: {used_percent}%'])
 
 def show_pool_health():
-    state = get_state()
-    pools = state.get("pools", [])
-
+    out = shell('zpool status -x')
     lcd.clear()
 
-    if not pools:
-        lcd.write(0, ['Pool Health', 'No Pool Data'])
-        return
-
-    bad = [p for p in pools if p.get("health") != "ONLINE"]
-
-    if bad:
-        pool = bad[0]
-        lcd.write(0, ['Pool Alert', f'{pool["name"][:8]} {pool["health"][:7]}'])
-    else:
+    if 'all pools are healthy' in out.lower():
         lcd.write(0, ['Pool Health', 'All Healthy'])
+    elif out.strip():
+        lcd.write(0, ['Pool Alert', out.splitlines()[0][:16]])
+    else:
+        lcd.write(0, ['Pool Health', 'No Data'])
 
+ip_addresses = []
 def add_ips_to_menu():
     def get_kind(iface):
         if 'linkinfo' in iface:
@@ -138,7 +122,6 @@ def show_ip():
     lcd.write(0, [f'{ip_addresses[ip_index][0]}', f'{ip_addresses[ip_index][1]}'])
 
 zfs_pools = []
-ip_addresses = []
 def add_zpools_to_menu():
     pools = shell('zpool list').split('\n')
 
@@ -154,54 +137,17 @@ def add_zpools_to_menu():
     for _ in zfs_pools:
         menu.append(show_zpool)
 
-
-
-
 def show_zpool():
-    state = get_state()
-    pools = state.get("pools", [])
+    pool_index = 0
+    for index in range(menu_item):
+        if menu[index] == show_zpool:
+            pool_index += 1
+
+    pool = zfs_pools[pool_index]
 
     lcd.clear()
-
-    if not pools:
-        lcd.write(0, ['Storage', 'No Pool Data'])
-        return
-
-    pool = pools[menu_item % len(pools)]
-    name = pool.get("name", "pool")
-    health = pool.get("health", "UNKNOWN")
-    capacity = pool.get("capacity", "0%")
-
-    try:
-        pct = int(str(capacity).strip('%'))
-    except Exception:
-        pct = 0
-
-    filled = round((pct / 100) * 10)
-    bar = '[' + ('#' * filled) + ('-' * (10 - filled)) + ']'
-
-    lcd.write(0, [f'{name[:8]} {health[:7]}', f'{bar} {pct}%'])
-
-
-def show_drive_temps():
-    state = get_state()
-    temps = state.get("temps", [])
-
-    lcd.clear()
-
-    if not temps:
-        lcd.write(0, ['Drive Temps', 'No SMART Data'])
-        return
-
-    drive_info = temps[menu_item % len(temps)]
-    drive = drive_info.get("drive", "disk")
-    temp = drive_info.get("temp", 0)
-
-    if temp >= 50:
-        lcd.write(0, ['HOT DRIVE', f'{drive[:10]} {temp} C'])
-    else:
-        lcd.write(0, [f'Drive {drive[:10]}', f'Temp {temp} C'])
-
+    lcd.write(0, [f'{pool[0]} ({pool[7]})', f'{pool[2]} of {pool[1]}'])
+    
 #
 # Menu
 #
@@ -210,10 +156,7 @@ menu = [
     show_truenas,
     show_version,
     show_uptime,
-    show_cpu_ram,
-    show_pool_health,
-    show_zpool,
-    show_drive_temps,
+    show_cpu_ram
 ]
 
 def response_handler(command, data):

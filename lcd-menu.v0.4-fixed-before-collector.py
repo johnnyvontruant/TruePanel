@@ -67,14 +67,13 @@ def show_uptime():
 
 
 
-
 def show_cpu_ram():
     state = get_state()
+    cpu = state.get("cpu_percent", 0)
+    ram = state.get("ram_percent", 0)
+
     lcd.clear()
-    lcd.write(0, [
-        f'CPU: {state.get("cpu_percent", 0)}%',
-        f'RAM: {state.get("ram_percent", 0)}%'
-    ])
+    lcd.write(0, [f'CPU: {cpu}%', f'RAM: {ram}%'])
 
 
 def show_pool_health():
@@ -156,7 +155,6 @@ def add_zpools_to_menu():
 
 
 
-
 def show_zpool():
     state = get_state()
     pools = state.get("pools", [])
@@ -168,6 +166,7 @@ def show_zpool():
         return
 
     pool = pools[menu_item % len(pools)]
+
     name = pool.get("name", "pool")
     health = pool.get("health", "UNKNOWN")
     capacity = pool.get("capacity", "0%")
