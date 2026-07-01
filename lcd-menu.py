@@ -51,6 +51,33 @@ def show_uptime():
     lcd.clear()
     lcd.write(0, [f'Up  : {up}', f'Load: {load[0]} {load[1]}, {load[2]}'])
 
+def show_cpu_ram():
+    load = os.getloadavg()[0]
+
+    mem = {}
+    with open('/proc/meminfo') as f:
+        for line in f:
+            key, value = line.split(':')
+            mem[key] = int(value.split()[0])
+
+    total = mem.get('MemTotal', 1)
+    available = mem.get('MemAvailable', 0)
+    used_percent = int((total - available) / total * 100)
+
+    lcd.clear()
+    lcd.write(0, [f'CPU Load: {load:.2f}', f'RAM Used: {used_percent}%'])
+
+def show_pool_health():
+    out = shell('zpool status -x')
+    lcd.clear()
+
+    if 'all pools are healthy' in out.lower():
+        lcd.write(0, ['Pool Health', 'All Healthy'])
+    elif out.strip():
+        lcd.write(0, ['Pool Alert', out.splitlines()[0][:16]])
+    else:
+        lcd.write(0, ['Pool Health', 'No Data'])
+
 ip_addresses = []
 def add_ips_to_menu():
     def get_kind(iface):
@@ -128,7 +155,8 @@ menu_item = 0
 menu = [
     show_truenas,
     show_version,
-    show_uptime
+    show_uptime,
+    show_cpu_ram
 ]
 
 def response_handler(command, data):
