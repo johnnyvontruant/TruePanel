@@ -267,10 +267,11 @@ def show_alert_history():
 
 def maybe_show_alert():
     event = show_mission_control()
-    record_alert(event)
+    decision = alert_manager.evaluate(event)
 
-    if alert_manager.should_interrupt(event):
-        time.sleep(event.timeout)
+    if decision.interrupt:
+        record_alert(event)
+        time.sleep(decision.timeout)
         return True
 
     return False
