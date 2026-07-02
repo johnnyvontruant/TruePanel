@@ -1,50 +1,194 @@
-# QnapLCD-Menu
+# TruePanel
 
-A simplistic package and examples using the front panel display and buttons
-on QNAP NAS devices under other operating systems. Tested with TVS-671,
-but should work on other models that use the "A125" display with two buttons.
+> **Bring your QNAP front panel back to life on TrueNAS SCALE.**
 
-# What's Included
+TruePanel is a native front-panel dashboard for supported QNAP NAS systems running TrueNAS SCALE. Rather than recreating the original QTS LCD interface, TruePanel is designed specifically for TrueNAS, transforming the built-in LCD into a real-time system monitor for storage, performance, and overall system health.
 
-In most cases you would setup *preinit.py*, *lcd-menu.py*, and *shutdown.py* to get a workable menu on the Qnap LCD.
+Built around a collector-first architecture, TruePanel gathers system information once and shares it across the entire application, resulting in a fast, responsive, and easily extensible dashboard.
 
-* *preinit.py* a short pre-initialization script to print a message on the LCD panel and terminate.
+---
 
-* *postinit.py* a short post-initialization script to print a message on the LCD panel and terminate. Not used in most cases.
+## Features
 
-* *lcd-menu.py* a Python script that will display a menu similar to the default QNAP menu, written for TrueNAS SCALE but may work with other TrueNAS and FreeNAS systems. This should take the place of the *postinit.py* script if you want the menu system active.
+Current development includes:
 
-* *shutdown* a short shutdown script to print a message on the LCD panel and terminate.
+* LCD communication and backlight control
+* Front-panel button navigation
+* Automatic page rotation
+* CPU utilization
+* Memory utilization
+* ZFS pool health
+* Storage usage with progress bar
+* Drive temperature monitoring (SATA and NVMe)
+* ARC cache statistics
+* ZFS scrub and resilver activity detection
+* Collector-based backend architecture
 
-* *qnaplcd* Python package (class) for using the front-panel (A125) display. Uses *pyserial* and threading to send button events to calling program.
+---
 
-# Installation
+## Why TruePanel?
 
-To install, clone this repository onto your NAS somewhere that is accessible to the admin (root) user. It needs to be run *as root* to communicate with the display and the TrueNAS CLI.
+Many QNAP systems include an excellent front-panel LCD that becomes largely unused after installing TrueNAS SCALE.
 
-#### First:
-- Copy the scripts to your nas via FTP (suggested: /home/admin/QnapLcdMenu).
+TruePanel gives that display a new purpose by turning it into a live operations dashboard that provides useful information at a glance, without requiring a monitor or web browser.
 
-#### In the TrueNAS Web Ui go to System Settings/Advanced/Init&Shutdown Scripts/Add and create the following:
+The long-term vision is simple:
 
-![Screenshot 2024-06-19 at 4 39 01 PM](https://github.com/alfredoarrieta/Qnap-TS-469-Pro-Lcd-Scale/assets/43350012/0eb03f37-d82a-44dd-9dd9-4a322c60b168)
+> **The front panel should tell you the single most important thing happening on your NAS.**
 
+---
 
+## Design Philosophy
 
-#### This is a screenshot of how the configuration should look for the Pre Init:
+TruePanel follows a few core principles:
 
-![Screenshot 2024-06-19 at 4 45 24 PM](https://github.com/alfredoarrieta/Qnap-TS-469-Pro-Lcd-Scale/assets/43350012/26a965ba-c31f-4187-bf00-626418d42c9e)
+### One Glance
 
+The most important information should be understandable in under one second.
 
+### Collector First
 
-#### This is a screenshot of how the configuration should look for the Post Init:
+System data is collected once and shared across the application rather than having each display page execute its own commands.
 
-![Screenshot 2024-06-19 at 4 45 39 PM](https://github.com/alfredoarrieta/Qnap-TS-469-Pro-Lcd-Scale/assets/43350012/6c02ca55-07b0-4733-b436-bcf18282704d)
+### Native
 
-(this one is different because the script should run in a separate thread so the system wont kill it after the set timeout is done):
+TruePanel is designed specifically for TrueNAS SCALE rather than attempting to emulate the original QTS firmware.
 
+### Reliable
 
+The dashboard should be capable of running continuously for months with minimal resource usage.
 
-#### This is a screenshot of how the configuration should look for the Shutdown:
+### Extensible
 
-![Screenshot 2024-06-19 at 4 45 48 PM](https://github.com/alfredoarrieta/Qnap-TS-469-Pro-Lcd-Scale/assets/43350012/2fbb768f-0581-4f82-a677-bd99efb14e3f)
+Adding new monitoring pages should be straightforward without requiring major architectural changes.
+
+---
+
+## Architecture
+
+```text
+                TrueNAS SCALE
+                      │
+                      ▼
+            TruePanel Collector
+                      │
+              Shared System State
+                      │
+          ┌───────────┼───────────┐
+          │           │           │
+          ▼           ▼           ▼
+      Storage      Hardware    Network
+          │           │           │
+          └───────────┼───────────┘
+                      ▼
+              Decision Engine
+                      ▼
+                 LCD Renderer
+                      ▼
+               QNAP Front Panel
+```
+
+The collector continuously gathers system telemetry and exposes a shared state that can be consumed by display pages and future interfaces.
+
+---
+
+## Roadmap
+
+### Version 0.7 — Mission Control
+
+* Decision Engine
+* Mission Control home screen
+* Priority-based status display
+* Live network throughput
+
+### Version 0.8
+
+* SMART health monitoring
+* CPU temperature
+* Fan speed monitoring (supported hardware)
+* TrueNAS alerts
+
+### Version 0.9
+
+* Configuration file
+* Custom page ordering
+* Night mode
+* Diagnostics mode
+
+### Version 1.0
+
+* Automated installer
+* Complete documentation
+* Stable public release
+
+---
+
+## Supported Hardware
+
+### Currently Tested
+
+* **QNAP TVS-671**
+* **TrueNAS SCALE**
+
+Current LCD serial port:
+
+```text
+/dev/ttyS1
+```
+
+Support for additional QNAP models is planned. Community testing and feedback are welcome.
+
+---
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/johnnyvontruant/TruePanel.git
+cd TruePanel
+```
+
+Verify LCD communication:
+
+```bash
+sudo python3 preinit.py
+```
+
+Launch the dashboard:
+
+```bash
+sudo python3 lcd-menu.py
+```
+
+Documentation for automatic startup through TrueNAS Init/Shutdown scripts will continue to evolve as the project matures.
+
+---
+
+## Project Status
+
+**Current Version**
+
+**0.6.0-dev** *(Codename: Sentinel)*
+
+TruePanel is under active development. The project is already stable enough for experimentation, but additional features and architectural improvements are planned before the first production release.
+
+---
+
+## Contributing
+
+Bug reports, hardware compatibility reports, feature ideas, and pull requests are all welcome.
+
+If you've successfully tested TruePanel on another QNAP model, please open an issue and let us know your hardware configuration.
+
+---
+
+## Acknowledgements
+
+TruePanel builds upon the excellent work of the QNAP LCD community, particularly the original LCD interface and TrueNAS adaptation projects that made this effort possible.
+
+---
+
+## License
+
+Released under the MIT License.
