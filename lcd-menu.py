@@ -10,6 +10,15 @@ import subprocess
 import socket
 import threading
 import json
+from collector import TruePanelCollector
+from truepanel.mission_control import MissionControl, Priority
+from truepanel.mission_control.alert_manager import AlertManager
+from truepanel.mission_control.renderer import render_event
+from truepanel.mission_control.watchers.healthy import healthy_watcher
+from truepanel.mission_control.watchers.pool import pool_watcher
+from truepanel.mission_control.watchers.smart import smart_watcher
+from truepanel.mission_control.watchers.thermal import thermal_watcher
+from truepanel.mission_control.watchers.zfs import zfs_watcher
 
 DISPLAY_TIMEOUT = 30    # seconds
 
@@ -220,11 +229,69 @@ def show_fan_pwm():
     lcd.clear()
     lcd.write(0, fan_pwm_page())
 
+
+def show_mission_control():
+    state = collector.update()
+    event = mission.evaluate(state)
+    lines = render_event(event)
+
+    lcd.clear()
+    lcd.write(0, lines)
+
+    return event
+
+
+def record_alert(event):
+    global alert_history
+
+    if event.priority < Priority.WARNING:
+        return
+
+    if alert_history and alert_history[0].event_id == event.event_id and alert_history[0].message == event.message:
+        return
+
+    alert_history.insert(0, event)
+    alert_history = alert_history[:5]
+
+
+def show_alert_history():
+    lcd.clear()
+
+    if not alert_history:
+        lcd.write(0, ['Alert History', 'No Alerts'])
+        return
+
+    event = alert_history[0]
+    lcd.write(0, [event.title[:16], event.message[:16]])
+
+
+def maybe_show_alert():
+    event = show_mission_control()
+    record_alert(event)
+
+    if alert_manager.should_interrupt(event):
+        time.sleep(event.timeout)
+        return True
+
+    return False
+
+
 #
 # Menu
 #
 menu_item = 0
+alert_history = []
+collector = TruePanelCollector()
+mission = MissionControl()
+alert_manager = AlertManager()
+mission.register(pool_watcher)
+mission.register(thermal_watcher)
+mission.register(zfs_watcher)
+mission.register(smart_watcher)
+mission.register(healthy_watcher)
 menu = [
+    show_mission_control,
+    show_alert_history,
     show_truenas,
     show_version,
     show_uptime,
@@ -270,10 +337,10 @@ def main():
     while not quit:
         add_ips_to_menu()
         # add_zpools_to_menu() disabled for Docker compatibility
-        menu[menu_item]()
 
-        print('sleep...')
-        time.sleep(30)
+        if not maybe_show_alert():
+            menu[menu_item]()
+            time.sleep(30)
 
     lcd.backlight(False)
 
