@@ -15,6 +15,7 @@ class TruePanelCollector:
             "arc": {},
             "zfs_activity": {},
             "last_updated": None,
+            "smart": [],
         }
         self._last_cpu = None
         self._last_net = None
@@ -36,6 +37,7 @@ class TruePanelCollector:
         self.state["arc"] = self.get_arc_stats()
         self.state["zfs_activity"] = self.get_zfs_activity()
         self.state["last_updated"] = time.time()
+        self.state["smart"] = self.get_smart_health()
         return self.state
 
     def get_cpu_percent(self):
@@ -244,6 +246,66 @@ class TruePanelCollector:
         return activity
 
 
+    def get_smart_health(self):
+        disks = self.shell(
+            "lsblk -ndo NAME,TYPE | awk '$2==\"disk\"{print \"/dev/\"$1}'"
+        ).splitlines()
+
+        results = []
+
+        for disk in disks:
+            if disk.endswith("/sdf"):
+                continue
+
+            health_out = self.shell(f"smartctl -H {disk} 2>/dev/null")
+            attrs_out = self.shell(f"smartctl -A {disk} 2>/dev/null")
+
+            health = "UNKNOWN"
+            if "PASSED" in health_out:
+                health = "PASSED"
+            elif "FAILED" in health_out:
+                health = "FAILED"
+
+            record = {
+                "drive": disk.split("/")[-1],
+                "health": health,
+                "reallocated": 0,
+                "pending": 0,
+                "offline_uncorrectable": 0,
+                "reported_uncorrect": 0,
+                "media_errors": 0,
+                "critical_warning": "0x00",
+            }
+
+            for line in attrs_out.splitlines():
+                lower = line.lower()
+                parts = line.split()
+
+                if parts and "reallocated_sector_ct" in lower and parts[-1].isdigit():
+                    record["reallocated"] = int(parts[-1])
+
+                if parts and "current_pending_sector" in lower and parts[-1].isdigit():
+                    record["pending"] = int(parts[-1])
+
+                if parts and "offline_uncorrectable" in lower and parts[-1].isdigit():
+                    record["offline_uncorrectable"] = int(parts[-1])
+
+                if parts and "reported_uncorrect" in lower and parts[-1].isdigit():
+                    record["reported_uncorrect"] = int(parts[-1])
+
+                if "media and data integrity errors" in lower:
+                    value = line.split(":")[-1].strip()
+                    if value.isdigit():
+                        record["media_errors"] = int(value)
+
+                if "critical warning" in lower:
+                    record["critical_warning"] = line.split(":")[-1].strip()
+
+            results.append(record)
+
+        return results
+
+
 if __name__ == "__main__":
     c = TruePanelCollector()
 
@@ -260,5 +322,6 @@ if __name__ == "__main__":
         print(f"ARC: {state['arc']}")
         print(f"ZFS Activity: {state['zfs_activity']}")
         print(f"Updated: {state['last_updated']}")
+        print(f"SMART: {state['smart']}")
 
         time.sleep(2)
