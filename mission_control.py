@@ -29,6 +29,7 @@ class MissionEvent:
     category: Category = Category.SYSTEM
     timeout: int = 5
     event_id: str = "system.unknown"
+    source: str = "mission_control"
 
 
 class MissionControl:
@@ -53,6 +54,7 @@ class MissionControl:
                 message="No Status",
                 category=Category.SYSTEM,
                 event_id="system.none",
+                source="mission_control",
             )
 
         return max(events, key=lambda event: event.priority)
@@ -73,6 +75,7 @@ def pool_watcher(state):
                 category=Category.STORAGE,
                 timeout=15,
                 event_id="storage.pool_alert",
+                source="pool_watcher",
             )
 
     return None
@@ -96,6 +99,7 @@ def thermal_watcher(state):
             category=Category.THERMAL,
             timeout=15,
             event_id="thermal.critical",
+            source="thermal_watcher",
         )
 
     if temp >= 50:
@@ -106,6 +110,41 @@ def thermal_watcher(state):
             category=Category.THERMAL,
             timeout=10,
             event_id="thermal.hot",
+            source="thermal_watcher",
+        )
+
+    return None
+
+
+def zfs_watcher(state):
+    activity = state.get("zfs_activity", {})
+
+    if not activity:
+        return None
+
+    percent = activity.get("percent")
+    percent_text = f"{percent}%" if percent is not None else "Running"
+
+    if activity.get("resilver_running"):
+        return MissionEvent(
+            priority=Priority.INFO,
+            title="RESILVER",
+            message=percent_text,
+            category=Category.STORAGE,
+            timeout=10,
+            event_id="storage.resilver",
+            source="zfs_watcher",
+        )
+
+    if activity.get("scrub_running"):
+        return MissionEvent(
+            priority=Priority.INFO,
+            title="SCRUB",
+            message=percent_text,
+            category=Category.STORAGE,
+            timeout=10,
+            event_id="storage.scrub",
+            source="zfs_watcher",
         )
 
     return None
@@ -119,6 +158,7 @@ def healthy_watcher(state):
         category=Category.HEALTH,
         timeout=5,
         event_id="health.healthy",
+        source="healthy_watcher",
     )
 
 
@@ -127,6 +167,7 @@ if __name__ == "__main__":
 
     mc.register(pool_watcher)
     mc.register(thermal_watcher)
+    mc.register(zfs_watcher)
     mc.register(healthy_watcher)
 
     event = mc.evaluate({
@@ -135,8 +176,15 @@ if __name__ == "__main__":
         ],
         "temps": [
             {"drive": "sda", "temp": 37},
-            {"drive": "nvme0n1", "temp": 52}
-        ]
+            {"drive": "nvme0n1", "temp": 44}
+        ],
+        "zfs_activity": {
+            "scrub_running": True,
+            "resilver_running": False,
+            "percent": 42,
+            "remaining": None,
+            "problem": False,
+        }
     })
 
     print(event)
