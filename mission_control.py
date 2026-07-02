@@ -5,6 +5,7 @@ from truepanel.mission_control.watchers.pool import pool_watcher
 from truepanel.mission_control.watchers.thermal import thermal_watcher
 from truepanel.mission_control.watchers.zfs import zfs_watcher
 from truepanel.mission_control.watchers.smart import smart_watcher
+from truepanel.mission_control.renderer import render_event
 
 
 if __name__ == "__main__":
@@ -23,4 +24,5 @@ if __name__ == "__main__":
     event = mission.evaluate(state)
 
     print(event)
+    print(render_event(event))
 
