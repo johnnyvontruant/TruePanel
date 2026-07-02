@@ -6,6 +6,7 @@ from truepanel.mission_control.watchers.thermal import thermal_watcher
 from truepanel.mission_control.watchers.zfs import zfs_watcher
 from truepanel.mission_control.watchers.smart import smart_watcher
 from truepanel.mission_control.renderer import render_event
+from truepanel.mission_control.alert_manager import AlertManager
 
 
 if __name__ == "__main__":
@@ -22,7 +23,10 @@ if __name__ == "__main__":
     state = collector.update()
 
     event = mission.evaluate(state)
+    alert_manager = AlertManager()
 
     print(event)
+    print(render_event(event))
+    print(f"Interrupt: {alert_manager.should_interrupt(event)}")
     print(render_event(event))
 
