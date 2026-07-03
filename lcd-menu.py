@@ -265,12 +265,23 @@ def show_alert_history():
     lcd.write(0, [event.title[:16], event.message[:16]])
 
 
+def show_alert_transition(event):
+    lcd.clear()
+    lcd.write(0, ['*** ALERT ***', event.title[:16]])
+    time.sleep(2)
+
+    lines = render_event(event)
+    lcd.clear()
+    lcd.write(0, lines)
+
+
 def maybe_show_alert():
     event = show_mission_control()
     decision = alert_manager.evaluate(event)
 
     if decision.interrupt:
         record_alert(event)
+        show_alert_transition(event)
         time.sleep(decision.timeout)
         return True
 
