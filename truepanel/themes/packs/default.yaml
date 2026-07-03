@@ -1,0 +1,8 @@
+theme:
+  healthy_message: "Mission Ready"
+  startup_title: "TruePanel"
+  startup_subtitle: "Flight Deck"
+  warning_prefix: "! "
+  critical_prefix: "!!"
+  info_prefix: "i "
+  healthy_prefix: "OK"

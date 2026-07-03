@@ -1,3 +1,5 @@
+theme_pack: default
+
 flightdeck:
   rotation_interval: 5
   pause_after_button: 60

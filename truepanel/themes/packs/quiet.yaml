@@ -1,0 +1,15 @@
+theme:
+  healthy_message: "All Quiet"
+  startup_title: "TruePanel"
+  startup_subtitle: "Quiet Mode"
+  warning_prefix: "! "
+  critical_prefix: "!!"
+  info_prefix: ""
+  healthy_prefix: "OK"
+
+flightdeck:
+  rotation_interval: 10
+  night_mode:
+    rotation_interval: 90
+    dashboard_pages:
+      - home
