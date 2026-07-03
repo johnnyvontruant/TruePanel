@@ -264,6 +264,20 @@ def record_alert(event):
     alert_history = alert_history[:5]
 
 
+
+def show_event_queue():
+    frame = display_manager.render_event_queue()
+
+    lcd.clear()
+    lcd.write(0, frame.lines)
+
+
+def next_event_queue():
+    frame = display_manager.next_event_queue()
+
+    lcd.clear()
+    lcd.write(0, frame.lines)
+
 def show_alert_history():
     frame = display_manager.render_history()
 
@@ -318,6 +332,7 @@ mission.register(healthy_watcher)
 menu = [
     show_mission_home,
     show_mission_control,
+    show_event_queue,
     show_alert_history,
     show_truenas,
     show_version,
@@ -342,6 +357,11 @@ def response_handler(command, data):
         if menu[menu_item] == show_alert_history:
             if data in (0x01, 0x02):
                 next_alert_history()
+                return
+
+        if menu[menu_item] == show_event_queue:
+            if data in (0x01, 0x02):
+                next_event_queue()
                 return
 
         if data == 0x01: # up

@@ -18,6 +18,7 @@ class DisplayMode:
     NORMAL = "normal"
     ALERT = "alert"
     HISTORY = "history"
+    QUEUE = "queue"
 
 
 @dataclass
@@ -48,6 +49,7 @@ class DisplayManager:
         self.alert_manager = alert_manager
         self.mode = DisplayMode.NORMAL
         self.history_index = 0
+        self.queue_index = 0
 
     def evaluate(self, state):
         event = self.mission.evaluate(state)
@@ -144,3 +146,42 @@ class DisplayManager:
 
         self.history_index = (self.history_index + 1) % len(history)
         return self.render_history()
+
+    def render_event_queue(self):
+        history = self.alert_manager.get_history()
+
+        if not history:
+            return DisplayFrame(
+                mode=DisplayMode.QUEUE,
+                line1="No Alerts",
+                line2="System Quiet",
+                priority=Priority.HEALTHY,
+                timeout=5,
+                interrupt=False,
+                event=None,
+            )
+
+        if self.queue_index >= len(history):
+            self.queue_index = 0
+
+        event = history[self.queue_index]
+
+        return DisplayFrame(
+            mode=DisplayMode.QUEUE,
+            line1=f"Queue {self.queue_index + 1}/{len(history)}",
+            line2=event.title,
+            priority=event.priority,
+            timeout=5,
+            interrupt=False,
+            event=event,
+        )
+
+    def next_event_queue(self):
+        history = self.alert_manager.get_history()
+
+        if not history:
+            self.queue_index = 0
+            return self.render_event_queue()
+
+        self.queue_index = (self.queue_index + 1) % len(history)
+        return self.render_event_queue()
