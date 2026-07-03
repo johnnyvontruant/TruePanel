@@ -40,9 +40,12 @@ class DisplayFrame:
 
 
 class DisplayManager:
-    def __init__(self, mission, alert_manager):
+    def __init__(self, mission, alert_manager, config=None):
         self.mission = mission
         self.alert_manager = alert_manager
+        self.config = config or {}
+        self.theme = self.config.get("theme", {})
+
         self.mode = DisplayMode.NORMAL
         self.history_index = 0
         self.queue_index = 0
@@ -59,14 +62,17 @@ class DisplayManager:
     def dashboard_count(self):
         return len(self.dashboard_pages)
 
+    def theme_value(self, key, default):
+        return self.theme.get(key, default)
+
     def status_prefix(self, priority):
         if priority >= Priority.CRITICAL:
-            return "!!"
+            return self.theme_value("critical_prefix", "!!")
         if priority >= Priority.WARNING:
-            return "! "
+            return self.theme_value("warning_prefix", "! ")
         if priority >= Priority.INFO:
-            return "i "
-        return "OK"
+            return self.theme_value("info_prefix", "i ")
+        return self.theme_value("healthy_prefix", "OK")
 
     def mission_title(self, state, priority):
         hostname = state.get("hostname", "BattleStation")
@@ -151,7 +157,7 @@ class DisplayManager:
             priority = Priority.WARNING
             event_obj = history[0]
         else:
-            line2 = "Mission Ready"
+            line2 = self.theme_value("healthy_message", "Mission Ready")
             priority = Priority.HEALTHY
             event_obj = event
 

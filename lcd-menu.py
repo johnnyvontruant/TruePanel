@@ -11,6 +11,7 @@ import qnaplcd
 
 from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
+from truepanel.config.loader import load_config
 from truepanel.flightdeck.autopilot import AutoPilot
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
@@ -37,8 +38,9 @@ ip_addresses = []
 collector = TruePanelCollector()
 mission = MissionControl()
 alert_manager = AlertManager()
-display_manager = DisplayManager(mission, alert_manager)
-autopilot = AutoPilot(display_manager)
+config = load_config()
+display_manager = DisplayManager(mission, alert_manager, config=config)
+autopilot = AutoPilot(display_manager, config=config)
 
 mission.register(pool_watcher)
 mission.register(thermal_watcher)
