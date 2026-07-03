@@ -3,7 +3,6 @@ import sys
 import os
 import time
 import qnaplcd
-from collector import TruePanelCollector
 from truepanel.pages.fans import fan_rpm_page, fan_pwm_page
 import platform
 import subprocess
@@ -13,7 +12,7 @@ import json
 from collector import TruePanelCollector
 from truepanel.mission_control import MissionControl, Priority
 from truepanel.mission_control.alert_manager import AlertManager
-from truepanel.mission_control.renderer import render_event
+from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.healthy import healthy_watcher
 from truepanel.mission_control.watchers.pool import pool_watcher
 from truepanel.mission_control.watchers.smart import smart_watcher
@@ -232,13 +231,12 @@ def show_fan_pwm():
 
 def show_mission_control():
     state = collector.update()
-    event = mission.evaluate(state)
-    lines = render_event(event)
+    frame = display_manager.evaluate(state)
 
     lcd.clear()
-    lcd.write(0, lines)
+    lcd.write(0, frame.lines)
 
-    return event
+    return frame
 
 
 def record_alert(event):
@@ -265,24 +263,24 @@ def show_alert_history():
     lcd.write(0, [event.title[:16], event.message[:16]])
 
 
-def show_alert_transition(event):
+def show_alert_transition(frame):
     lcd.clear()
-    lcd.write(0, ['*** ALERT ***', event.title[:16]])
-    time.sleep(2)
+    lcd.write(0, frame.lines)
+    time.sleep(frame.timeout)
 
-    lines = render_event(event)
+    detail = display_manager.render_alert_detail(frame.event)
     lcd.clear()
-    lcd.write(0, lines)
+    lcd.write(0, detail.lines)
 
 
 def maybe_show_alert():
-    event = show_mission_control()
-    decision = alert_manager.evaluate(event)
+    state = collector.update()
+    frame = display_manager.evaluate(state)
 
-    if decision.interrupt:
-        record_alert(event)
-        show_alert_transition(event)
-        time.sleep(decision.timeout)
+    if frame.interrupt:
+        record_alert(frame.event)
+        show_alert_transition(frame)
+        time.sleep(frame.event.timeout)
         return True
 
     return False
@@ -296,6 +294,7 @@ alert_history = []
 collector = TruePanelCollector()
 mission = MissionControl()
 alert_manager = AlertManager()
+display_manager = DisplayManager(mission, alert_manager)
 mission.register(pool_watcher)
 mission.register(thermal_watcher)
 mission.register(zfs_watcher)
