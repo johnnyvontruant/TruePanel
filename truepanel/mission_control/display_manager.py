@@ -5,7 +5,10 @@ Coordinates Mission Control events, Alert Manager decisions, and LCD-safe
 rendering. It does not talk directly to LCD hardware.
 """
 
-from .constants import Priority
+from dataclasses import dataclass
+from typing import Optional
+
+from .event import MissionEvent
 from .renderer import render_event
 
 
@@ -13,6 +16,15 @@ class DisplayMode:
     NORMAL = "normal"
     ALERT = "alert"
     HISTORY = "history"
+
+
+@dataclass
+class DisplayFrame:
+    mode: str
+    lines: list[str]
+    timeout: int
+    interrupt: bool
+    event: Optional[MissionEvent] = None
 
 
 class DisplayManager:
@@ -28,59 +40,59 @@ class DisplayManager:
 
         if decision.interrupt:
             self.mode = DisplayMode.ALERT
-            return {
-                "mode": self.mode,
-                "event": event,
-                "lines": ["*** ALERT ***", event.title[:16]],
-                "timeout": 2,
-                "interrupt": True,
-            }
+            return DisplayFrame(
+                mode=self.mode,
+                event=event,
+                lines=["*** ALERT ***", event.title[:16]],
+                timeout=2,
+                interrupt=True,
+            )
 
         self.mode = DisplayMode.NORMAL
-        return {
-            "mode": self.mode,
-            "event": event,
-            "lines": render_event(event),
-            "timeout": event.timeout,
-            "interrupt": False,
-        }
+        return DisplayFrame(
+            mode=self.mode,
+            event=event,
+            lines=render_event(event),
+            timeout=event.timeout,
+            interrupt=False,
+        )
 
     def render_alert_detail(self, event):
-        return {
-            "mode": DisplayMode.ALERT,
-            "event": event,
-            "lines": render_event(event),
-            "timeout": event.timeout,
-            "interrupt": True,
-        }
+        return DisplayFrame(
+            mode=DisplayMode.ALERT,
+            event=event,
+            lines=render_event(event),
+            timeout=event.timeout,
+            interrupt=True,
+        )
 
     def render_history(self):
         history = self.alert_manager.get_history()
 
         if not history:
-            return {
-                "mode": DisplayMode.HISTORY,
-                "event": None,
-                "lines": ["Alert History", "No Alerts"],
-                "timeout": 5,
-                "interrupt": False,
-            }
+            return DisplayFrame(
+                mode=DisplayMode.HISTORY,
+                event=None,
+                lines=["Alert History", "No Alerts"],
+                timeout=5,
+                interrupt=False,
+            )
 
         if self.history_index >= len(history):
             self.history_index = 0
 
         event = history[self.history_index]
 
-        return {
-            "mode": DisplayMode.HISTORY,
-            "event": event,
-            "lines": [
+        return DisplayFrame(
+            mode=DisplayMode.HISTORY,
+            event=event,
+            lines=[
                 f"Alert {self.history_index + 1}/{len(history)}"[:16],
                 event.title[:16],
             ],
-            "timeout": 5,
-            "interrupt": False,
-        }
+            timeout=5,
+            interrupt=False,
+        )
 
     def next_history(self):
         history = self.alert_manager.get_history()
