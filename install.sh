@@ -1,9 +1,3 @@
-cd ~/TruePanel
-cat > install.sh <<'SH'
-#!/usr/bin/env bash
-set -euo pipefail
-
-APP_NAME="truepanel"
 INSTALL_DIR="/opt/truepanel"
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
 BIN_DIR="$INSTALL_DIR/bin"
@@ -171,8 +165,3 @@ echo "  systemctl enable truepanel"
 echo
 echo "View logs with:"
 echo "  journalctl -u truepanel -f"
-SH
-
-chmod +x install.sh
-bash -n install.sh
-git diff install.sh
