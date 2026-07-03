@@ -8,11 +8,13 @@ from pathlib import Path
 from .core import CorePlugin
 from .registry import Registry
 from .simulator import SimulatorPlugin
+from .status import PluginStatusPlugin
 
 
 BUILTIN_PLUGINS = [
     CorePlugin,
     SimulatorPlugin,
+    PluginStatusPlugin,
 ]
 
 

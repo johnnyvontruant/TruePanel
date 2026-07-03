@@ -25,10 +25,11 @@ class Registry:
     def register_collector(self, name, factory):
         self.collectors[name] = factory
 
-    def register_dashboard_page(self, page_id, title=None):
+    def register_dashboard_page(self, page_id, title=None, renderer=None):
         self.dashboard_pages.append({
             "id": page_id,
             "title": title or page_id,
+            "renderer": renderer,
         })
 
     def register_watcher(self, watcher):
@@ -53,7 +54,13 @@ class Registry:
         return {
             "plugins": self.plugins,
             "collectors": sorted(self.collectors.keys()),
-            "dashboard_pages": self.dashboard_pages,
+            "dashboard_pages": [
+                {
+                    "id": page["id"],
+                    "title": page["title"],
+                }
+                for page in self.dashboard_pages
+            ],
             "watchers": len(self.watchers),
             "startup_frames": len(self.startup_frames),
             "theme_packs": self.theme_packs,

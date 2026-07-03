@@ -21,3 +21,8 @@ class CorePlugin(Plugin):
         registry.register_theme_pack("default")
         registry.register_theme_pack("tactical")
         registry.register_theme_pack("quiet")
+
+        registry.register_startup_frame("TruePanel", "Flight Deck")
+        registry.register_startup_frame("Mission Ctrl", "Online")
+        registry.register_startup_frame("Plugins", "Loading")
+        registry.register_startup_frame("Mission Ready", "")

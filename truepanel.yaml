@@ -6,14 +6,13 @@ flightdeck:
   idle_slowdown_after: 3600
   idle_interval: 30
 
+  transitions:
+    enabled: true
+
   startup:
     enabled: true
     delay: 0.75
-    frames:
-      - ["TruePanel", "Flight Deck"]
-      - ["Mission Ctrl", "Online"]
-      - ["Collectors", "Ready"]
-      - ["Mission Ready", ""]
+    diagnostics: true
 
   night_mode:
     enabled: true

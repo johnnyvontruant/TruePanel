@@ -7,8 +7,9 @@ Mission Control decides what matters.
 Display Manager knows how to build dashboard frames.
 AutoPilot decides when dashboard frames advance.
 
-Startup splash and Night Mode behavior are configuration-driven so
-FlightDeck policy can evolve without changing Mission Control logic.
+Startup splash, Night Mode, and FlightDeck transition behavior are
+configuration-driven so FlightDeck policy can evolve without changing
+Mission Control logic.
 """
 
 from time import monotonic
@@ -56,6 +57,9 @@ class AutoPilot:
             ["home", "storage"],
         )
 
+        self.transition_config = flightdeck.get("transitions", {})
+        self.transition_frames = self.transition_config.get("enabled", True)
+
         now = monotonic()
 
         self.last_rotation = now
@@ -63,6 +67,7 @@ class AutoPilot:
         self.pause_until = 0
         self.enabled = True
         self.mode = FlightMode.NORMAL
+        self.last_mode = FlightMode.NORMAL
 
     def startup_enabled(self):
         return self.startup_config.get("enabled", self.legacy_startup_splash)
@@ -72,6 +77,10 @@ class AutoPilot:
 
     def startup_frames(self):
         theme = self.config.get("theme", {})
+        registry = getattr(self.display_manager, "registry", None)
+
+        plugin_count = len(getattr(registry, "plugins", [])) if registry else 0
+        collector_count = len(getattr(registry, "collectors", {})) if registry else 0
 
         default_frames = [
             [
@@ -79,11 +88,17 @@ class AutoPilot:
                 theme.get("startup_subtitle", "Flight Deck"),
             ],
             ["Mission Ctrl", "Online"],
-            ["Collectors", "Ready"],
+            ["Plugins", f"{plugin_count} Loaded"],
+            ["Collectors", f"{collector_count} Ready"],
             [theme.get("healthy_message", "Mission Ready"), ""],
         ]
 
-        frames = self.startup_config.get("frames", default_frames)
+        frames = self.startup_config.get("frames")
+
+        if self.startup_config.get("diagnostics", True):
+            frames = frames or default_frames
+        else:
+            frames = frames or default_frames[:2]
 
         safe_frames = []
 
@@ -102,6 +117,8 @@ class AutoPilot:
         now = monotonic()
         idle_time = now - self.last_interaction
 
+        previous = self.mode
+
         if self.night_enabled and idle_time >= self.night_idle_after:
             self.mode = FlightMode.NIGHT
         elif idle_time >= self.idle_slowdown_after:
@@ -109,6 +126,7 @@ class AutoPilot:
         else:
             self.mode = FlightMode.NORMAL
 
+        self.last_mode = previous
         return self.mode
 
     def current_interval(self):
@@ -125,8 +143,12 @@ class AutoPilot:
     def night_mode_active(self):
         return self.current_mode() == FlightMode.NIGHT
 
+    def mode_changed(self):
+        return self.mode != self.last_mode
+
     def wake(self):
         self.last_interaction = monotonic()
+        self.last_mode = self.mode
         self.mode = FlightMode.NORMAL
 
     def frame(self, state):
@@ -134,6 +156,12 @@ class AutoPilot:
             return self.night_frame(state)
 
         return self.display_manager.render_dashboard(state)
+
+    def transition_frame(self, label):
+        return self.display_manager.make_frame(
+            line1="FlightDeck",
+            line2=label,
+        )
 
     def night_frame(self, state):
         current_index = getattr(self.display_manager, "dashboard_index", 0)
@@ -148,27 +176,14 @@ class AutoPilot:
         return self.display_manager.render_dashboard(state)
 
     def night_dashboard_indexes(self):
-        page_names = {
-            "home": 0,
-            "storage": 1,
-            "capacity": 2,
-            "performance": 3,
-            "thermal": 4,
-            "smart": 5,
-        }
-
+        page_ids = self.display_manager.dashboard_page_ids()
         indexes = []
 
-        for page in self.night_dashboard_pages:
-            if page in page_names:
-                indexes.append(page_names[page])
+        for page_id in self.night_dashboard_pages:
+            if page_id in page_ids:
+                indexes.append(page_ids.index(page_id))
 
-        try:
-            total = self.display_manager.dashboard_count()
-        except AttributeError:
-            total = 6
-
-        return [index for index in indexes if index < total]
+        return indexes
 
     def next_night_dashboard(self, state):
         allowed_indexes = self.night_dashboard_indexes()
@@ -197,10 +212,7 @@ class AutoPilot:
         self.wake()
         self.pause()
 
-        try:
-            total = self.display_manager.dashboard_count()
-        except AttributeError:
-            total = 6
+        total = self.display_manager.dashboard_count()
 
         self.display_manager.dashboard_index = (
             self.display_manager.dashboard_index - 2
@@ -236,6 +248,23 @@ class AutoPilot:
         return (now - self.last_rotation) >= self.current_interval()
 
     def tick(self, state):
+        previous_mode = self.mode
+        active_mode = self.current_mode()
+
+        if (
+            self.transition_frames
+            and previous_mode != active_mode
+            and active_mode == FlightMode.NIGHT
+        ):
+            return self.transition_frame("Night Mode")
+
+        if (
+            self.transition_frames
+            and previous_mode != active_mode
+            and active_mode == FlightMode.NORMAL
+        ):
+            return self.transition_frame("Awake")
+
         if self.should_rotate():
             self.last_rotation = monotonic()
 

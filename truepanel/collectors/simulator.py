@@ -22,19 +22,29 @@ class SimulatorCollector(Collector):
 
         state = self.base_state()
 
-        if self.scenario == "thermal":
+        scenario = self.scenario
+
+        if scenario == "thermal":
             self.apply_thermal_scenario(state)
-        elif self.scenario == "pool":
+        elif scenario == "pool":
             self.apply_pool_scenario(state)
-        elif self.scenario == "smart":
+        elif scenario == "smart":
             self.apply_smart_scenario(state)
-        elif self.scenario == "resilver":
+        elif scenario == "resilver":
             self.apply_resilver_scenario(state)
-        elif self.scenario == "everything":
+        elif scenario == "network":
+            self.apply_network_scenario(state)
+        elif scenario == "capacity":
+            self.apply_capacity_scenario(state)
+        elif scenario == "quiet-night":
+            self.apply_quiet_night_scenario(state)
+        elif scenario == "everything":
             self.apply_thermal_scenario(state)
             self.apply_pool_scenario(state)
             self.apply_smart_scenario(state)
             self.apply_resilver_scenario(state)
+            self.apply_network_scenario(state)
+            self.apply_capacity_scenario(state)
 
         state["last_updated"] = time.time()
         return state
@@ -109,8 +119,23 @@ class SimulatorCollector(Collector):
             "last_updated": None,
         }
 
+    def timeline_value(self, points):
+        value = points[0][1]
+
+        for tick, candidate in points:
+            if self.tick_count >= tick:
+                value = candidate
+
+        return value
+
     def apply_thermal_scenario(self, state):
-        hot_temp = min(65, 38 + self.tick_count * 2)
+        hot_temp = self.timeline_value([
+            (1, 40),
+            (3, 45),
+            (5, 51),
+            (8, 56),
+            (12, 61),
+        ])
 
         state["temps"][0] = {
             "drive": "sda",
@@ -118,12 +143,23 @@ class SimulatorCollector(Collector):
         }
 
     def apply_pool_scenario(self, state):
-        if self.tick_count >= 5:
-            state["pools"][0]["health"] = "DEGRADED"
+        health = self.timeline_value([
+            (1, "ONLINE"),
+            (5, "DEGRADED"),
+            (10, "FAULTED"),
+        ])
+
+        state["pools"][0]["health"] = health
 
     def apply_smart_scenario(self, state):
-        if self.tick_count >= 4:
-            state["smart"][1]["pending"] = self.tick_count - 3
+        pending = self.timeline_value([
+            (1, 0),
+            (4, 1),
+            (6, 3),
+            (9, 8),
+        ])
+
+        state["smart"][1]["pending"] = pending
 
         if self.tick_count >= 8:
             state["smart"][1]["health"] = "FAILED"
@@ -139,4 +175,26 @@ class SimulatorCollector(Collector):
             "status_line": f"resilver in progress, {percent}% done",
             "problem": False,
             "problem_line": "",
+        }
+
+    def apply_network_scenario(self, state):
+        state["network"]["sim0"] = {
+            "download_mb": round(25 + self.tick_count * 3.5, 1),
+            "upload_mb": round(8 + self.tick_count * 1.7, 1),
+        }
+
+    def apply_capacity_scenario(self, state):
+        percent = min(96, 70 + self.tick_count * 2)
+
+        state["pools"][0]["capacity"] = f"{percent}%"
+        state["pools"][0]["used"] = f"{round(percent / 10, 1)}T"
+        state["pools"][0]["free"] = f"{round(10 - percent / 10, 1)}T"
+
+    def apply_quiet_night_scenario(self, state):
+        state["hostname"] = "NightPanel"
+        state["cpu_percent"] = 5
+        state["ram_percent"] = 28
+        state["network"]["sim0"] = {
+            "download_mb": 0.1,
+            "upload_mb": 0.0,
         }

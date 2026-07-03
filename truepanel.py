@@ -19,6 +19,19 @@ from truepanel.doctor import run_doctor
 from truepanel.plugins import load_plugins
 
 
+SCENARIOS = [
+    "normal",
+    "thermal",
+    "pool",
+    "smart",
+    "resilver",
+    "network",
+    "capacity",
+    "quiet-night",
+    "everything",
+]
+
+
 def print_state(state):
     print("\nTruePanel Simulator")
     print("-------------------")
@@ -27,6 +40,7 @@ def print_state(state):
     print(f"RAM: {state.get('ram_percent', 0)}%")
     print(f"Pools: {state.get('pools', [])}")
     print(f"Temps: {state.get('temps', [])}")
+    print(f"Network: {state.get('network', {})}")
     print(f"ZFS Activity: {state.get('zfs_activity', {})}")
     print(f"SMART: {state.get('smart', [])}")
 
@@ -98,7 +112,7 @@ def parse_args():
     parser.add_argument(
         "--scenario",
         default="normal",
-        choices=["normal", "thermal", "pool", "smart", "resilver", "everything"],
+        choices=SCENARIOS,
         help="Simulator scenario to run",
     )
 

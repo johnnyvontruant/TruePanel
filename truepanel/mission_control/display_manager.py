@@ -1,8 +1,8 @@
 """
 Display Manager
 
-Coordinates Mission Control events, Alert Manager decisions, dashboard pages,
-event queue pages, alert history, and LCD-safe rendering.
+Coordinates Mission Control events, Alert Manager decisions, registry-driven
+dashboard pages, event queue pages, alert history, and LCD-safe rendering.
 
 It does not talk directly to LCD hardware.
 """
@@ -14,6 +14,7 @@ from .constants import Priority
 from .event import MissionEvent
 from .renderer import render_event
 from truepanel.display.widgets import progress_bar
+from truepanel.plugins import load_plugins
 
 
 class DisplayMode:
@@ -40,27 +41,79 @@ class DisplayFrame:
 
 
 class DisplayManager:
-    def __init__(self, mission, alert_manager, config=None):
+    def __init__(self, mission, alert_manager, config=None, registry=None):
         self.mission = mission
         self.alert_manager = alert_manager
         self.config = config or {}
         self.theme = self.config.get("theme", {})
+        self.registry = registry or self.config.get("registry") or load_plugins(self.config)
 
         self.mode = DisplayMode.NORMAL
         self.history_index = 0
         self.queue_index = 0
         self.dashboard_index = 0
-        self.dashboard_pages = [
-            self._dashboard_home,
-            self._dashboard_storage,
-            self._dashboard_capacity,
-            self._dashboard_performance,
-            self._dashboard_thermal,
-            self._dashboard_smart,
-        ]
+
+        self.builtin_dashboard_pages = {
+            "home": self._dashboard_home,
+            "storage": self._dashboard_storage,
+            "capacity": self._dashboard_capacity,
+            "performance": self._dashboard_performance,
+            "thermal": self._dashboard_thermal,
+            "smart": self._dashboard_smart,
+        }
+
+        self.dashboard_pages = self.build_dashboard_pages()
+
+    def build_dashboard_pages(self):
+        pages = []
+
+        for page in getattr(self.registry, "dashboard_pages", []):
+            renderer = page.get("renderer")
+
+            if renderer is None:
+                renderer = self.builtin_dashboard_pages.get(page.get("id"))
+
+            if renderer is not None:
+                pages.append({
+                    "id": page.get("id", "unknown"),
+                    "title": page.get("title", page.get("id", "Dashboard")),
+                    "renderer": renderer,
+                })
+
+        if not pages:
+            pages.append({
+                "id": "home",
+                "title": "Mission Home",
+                "renderer": self._dashboard_home,
+            })
+
+        return pages
 
     def dashboard_count(self):
         return len(self.dashboard_pages)
+
+    def dashboard_page_ids(self):
+        return [page["id"] for page in self.dashboard_pages]
+
+    def make_frame(
+        self,
+        line1,
+        line2,
+        priority=Priority.INFO,
+        timeout=5,
+        interrupt=False,
+        event=None,
+        mode=DisplayMode.DASHBOARD,
+    ):
+        return DisplayFrame(
+            mode=mode,
+            line1=str(line1)[:16],
+            line2=str(line2)[:16],
+            priority=priority,
+            timeout=timeout,
+            interrupt=interrupt,
+            event=event,
+        )
 
     def theme_value(self, key, default):
         return self.theme.get(key, default)
@@ -137,7 +190,10 @@ class DisplayManager:
         if self.dashboard_index >= self.dashboard_count():
             self.dashboard_index = 0
 
-        return self.dashboard_pages[self.dashboard_index](state)
+        page = self.dashboard_pages[self.dashboard_index]
+        renderer = page["renderer"]
+
+        return renderer(state)
 
     def next_dashboard(self, state):
         self.dashboard_index = (self.dashboard_index + 1) % self.dashboard_count()
