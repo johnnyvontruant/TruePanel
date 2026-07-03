@@ -289,15 +289,19 @@ def show_fan_pwm():
 
 
 def show_mission_home():
-    state = collector.update()
-    frame = display_manager.evaluate(state)
+    state = get_state()
+    frame = display_manager.render_dashboard(state)
 
     lcd.clear()
+    lcd.write(0, frame.lines)
 
-    if frame.priority >= Priority.WARNING:
-        lcd.write(0, [platform.node()[:16], frame.line1[:16]])
-    else:
-        lcd.write(0, [platform.node()[:16], frame.line2[:16]])
+
+def next_mission_dashboard():
+    state = get_state()
+    frame = display_manager.next_dashboard(state)
+
+    lcd.clear()
+    lcd.write(0, frame.lines)
 
 
 def show_mission_control():
@@ -384,6 +388,11 @@ def response_handler(command, data):
 
     if command == "Switch_Status":
         lcd_on()
+
+        if menu[menu_item] == show_mission_home:
+            if data in (0x01, 0x02):
+                next_mission_dashboard()
+                return
 
         if menu[menu_item] == show_alert_history:
             if data in (0x01, 0x02):

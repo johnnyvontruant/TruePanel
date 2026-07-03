@@ -1,8 +1,10 @@
 """
 Display Manager
 
-Coordinates Mission Control events, Alert Manager decisions, and LCD-safe
-rendering. It does not talk directly to LCD hardware.
+Coordinates Mission Control events, Alert Manager decisions, dashboard pages,
+event queue pages, alert history, and LCD-safe rendering.
+
+It does not talk directly to LCD hardware.
 """
 
 from dataclasses import dataclass
@@ -19,6 +21,7 @@ class DisplayMode:
     ALERT = "alert"
     HISTORY = "history"
     QUEUE = "queue"
+    DASHBOARD = "dashboard"
 
 
 @dataclass
@@ -50,6 +53,7 @@ class DisplayManager:
         self.mode = DisplayMode.NORMAL
         self.history_index = 0
         self.queue_index = 0
+        self.dashboard_index = 0
 
     def evaluate(self, state):
         event = self.mission.evaluate(state)
@@ -106,6 +110,169 @@ class DisplayManager:
             timeout=event.timeout,
             interrupt=True,
             event=event,
+        )
+
+    def render_dashboard(self, state):
+        pages = [
+            self._dashboard_home,
+            self._dashboard_storage,
+            self._dashboard_performance,
+            self._dashboard_thermal,
+            self._dashboard_smart,
+        ]
+
+        if self.dashboard_index >= len(pages):
+            self.dashboard_index = 0
+
+        return pages[self.dashboard_index](state)
+
+    def next_dashboard(self, state):
+        self.dashboard_index = (self.dashboard_index + 1) % 5
+        return self.render_dashboard(state)
+
+    def _dashboard_home(self, state):
+        event = self.mission.evaluate(state)
+        history = self.alert_manager.get_history()
+        alert_count = len(history)
+
+        if event.priority >= Priority.WARNING:
+            line2 = event.title
+            priority = event.priority
+            event_obj = event
+        elif alert_count:
+            line2 = f"{alert_count} Alert"
+            if alert_count != 1:
+                line2 += "s"
+            priority = Priority.WARNING
+            event_obj = history[0]
+        else:
+            line2 = "Healthy"
+            priority = Priority.HEALTHY
+            event_obj = event
+
+        return DisplayFrame(
+            mode=DisplayMode.DASHBOARD,
+            line1=state.get("hostname", "BattleStation"),
+            line2=line2,
+            priority=priority,
+            timeout=5,
+            interrupt=False,
+            event=event_obj,
+        )
+
+    def _dashboard_storage(self, state):
+        pools = state.get("pools", [])
+
+        if not pools:
+            line2 = "No Pool Data"
+            priority = Priority.INFO
+        else:
+            bad = [pool for pool in pools if pool.get("health") != "ONLINE"]
+
+            if bad:
+                line2 = f"{len(bad)} Pool Alert"
+                if len(bad) != 1:
+                    line2 += "s"
+                priority = Priority.CRITICAL
+            else:
+                line2 = f"{len(pools)} Pools OK"
+                priority = Priority.HEALTHY
+
+        return DisplayFrame(
+            mode=DisplayMode.DASHBOARD,
+            line1="Storage",
+            line2=line2,
+            priority=priority,
+            timeout=5,
+            interrupt=False,
+            event=None,
+        )
+
+    def _dashboard_performance(self, state):
+        cpu = state.get("cpu_percent", 0)
+        ram = state.get("ram_percent", 0)
+
+        return DisplayFrame(
+            mode=DisplayMode.DASHBOARD,
+            line1="Performance",
+            line2=f"CPU {cpu}% RAM {ram}%",
+            priority=Priority.INFO,
+            timeout=5,
+            interrupt=False,
+            event=None,
+        )
+
+    def _dashboard_thermal(self, state):
+        temps = state.get("temps", [])
+
+        if not temps:
+            line2 = "No Temp Data"
+            priority = Priority.INFO
+        else:
+            hottest = max(temps, key=lambda drive: drive.get("temp", 0))
+            drive = hottest.get("drive", "disk")
+            temp = hottest.get("temp", 0)
+
+            line2 = f"{drive} {temp}C"
+            priority = Priority.WARNING if temp >= 50 else Priority.HEALTHY
+
+        return DisplayFrame(
+            mode=DisplayMode.DASHBOARD,
+            line1="Thermal",
+            line2=line2,
+            priority=priority,
+            timeout=5,
+            interrupt=False,
+            event=None,
+        )
+
+    def _dashboard_smart(self, state):
+        smart = state.get("smart", [])
+
+        if not smart:
+            line2 = "No SMART Data"
+            priority = Priority.INFO
+        else:
+            problem_drives = []
+
+            for drive in smart:
+                if drive.get("health") == "FAILED":
+                    problem_drives.append(drive)
+                    continue
+
+                if drive.get("pending", 0) > 0:
+                    problem_drives.append(drive)
+                    continue
+
+                if drive.get("offline_uncorrectable", 0) > 0:
+                    problem_drives.append(drive)
+                    continue
+
+                if drive.get("media_errors", 0) > 0:
+                    problem_drives.append(drive)
+                    continue
+
+                if drive.get("critical_warning", "0x00") not in ["0x00", "0"]:
+                    problem_drives.append(drive)
+                    continue
+
+            if problem_drives:
+                line2 = f"{len(problem_drives)} SMART Alert"
+                if len(problem_drives) != 1:
+                    line2 += "s"
+                priority = Priority.CRITICAL
+            else:
+                line2 = f"{len(smart)} Drives OK"
+                priority = Priority.HEALTHY
+
+        return DisplayFrame(
+            mode=DisplayMode.DASHBOARD,
+            line1="SMART",
+            line2=line2,
+            priority=priority,
+            timeout=5,
+            interrupt=False,
+            event=None,
         )
 
     def render_history(self):
