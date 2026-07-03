@@ -13,6 +13,15 @@ flightdeck:
       - ["Collectors", "Ready"]
       - ["Mission Ready", ""]
 
+  night_mode:
+    enabled: true
+    idle_after: 1800
+    rotation_interval: 60
+    suppress_info: true
+    dashboard_pages:
+      - home
+      - storage
+
 theme:
   healthy_message: "Mission Ready"
   startup_title: "TruePanel"
