@@ -3,11 +3,14 @@ TruePanel CLI
 """
 
 import argparse
+import platform
 import runpy
 import time
 
+from truepanel import __version__
 from truepanel.collectors import create_collector
 from truepanel.doctor import run_doctor
+from truepanel.logging import setup_logging
 from truepanel.plugins import load_plugins
 
 
@@ -64,6 +67,17 @@ def print_plugins(registry):
         print(f"- {theme}")
 
 
+def print_version(registry):
+    print("\nTruePanel")
+    print("=========")
+    print(f"Version: {__version__}")
+    print(f"Python:  {platform.python_version()}")
+    print(f"System:  {platform.system()} {platform.machine()}")
+    print(f"Plugins: {len(registry.plugins)}")
+    print()
+    print("Mission Ready")
+
+
 def run_simulator(args, registry):
     collector = create_collector(
         kind="simulator",
@@ -83,13 +97,18 @@ def run_simulator(args, registry):
 def build_parser():
     parser = argparse.ArgumentParser(description="TruePanel command line")
 
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        help="Logging level: DEBUG, INFO, WARNING, ERROR",
+    )
+
     subcommands = parser.add_subparsers(dest="command")
 
     subcommands.add_parser("run", help="Run TruePanel")
-
     subcommands.add_parser("doctor", help="Run TruePanel diagnostics")
-
     subcommands.add_parser("plugins", help="Show loaded plugins")
+    subcommands.add_parser("version", help="Show TruePanel version")
 
     simulate = subcommands.add_parser("simulate", help="Run simulator")
     simulate.add_argument(
@@ -152,7 +171,15 @@ def build_parser():
 def main():
     parser = build_parser()
     args = parser.parse_args()
+
+    logger = setup_logging(args.log_level)
+    logger.info("TruePanel CLI starting")
+
     registry = load_plugins()
+
+    if args.command == "version":
+        print_version(registry)
+        return
 
     if args.doctor or args.command == "doctor":
         raise SystemExit(run_doctor())
@@ -165,6 +192,7 @@ def main():
         run_simulator(args, registry)
         return
 
+    logger.info("Starting LCD menu")
     runpy.run_path("lcd-menu.py", run_name="__main__")
 
 
