@@ -6,6 +6,7 @@ TruePanel launcher.
 Default behavior safely runs the existing working LCD menu.
 
 Simulator mode runs a collector without touching LCD hardware.
+Plugin status mode shows the active registry.
 """
 
 import argparse
@@ -13,6 +14,7 @@ import runpy
 import time
 
 from truepanel.collectors import create_collector
+from truepanel.plugins import load_plugins
 
 
 def print_state(state):
@@ -27,10 +29,38 @@ def print_state(state):
     print(f"SMART: {state.get('smart', [])}")
 
 
-def run_simulator(args):
+def print_plugins(registry):
+    summary = registry.summary()
+
+    print("\nTruePanel Registry")
+    print("==================")
+
+    print("\nPlugins")
+    print("-------")
+    for plugin in summary["plugins"]:
+        print(f"- {plugin['name']} {plugin['version']}")
+
+    print("\nCollectors")
+    print("----------")
+    for collector in summary["collectors"]:
+        print(f"- {collector}")
+
+    print("\nDashboard Pages")
+    print("---------------")
+    for page in summary["dashboard_pages"]:
+        print(f"- {page['id']}: {page['title']}")
+
+    print("\nTheme Packs")
+    print("-----------")
+    for theme in summary["theme_packs"]:
+        print(f"- {theme}")
+
+
+def run_simulator(args, registry):
     collector = create_collector(
         kind="simulator",
         scenario=args.scenario,
+        registry=registry,
     )
 
     step = 0
@@ -49,6 +79,12 @@ def parse_args():
         "--simulate",
         action="store_true",
         help="Run TruePanel with simulated collector data",
+    )
+
+    parser.add_argument(
+        "--plugins",
+        action="store_true",
+        help="Show loaded TruePanel plugins and registry entries",
     )
 
     parser.add_argument(
@@ -77,9 +113,14 @@ def parse_args():
 
 def main():
     args = parse_args()
+    registry = load_plugins()
+
+    if args.plugins:
+        print_plugins(registry)
+        return
 
     if args.simulate:
-        run_simulator(args)
+        run_simulator(args, registry)
         return
 
     runpy.run_path("lcd-menu.py", run_name="__main__")
