@@ -3,7 +3,15 @@ flightdeck:
   pause_after_button: 60
   idle_slowdown_after: 3600
   idle_interval: 30
-  startup_splash: true
+
+  startup:
+    enabled: true
+    delay: 0.75
+    frames:
+      - ["TruePanel", "Flight Deck"]
+      - ["Mission Ctrl", "Online"]
+      - ["Collectors", "Ready"]
+      - ["Mission Ready", ""]
 
 theme:
   healthy_message: "Mission Ready"

@@ -6,6 +6,9 @@ Owns dashboard rotation behavior for the Flight Deck.
 Mission Control decides what matters.
 Display Manager knows how to build dashboard frames.
 AutoPilot decides when dashboard frames advance.
+
+Startup splash behavior is configuration-driven so boot presentation
+can evolve into theme packs without changing Flight Deck logic.
 """
 
 from time import monotonic
@@ -22,8 +25,9 @@ class AutoPilot:
         config=None,
     ):
         self.display_manager = display_manager
+        self.config = config or {}
 
-        flightdeck = (config or {}).get("flightdeck", {})
+        flightdeck = self.config.get("flightdeck", {})
 
         self.interval = flightdeck.get("rotation_interval", interval)
         self.pause_time = flightdeck.get("pause_after_button", pause_time)
@@ -33,12 +37,49 @@ class AutoPilot:
         )
         self.idle_interval = flightdeck.get("idle_interval", idle_interval)
 
+        self.startup_config = flightdeck.get("startup", {})
+        self.legacy_startup_splash = flightdeck.get("startup_splash", True)
+
         now = monotonic()
 
         self.last_rotation = now
         self.last_interaction = now
         self.pause_until = 0
         self.enabled = True
+
+    def startup_enabled(self):
+        return self.startup_config.get("enabled", self.legacy_startup_splash)
+
+    def startup_delay(self):
+        return self.startup_config.get("delay", 0.75)
+
+    def startup_frames(self):
+        theme = self.config.get("theme", {})
+
+        default_frames = [
+            [
+                theme.get("startup_title", "TruePanel"),
+                theme.get("startup_subtitle", "Flight Deck"),
+            ],
+            ["Mission Ctrl", "Online"],
+            ["Collectors", "Ready"],
+            [theme.get("healthy_message", "Mission Ready"), ""],
+        ]
+
+        frames = self.startup_config.get("frames", default_frames)
+
+        safe_frames = []
+
+        for frame in frames:
+            if not isinstance(frame, (list, tuple)):
+                continue
+
+            line1 = str(frame[0]) if len(frame) > 0 else ""
+            line2 = str(frame[1]) if len(frame) > 1 else ""
+
+            safe_frames.append([line1[:16], line2[:16]])
+
+        return safe_frames or default_frames
 
     def current_interval(self):
         now = monotonic()
