@@ -7,6 +7,7 @@ Default behavior safely runs the existing working LCD menu.
 
 Simulator mode runs a collector without touching LCD hardware.
 Plugin status mode shows the active registry.
+Doctor mode runs safe system diagnostics.
 """
 
 import argparse
@@ -14,6 +15,7 @@ import runpy
 import time
 
 from truepanel.collectors import create_collector
+from truepanel.doctor import run_doctor
 from truepanel.plugins import load_plugins
 
 
@@ -88,6 +90,12 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Run TruePanel diagnostics",
+    )
+
+    parser.add_argument(
         "--scenario",
         default="normal",
         choices=["normal", "thermal", "pool", "smart", "resilver", "everything"],
@@ -114,6 +122,9 @@ def parse_args():
 def main():
     args = parse_args()
     registry = load_plugins()
+
+    if args.doctor:
+        raise SystemExit(run_doctor())
 
     if args.plugins:
         print_plugins(registry)
