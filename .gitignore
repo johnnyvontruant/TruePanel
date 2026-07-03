@@ -30,3 +30,4 @@ development/backups/*.before-*.py
 
 # Ignore Python cache anywhere
 **/__pycache__/
+.quality-venv/
