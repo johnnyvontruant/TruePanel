@@ -48,14 +48,26 @@ class DisplayManager:
         self.queue_index = 0
         self.dashboard_index = 0
 
+    def status_prefix(self, priority):
+        if priority >= Priority.CRITICAL:
+            return "!!"
+        if priority >= Priority.WARNING:
+            return "! "
+        if priority >= Priority.INFO:
+            return "i "
+        return "OK"
+
+    def mission_title(self, state, priority):
+        hostname = state.get("hostname", "BattleStation")
+        return f"{self.status_prefix(priority)} {hostname}"[:16]
+
     def evaluate(self, state):
         event = self.mission.evaluate(state)
         decision = self.alert_manager.evaluate(event)
 
         if decision.interrupt:
-            self.mode = DisplayMode.ALERT
             return DisplayFrame(
-                mode=self.mode,
+                mode=DisplayMode.ALERT,
                 line1="*** ALERT ***",
                 line2=event.title,
                 priority=event.priority,
@@ -65,42 +77,18 @@ class DisplayManager:
             )
 
         rendered = render_event(event)
-        return DisplayFrame(
-            mode=DisplayMode.NORMAL,
-            line1=rendered[0],
-            line2=rendered[1],
-            priority=event.priority,
-            timeout=event.timeout,
-            interrupt=False,
-            event=event,
-        )
+        return DisplayFrame(DisplayMode.NORMAL, rendered[0], rendered[1], event.priority, event.timeout, False, event)
 
     def render_alert_detail(self, event):
         if event.event_id in ("storage.scrub", "storage.resilver"):
             try:
                 percent = int(str(event.message).strip("%"))
-                return DisplayFrame(
-                    mode=DisplayMode.ALERT,
-                    line1=f"{event.title} {percent}%",
-                    line2=progress_bar(percent),
-                    priority=event.priority,
-                    timeout=event.timeout,
-                    interrupt=True,
-                    event=event,
-                )
+                return DisplayFrame(DisplayMode.ALERT, f"{event.title} {percent}%", progress_bar(percent), event.priority, event.timeout, True, event)
             except Exception:
                 pass
 
         rendered = render_event(event)
-        return DisplayFrame(
-            mode=DisplayMode.ALERT,
-            line1=rendered[0],
-            line2=rendered[1],
-            priority=event.priority,
-            timeout=event.timeout,
-            interrupt=True,
-            event=event,
-        )
+        return DisplayFrame(DisplayMode.ALERT, rendered[0], rendered[1], event.priority, event.timeout, True, event)
 
     def render_dashboard(self, state):
         pages = [
@@ -135,13 +123,13 @@ class DisplayManager:
             priority = Priority.WARNING
             event_obj = history[0]
         else:
-            line2 = "Healthy"
+            line2 = "Mission Ready"
             priority = Priority.HEALTHY
             event_obj = event
 
         return DisplayFrame(
             mode=DisplayMode.DASHBOARD,
-            line1=state.get("hostname", "BattleStation"),
+            line1=self.mission_title(state, priority),
             line2=line2,
             priority=priority,
             timeout=5,
@@ -165,40 +153,23 @@ class DisplayManager:
                 line2 = f"{len(pools)} Pools OK"
                 priority = Priority.HEALTHY
 
-        return DisplayFrame(
-            mode=DisplayMode.DASHBOARD,
-            line1="Storage",
-            line2=line2,
-            priority=priority,
-            timeout=5,
-            interrupt=False,
-        )
+        return DisplayFrame(DisplayMode.DASHBOARD, "Storage", line2, priority, 5, False)
 
     def _dashboard_capacity(self, state):
         pools = state.get("pools", [])
 
         if not pools:
-            return DisplayFrame(
-                mode=DisplayMode.DASHBOARD,
-                line1="Capacity",
-                line2="No Pool Data",
-                priority=Priority.INFO,
-                timeout=5,
-                interrupt=False,
-            )
+            return DisplayFrame(DisplayMode.DASHBOARD, "Capacity", "No Pool Data", Priority.INFO, 5, False)
 
-        fullest = max(
-            pools,
-            key=lambda pool: int(str(pool.get("capacity", "0%")).strip("%") or 0),
-        )
+        def pool_pct(pool):
+            try:
+                return int(str(pool.get("capacity", "0%")).strip("%"))
+            except Exception:
+                return 0
 
+        fullest = max(pools, key=pool_pct)
         name = fullest.get("name", "pool")
-        capacity = fullest.get("capacity", "0%")
-
-        try:
-            pct = int(str(capacity).strip("%"))
-        except Exception:
-            pct = 0
+        pct = pool_pct(fullest)
 
         return DisplayFrame(
             mode=DisplayMode.DASHBOARD,
@@ -212,76 +183,58 @@ class DisplayManager:
     def _dashboard_performance(self, state):
         cpu = state.get("cpu_percent", 0)
         ram = state.get("ram_percent", 0)
+        priority = Priority.WARNING if cpu >= 90 or ram >= 90 else Priority.INFO
 
         return DisplayFrame(
-            mode=DisplayMode.DASHBOARD,
-            line1=f"CPU {cpu}% RAM {ram}%",
-            line2=progress_bar(max(cpu, ram)),
-            priority=Priority.WARNING if cpu >= 90 or ram >= 90 else Priority.INFO,
-            timeout=5,
-            interrupt=False,
+            DisplayMode.DASHBOARD,
+            f"CPU {cpu}% RAM {ram}%",
+            progress_bar(max(cpu, ram)),
+            priority,
+            5,
+            False,
         )
 
     def _dashboard_thermal(self, state):
         temps = state.get("temps", [])
 
         if not temps:
-            line2 = "No Temp Data"
-            priority = Priority.INFO
-        else:
-            hottest = max(temps, key=lambda drive: drive.get("temp", 0))
-            drive = hottest.get("drive", "disk")
-            temp = hottest.get("temp", 0)
-            line2 = f"{drive} {temp}C"
-            priority = Priority.WARNING if temp >= 50 else Priority.HEALTHY
+            return DisplayFrame(DisplayMode.DASHBOARD, "Thermal", "No Temp Data", Priority.INFO, 5, False)
 
-        return DisplayFrame(
-            mode=DisplayMode.DASHBOARD,
-            line1="Thermal",
-            line2=line2,
-            priority=priority,
-            timeout=5,
-            interrupt=False,
-        )
+        hottest = max(temps, key=lambda drive: drive.get("temp", 0))
+        drive = hottest.get("drive", "disk")
+        temp = hottest.get("temp", 0)
+        priority = Priority.WARNING if temp >= 50 else Priority.HEALTHY
+
+        return DisplayFrame(DisplayMode.DASHBOARD, "Thermal", f"{drive} {temp}C", priority, 5, False)
 
     def _dashboard_smart(self, state):
         smart = state.get("smart", [])
 
         if not smart:
-            line2 = "No SMART Data"
-            priority = Priority.INFO
+            return DisplayFrame(DisplayMode.DASHBOARD, "SMART", "No SMART Data", Priority.INFO, 5, False)
+
+        problem_drives = []
+
+        for drive in smart:
+            if drive.get("health") == "FAILED":
+                problem_drives.append(drive)
+            elif drive.get("pending", 0) > 0:
+                problem_drives.append(drive)
+            elif drive.get("offline_uncorrectable", 0) > 0:
+                problem_drives.append(drive)
+            elif drive.get("media_errors", 0) > 0:
+                problem_drives.append(drive)
+            elif drive.get("critical_warning", "0x00") not in ["0x00", "0"]:
+                problem_drives.append(drive)
+
+        if problem_drives:
+            line2 = f"{len(problem_drives)} SMART Alert" + ("s" if len(problem_drives) != 1 else "")
+            priority = Priority.CRITICAL
         else:
-            problem_drives = []
+            line2 = f"{len(smart)} Drives OK"
+            priority = Priority.HEALTHY
 
-            for drive in smart:
-                if drive.get("health") == "FAILED":
-                    problem_drives.append(drive)
-                elif drive.get("pending", 0) > 0:
-                    problem_drives.append(drive)
-                elif drive.get("offline_uncorrectable", 0) > 0:
-                    problem_drives.append(drive)
-                elif drive.get("media_errors", 0) > 0:
-                    problem_drives.append(drive)
-                elif drive.get("critical_warning", "0x00") not in ["0x00", "0"]:
-                    problem_drives.append(drive)
-
-            if problem_drives:
-                line2 = f"{len(problem_drives)} SMART Alert"
-                if len(problem_drives) != 1:
-                    line2 += "s"
-                priority = Priority.CRITICAL
-            else:
-                line2 = f"{len(smart)} Drives OK"
-                priority = Priority.HEALTHY
-
-        return DisplayFrame(
-            mode=DisplayMode.DASHBOARD,
-            line1="SMART",
-            line2=line2,
-            priority=priority,
-            timeout=5,
-            interrupt=False,
-        )
+        return DisplayFrame(DisplayMode.DASHBOARD, "SMART", line2, priority, 5, False)
 
     def render_history(self):
         history = self.alert_manager.get_history()
