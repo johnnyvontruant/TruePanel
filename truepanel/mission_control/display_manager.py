@@ -47,6 +47,17 @@ class DisplayManager:
         self.history_index = 0
         self.queue_index = 0
         self.dashboard_index = 0
+        self.dashboard_pages = [
+            self._dashboard_home,
+            self._dashboard_storage,
+            self._dashboard_capacity,
+            self._dashboard_performance,
+            self._dashboard_thermal,
+            self._dashboard_smart,
+        ]
+
+    def dashboard_count(self):
+        return len(self.dashboard_pages)
 
     def status_prefix(self, priority):
         if priority >= Priority.CRITICAL:
@@ -77,36 +88,53 @@ class DisplayManager:
             )
 
         rendered = render_event(event)
-        return DisplayFrame(DisplayMode.NORMAL, rendered[0], rendered[1], event.priority, event.timeout, False, event)
+
+        return DisplayFrame(
+            mode=DisplayMode.NORMAL,
+            line1=rendered[0],
+            line2=rendered[1],
+            priority=event.priority,
+            timeout=event.timeout,
+            interrupt=False,
+            event=event,
+        )
 
     def render_alert_detail(self, event):
         if event.event_id in ("storage.scrub", "storage.resilver"):
             try:
                 percent = int(str(event.message).strip("%"))
-                return DisplayFrame(DisplayMode.ALERT, f"{event.title} {percent}%", progress_bar(percent), event.priority, event.timeout, True, event)
+                return DisplayFrame(
+                    mode=DisplayMode.ALERT,
+                    line1=f"{event.title} {percent}%",
+                    line2=progress_bar(percent),
+                    priority=event.priority,
+                    timeout=event.timeout,
+                    interrupt=True,
+                    event=event,
+                )
             except Exception:
                 pass
 
         rendered = render_event(event)
-        return DisplayFrame(DisplayMode.ALERT, rendered[0], rendered[1], event.priority, event.timeout, True, event)
+
+        return DisplayFrame(
+            mode=DisplayMode.ALERT,
+            line1=rendered[0],
+            line2=rendered[1],
+            priority=event.priority,
+            timeout=event.timeout,
+            interrupt=True,
+            event=event,
+        )
 
     def render_dashboard(self, state):
-        pages = [
-            self._dashboard_home,
-            self._dashboard_storage,
-            self._dashboard_capacity,
-            self._dashboard_performance,
-            self._dashboard_thermal,
-            self._dashboard_smart,
-        ]
-
-        if self.dashboard_index >= len(pages):
+        if self.dashboard_index >= self.dashboard_count():
             self.dashboard_index = 0
 
-        return pages[self.dashboard_index](state)
+        return self.dashboard_pages[self.dashboard_index](state)
 
     def next_dashboard(self, state):
-        self.dashboard_index = (self.dashboard_index + 1) % 6
+        self.dashboard_index = (self.dashboard_index + 1) % self.dashboard_count()
         return self.render_dashboard(state)
 
     def _dashboard_home(self, state):
@@ -141,17 +169,23 @@ class DisplayManager:
         pools = state.get("pools", [])
 
         if not pools:
-            line2 = "No Pool Data"
-            priority = Priority.INFO
-        else:
-            bad = [pool for pool in pools if pool.get("health") != "ONLINE"]
+            return DisplayFrame(
+                DisplayMode.DASHBOARD,
+                "Storage",
+                "No Pool Data",
+                Priority.INFO,
+                5,
+                False,
+            )
 
-            if bad:
-                line2 = f"{len(bad)} Pool Alert" + ("s" if len(bad) != 1 else "")
-                priority = Priority.CRITICAL
-            else:
-                line2 = f"{len(pools)} Pools OK"
-                priority = Priority.HEALTHY
+        bad = [pool for pool in pools if pool.get("health") != "ONLINE"]
+
+        if bad:
+            line2 = f"{len(bad)} Pool Alert" + ("s" if len(bad) != 1 else "")
+            priority = Priority.CRITICAL
+        else:
+            line2 = f"{len(pools)} Pools OK"
+            priority = Priority.HEALTHY
 
         return DisplayFrame(DisplayMode.DASHBOARD, "Storage", line2, priority, 5, False)
 
@@ -159,7 +193,14 @@ class DisplayManager:
         pools = state.get("pools", [])
 
         if not pools:
-            return DisplayFrame(DisplayMode.DASHBOARD, "Capacity", "No Pool Data", Priority.INFO, 5, False)
+            return DisplayFrame(
+                DisplayMode.DASHBOARD,
+                "Capacity",
+                "No Pool Data",
+                Priority.INFO,
+                5,
+                False,
+            )
 
         def pool_pct(pool):
             try:
@@ -198,20 +239,41 @@ class DisplayManager:
         temps = state.get("temps", [])
 
         if not temps:
-            return DisplayFrame(DisplayMode.DASHBOARD, "Thermal", "No Temp Data", Priority.INFO, 5, False)
+            return DisplayFrame(
+                DisplayMode.DASHBOARD,
+                "Thermal",
+                "No Temp Data",
+                Priority.INFO,
+                5,
+                False,
+            )
 
         hottest = max(temps, key=lambda drive: drive.get("temp", 0))
         drive = hottest.get("drive", "disk")
         temp = hottest.get("temp", 0)
         priority = Priority.WARNING if temp >= 50 else Priority.HEALTHY
 
-        return DisplayFrame(DisplayMode.DASHBOARD, "Thermal", f"{drive} {temp}C", priority, 5, False)
+        return DisplayFrame(
+            DisplayMode.DASHBOARD,
+            "Thermal",
+            f"{drive} {temp}C",
+            priority,
+            5,
+            False,
+        )
 
     def _dashboard_smart(self, state):
         smart = state.get("smart", [])
 
         if not smart:
-            return DisplayFrame(DisplayMode.DASHBOARD, "SMART", "No SMART Data", Priority.INFO, 5, False)
+            return DisplayFrame(
+                DisplayMode.DASHBOARD,
+                "SMART",
+                "No SMART Data",
+                Priority.INFO,
+                5,
+                False,
+            )
 
         problem_drives = []
 
@@ -228,7 +290,9 @@ class DisplayManager:
                 problem_drives.append(drive)
 
         if problem_drives:
-            line2 = f"{len(problem_drives)} SMART Alert" + ("s" if len(problem_drives) != 1 else "")
+            line2 = f"{len(problem_drives)} SMART Alert"
+            if len(problem_drives) != 1:
+                line2 += "s"
             priority = Priority.CRITICAL
         else:
             line2 = f"{len(smart)} Drives OK"
@@ -240,13 +304,29 @@ class DisplayManager:
         history = self.alert_manager.get_history()
 
         if not history:
-            return DisplayFrame(DisplayMode.HISTORY, "Alert History", "No Alerts", Priority.INFO, 5, False)
+            return DisplayFrame(
+                DisplayMode.HISTORY,
+                "Alert History",
+                "No Alerts",
+                Priority.INFO,
+                5,
+                False,
+            )
 
         if self.history_index >= len(history):
             self.history_index = 0
 
         event = history[self.history_index]
-        return DisplayFrame(DisplayMode.HISTORY, f"Alert {self.history_index + 1}/{len(history)}", event.title, event.priority, 5, False, event)
+
+        return DisplayFrame(
+            DisplayMode.HISTORY,
+            f"Alert {self.history_index + 1}/{len(history)}",
+            event.title,
+            event.priority,
+            5,
+            False,
+            event,
+        )
 
     def next_history(self):
         history = self.alert_manager.get_history()
@@ -257,13 +337,29 @@ class DisplayManager:
         history = self.alert_manager.get_history()
 
         if not history:
-            return DisplayFrame(DisplayMode.QUEUE, "No Alerts", "System Quiet", Priority.HEALTHY, 5, False)
+            return DisplayFrame(
+                DisplayMode.QUEUE,
+                "No Alerts",
+                "System Quiet",
+                Priority.HEALTHY,
+                5,
+                False,
+            )
 
         if self.queue_index >= len(history):
             self.queue_index = 0
 
         event = history[self.queue_index]
-        return DisplayFrame(DisplayMode.QUEUE, f"Queue {self.queue_index + 1}/{len(history)}", event.title, event.priority, 5, False, event)
+
+        return DisplayFrame(
+            DisplayMode.QUEUE,
+            f"Queue {self.queue_index + 1}/{len(history)}",
+            event.title,
+            event.priority,
+            5,
+            False,
+            event,
+        )
 
     def next_event_queue(self):
         history = self.alert_manager.get_history()

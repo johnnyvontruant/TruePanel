@@ -3,7 +3,6 @@
 import json
 import os
 import platform
-import socket
 import subprocess
 import threading
 import time
@@ -12,7 +11,8 @@ import qnaplcd
 
 from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
-from truepanel.mission_control import MissionControl, Priority
+from truepanel.flightdeck.autopilot import AutoPilot
+from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.healthy import healthy_watcher
@@ -34,11 +34,11 @@ menu_item = 0
 zfs_pools = []
 ip_addresses = []
 
-
 collector = TruePanelCollector()
 mission = MissionControl()
 alert_manager = AlertManager()
 display_manager = DisplayManager(mission, alert_manager)
+autopilot = AutoPilot(display_manager)
 
 mission.register(pool_watcher)
 mission.register(thermal_watcher)
@@ -83,17 +83,13 @@ def show_startup_splash():
     write_lines("TruePanel", "Flight Deck", 1)
     write_lines("Collector", "Online", 1)
     write_lines("Mission Ctrl", "Online", 1)
+    write_lines("AutoPilot", "Online", 1)
     write_lines("Display", "Ready", 1)
 
     try:
         state = collector.update()
-        event = mission.evaluate(state)
-
-        if event.priority >= Priority.WARNING:
-            write_lines(platform.node(), event.title, 2)
-        else:
-            write_lines(platform.node(), event.message, 2)
-
+        frame = autopilot.frame(state)
+        write_lines(frame.line1, frame.line2, 2)
     except Exception:
         write_lines("TruePanel", "Ready", 2)
 
@@ -290,7 +286,7 @@ def show_fan_pwm():
 
 def show_mission_home():
     state = get_state()
-    frame = display_manager.render_dashboard(state)
+    frame = autopilot.tick(state)
 
     lcd.clear()
     lcd.write(0, frame.lines)
@@ -298,7 +294,15 @@ def show_mission_home():
 
 def next_mission_dashboard():
     state = get_state()
-    frame = display_manager.next_dashboard(state)
+    frame = autopilot.next(state)
+
+    lcd.clear()
+    lcd.write(0, frame.lines)
+
+
+def previous_mission_dashboard():
+    state = get_state()
+    frame = autopilot.previous(state)
 
     lcd.clear()
     lcd.write(0, frame.lines)
@@ -390,7 +394,11 @@ def response_handler(command, data):
         lcd_on()
 
         if menu[menu_item] == show_mission_home:
-            if data in (0x01, 0x02):
+            if data == 0x01:
+                previous_mission_dashboard()
+                return
+
+            if data == 0x02:
                 next_mission_dashboard()
                 return
 
@@ -431,7 +439,7 @@ def main():
 
         if not maybe_show_alert():
             menu[menu_item]()
-            time.sleep(30)
+            time.sleep(5 if menu[menu_item] == show_mission_home else 30)
 
     lcd.backlight(False)
 
