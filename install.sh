@@ -4,6 +4,7 @@ set -euo pipefail
 APP_NAME="truepanel"
 INSTALL_DIR="/opt/truepanel"
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
+BIN_FILE="/usr/local/bin/truepanel"
 
 echo "== TruePanel Installer =="
 
@@ -29,6 +30,15 @@ echo "Installing Python dependencies..."
 "$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
 "$INSTALL_DIR/.venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
+echo "Creating CLI wrapper..."
+cat > "$BIN_FILE" <<CLI
+#!/usr/bin/env bash
+cd "$INSTALL_DIR"
+exec "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/truepanel.py" "\$@"
+CLI
+
+chmod +x "$BIN_FILE"
+
 echo "Creating systemd service..."
 cat > "$SERVICE_FILE" <<SERVICE
 [Unit]
@@ -39,7 +49,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/.venv/bin/python $INSTALL_DIR/truepanel.py
+ExecStart=$BIN_FILE run
 Restart=always
 RestartSec=5
 
@@ -52,6 +62,11 @@ systemctl daemon-reload
 
 echo
 echo "Install complete."
+echo
+echo "Try:"
+echo "  truepanel doctor"
+echo "  truepanel plugins"
+echo "  truepanel simulate thermal --steps 5 --delay 0.2"
 echo
 echo "Start with:"
 echo "  systemctl start truepanel"
