@@ -7,7 +7,7 @@ PYTHON_BIN=""
 echo "== TruePanel Installer =="
 echo
 
-if [[ $EUID -ne 0 ]]; then
+if [ "$(id -u)" -ne 0 ]; then
   echo "Please run as root: sudo ./install.sh"
   exit 1
 fi
@@ -31,7 +31,7 @@ rsync -a --delete \
   ./ "$INSTALL_DIR/"
 
 echo "Creating default configuration if needed..."
-if [[ ! -f "$INSTALL_DIR/truepanel.yaml" ]]; then
+if [ ! -f "$INSTALL_DIR/truepanel.yaml" ]; then
   cat > "$INSTALL_DIR/truepanel.yaml" <<'YAML'
 theme_pack: default
 
