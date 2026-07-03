@@ -11,6 +11,7 @@ from typing import Optional
 from .constants import Priority
 from .event import MissionEvent
 from .renderer import render_event
+from truepanel.display.widgets import progress_bar
 
 
 class DisplayMode:
@@ -78,6 +79,21 @@ class DisplayManager:
         )
 
     def render_alert_detail(self, event):
+        if event.event_id in ("storage.scrub", "storage.resilver"):
+            try:
+                percent = int(str(event.message).strip("%"))
+                return DisplayFrame(
+                    mode=DisplayMode.ALERT,
+                    line1=f"{event.title} {percent}%",
+                    line2=progress_bar(percent),
+                    priority=event.priority,
+                    timeout=event.timeout,
+                    interrupt=True,
+                    event=event,
+                )
+            except Exception:
+                pass
+
         rendered = render_event(event)
 
         return DisplayFrame(
