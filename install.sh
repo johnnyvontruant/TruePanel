@@ -1,10 +1,14 @@
+cd ~/TruePanel
+cat > install.sh <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 
 APP_NAME="truepanel"
 INSTALL_DIR="/opt/truepanel"
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
-BIN_FILE="/usr/local/bin/truepanel"
+BIN_DIR="$INSTALL_DIR/bin"
+BIN_FILE="$BIN_DIR/truepanel"
+PYTHON_BIN=""
 
 echo "== TruePanel Installer =="
 echo
@@ -71,18 +75,50 @@ theme:
 YAML
 fi
 
-echo "Creating Python virtual environment..."
-python3 -m venv "$INSTALL_DIR/.venv"
+echo "Preparing Python runtime..."
+if python3 -m venv "$INSTALL_DIR/.venv" >/tmp/truepanel-venv.log 2>&1; then
+  PYTHON_BIN="$INSTALL_DIR/.venv/bin/python"
 
-echo "Installing Python dependencies..."
-"$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
-"$INSTALL_DIR/.venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+  echo "Installing Python dependencies into virtual environment..."
+  "$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
+  "$INSTALL_DIR/.venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+else
+  echo "Virtual environment unavailable."
+  echo "Using system Python instead."
+  echo
+  echo "Reason:"
+  cat /tmp/truepanel-venv.log
+  echo
+
+  PYTHON_BIN="$(command -v python3)"
+fi
+
+echo "Checking Python imports..."
+"$PYTHON_BIN" - <<'PY'
+missing = []
+
+for module in ["yaml"]:
+    try:
+        __import__(module)
+    except Exception:
+        missing.append(module)
+
+if missing:
+    print("Missing Python modules: " + ", ".join(missing))
+    print("Install dependencies or run TruePanel from an environment that provides them.")
+    raise SystemExit(1)
+
+print("Python imports OK")
+PY
+
+echo "Creating CLI directory..."
+mkdir -p "$BIN_DIR"
 
 echo "Creating CLI wrapper..."
 cat > "$BIN_FILE" <<CLI
 #!/usr/bin/env bash
 cd "$INSTALL_DIR"
-exec "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/truepanel.py" "\$@"
+exec "$PYTHON_BIN" "$INSTALL_DIR/truepanel.py" "\$@"
 CLI
 
 chmod +x "$BIN_FILE"
@@ -123,9 +159,9 @@ echo
 echo "$DOCTOR_STATUS"
 echo
 echo "Try:"
-echo "  truepanel doctor"
-echo "  truepanel plugins"
-echo "  truepanel simulate thermal --steps 5 --delay 0.2"
+echo "  $BIN_FILE doctor"
+echo "  $BIN_FILE plugins"
+echo "  $BIN_FILE simulate thermal --steps 5 --delay 0.2"
 echo
 echo "Start with:"
 echo "  systemctl start truepanel"
@@ -135,3 +171,8 @@ echo "  systemctl enable truepanel"
 echo
 echo "View logs with:"
 echo "  journalctl -u truepanel -f"
+SH
+
+chmod +x install.sh
+bash -n install.sh
+git diff install.sh
