@@ -147,15 +147,12 @@ truepanel/
 Clone the repository.
 
 ```bash
-git clone https://github.com/JohnnyvonTruant/TruePanel.git
+git clone https://github.com/johnnyvontruant/TruePanel.git
 cd TruePanel
+bash install.sh
+systemctl start truepanel
 ```
-
-Install dependencies.
-
-```bash
-./install.sh
-```
+Use bash install.sh instead of ./install.sh on TrueNAS SCALE to avoid executable-permission or noexec mount issues.
 
 Launch TruePanel.
 
