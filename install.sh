@@ -1,4 +1,3 @@
-cat > install.sh <<'EOF'
 #!/usr/bin/env bash
 set -e
 
@@ -75,4 +74,3 @@ echo "  systemctl start truepanel"
 echo
 echo "View logs with:"
 echo "  journalctl -u truepanel -f"
-EOF
