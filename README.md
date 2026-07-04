@@ -1,260 +1,246 @@
 # TruePanel
 
-> **Mission control for your TrueNAS front panel.**
+<p align="center">
+  <img src="assets/logo/truepanel-logo.svg" alt="TruePanel Logo" width="180">
+</p>
 
-TruePanel is a modular front-panel monitoring platform for supported QNAP NAS systems running TrueNAS SCALE. It brings the built-in LCD back to life with a real-time dashboard, automated rotation, alert-aware display logic, theme packs, diagnostics, simulation tools, and a plugin-ready architecture.
+<h3 align="center">
+Mission Control for TrueNAS LCD Dashboards
+</h3>
 
-TruePanel started as a way to revive the LCD on a QNAP TVS-671. It has grown into a small, extensible monitoring platform designed around one goal:
+<p align="center">
+Transform compatible QNAP LCD hardware into a modern, plugin-driven dashboard for TrueNAS SCALE.
+</p>
 
-> **The front panel should tell you the single most important thing happening on your NAS.**
+<p align="center">
+  <img src="https://img.shields.io/badge/status-active-success.svg">
+  <img src="https://img.shields.io/badge/python-3.11+-blue.svg">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg">
+  <img src="https://img.shields.io/badge/platform-TrueNAS%20SCALE-blue.svg">
+</p>
 
 ---
 
-## Project Status
+## Overview
 
-**Current release candidate:** `v1.0.0-rc0`
+TruePanel brings aging QNAP LCD hardware back to life by turning it into a dedicated system dashboard for TrueNAS SCALE.
 
-TruePanel has passed a clean installation test on TrueNAS SCALE:
+Instead of becoming another forgotten display, the LCD becomes a live mission console for your NAS, showing the information that matters most:
 
-```text
-Clone repository
-Run installer
-Doctor reports MISSION READY
-Start systemd service
-Reboot
-Service starts automatically
+- Storage pool health
+- CPU utilization
+- Memory usage
+- Network activity
+- Drive temperatures
+- System alerts
+- Plugin-provided pages
+- Theme-aware layouts
 
-Highlights
-QNAP front-panel LCD support
-TrueNAS SCALE-focused monitoring
-Collector-first system state architecture
-Mission Control event evaluation
-Alert Manager with priority handling
-Display Manager with registry-driven dashboard pages
-FlightDeck AutoPilot dashboard rotation
-Startup sequence
-Night Mode
-Theme packs
-Plugin registry and plugin manager
-Simulator collector
-truepanel doctor diagnostics
-truepanel plugins registry view
-truepanel simulate scenarios
-systemd service installer
-Docker support foundation
-Supported Hardware
-Tested
-QNAP TVS-671
-TrueNAS SCALE
-LCD serial port: /dev/ttyS1
+TruePanel was designed from the ground up around a modular architecture, allowing new pages, collectors, themes, and hardware support to be added without changing the core application.
 
-Additional QNAP models may work, but community testing is needed.
+---
 
-Quick Start
+## Why TruePanel?
 
-Clone the development branch:
+Most LCD projects stop at displaying a few system statistics.
 
-git clone -b develop https://github.com/johnnyvontruant/TruePanel.git
+TruePanel aims to become a flexible dashboard platform.
+
+Its design focuses on:
+
+- Clean architecture
+- Modular components
+- Hardware abstraction
+- Expandability
+- Reliability
+- Easy customization
+
+Whether you're running a single home NAS or maintaining multiple systems, TruePanel provides a lightweight dashboard that always keeps your server's status within view.
+
+---
+
+## Features
+
+### Mission Control
+
+The central engine that coordinates data collection, state updates, and page rendering.
+
+### FlightDeck
+
+Automatically manages page rotation and prioritization.
+
+### Plugin Framework
+
+Create new dashboard pages without modifying the core application.
+
+### Collector Framework
+
+System information is gathered through independent collectors, making it easy to extend and maintain.
+
+### Theme Engine
+
+Support for multiple display themes and future community-created designs.
+
+### Hardware Abstraction
+
+Designed so additional LCD hardware can be supported with minimal changes.
+
+---
+
+## Architecture
+
+```
+                +--------------------+
+                |    Collectors      |
+                +---------+----------+
+                          |
+                          v
+                +--------------------+
+                |  Mission Control   |
+                +---------+----------+
+                          |
+                          v
+                +--------------------+
+                |   Shared State     |
+                +---------+----------+
+                          |
+                          v
+                +--------------------+
+                |    FlightDeck      |
+                +---------+----------+
+                          |
+                          v
+                +--------------------+
+                | Display Manager    |
+                +---------+----------+
+                          |
+                          v
+                +--------------------+
+                |      LCD Driver    |
+                +--------------------+
+```
+
+Each component has a single responsibility, making the project easier to understand, test, and extend.
+
+---
+
+## Project Structure
+
+```
+truepanel/
+│
+├── collectors/
+├── mission_control/
+├── hardware/
+├── display/
+├── pages/
+├── plugins/
+├── themes/
+├── shared_state/
+└── utils/
+```
+
+---
+
+## Quick Start
+
+Clone the repository.
+
+```bash
+git clone https://github.com/<username>/TruePanel.git
 cd TruePanel
+```
 
-Run the installer:
+Install dependencies.
 
-sudo ./install.sh
+```bash
+./install.sh
+```
 
-Run diagnostics:
+Launch TruePanel.
 
-/opt/truepanel/bin/truepanel doctor
+```bash
+python3 run.py
+```
 
-Start the service:
+---
 
-sudo systemctl start truepanel
+## Screenshots
 
-Enable startup on boot:
+Coming soon.
 
-sudo systemctl enable truepanel
+We are actively developing the next generation dashboard interface.
 
-View logs:
+---
 
-journalctl -u truepanel -f
-CLI
+## Roadmap
 
-After installation, use:
+### Current
 
-/opt/truepanel/bin/truepanel doctor
-/opt/truepanel/bin/truepanel plugins
-/opt/truepanel/bin/truepanel version
-/opt/truepanel/bin/truepanel simulate thermal --steps 5 --delay 0.2
+- Modular architecture
+- Plugin system
+- Theme support
+- Mission Control
+- FlightDeck
+- Collector framework
 
-The service uses:
+### In Progress
 
-/opt/truepanel/bin/truepanel run
-Simulator
+- AutoPilot enhancements
+- Additional dashboard pages
+- Improved installer
+- Configuration manager
 
-The simulator lets you test TruePanel without creating real NAS problems.
+### Planned
 
-Available scenarios:
+- Sentinel monitoring
+- REST API
+- Web dashboard
+- Community plugin repository
+- Docker support
+- Multiple LCD hardware targets
 
-normal
-thermal
-pool
-smart
-resilver
-network
-capacity
-quiet-night
-everything
+---
 
-Example:
+## Contributing
 
-/opt/truepanel/bin/truepanel simulate everything --steps 10 --delay 0.2
-Doctor
+Contributions are always welcome.
 
-truepanel doctor checks:
+Ideas, bug reports, documentation improvements, testing, and pull requests all help move the project forward.
 
-Python runtime
-Configuration
-Theme pack
-Plugin registry
-Required system commands
-TrueNAS collector import
-Simulator state generation
-Mission stack imports
+If you're interested in contributing:
 
-A healthy install ends with:
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Submit a Pull Request
 
-MISSION READY
-Architecture
-                           TruePanel
-                               │
-                         truepanel CLI
-                               │
-      ┌────────────────────────┼────────────────────────┐
-      │                        │                        │
-   Doctor                 Simulator               Plugin Manager
-      │                        │                        │
-      └────────────────────────┼────────────────────────┘
-                               │
-                        Plugin Registry
-      ┌──────────────┬─────────┼──────────┬─────────────┐
-      │              │         │          │             │
- Collectors      Dashboard   Themes   Startup      Hardware
-      │            Pages                  │
-      └───────────────────────────────────┘
-                      │
-              Collector Factory
-                      │
-              Mission Control
-                      │
-              Alert Manager
-                      │
-             Display Manager
-                      │
-                 FlightDeck
-                      │
-                  AutoPilot
-                      │
-                 LCD Hardware
-Configuration
+---
 
-TruePanel uses truepanel.yaml.
+## Design Philosophy
 
-Example:
+TruePanel follows a few simple principles:
 
-theme_pack: default
+- One component, one responsibility.
+- Keep the display readable.
+- Reliability over complexity.
+- Build for extensibility.
+- Make contributions approachable.
+- Document decisions.
+- Have fun building cool things.
 
-flightdeck:
-  rotation_interval: 5
-  pause_after_button: 60
-  idle_slowdown_after: 3600
-  idle_interval: 30
+---
 
-  transitions:
-    enabled: true
-
-  startup:
-    enabled: true
-    delay: 0.75
-    diagnostics: true
-
-  night_mode:
-    enabled: true
-    idle_after: 1800
-    rotation_interval: 60
-    suppress_info: true
-    dashboard_pages:
-      - home
-      - storage
-Theme Packs
-
-Included theme packs:
-
-default
-tactical
-quiet
-
-Theme packs live in:
-
-truepanel/themes/packs/
-Plugins
-
-TruePanel includes a plugin registry and manager.
-
-Built-in plugins:
-
-Core
-Simulator
-Plugin Status
-
-Current plugin-provided capabilities include:
-
-dashboard pages
-collectors
-theme pack registration
-Development
-
-Run syntax checks:
-
-python3 -m py_compile truepanel.py collector.py truepanel/**/*.py
-
-Run the simulator from the repository:
-
-python3 truepanel.py simulate thermal --steps 3 --delay 0.1
-
-Run doctor from the repository:
-
-python3 truepanel.py doctor
-Roadmap
-v1.0
-Release hardening
-Documentation polish
-Installer polish
-Logging polish
-Final clean install test
-v1.1
-Configuration validation
-Plugin examples
-Better installer wizard
-Expanded logging
-Additional hardware compatibility reports
-Future
-Web Mission Console
-Multiple display backends
-MQTT/Home Assistant integration
-Remote collector support
-Multi-NAS monitoring
-Acknowledgements
-
-TruePanel builds on the work of the QNAP LCD and TrueNAS community. The project exists because those early hardware and serial interface experiments made it possible to give these front panels a second life.
-
-License
+## License
 
 Released under the MIT License.
 
+See `LICENSE` for details.
 
-Test:
+---
 
-```bash
-python3 -m py_compile truepanel.py truepanel/cli.py truepanel/logging.py
-python3 truepanel.py version
-python3 truepanel.py doctor
-python3 truepanel.py plugins
+## Acknowledgements
+
+Special thanks to everyone experimenting with QNAP LCD hardware, TrueNAS SCALE, and open-source home lab projects.
+
+Your ideas and feedback continue to shape the future of TruePanel.
