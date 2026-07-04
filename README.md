@@ -147,7 +147,7 @@ truepanel/
 Clone the repository.
 
 ```bash
-git clone https://github.com/<username>/TruePanel.git
+git clone https://github.com/JohnnyvonTruant/TruePanel.git
 cd TruePanel
 ```
 
@@ -244,3 +244,4 @@ See `LICENSE` for details.
 Special thanks to everyone experimenting with QNAP LCD hardware, TrueNAS SCALE, and open-source home lab projects.
 
 Your ideas and feedback continue to shape the future of TruePanel.
+
