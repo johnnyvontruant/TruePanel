@@ -1,0 +1,16 @@
+theme:
+  healthy_message: "Mission Ready"
+  startup_title: "TruePanel"
+  startup_subtitle: "Tactical"
+  warning_prefix: "WARN"
+  critical_prefix: "CRIT"
+  info_prefix: "INFO"
+  healthy_prefix: "GOOD"
+
+flightdeck:
+  startup:
+    frames:
+      - ["TruePanel", "Tactical"]
+      - ["Mission Ctrl", "Online"]
+      - ["Sensors", "Scanning"]
+      - ["Mission Ready", ""]

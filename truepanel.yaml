@@ -1,0 +1,33 @@
+theme_pack: default
+
+flightdeck:
+  rotation_interval: 5
+  pause_after_button: 60
+  idle_slowdown_after: 3600
+  idle_interval: 30
+
+  transitions:
+    enabled: true
+
+  startup:
+    enabled: true
+    delay: 0.75
+    diagnostics: true
+
+  night_mode:
+    enabled: true
+    idle_after: 1800
+    rotation_interval: 60
+    suppress_info: true
+    dashboard_pages:
+      - home
+      - storage
+
+theme:
+  healthy_message: "Mission Ready"
+  startup_title: "TruePanel"
+  startup_subtitle: "Flight Deck"
+  warning_prefix: "! "
+  critical_prefix: "!!"
+  info_prefix: "i "
+  healthy_prefix: "OK"

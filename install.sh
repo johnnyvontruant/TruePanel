@@ -1,3 +1,4 @@
+cat > install.sh <<'EOF'
 #!/usr/bin/env bash
 set -e
 
@@ -5,6 +6,11 @@ INSTALL_DIR="/opt/truepanel"
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
 
 echo "== TruePanel Installer =="
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Please run as root: sudo bash install.sh"
+  exit 1
+fi
 
 echo "Stopping existing service if present..."
 systemctl stop truepanel 2>/dev/null || true
@@ -40,7 +46,7 @@ else
 fi
 
 echo "Creating systemd service..."
-cat > "$SERVICE_FILE" <<EOF
+cat > "$SERVICE_FILE" <<SERVICEEOF
 [Unit]
 Description=TruePanel QNAP LCD Front Panel
 After=network-online.target
@@ -55,7 +61,7 @@ RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-EOF
+SERVICEEOF
 
 echo "Reloading systemd..."
 systemctl daemon-reload
@@ -69,3 +75,4 @@ echo "  systemctl start truepanel"
 echo
 echo "View logs with:"
 echo "  journalctl -u truepanel -f"
+EOF

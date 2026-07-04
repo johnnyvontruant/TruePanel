@@ -1,9 +1,33 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.swp
-*.bak
-*.tmp
-.env
+*.py[cod]
+*$py.class
+
+# Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.venv/
+venv/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Timestamped development backups
+development/backups/*.before-*.py
+
+# Ignore Python cache anywhere
+**/__pycache__/
+.quality-venv/

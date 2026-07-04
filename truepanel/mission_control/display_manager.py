@@ -1,0 +1,429 @@
+"""
+Display Manager
+
+Coordinates Mission Control events, Alert Manager decisions, registry-driven
+dashboard pages, event queue pages, alert history, and LCD-safe rendering.
+
+It does not talk directly to LCD hardware.
+"""
+
+from dataclasses import dataclass
+from typing import Optional
+
+from .constants import Priority
+from .event import MissionEvent
+from .renderer import render_event
+from truepanel.display.widgets import progress_bar
+from truepanel.plugins import load_plugins
+
+
+class DisplayMode:
+    NORMAL = "normal"
+    ALERT = "alert"
+    HISTORY = "history"
+    QUEUE = "queue"
+    DASHBOARD = "dashboard"
+
+
+@dataclass
+class DisplayFrame:
+    mode: str
+    line1: str
+    line2: str
+    priority: Priority
+    timeout: int
+    interrupt: bool
+    event: Optional[MissionEvent] = None
+
+    @property
+    def lines(self):
+        return [self.line1[:16], self.line2[:16]]
+
+
+class DisplayManager:
+    def __init__(self, mission, alert_manager, config=None, registry=None):
+        self.mission = mission
+        self.alert_manager = alert_manager
+        self.config = config or {}
+        self.theme = self.config.get("theme", {})
+        self.registry = registry or self.config.get("registry") or load_plugins(self.config)
+
+        self.mode = DisplayMode.NORMAL
+        self.history_index = 0
+        self.queue_index = 0
+        self.dashboard_index = 0
+
+        self.builtin_dashboard_pages = {
+            "home": self._dashboard_home,
+            "storage": self._dashboard_storage,
+            "capacity": self._dashboard_capacity,
+            "performance": self._dashboard_performance,
+            "thermal": self._dashboard_thermal,
+            "smart": self._dashboard_smart,
+        }
+
+        self.dashboard_pages = self.build_dashboard_pages()
+
+    def build_dashboard_pages(self):
+        pages = []
+
+        for page in getattr(self.registry, "dashboard_pages", []):
+            renderer = page.get("renderer")
+
+            if renderer is None:
+                renderer = self.builtin_dashboard_pages.get(page.get("id"))
+
+            if renderer is not None:
+                pages.append({
+                    "id": page.get("id", "unknown"),
+                    "title": page.get("title", page.get("id", "Dashboard")),
+                    "renderer": renderer,
+                })
+
+        if not pages:
+            pages.append({
+                "id": "home",
+                "title": "Mission Home",
+                "renderer": self._dashboard_home,
+            })
+
+        return pages
+
+    def dashboard_count(self):
+        return len(self.dashboard_pages)
+
+    def dashboard_page_ids(self):
+        return [page["id"] for page in self.dashboard_pages]
+
+    def make_frame(
+        self,
+        line1,
+        line2,
+        priority=Priority.INFO,
+        timeout=5,
+        interrupt=False,
+        event=None,
+        mode=DisplayMode.DASHBOARD,
+    ):
+        return DisplayFrame(
+            mode=mode,
+            line1=str(line1)[:16],
+            line2=str(line2)[:16],
+            priority=priority,
+            timeout=timeout,
+            interrupt=interrupt,
+            event=event,
+        )
+
+    def theme_value(self, key, default):
+        return self.theme.get(key, default)
+
+    def status_prefix(self, priority):
+        if priority >= Priority.CRITICAL:
+            return self.theme_value("critical_prefix", "!!")
+        if priority >= Priority.WARNING:
+            return self.theme_value("warning_prefix", "! ")
+        if priority >= Priority.INFO:
+            return self.theme_value("info_prefix", "i ")
+        return self.theme_value("healthy_prefix", "OK")
+
+    def mission_title(self, state, priority):
+        hostname = state.get("hostname", "BattleStation")
+        return f"{self.status_prefix(priority)} {hostname}"[:16]
+
+    def evaluate(self, state):
+        event = self.mission.evaluate(state)
+        decision = self.alert_manager.evaluate(event)
+
+        if decision.interrupt:
+            return DisplayFrame(
+                mode=DisplayMode.ALERT,
+                line1="*** ALERT ***",
+                line2=event.title,
+                priority=event.priority,
+                timeout=2,
+                interrupt=True,
+                event=event,
+            )
+
+        rendered = render_event(event)
+
+        return DisplayFrame(
+            mode=DisplayMode.NORMAL,
+            line1=rendered[0],
+            line2=rendered[1],
+            priority=event.priority,
+            timeout=event.timeout,
+            interrupt=False,
+            event=event,
+        )
+
+    def render_alert_detail(self, event):
+        if event.event_id in ("storage.scrub", "storage.resilver"):
+            try:
+                percent = int(str(event.message).strip("%"))
+                return DisplayFrame(
+                    mode=DisplayMode.ALERT,
+                    line1=f"{event.title} {percent}%",
+                    line2=progress_bar(percent),
+                    priority=event.priority,
+                    timeout=event.timeout,
+                    interrupt=True,
+                    event=event,
+                )
+            except Exception:
+                pass
+
+        rendered = render_event(event)
+
+        return DisplayFrame(
+            mode=DisplayMode.ALERT,
+            line1=rendered[0],
+            line2=rendered[1],
+            priority=event.priority,
+            timeout=event.timeout,
+            interrupt=True,
+            event=event,
+        )
+
+    def render_dashboard(self, state):
+        if self.dashboard_index >= self.dashboard_count():
+            self.dashboard_index = 0
+
+        page = self.dashboard_pages[self.dashboard_index]
+        renderer = page["renderer"]
+
+        return renderer(state)
+
+    def next_dashboard(self, state):
+        self.dashboard_index = (self.dashboard_index + 1) % self.dashboard_count()
+        return self.render_dashboard(state)
+
+    def _dashboard_home(self, state):
+        event = self.mission.evaluate(state)
+        history = self.alert_manager.get_history()
+        alert_count = len(history)
+
+        if event.priority >= Priority.WARNING:
+            line2 = event.title
+            priority = event.priority
+            event_obj = event
+        elif alert_count:
+            line2 = f"{alert_count} Alert" + ("s" if alert_count != 1 else "")
+            priority = Priority.WARNING
+            event_obj = history[0]
+        else:
+            line2 = self.theme_value("healthy_message", "Mission Ready")
+            priority = Priority.HEALTHY
+            event_obj = event
+
+        return DisplayFrame(
+            mode=DisplayMode.DASHBOARD,
+            line1=self.mission_title(state, priority),
+            line2=line2,
+            priority=priority,
+            timeout=5,
+            interrupt=False,
+            event=event_obj,
+        )
+
+    def _dashboard_storage(self, state):
+        pools = state.get("pools", [])
+
+        if not pools:
+            return DisplayFrame(
+                DisplayMode.DASHBOARD,
+                "Storage",
+                "No Pool Data",
+                Priority.INFO,
+                5,
+                False,
+            )
+
+        bad = [pool for pool in pools if pool.get("health") != "ONLINE"]
+
+        if bad:
+            line2 = f"{len(bad)} Pool Alert" + ("s" if len(bad) != 1 else "")
+            priority = Priority.CRITICAL
+        else:
+            line2 = f"{len(pools)} Pools OK"
+            priority = Priority.HEALTHY
+
+        return DisplayFrame(DisplayMode.DASHBOARD, "Storage", line2, priority, 5, False)
+
+    def _dashboard_capacity(self, state):
+        pools = state.get("pools", [])
+
+        if not pools:
+            return DisplayFrame(
+                DisplayMode.DASHBOARD,
+                "Capacity",
+                "No Pool Data",
+                Priority.INFO,
+                5,
+                False,
+            )
+
+        def pool_pct(pool):
+            try:
+                return int(str(pool.get("capacity", "0%")).strip("%"))
+            except Exception:
+                return 0
+
+        fullest = max(pools, key=pool_pct)
+        name = fullest.get("name", "pool")
+        pct = pool_pct(fullest)
+
+        return DisplayFrame(
+            mode=DisplayMode.DASHBOARD,
+            line1=f"{name[:9]} {pct}%",
+            line2=progress_bar(pct),
+            priority=Priority.WARNING if pct >= 85 else Priority.INFO,
+            timeout=5,
+            interrupt=False,
+        )
+
+    def _dashboard_performance(self, state):
+        cpu = state.get("cpu_percent", 0)
+        ram = state.get("ram_percent", 0)
+        priority = Priority.WARNING if cpu >= 90 or ram >= 90 else Priority.INFO
+
+        return DisplayFrame(
+            DisplayMode.DASHBOARD,
+            f"CPU {cpu}% RAM {ram}%",
+            progress_bar(max(cpu, ram)),
+            priority,
+            5,
+            False,
+        )
+
+    def _dashboard_thermal(self, state):
+        temps = state.get("temps", [])
+
+        if not temps:
+            return DisplayFrame(
+                DisplayMode.DASHBOARD,
+                "Thermal",
+                "No Temp Data",
+                Priority.INFO,
+                5,
+                False,
+            )
+
+        hottest = max(temps, key=lambda drive: drive.get("temp", 0))
+        drive = hottest.get("drive", "disk")
+        temp = hottest.get("temp", 0)
+        priority = Priority.WARNING if temp >= 50 else Priority.HEALTHY
+
+        return DisplayFrame(
+            DisplayMode.DASHBOARD,
+            "Thermal",
+            f"{drive} {temp}C",
+            priority,
+            5,
+            False,
+        )
+
+    def _dashboard_smart(self, state):
+        smart = state.get("smart", [])
+
+        if not smart:
+            return DisplayFrame(
+                DisplayMode.DASHBOARD,
+                "SMART",
+                "No SMART Data",
+                Priority.INFO,
+                5,
+                False,
+            )
+
+        problem_drives = []
+
+        for drive in smart:
+            if drive.get("health") == "FAILED":
+                problem_drives.append(drive)
+            elif drive.get("pending", 0) > 0:
+                problem_drives.append(drive)
+            elif drive.get("offline_uncorrectable", 0) > 0:
+                problem_drives.append(drive)
+            elif drive.get("media_errors", 0) > 0:
+                problem_drives.append(drive)
+            elif drive.get("critical_warning", "0x00") not in ["0x00", "0"]:
+                problem_drives.append(drive)
+
+        if problem_drives:
+            line2 = f"{len(problem_drives)} SMART Alert"
+            if len(problem_drives) != 1:
+                line2 += "s"
+            priority = Priority.CRITICAL
+        else:
+            line2 = f"{len(smart)} Drives OK"
+            priority = Priority.HEALTHY
+
+        return DisplayFrame(DisplayMode.DASHBOARD, "SMART", line2, priority, 5, False)
+
+    def render_history(self):
+        history = self.alert_manager.get_history()
+
+        if not history:
+            return DisplayFrame(
+                DisplayMode.HISTORY,
+                "Alert History",
+                "No Alerts",
+                Priority.INFO,
+                5,
+                False,
+            )
+
+        if self.history_index >= len(history):
+            self.history_index = 0
+
+        event = history[self.history_index]
+
+        return DisplayFrame(
+            DisplayMode.HISTORY,
+            f"Alert {self.history_index + 1}/{len(history)}",
+            event.title,
+            event.priority,
+            5,
+            False,
+            event,
+        )
+
+    def next_history(self):
+        history = self.alert_manager.get_history()
+        self.history_index = 0 if not history else (self.history_index + 1) % len(history)
+        return self.render_history()
+
+    def render_event_queue(self):
+        history = self.alert_manager.get_history()
+
+        if not history:
+            return DisplayFrame(
+                DisplayMode.QUEUE,
+                "No Alerts",
+                "System Quiet",
+                Priority.HEALTHY,
+                5,
+                False,
+            )
+
+        if self.queue_index >= len(history):
+            self.queue_index = 0
+
+        event = history[self.queue_index]
+
+        return DisplayFrame(
+            DisplayMode.QUEUE,
+            f"Queue {self.queue_index + 1}/{len(history)}",
+            event.title,
+            event.priority,
+            5,
+            False,
+            event,
+        )
+
+    def next_event_queue(self):
+        history = self.alert_manager.get_history()
+        self.queue_index = 0 if not history else (self.queue_index + 1) % len(history)
+        return self.render_event_queue()
