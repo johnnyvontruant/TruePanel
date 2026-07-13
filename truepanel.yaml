@@ -57,3 +57,21 @@ plugins:
 
   # Third-party plugin settings live under their plugin ID.
   config: {}
+
+history:
+  enabled: true
+
+  # Native installs use persistent application data under /var/lib.
+  path: /var/lib/truepanel/history/telemetry.jsonl
+
+  # One sample per minute keeps writes modest while preserving useful trends.
+  sample_interval: 60
+
+  retention_days: 30
+  max_samples: 50000
+
+  # Rewrite and prune the JSONL file after this many new samples.
+  compact_every: 250
+
+  # fsync on every sample is unnecessary for noncritical telemetry.
+  flush: false

@@ -15,6 +15,15 @@ except Exception:
 
 
 DEFAULT_CONFIG = {
+    "history": {
+        "enabled": True,
+        "path": "/var/lib/truepanel/history/telemetry.jsonl",
+        "sample_interval": 60,
+        "retention_days": 30,
+        "max_samples": 50000,
+        "compact_every": 250,
+        "flush": False,
+    },
     "plugins": {
         "path": "plugins",
         "external_enabled": True,
