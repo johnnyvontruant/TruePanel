@@ -49,3 +49,11 @@ buzzer:
   long_duration: 0.65
 
   cooldown: 30
+
+plugins:
+  path: plugins
+  external_enabled: true
+  disabled: []
+
+  # Third-party plugin settings live under their plugin ID.
+  config: {}
