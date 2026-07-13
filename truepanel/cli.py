@@ -14,6 +14,7 @@ from truepanel.doctor import run_doctor
 from truepanel.logging import setup_logging
 from truepanel.config.loader import load_config
 from truepanel.hardware import Buzzer
+from truepanel.history import TelemetryRecorder
 from truepanel.themes import Theme, discover_theme_packs, load_theme_pack, validate_theme_pack
 from truepanel.plugins import load_plugins
 from truepanel.plugins.commands import add_plugin_subcommands, handle_plugin_command
@@ -90,13 +91,37 @@ def run_simulator(args, registry):
         registry=registry,
     )
 
+    recorder = None
+
+    if getattr(args, "record_history", False):
+        config = load_config()
+        history_config = dict(config.get("history", {}))
+
+        if getattr(args, "history_path", None):
+            history_config["path"] = args.history_path
+
+        recorder = TelemetryRecorder(history_config)
+
     step = 0
 
     while args.steps == 0 or step < args.steps:
         step += 1
         state = collector.update()
+
+        if recorder is not None:
+            # Recording was explicitly requested for this simulator run,
+            # so preserve every generated step regardless of interval.
+            recorder.record(state, force=True)
+
         print_state(state)
         time.sleep(args.delay)
+
+    if recorder is not None:
+        stats = recorder.stats()
+        print("\nHistory Recording")
+        print("-----------------")
+        print(f"Samples: {stats['samples']}")
+        print(f"Path: {stats['path']}")
 
 
 def print_theme_preview(pack_id):
@@ -248,6 +273,15 @@ def build_parser():
         type=float,
         default=1.0,
         help="Delay between simulator updates in seconds.",
+    )
+    simulate.add_argument(
+        "--record-history",
+        action="store_true",
+        help="Record every generated simulator step to history.",
+    )
+    simulate.add_argument(
+        "--history-path",
+        help="Override the configured history file for this run.",
     )
 
     parser.add_argument(

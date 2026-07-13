@@ -15,6 +15,7 @@ from truepanel.display.widgets import progress_bar
 from truepanel.config.loader import load_config
 from truepanel.flightdeck.autopilot import AutoPilot
 from truepanel.hardware import Buzzer
+from truepanel.history import TelemetryRecorder
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
@@ -43,6 +44,7 @@ alert_manager = AlertManager()
 config = load_config()
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
+history_recorder = TelemetryRecorder(config.get("history", {}))
 buzzer = Buzzer(config.get("buzzer", {}))
 shutdown_requested = False
 
@@ -69,12 +71,31 @@ def shell(cmd):
     return subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
 
 
+def refresh_state(force_history=False):
+    """
+    Refresh collector data and offer the new state to historical telemetry.
+
+    HistoryStore enforces its own sampling interval, so frequent collector
+    refreshes do not become frequent disk writes.
+    """
+
+    state = collector.update()
+
+    history_recorder.record(
+        state,
+        alert_count=len(alert_manager.get_history()),
+        force=force_history,
+    )
+
+    return state
+
+
 def get_state(max_age=5):
     last = collector.state.get("last_updated")
     now = time.time()
 
     if last is None or now - last > max_age:
-        collector.update()
+        return refresh_state()
 
     return collector.state
 
@@ -93,7 +114,7 @@ def show_startup_splash():
     write_lines("Display", "Ready", 1)
 
     try:
-        state = collector.update()
+        state = refresh_state(force_history=True)
         frame = autopilot.frame(state)
         write_lines(frame.line1, frame.line2, 2)
     except Exception:
@@ -315,7 +336,7 @@ def previous_mission_dashboard():
 
 
 def show_mission_control():
-    state = collector.update()
+    state = refresh_state()
     frame = display_manager.evaluate(state)
 
     lcd.clear()
@@ -368,7 +389,7 @@ def request_shutdown(signum=None, frame=None):
 
 
 def maybe_show_alert():
-    state = collector.update()
+    state = refresh_state()
     frame = display_manager.evaluate(state)
 
     if frame.interrupt:
