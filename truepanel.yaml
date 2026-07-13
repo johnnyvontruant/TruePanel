@@ -91,3 +91,16 @@ history:
       - history-network
       - history-zfs
       - history-alerts
+
+graphics_engine:
+  enabled: true
+
+  # auto selects verified custom glyphs, configured ROM glyphs,
+  # or the safe ASCII fallback.
+  mode: auto
+
+  # Keep false until the A125 CGRAM command is verified.
+  custom_glyphs_verified: false
+
+  # Populate only after a successful character-ROM probe.
+  rom_levels: []
