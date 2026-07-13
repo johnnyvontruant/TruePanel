@@ -3,6 +3,8 @@ TruePanel CLI
 """
 
 import argparse
+import sys
+from truepanel.diagnostics.a125 import main as run_a125_diagnostics
 from pathlib import Path
 import platform
 import runpy
@@ -322,6 +324,11 @@ def build_parser():
 
 
 def main():
+    # Project Stargate diagnostic subcommand.
+    if len(sys.argv) >= 3 and sys.argv[1:3] == ["doctor", "a125"]:
+        raise SystemExit(
+            run_a125_diagnostics(sys.argv[3:])
+        )
     parser = build_parser()
     args = parser.parse_args()
 
