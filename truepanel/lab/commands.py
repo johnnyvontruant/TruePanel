@@ -9,21 +9,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import subprocess
 import time
-from contextlib import contextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime
-from pathlib import Path
 
-from truepanel.hardware.a125 import A125Controller
-
-
-DEFAULT_PORT = "/dev/ttyS1"
-DEFAULT_BAUD = 1200
-DEFAULT_TIMEOUT = 1.0
-DEFAULT_CAPTURE_DIR = Path("development/logs")
+from truepanel.lab.capture import (
+    DEFAULT_BAUD,
+    DEFAULT_CAPTURE_DIR,
+    DEFAULT_PORT,
+    DEFAULT_TIMEOUT,
+    open_controller,
+    service_is_active,
+)
 
 
 @dataclass
@@ -34,127 +30,6 @@ class LabResult:
     detail: str = ""
     capture_path: str = ""
 
-
-def service_is_active(service="truepanel") -> bool:
-    result = subprocess.run(
-        ["systemctl", "is-active", "--quiet", service],
-        check=False,
-    )
-    return result.returncode == 0
-
-
-def require_exclusive_access() -> None:
-    if service_is_active():
-        raise RuntimeError(
-            "truepanel.service is running. Run:\n"
-            "  systemctl stop truepanel\n"
-            "before using the Stargate Laboratory."
-        )
-
-
-def capture_path(command, directory=DEFAULT_CAPTURE_DIR) -> Path:
-    directory = Path(directory)
-    directory.mkdir(parents=True, exist_ok=True)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_command = command.replace(" ", "-")
-
-    return directory / f"{timestamp}_lab_{safe_command}.log"
-
-
-class CaptureTransport:
-    def __init__(self, transport, capture):
-        self.transport = transport
-        self.capture = capture
-
-    def record(self, direction, payload):
-        payload = bytes(payload)
-        timestamp = datetime.now().isoformat(timespec="milliseconds")
-
-        self.capture.write(
-            f"{timestamp} {direction} "
-            f"{payload.hex(' ').upper()}\n"
-        )
-        self.capture.flush()
-
-    def write(self, payload):
-        payload = bytes(payload)
-        self.record("TX", payload)
-        return self.transport.write(payload)
-
-    def read(self, size=1):
-        payload = self.transport.read(size)
-
-        if payload:
-            self.record("RX", payload)
-
-        return payload
-
-    def flush(self):
-        flush = getattr(self.transport, "flush", None)
-
-        if callable(flush):
-            flush()
-
-    def close(self):
-        close = getattr(self.transport, "close", None)
-
-        if callable(close):
-            close()
-
-
-@contextmanager
-def open_controller(
-    command,
-    port=DEFAULT_PORT,
-    baud=DEFAULT_BAUD,
-    timeout=DEFAULT_TIMEOUT,
-    capture_dir=DEFAULT_CAPTURE_DIR,
-):
-    require_exclusive_access()
-
-    if not os.path.exists(port):
-        raise FileNotFoundError(f"Serial device not found: {port}")
-
-    try:
-        import serial
-    except ImportError as error:
-        raise RuntimeError(
-            "PySerial is unavailable in this Python environment"
-        ) from error
-
-    path = capture_path(command, capture_dir)
-
-    connection = None
-
-    try:
-        with path.open("w", encoding="utf-8") as capture:
-            capture.write("TruePanel Project Stargate Laboratory\n")
-            capture.write(f"Command: {command}\n")
-            capture.write(f"Port: {port}\n")
-            capture.write(f"Baud: {baud}\n\n")
-            capture.flush()
-
-            connection = serial.Serial(
-                port,
-                baud,
-                timeout=timeout,
-                write_timeout=timeout,
-            )
-
-            transport = CaptureTransport(connection, capture)
-            controller = A125Controller(
-                transport,
-                timeout=timeout,
-            )
-
-            yield controller, path
-    finally:
-        if connection is not None:
-            try:
-                connection.close()
-            except Exception:
-                pass
 
 
 def run_status(args) -> LabResult:
