@@ -11,7 +11,7 @@ flightdeck:
 
   startup:
     enabled: true
-    delay: 0.75
+    delay: 0.18
     diagnostics: true
 
   night_mode:
@@ -22,12 +22,13 @@ flightdeck:
     dashboard_pages:
       - home
       - storage
+      - capacity
 
 theme:
   healthy_message: "Mission Ready"
   startup_title: "TruePanel"
   startup_subtitle: "Flight Deck"
   warning_prefix: "! "
-  critical_prefix: "!!"
+  critical_prefix: "X "
   info_prefix: "i "
-  healthy_prefix: "OK"
+  healthy_prefix: "O "

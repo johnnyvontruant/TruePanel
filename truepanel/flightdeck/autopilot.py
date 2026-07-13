@@ -4,15 +4,15 @@ AutoPilot
 Owns dashboard rotation behavior for the Flight Deck.
 
 Mission Control decides what matters.
-Display Manager knows how to build dashboard frames.
-AutoPilot decides when dashboard frames advance.
-
-Startup splash, Night Mode, and FlightDeck transition behavior are
-configuration-driven so FlightDeck policy can evolve without changing
-Mission Control logic.
+Display Manager builds dashboard frames.
+AutoPilot decides when frames advance.
 """
 
 from time import monotonic
+
+from truepanel.display.animations import startup_frames as graphic_startup_frames
+from truepanel.display.canvas import Canvas
+from truepanel.display.widgets import spinner
 
 
 class FlightMode:
@@ -36,93 +36,175 @@ class AutoPilot:
 
         flightdeck = self.config.get("flightdeck", {})
 
-        self.interval = flightdeck.get("rotation_interval", interval)
-        self.pause_time = flightdeck.get("pause_after_button", pause_time)
+        self.interval = flightdeck.get(
+            "rotation_interval",
+            interval,
+        )
+        self.pause_time = flightdeck.get(
+            "pause_after_button",
+            pause_time,
+        )
         self.idle_slowdown_after = flightdeck.get(
             "idle_slowdown_after",
             idle_slowdown_after,
         )
-        self.idle_interval = flightdeck.get("idle_interval", idle_interval)
+        self.idle_interval = flightdeck.get(
+            "idle_interval",
+            idle_interval,
+        )
 
         self.startup_config = flightdeck.get("startup", {})
-        self.legacy_startup_splash = flightdeck.get("startup_splash", True)
+        self.legacy_startup_splash = flightdeck.get(
+            "startup_splash",
+            True,
+        )
 
         self.night_config = flightdeck.get("night_mode", {})
-        self.night_enabled = self.night_config.get("enabled", False)
-        self.night_idle_after = self.night_config.get("idle_after", 1800)
-        self.night_interval = self.night_config.get("rotation_interval", 60)
-        self.night_suppress_info = self.night_config.get("suppress_info", True)
+        self.night_enabled = self.night_config.get(
+            "enabled",
+            False,
+        )
+        self.night_idle_after = self.night_config.get(
+            "idle_after",
+            1800,
+        )
+        self.night_interval = self.night_config.get(
+            "rotation_interval",
+            60,
+        )
+        self.night_suppress_info = self.night_config.get(
+            "suppress_info",
+            True,
+        )
         self.night_dashboard_pages = self.night_config.get(
             "dashboard_pages",
             ["home", "storage"],
         )
 
-        self.transition_config = flightdeck.get("transitions", {})
-        self.transition_frames = self.transition_config.get("enabled", True)
+        self.transition_config = flightdeck.get(
+            "transitions",
+            {},
+        )
+        self.transition_frames = self.transition_config.get(
+            "enabled",
+            True,
+        )
 
         now = monotonic()
 
         self.last_rotation = now
         self.last_interaction = now
         self.pause_until = 0
+
         self.enabled = True
         self.mode = FlightMode.NORMAL
         self.last_mode = FlightMode.NORMAL
+        self.transition_counter = 0
 
     def startup_enabled(self):
-        return self.startup_config.get("enabled", self.legacy_startup_splash)
+        return self.startup_config.get(
+            "enabled",
+            self.legacy_startup_splash,
+        )
 
     def startup_delay(self):
-        return self.startup_config.get("delay", 0.75)
+        return self.startup_config.get("delay", 0.18)
 
     def startup_frames(self):
         theme = self.config.get("theme", {})
-        registry = getattr(self.display_manager, "registry", None)
+        title = theme.get("startup_title", "TruePanel")
+        subtitle = theme.get("startup_subtitle", "Flight Deck")
 
-        plugin_count = len(getattr(registry, "plugins", [])) if registry else 0
-        collector_count = len(getattr(registry, "collectors", {})) if registry else 0
+        registry = getattr(
+            self.display_manager,
+            "registry",
+            None,
+        )
 
-        default_frames = [
-            [
-                theme.get("startup_title", "TruePanel"),
-                theme.get("startup_subtitle", "Flight Deck"),
-            ],
-            ["Mission Ctrl", "Online"],
-            ["Plugins", f"{plugin_count} Loaded"],
-            ["Collectors", f"{collector_count} Ready"],
-            [theme.get("healthy_message", "Mission Ready"), ""],
-        ]
+        plugin_count = (
+            len(getattr(registry, "plugins", []))
+            if registry
+            else 0
+        )
 
-        frames = self.startup_config.get("frames")
+        collector_count = (
+            len(getattr(registry, "collectors", {}))
+            if registry
+            else 0
+        )
+
+        configured_frames = self.startup_config.get("frames")
+
+        if configured_frames:
+            safe_frames = []
+
+            for frame in configured_frames:
+                if not isinstance(frame, (list, tuple)):
+                    continue
+
+                line1 = str(frame[0]) if len(frame) > 0 else ""
+                line2 = str(frame[1]) if len(frame) > 1 else ""
+
+                safe_frames.append(
+                    [line1[:16], line2[:16]]
+                )
+
+            if safe_frames:
+                return safe_frames
+
+        frames = list(
+            graphic_startup_frames(
+                title=title,
+                subtitle=subtitle,
+                width=16,
+            )
+        )
 
         if self.startup_config.get("diagnostics", True):
-            frames = frames or default_frames
+            frames.extend(
+                [
+                    [
+                        "MISSION CONTROL",
+                        "O Online",
+                    ],
+                    [
+                        "PLUGINS",
+                        f"O {plugin_count} Loaded",
+                    ],
+                    [
+                        "COLLECTORS",
+                        f"O {collector_count} Ready",
+                    ],
+                    [
+                        "O MISSION READY",
+                        "All Systems GO",
+                    ],
+                ]
+            )
         else:
-            frames = frames or default_frames[:2]
+            frames.append(
+                [
+                    "O MISSION READY",
+                    "All Systems GO",
+                ]
+            )
 
-        safe_frames = []
-
-        for frame in frames:
-            if not isinstance(frame, (list, tuple)):
-                continue
-
-            line1 = str(frame[0]) if len(frame) > 0 else ""
-            line2 = str(frame[1]) if len(frame) > 1 else ""
-
-            safe_frames.append([line1[:16], line2[:16]])
-
-        return safe_frames or default_frames
+        return frames
 
     def current_mode(self):
         now = monotonic()
         idle_time = now - self.last_interaction
-
         previous = self.mode
 
-        if self.night_enabled and idle_time >= self.night_idle_after:
+        if (
+            self.night_enabled
+            and idle_time >= self.night_idle_after
+        ):
             self.mode = FlightMode.NIGHT
+
         elif idle_time >= self.idle_slowdown_after:
             self.mode = FlightMode.IDLE
+
         else:
             self.mode = FlightMode.NORMAL
 
@@ -158,20 +240,45 @@ class AutoPilot:
         return self.display_manager.render_dashboard(state)
 
     def transition_frame(self, label):
+        self.transition_counter += 1
+
+        canvas = Canvas()
+        canvas.text(
+            0,
+            0,
+            "FLIGHT DECK",
+            width=16,
+            align="center",
+        )
+        canvas.text(
+            0,
+            1,
+            f"{spinner(self.transition_counter)} {label}",
+            width=16,
+            align="center",
+        )
+
         return self.display_manager.make_frame(
-            line1="FlightDeck",
-            line2=label,
+            line1=canvas.lines[0],
+            line2=canvas.lines[1],
         )
 
     def night_frame(self, state):
-        current_index = getattr(self.display_manager, "dashboard_index", 0)
         allowed_indexes = self.night_dashboard_indexes()
 
         if not allowed_indexes:
             return self.display_manager.render_dashboard(state)
 
+        current_index = getattr(
+            self.display_manager,
+            "dashboard_index",
+            0,
+        )
+
         if current_index not in allowed_indexes:
-            self.display_manager.dashboard_index = allowed_indexes[0]
+            self.display_manager.dashboard_index = (
+                allowed_indexes[0]
+            )
 
         return self.display_manager.render_dashboard(state)
 
@@ -191,15 +298,24 @@ class AutoPilot:
         if not allowed_indexes:
             return self.display_manager.next_dashboard(state)
 
-        current_index = getattr(self.display_manager, "dashboard_index", 0)
+        current_index = getattr(
+            self.display_manager,
+            "dashboard_index",
+            0,
+        )
 
         if current_index not in allowed_indexes:
-            self.display_manager.dashboard_index = allowed_indexes[0]
+            self.display_manager.dashboard_index = (
+                allowed_indexes[0]
+            )
             return self.display_manager.render_dashboard(state)
 
         position = allowed_indexes.index(current_index)
         next_position = (position + 1) % len(allowed_indexes)
-        self.display_manager.dashboard_index = allowed_indexes[next_position]
+
+        self.display_manager.dashboard_index = (
+            allowed_indexes[next_position]
+        )
 
         return self.display_manager.render_dashboard(state)
 
@@ -245,7 +361,9 @@ class AutoPilot:
         if now < self.pause_until:
             return False
 
-        return (now - self.last_rotation) >= self.current_interval()
+        return (
+            now - self.last_rotation
+        ) >= self.current_interval()
 
     def tick(self, state):
         previous_mode = self.mode
