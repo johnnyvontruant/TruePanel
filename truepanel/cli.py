@@ -5,6 +5,7 @@ TruePanel CLI
 import argparse
 import sys
 from truepanel.diagnostics.a125 import main as run_a125_diagnostics
+from truepanel.lab.commands import main as run_stargate_lab
 from pathlib import Path
 import platform
 import runpy
@@ -324,6 +325,11 @@ def build_parser():
 
 
 def main():
+    # Project Stargate Laboratory.
+    if len(sys.argv) >= 2 and sys.argv[1] == "lab":
+        raise SystemExit(
+            run_stargate_lab(sys.argv[2:])
+        )
     # Project Stargate diagnostic subcommand.
     if len(sys.argv) >= 3 and sys.argv[1:3] == ["doctor", "a125"]:
         raise SystemExit(
