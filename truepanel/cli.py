@@ -16,6 +16,7 @@ from truepanel.config.loader import load_config
 from truepanel.hardware import Buzzer
 from truepanel.themes import Theme, discover_theme_packs, load_theme_pack, validate_theme_pack
 from truepanel.plugins import load_plugins
+from truepanel.plugins.commands import add_plugin_subcommands, handle_plugin_command
 
 
 SCENARIOS = [
@@ -207,7 +208,7 @@ def build_parser():
 
     subcommands.add_parser("run", help="Run TruePanel")
     subcommands.add_parser("doctor", help="Run TruePanel diagnostics")
-    subcommands.add_parser("plugins", help="Show loaded plugins")
+    add_plugin_subcommands(subcommands)
     subcommands.add_parser("version", help="Show TruePanel version")
 
     themes = subcommands.add_parser("themes", help="Manage theme packs")
@@ -315,7 +316,10 @@ def main():
     if args.doctor or args.command == "doctor":
         raise SystemExit(run_doctor())
 
-    if args.plugins or args.command == "plugins":
+    if args.command == "plugins":
+        raise SystemExit(handle_plugin_command(args))
+
+    if args.plugins:
         print_plugins(registry)
         return
 

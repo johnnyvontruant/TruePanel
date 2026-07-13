@@ -15,6 +15,12 @@ except Exception:
 
 
 DEFAULT_CONFIG = {
+    "plugins": {
+        "path": "plugins",
+        "external_enabled": True,
+        "disabled": [],
+        "config": {},
+    },
     "flightdeck": {
         "rotation_interval": 5,
         "pause_after_button": 60,
