@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 from truepanel.lab.capture import (
     DEFAULT_BAUD,
@@ -19,6 +19,10 @@ from truepanel.lab.capture import (
     DEFAULT_TIMEOUT,
     open_controller,
     service_is_active,
+)
+from truepanel.lab.experiments import (
+    RepeatSample,
+    run_repeat_experiment,
 )
 
 
@@ -29,6 +33,7 @@ class LabResult:
     value: str = ""
     detail: str = ""
     capture_path: str = ""
+    data: dict[str, object] = field(default_factory=dict)
 
 
 
@@ -192,6 +197,75 @@ def run_monitor(args) -> LabResult:
         )
 
 
+
+def print_repeat_sample(sample: RepeatSample) -> None:
+    if sample.success:
+        print(
+            f"{sample.index:03d}: "
+            f"value=0x{sample.value:04X} "
+            f"latency={sample.latency_ms:.3f} ms"
+        )
+    else:
+        print(
+            f"{sample.index:03d}: "
+            f"FAIL latency={sample.latency_ms:.3f} ms "
+            f"{sample.error}"
+        )
+
+
+def run_repeat(args) -> LabResult:
+    command_name = f"repeat-{args.query}"
+
+    with open_controller(
+        command_name,
+        args.port,
+        args.baud,
+        args.timeout,
+        args.capture_dir,
+    ) as (controller, capture):
+        result = run_repeat_experiment(
+            controller=controller,
+            query=args.query,
+            count=args.count,
+            interval=args.interval,
+            sample_callback=(
+                None
+                if args.json_output
+                else print_repeat_sample
+            ),
+        )
+
+        latency = result.latency
+
+        if latency.count:
+            latency_detail = (
+                f"min={latency.minimum_ms:.3f} ms, "
+                f"avg={latency.average_ms:.3f} ms, "
+                f"median={latency.median_ms:.3f} ms, "
+                f"p95={latency.p95_ms:.3f} ms, "
+                f"max={latency.maximum_ms:.3f} ms"
+            )
+        else:
+            latency_detail = "No successful latency samples"
+
+        consistency = (
+            "consistent"
+            if result.values_consistent
+            else "variable"
+        )
+
+        return LabResult(
+            command="repeat",
+            success=result.failures == 0,
+            value=(
+                f"{result.successes}/{result.requested_count} "
+                f"successful; values {consistency}"
+            ),
+            detail=latency_detail,
+            capture_path=str(capture),
+            data=result.as_dict(),
+        )
+
 def add_common_arguments(parser):
     parser.add_argument("--port", default=DEFAULT_PORT)
     parser.add_argument("--baud", type=int, default=DEFAULT_BAUD)
@@ -254,6 +328,28 @@ def build_parser():
     monitor.add_argument("--samples", type=int, default=20)
     monitor.add_argument("--delay", type=float, default=0.25)
     monitor.set_defaults(handler=run_monitor)
+
+    repeat = commands.add_parser(
+        "repeat",
+        help="Repeat a safe query and measure latency",
+    )
+    repeat.add_argument(
+        "--query",
+        choices=("board", "version", "buttons"),
+        default="board",
+    )
+    repeat.add_argument(
+        "--count",
+        type=int,
+        default=25,
+    )
+    repeat.add_argument(
+        "--interval",
+        type=float,
+        default=0.10,
+        help="Seconds between queries",
+    )
+    repeat.set_defaults(handler=run_repeat)
 
     return parser
 
