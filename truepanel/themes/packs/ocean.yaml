@@ -1,0 +1,27 @@
+metadata:
+  name: Blue Ocean
+  description: Calm nautical status language for the Flight Deck.
+  author: TruePanel
+  version: "1.0"
+
+theme:
+  healthy_message: Smooth Sailing
+  startup_title: TruePanel
+  startup_subtitle: Navigation
+  mission_ready: SMOOTH SAILING
+  all_systems_go: All Decks Clear
+  pool_healthy: STORAGE CLEAR
+  system_watch: WEATHER WATCH
+  alert_banner: DISTRESS ALERT
+  warning_banner: ADVISORY
+
+graphics:
+  filled: "~"
+  empty: "."
+  healthy: "+"
+  info: ":"
+  warning: "!"
+  critical: "X"
+  activity_low: "."
+  activity_mid: "~"
+  activity_high: "="

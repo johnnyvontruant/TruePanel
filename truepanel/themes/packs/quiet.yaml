@@ -1,15 +1,27 @@
-theme:
-  healthy_message: "All Quiet"
-  startup_title: "TruePanel"
-  startup_subtitle: "Quiet Mode"
-  warning_prefix: "! "
-  critical_prefix: "!!"
-  info_prefix: ""
-  healthy_prefix: "OK"
+metadata:
+  name: Quiet
+  description: Calm, low-noise language for always-on displays.
+  author: TruePanel
+  version: "2.0"
 
-flightdeck:
-  rotation_interval: 10
-  night_mode:
-    rotation_interval: 90
-    dashboard_pages:
-      - home
+theme:
+  healthy_message: All Is Well
+  startup_title: TruePanel
+  startup_subtitle: Waking Up
+  mission_ready: ALL IS WELL
+  all_systems_go: Running Quietly
+  pool_healthy: Storage Healthy
+  system_watch: Needs Attention
+  alert_banner: SYSTEM ALERT
+  warning_banner: NOTICE
+
+graphics:
+  filled: "="
+  empty: " "
+  healthy: "."
+  info: "."
+  warning: "!"
+  critical: "X"
+  activity_low: " "
+  activity_mid: "."
+  activity_high: "="

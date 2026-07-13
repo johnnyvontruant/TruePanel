@@ -4,6 +4,7 @@ import json
 import os
 import platform
 import subprocess
+import signal
 import threading
 import time
 
@@ -13,6 +14,7 @@ from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
 from truepanel.config.loader import load_config
 from truepanel.flightdeck.autopilot import AutoPilot
+from truepanel.hardware import Buzzer
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
@@ -41,6 +43,8 @@ alert_manager = AlertManager()
 config = load_config()
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
+buzzer = Buzzer(config.get("buzzer", {}))
+shutdown_requested = False
 
 mission.register(pool_watcher)
 mission.register(thermal_watcher)
@@ -358,11 +362,17 @@ def show_alert_transition(frame):
     lcd.write(0, detail.lines)
 
 
+def request_shutdown(signum=None, frame=None):
+    global shutdown_requested
+    shutdown_requested = True
+
+
 def maybe_show_alert():
     state = collector.update()
     frame = display_manager.evaluate(state)
 
     if frame.interrupt:
+        buzzer.alert(frame.priority)
         show_alert_transition(frame)
         time.sleep(frame.event.timeout)
         return True
@@ -427,23 +437,36 @@ def response_handler(command, data):
 def main():
     global lcd
 
+    signal.signal(signal.SIGTERM, request_shutdown)
+    signal.signal(signal.SIGINT, request_shutdown)
+
     lcd = qnaplcd.QnapLCD(PORT, PORT_SPEED, response_handler)
     lcd_on()
     lcd.reset()
     lcd.clear()
 
-    show_startup_splash()
+    try:
+        show_startup_splash()
+        buzzer.startup()
 
-    quit_requested = False
+        while not shutdown_requested:
+            add_ips_to_menu()
 
-    while not quit_requested:
-        add_ips_to_menu()
+            if not maybe_show_alert():
+                menu[menu_item]()
+                delay = 5 if menu[menu_item] == show_mission_home else 30
 
-        if not maybe_show_alert():
-            menu[menu_item]()
-            time.sleep(5 if menu[menu_item] == show_mission_home else 30)
-
-    lcd.backlight(False)
+                for _ in range(delay * 10):
+                    if shutdown_requested:
+                        break
+                    time.sleep(0.1)
+    finally:
+        try:
+            buzzer.shutdown()
+            write_lines("TruePanel", "Shutting Down", 0.5)
+            lcd.backlight(False)
+        except Exception:
+            pass
 
 
 main()

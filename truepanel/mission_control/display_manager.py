@@ -9,6 +9,7 @@ It does not communicate directly with LCD hardware.
 """
 
 from dataclasses import dataclass
+import inspect
 from typing import Optional
 
 from .constants import Priority
@@ -16,6 +17,7 @@ from .event import MissionEvent
 from .renderer import render_event
 
 from truepanel.display import Canvas, sanitize
+from truepanel.themes import Theme
 from truepanel.display.widgets import (
     activity_meter,
     dual_meter,
@@ -67,6 +69,7 @@ class DisplayManager:
         self.alert_manager = alert_manager
         self.config = config or {}
         self.theme = self.config.get("theme", {})
+        self.theme_engine = Theme(self.config)
 
         self.registry = registry or self.config.get("registry")
 
@@ -197,7 +200,7 @@ class DisplayManager:
         return self.theme.get(key, default)
 
     def status_prefix(self, priority):
-        return status_icon(priority)
+        return self.theme_engine.status(priority)
 
     def mission_title(self, state, priority):
         hostname = state.get("hostname", "BattleStation")
@@ -267,7 +270,7 @@ class DisplayManager:
                 canvas.text(
                     0,
                     1,
-                    progress_bar(percent, width=LCD_WIDTH),
+                    self.theme_engine.bar(percent, width=LCD_WIDTH),
                 )
 
                 return self.canvas_frame(
@@ -284,9 +287,11 @@ class DisplayManager:
         canvas = Canvas()
 
         if event.priority >= Priority.CRITICAL:
-            banner = "X SYSTEM ALERT X"
+            label = self.theme_engine.text("alert_banner", "SYSTEM ALERT")
+            banner = f"{self.theme_engine.status(event.priority)} {label}"
         elif event.priority >= Priority.WARNING:
-            banner = "! WARNING !"
+            label = self.theme_engine.text("warning_banner", "WARNING")
+            banner = f"{self.theme_engine.status(event.priority)} {label}"
         else:
             banner = "SYSTEM NOTICE"
 
@@ -302,6 +307,33 @@ class DisplayManager:
             mode=DisplayMode.ALERT,
         )
 
+    def invoke_renderer(self, renderer, state):
+        """
+        Invoke built-in and plugin dashboard renderers.
+
+        Built-in bound methods accept ``state``.
+        Plugin renderers may accept ``state, display_manager``.
+        """
+
+        try:
+            signature = inspect.signature(renderer)
+            positional = [
+                parameter
+                for parameter in signature.parameters.values()
+                if parameter.kind
+                in (
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                )
+            ]
+        except (TypeError, ValueError):
+            positional = []
+
+        if len(positional) >= 2:
+            return renderer(state, self)
+
+        return renderer(state)
+
     def render_dashboard(self, state):
         if self.dashboard_index >= self.dashboard_count():
             self.dashboard_index = 0
@@ -309,7 +341,7 @@ class DisplayManager:
         page = self.dashboard_pages[self.dashboard_index]
         renderer = page["renderer"]
 
-        return renderer(state)
+        return self.invoke_renderer(renderer, state)
 
     def next_dashboard(self, state):
         self.dashboard_index = (
@@ -350,7 +382,8 @@ class DisplayManager:
             canvas.text(
                 0,
                 0,
-                "! SYSTEM WATCH",
+                f"{self.theme_engine.status(Priority.WARNING)} "
+                f"{self.theme_engine.text('system_watch', 'SYSTEM WATCH')}",
                 width=LCD_WIDTH,
             )
             canvas.text(
@@ -369,14 +402,15 @@ class DisplayManager:
             canvas.text(
                 0,
                 0,
-                "O MISSION READY",
+                f"{self.theme_engine.status(Priority.HEALTHY)} "
+                f"{self.theme_engine.text('mission_ready', 'MISSION READY')}",
                 width=LCD_WIDTH,
                 align="center",
             )
             canvas.text(
                 0,
                 1,
-                "All Systems GO",
+                self.theme_engine.text("all_systems_go", "All Systems GO"),
                 width=LCD_WIDTH,
                 align="center",
             )
@@ -422,7 +456,8 @@ class DisplayManager:
             canvas.text(
                 0,
                 0,
-                "O POOLS ONLINE",
+                f"{self.theme_engine.status(Priority.HEALTHY)} "
+                f"{self.theme_engine.text('pool_healthy', 'POOLS ONLINE')}",
                 width=LCD_WIDTH,
                 align="center",
             )
@@ -474,7 +509,7 @@ class DisplayManager:
         canvas.text(
             0,
             1,
-            progress_bar(percent, width=LCD_WIDTH),
+            self.theme_engine.bar(percent, width=LCD_WIDTH),
         )
 
         if percent >= 95:
@@ -551,7 +586,7 @@ class DisplayManager:
         canvas.text(
             0,
             1,
-            progress_bar(gauge_percent, width=LCD_WIDTH),
+            self.theme_engine.bar(gauge_percent, width=LCD_WIDTH),
         )
 
         if temp >= 60:

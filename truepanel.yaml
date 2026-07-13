@@ -1,4 +1,4 @@
-theme_pack: default
+theme_pack: tactical
 
 flightdeck:
   rotation_interval: 5
@@ -32,3 +32,20 @@ theme:
   critical_prefix: "X "
   info_prefix: "i "
   healthy_prefix: "O "
+
+buzzer:
+  enabled: true
+  backend: pcspkr
+  device: auto
+
+  startup: long
+  shutdown: short
+  warning: short
+  critical: long
+
+  short_frequency: 880
+  short_duration: 0.20
+  long_frequency: 660
+  long_duration: 0.65
+
+  cooldown: 30
