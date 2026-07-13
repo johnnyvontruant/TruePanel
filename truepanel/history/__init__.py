@@ -10,6 +10,7 @@ from .service import HistoryService
 from .store import HistoryStore
 
 __all__ = [
+    "HISTORY_RENDERERS",
     "HistoryService",
     "HistoryStore",
     "METRICS",

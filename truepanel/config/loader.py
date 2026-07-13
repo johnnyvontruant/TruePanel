@@ -23,6 +23,20 @@ DEFAULT_CONFIG = {
         "max_samples": 50000,
         "compact_every": 250,
         "flush": False,
+        "lcd": {
+            "enabled": True,
+            "window_hours": 1,
+            "points": 16,
+            "pages": [
+                "history-cpu",
+                "history-ram",
+                "history-temperature",
+                "history-capacity",
+                "history-network",
+                "history-zfs",
+                "history-alerts",
+            ],
+        },
     },
     "plugins": {
         "path": "plugins",

@@ -38,6 +38,7 @@ def builtin_plugin_classes():
     """
 
     from .core import CorePlugin
+    from .history import HistoricalLCDPlugin
     from .simulator import SimulatorPlugin
     from .status import PluginStatusPlugin
 
@@ -45,6 +46,7 @@ def builtin_plugin_classes():
         CorePlugin,
         SimulatorPlugin,
         PluginStatusPlugin,
+        HistoricalLCDPlugin,
     ]
 
 

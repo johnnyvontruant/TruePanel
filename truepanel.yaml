@@ -75,3 +75,19 @@ history:
 
   # fsync on every sample is unnecessary for noncritical telemetry.
   flush: false
+
+  lcd:
+    enabled: true
+
+    # Initial historical view displayed by the LCD.
+    window_hours: 1
+    points: 16
+
+    pages:
+      - history-cpu
+      - history-ram
+      - history-temperature
+      - history-capacity
+      - history-network
+      - history-zfs
+      - history-alerts
