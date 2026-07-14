@@ -28,6 +28,11 @@ from truepanel.display.widgets import (
 )
 
 
+from truepanel.lab.widgets.render import (
+    renderer as widget_renderer,
+)
+
+
 LCD_WIDTH = 16
 
 
@@ -531,20 +536,14 @@ class DisplayManager:
         self.performance_history.append(max(cpu, ram))
         self.performance_history = self.performance_history[-16:]
 
+        line1, line2 = widget_renderer.performance_lines(
+            cpu,
+            ram,
+        )
+
         canvas = Canvas()
-        canvas.text(
-            0,
-            0,
-            dual_meter("CPU", cpu, "RAM", ram),
-        )
-        canvas.text(
-            0,
-            1,
-            sparkline(
-                self.performance_history,
-                width=LCD_WIDTH,
-            ),
-        )
+        canvas.text(0, 0, line1)
+        canvas.text(0, 1, line2)
 
         priority = (
             Priority.WARNING
