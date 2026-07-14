@@ -40,6 +40,11 @@ from truepanel.lab.interlock import (
     run_hardware_execution,
     run_simulated_execution,
 )
+from truepanel.lab.fingerprint_format import (
+    fingerprint_to_json,
+    render_fingerprint,
+)
+from truepanel.lab.service import LaboratoryService
 
 
 @dataclass
@@ -51,6 +56,20 @@ class LabResult:
     capture_path: str = ""
     data: dict[str, object] = field(default_factory=dict)
 
+
+
+def run_fingerprint(args) -> LabResult:
+    """Build the current known-safe controller fingerprint."""
+
+    fingerprint = LaboratoryService().build_fingerprint()
+
+    return LabResult(
+        command="fingerprint",
+        success=True,
+        value=fingerprint.controller_family,
+        detail="Canonical Project Stargate controller profile",
+        data=fingerprint.to_dict(),
+    )
 
 
 def run_status(args) -> LabResult:
@@ -522,6 +541,24 @@ def build_parser():
         required=True,
     )
 
+    fingerprint = commands.add_parser(
+        "fingerprint",
+        help="Show the current controller fingerprint",
+    )
+    fingerprint.add_argument(
+        "--json",
+        action="store_true",
+        dest="json_output",
+        default=argparse.SUPPRESS,
+        help="Emit the fingerprint as JSON",
+    )
+    fingerprint.add_argument(
+        "--compact",
+        action="store_true",
+        help="Emit compact JSON; implies --json",
+    )
+    fingerprint.set_defaults(handler=run_fingerprint)
+
     status = commands.add_parser("status")
     status.set_defaults(handler=run_status)
 
@@ -705,7 +742,23 @@ def main(argv=None) -> int:
             detail=str(error),
         )
 
-    if args.json_output:
+    if result.command == "fingerprint" and result.success:
+        fingerprint = LaboratoryService().build_fingerprint()
+
+        if args.json_output or getattr(args, "compact", False):
+            print(
+                fingerprint_to_json(
+                    fingerprint,
+                    indent=(
+                        None
+                        if getattr(args, "compact", False)
+                        else 2
+                    ),
+                )
+            )
+        else:
+            print(render_fingerprint(fingerprint))
+    elif args.json_output:
         print(json.dumps(asdict(result), indent=2))
     else:
         print_result(result)
