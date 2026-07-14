@@ -31,6 +31,15 @@ from truepanel.lab.experiments import (
 from truepanel.lab.planner import (
     build_plan_from_expression,
 )
+from truepanel.lab.execution import (
+    ExecutionObservation,
+)
+from truepanel.lab.interlock import (
+    ARMING_PHRASE,
+    build_execution_context,
+    run_hardware_execution,
+    run_simulated_execution,
+)
 
 
 @dataclass
@@ -206,6 +215,99 @@ def run_monitor(args) -> LabResult:
 
 
 
+
+
+def print_execution_observation(
+    observation: ExecutionObservation,
+) -> None:
+    mode = "SIM" if observation.simulated else "HW"
+
+    if observation.success:
+        value = (
+            f" value={observation.value_hex}"
+            if observation.value_hex
+            else ""
+        )
+
+        print(
+            f"{mode} {observation.opcode_hex} PASS"
+            f"{value} "
+            f"latency={observation.latency_ms:.3f} ms"
+        )
+    else:
+        print(
+            f"{mode} {observation.opcode_hex} FAIL "
+            f"latency={observation.latency_ms:.3f} ms "
+            f"{observation.detail}"
+        )
+
+
+def run_survey(args) -> LabResult:
+    plan = build_plan_from_expression(
+        args.opcodes,
+        allow_experimental_read_only=False,
+        allow_experimental_stateful=False,
+        allow_documented_writes=False,
+    )
+
+    simulation = not args.hardware
+
+    context = build_execution_context(
+        plan=plan,
+        simulation=simulation,
+        arming_phrase=args.arm,
+        cooldown_seconds=args.cooldown,
+        stop_on_failure=True,
+    )
+
+    callback = (
+        None
+        if args.json_output
+        else print_execution_observation
+    )
+
+    if simulation:
+        run_simulated_execution(
+            context,
+            callback=callback,
+        )
+
+        capture_path = ""
+    else:
+        with open_controller(
+            "survey-read-only",
+            args.port,
+            args.baud,
+            args.timeout,
+            args.capture_dir,
+        ) as (controller, capture):
+            run_hardware_execution(
+                context,
+                controller,
+                callback=callback,
+            )
+
+            capture_path = str(capture)
+
+    return LabResult(
+        command="survey",
+        success=context.healthy,
+        value=(
+            f"{context.successes}/{plan.count} "
+            f"probes successful"
+        ),
+        detail=(
+            f"mode={'SIMULATION' if simulation else 'HARDWARE'}, "
+            f"state={context.state.value}"
+            + (
+                f", abort={context.abort_reason}"
+                if context.abort_reason
+                else ""
+            )
+        ),
+        capture_path=capture_path,
+        data=context.as_dict(),
+    )
 
 def run_plan(args) -> LabResult:
     plan = build_plan_from_expression(
@@ -505,6 +607,36 @@ def build_parser():
         action="store_true",
     )
     plan.set_defaults(handler=run_plan)
+
+    survey = commands.add_parser(
+        "survey",
+        help="Run an interlocked read-only survey",
+    )
+    survey.add_argument(
+        "--opcodes",
+        required=True,
+        help="Approved read-only opcodes to execute",
+    )
+    survey.add_argument(
+        "--hardware",
+        action="store_true",
+        help="Use hardware instead of simulation",
+    )
+    survey.add_argument(
+        "--arm",
+        default="",
+        help=(
+            "Exact hardware arming phrase; required with "
+            "--hardware"
+        ),
+    )
+    survey.add_argument(
+        "--cooldown",
+        type=float,
+        default=0.10,
+        help="Seconds between probes",
+    )
+    survey.set_defaults(handler=run_survey)
 
     return parser
 
