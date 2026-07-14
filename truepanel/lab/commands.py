@@ -41,16 +41,7 @@ from truepanel.lab.interlock import (
     run_simulated_execution,
 )
 from truepanel.lab.fingerprint import (
-    CapabilityState,
     ControllerFingerprint,
-    FingerprintEvidence,
-)
-from truepanel.lab.fingerprint_builder import (
-    CapabilityObservation,
-    IdentityObservation,
-    MetadataObservation,
-    StaticFingerprintProvider,
-    TimingObservation,
 )
 from truepanel.lab.capability_format import (
     capability_report_to_json,
@@ -72,148 +63,6 @@ class LabResult:
     capture_path: str = ""
     data: dict[str, object] = field(default_factory=dict)
 
-
-
-def _build_live_fingerprint(
-    args,
-) -> tuple[ControllerFingerprint, str]:
-    """Acquire a fingerprint through the known-safe discovery sequence."""
-
-    with open_controller(
-        "fingerprint",
-        args.port,
-        args.baud,
-        args.timeout,
-        args.capture_dir,
-    ) as (controller, capture):
-        report = run_discovery(
-            controller,
-            probe_callback=(
-                None
-                if args.json_output
-                else print_discovery_probe
-            ),
-        )
-
-        observations = []
-        identity_evidence = []
-
-        if report.board_id is not None:
-            identity_evidence.append(
-                FingerprintEvidence(
-                    source="live-discovery",
-                    observation=(
-                        f"board identifier "
-                        f"0x{report.board_id:04X}"
-                    ),
-                )
-            )
-
-        if report.protocol_version is not None:
-            identity_evidence.append(
-                FingerprintEvidence(
-                    source="live-discovery",
-                    observation=(
-                        "protocol version "
-                        f"0x{report.protocol_version:04X}"
-                    ),
-                )
-            )
-
-        observations.append(
-            IdentityObservation(
-                board_id=(
-                    f"0x{report.board_id:04X}"
-                    if report.board_id is not None
-                    else None
-                ),
-                firmware_version=(
-                    f"0x{report.protocol_version:04X}"
-                    if report.protocol_version is not None
-                    else None
-                ),
-                evidence=tuple(identity_evidence),
-            )
-        )
-
-        capability_values = (
-            (
-                "board_query",
-                report.board_id,
-                "Board identifier query returned a response.",
-            ),
-            (
-                "version_query",
-                report.protocol_version,
-                "Protocol version query returned a response.",
-            ),
-            (
-                "button_query",
-                report.button_status,
-                "Button-status query returned a response.",
-            ),
-        )
-
-        for name, value, detail in capability_values:
-            observations.append(
-                CapabilityObservation(
-                    name=name,
-                    state=(
-                        CapabilityState.SUPPORTED
-                        if value is not None
-                        else CapabilityState.UNKNOWN
-                    ),
-                    evidence=(
-                        (
-                            FingerprintEvidence(
-                                source="live-discovery",
-                                observation=detail,
-                            ),
-                        )
-                        if value is not None
-                        else ()
-                    ),
-                    notes=(
-                        "Verified by the current live discovery run."
-                        if value is not None
-                        else "No successful response in this discovery run."
-                    ),
-                )
-            )
-
-        if report.latency.count:
-            observations.append(
-                TimingObservation(
-                    average_latency_ms=report.latency.average_ms,
-                    successful_samples=report.successes,
-                    total_samples=len(report.results),
-                    source="live-discovery",
-                )
-            )
-
-        observations.append(
-            MetadataObservation(
-                values={
-                    "acquisition_mode": "live",
-                    "capture_path": str(capture),
-                    "discovery_successes": report.successes,
-                    "discovery_failures": report.failures,
-                    "discovery_probe_count": len(report.results),
-                    "discovery_healthy": report.healthy,
-                }
-            )
-        )
-
-        provider = StaticFingerprintProvider(
-            name="a125-live-discovery",
-            items=observations,
-        )
-
-        fingerprint = LaboratoryService().build_fingerprint(
-            [provider]
-        )
-
-        return fingerprint, str(capture)
 
 
 def run_capabilities(args) -> LabResult:
@@ -249,11 +98,39 @@ def run_capabilities(args) -> LabResult:
         data=report.as_dict(),
     )
 
-    # Preserve the assembled report for rendering without a second run.
     result._capability_report = report
 
     return result
 
+
+def _build_live_fingerprint(
+    args,
+) -> tuple[ControllerFingerprint, str]:
+    """Acquire a fingerprint through capability providers."""
+
+    with open_controller(
+        "fingerprint",
+        args.port,
+        args.baud,
+        args.timeout,
+        args.capture_dir,
+    ) as (controller, capture):
+        fingerprint, capability_report = (
+            LaboratoryService().build_live_fingerprint(
+                controller,
+                capture_path=str(capture),
+            )
+        )
+
+        fingerprint.merge_metadata(
+            {
+                "capability_report": (
+                    capability_report.as_dict()
+                ),
+            }
+        )
+
+        return fingerprint, str(capture)
 
 def run_fingerprint(args) -> LabResult:
     """Build the baseline or live controller fingerprint."""

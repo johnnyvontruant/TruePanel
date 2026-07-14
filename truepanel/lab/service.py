@@ -20,11 +20,16 @@ from truepanel.lab.capabilities import (
     CapabilityProviderReport,
     CapabilityProviderResult,
     ProbeOutcome,
+    provider_report_to_observations,
 )
 from truepanel.lab.fingerprint import ControllerFingerprint
 from truepanel.lab.fingerprint_builder import (
     FingerprintBuilder,
     FingerprintProvider,
+    IdentityObservation,
+    MetadataObservation,
+    StaticFingerprintProvider,
+    TimingObservation,
 )
 
 
@@ -130,6 +135,107 @@ class LaboratoryService:
         registry = CapabilityProviderRegistry(providers)
 
         return CapabilityProviderDetector(registry).detect()
+
+    def build_live_fingerprint(
+        self,
+        controller,
+        *,
+        capture_path: str = "",
+    ) -> tuple[
+        ControllerFingerprint,
+        CapabilityProviderReport,
+    ]:
+        """Build a live fingerprint from capability-provider evidence."""
+
+        capability_report = self.detect_capabilities(controller)
+
+        results = {
+            result.capability: result
+            for result in capability_report.results
+        }
+
+        board_result = results.get("board_query")
+        version_result = results.get("version_query")
+
+        observations = list(
+            provider_report_to_observations(capability_report)
+        )
+
+        observations.append(
+            IdentityObservation(
+                board_id=(
+                    str(board_result.metadata.get("value_hex"))
+                    if board_result is not None
+                    and board_result.metadata.get("value_hex")
+                    else None
+                ),
+                firmware_version=(
+                    str(version_result.metadata.get("value_hex"))
+                    if version_result is not None
+                    and version_result.metadata.get("value_hex")
+                    else None
+                ),
+            )
+        )
+
+        latencies = [
+            float(result.metadata["latency_ms"])
+            for result in capability_report.results
+            if "latency_ms" in result.metadata
+        ]
+
+        if latencies:
+            observations.append(
+                TimingObservation(
+                    average_latency_ms=(
+                        sum(latencies) / len(latencies)
+                    ),
+                    successful_samples=capability_report.supported,
+                    total_samples=len(capability_report.results),
+                    source="capability-provider-pipeline",
+                )
+            )
+
+        observations.append(
+            MetadataObservation(
+                values={
+                    "acquisition_mode": "live",
+                    "capture_path": capture_path,
+                    "capability_provider_count": len(
+                        capability_report.providers
+                    ),
+                    "capability_result_count": len(
+                        capability_report.results
+                    ),
+                    "capability_supported": (
+                        capability_report.supported
+                    ),
+                    "capability_unsupported": (
+                        capability_report.unsupported
+                    ),
+                    "capability_experimental": (
+                        capability_report.experimental
+                    ),
+                    "capability_inconclusive": (
+                        capability_report.inconclusive
+                    ),
+                    "capability_healthy": (
+                        capability_report.healthy
+                    ),
+                }
+            )
+        )
+
+        fingerprint_provider = StaticFingerprintProvider(
+            name="live-capability-pipeline",
+            items=observations,
+        )
+
+        fingerprint = self.build_fingerprint(
+            [fingerprint_provider]
+        )
+
+        return fingerprint, capability_report
 
     def with_providers(
         self,
