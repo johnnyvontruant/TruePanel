@@ -1,5 +1,5 @@
 """
-Reusable LCD progress bar widget.
+Reusable LCD signal-strength widget.
 """
 
 from __future__ import annotations
@@ -10,10 +10,10 @@ from truepanel.lab.widgets.linear import LinearWidget
 
 
 @dataclass(frozen=True)
-class ProgressBar(LinearWidget):
+class SignalMeter(LinearWidget):
     minimum: float = 0.0
     maximum: float = 1.0
-    style: str = "ascii"
+    style: str = "blocks"
 
     def render_percent(
         self,
