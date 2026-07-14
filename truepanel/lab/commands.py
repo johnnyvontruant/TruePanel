@@ -52,6 +52,10 @@ from truepanel.lab.fingerprint_builder import (
     StaticFingerprintProvider,
     TimingObservation,
 )
+from truepanel.lab.capability_format import (
+    capability_report_to_json,
+    render_capability_report,
+)
 from truepanel.lab.fingerprint_format import (
     fingerprint_to_json,
     render_fingerprint,
@@ -210,6 +214,45 @@ def _build_live_fingerprint(
         )
 
         return fingerprint, str(capture)
+
+
+def run_capabilities(args) -> LabResult:
+    """Build the baseline or live capability report."""
+
+    service = LaboratoryService()
+
+    if args.live:
+        with open_controller(
+            "capabilities",
+            args.port,
+            args.baud,
+            args.timeout,
+            args.capture_dir,
+        ) as (controller, capture):
+            report = service.detect_capabilities(controller)
+            capture_path = str(capture)
+            detail = "Live documented read-only capability detection"
+    else:
+        report = service.build_baseline_capability_report()
+        capture_path = ""
+        detail = "Recorded baseline capability knowledge"
+
+    result = LabResult(
+        command="capabilities",
+        success=report.healthy,
+        value=(
+            f"{report.supported}/"
+            f"{len(report.results)} supported"
+        ),
+        detail=detail,
+        capture_path=capture_path,
+        data=report.as_dict(),
+    )
+
+    # Preserve the assembled report for rendering without a second run.
+    result._capability_report = report
+
+    return result
 
 
 def run_fingerprint(args) -> LabResult:
@@ -707,6 +750,32 @@ def build_parser():
         required=True,
     )
 
+    capabilities = commands.add_parser(
+        "capabilities",
+        help="Show detected controller capabilities",
+    )
+    capabilities.add_argument(
+        "--json",
+        action="store_true",
+        dest="json_output",
+        default=argparse.SUPPRESS,
+        help="Emit the capability report as JSON",
+    )
+    capabilities.add_argument(
+        "--compact",
+        action="store_true",
+        help="Emit compact JSON; implies --json",
+    )
+    capabilities.add_argument(
+        "--live",
+        action="store_true",
+        help=(
+            "Run documented read-only capability providers "
+            "against the controller"
+        ),
+    )
+    capabilities.set_defaults(handler=run_capabilities)
+
     fingerprint = commands.add_parser(
         "fingerprint",
         help="Show the current controller fingerprint",
@@ -916,7 +985,28 @@ def main(argv=None) -> int:
             detail=str(error),
         )
 
-    if result.command == "fingerprint" and result.success:
+    if result.command == "capabilities" and result.success:
+        report = getattr(result, "_capability_report", None)
+
+        if report is None:
+            raise RuntimeError(
+                "capabilities command returned no capability report"
+            )
+
+        if args.json_output or getattr(args, "compact", False):
+            print(
+                capability_report_to_json(
+                    report,
+                    indent=(
+                        None
+                        if getattr(args, "compact", False)
+                        else 2
+                    ),
+                )
+            )
+        else:
+            print(render_capability_report(report))
+    elif result.command == "fingerprint" and result.success:
         fingerprint = getattr(result, "_fingerprint", None)
 
         if fingerprint is None:
