@@ -16,7 +16,7 @@ def test_ram_bar_is_ascii_safe():
     assert renderer.ram(75) == "######--"
 
 
-def test_performance_lines():
+def test_performance_lines_use_percentages():
     renderer = WidgetRenderer()
 
     line1, line2 = renderer.performance_lines(
@@ -24,8 +24,8 @@ def test_performance_lines():
         75,
     )
 
-    assert line1 == "CPU ####--- 50% "
-    assert line2 == "RAM #####-- 75% "
+    assert line1 == "CPU Usage  50%  "
+    assert line2 == "RAM Usage  75%  "
 
 
 def test_performance_lines_are_lcd_width():
@@ -50,8 +50,8 @@ def test_performance_values_are_clamped():
         500,
     )
 
-    assert line1 == "CPU ------- 0%  "
-    assert line2 == "RAM ####### 100%"
+    assert line1 == "CPU Usage   0%  "
+    assert line2 == "RAM Usage 100%  "
 
 
 def test_performance_values_are_rounded():
@@ -62,5 +62,17 @@ def test_performance_values_are_rounded():
         24.5,
     )
 
-    assert line1.endswith("50% ")
-    assert line2.endswith("24% ")
+    assert line1 == "CPU Usage  50%  "
+    assert line2 == "RAM Usage  24%  "
+
+
+def test_invalid_values_default_to_zero():
+    renderer = WidgetRenderer()
+
+    line1, line2 = renderer.performance_lines(
+        None,
+        "not-a-number",
+    )
+
+    assert line1 == "CPU Usage   0%  "
+    assert line2 == "RAM Usage   0%  "
