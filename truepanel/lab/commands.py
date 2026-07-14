@@ -34,6 +34,19 @@ from truepanel.lab.planner import (
 from truepanel.lab.execution import (
     ExecutionObservation,
 )
+from truepanel.lab.display_experiment import (
+    build_characterization,
+)
+from truepanel.lab.display_runner import (
+    DisplayExperimentRunner,
+    FrameExecution,
+)
+from truepanel.lab.display_timing import (
+    DisplayTimingSample,
+    measure_clear,
+    measure_frame_write,
+    measure_line_write,
+)
 from truepanel.lab.interlock import (
     ARMING_PHRASE,
     build_execution_context,
@@ -156,6 +169,178 @@ def run_fingerprint(args) -> LabResult:
     result._fingerprint = fingerprint
 
     return result
+
+
+def print_display_timing_sample(
+    sample: DisplayTimingSample,
+) -> None:
+    """Print one display timing sample."""
+
+    if sample.success:
+        print(
+            f"{sample.index:03d}: "
+            f"{sample.operation} "
+            f"{sample.latency_ms:.3f} ms"
+        )
+    else:
+        print(
+            f"{sample.index:03d}: "
+            f"{sample.operation} FAIL "
+            f"{sample.latency_ms:.3f} ms "
+            f"{sample.detail}"
+        )
+
+
+def run_display_timing(args) -> LabResult:
+    """Measure host-side transmission latency for display commands."""
+
+    if args.count < 1:
+        raise ValueError("count must be at least 1")
+
+    if args.interval < 0:
+        raise ValueError("interval must be non-negative")
+
+    callback = (
+        None
+        if args.json_output
+        else print_display_timing_sample
+    )
+
+    with open_controller(
+        f"timing-{args.timing_operation}",
+        args.port,
+        args.baud,
+        args.timeout,
+        args.capture_dir,
+    ) as (controller, capture):
+        if args.timing_operation == "clear":
+            result = measure_clear(
+                controller,
+                count=args.count,
+                interval=args.interval,
+                callback=callback,
+            )
+
+        elif args.timing_operation == "row":
+            result = measure_line_write(
+                controller,
+                row=args.row,
+                text=args.text,
+                count=args.count,
+                interval=args.interval,
+                callback=callback,
+            )
+
+        elif args.timing_operation == "frame":
+            result = measure_frame_write(
+                controller,
+                line1=args.line1,
+                line2=args.line2,
+                count=args.count,
+                interval=args.interval,
+                callback=callback,
+            )
+
+        else:
+            raise ValueError(
+                f"unsupported timing operation: "
+                f"{args.timing_operation}"
+            )
+
+        latency = result.latency
+
+        detail = (
+            f"min={latency.minimum_ms:.3f} ms, "
+            f"avg={latency.average_ms:.3f} ms, "
+            f"median={latency.median_ms:.3f} ms, "
+            f"p95={latency.p95_ms:.3f} ms, "
+            f"max={latency.maximum_ms:.3f} ms"
+            if latency.count
+            else "No successful timing samples"
+        )
+
+        return LabResult(
+            command=f"timing-{args.timing_operation}",
+            success=result.healthy,
+            value=(
+                f"{result.successes}/"
+                f"{result.requested_count} successful"
+            ),
+            detail=detail,
+            capture_path=str(capture),
+            data=result.as_dict(),
+        )
+
+
+def print_display_frame(
+    execution: FrameExecution,
+) -> None:
+    """Print progress for one display-experiment frame."""
+
+    print()
+    print(
+        f"Frame {execution.index}/{execution.total}"
+    )
+    print(execution.frame.line1)
+    print(execution.frame.line2)
+
+
+def run_display_characterize(args) -> LabResult:
+    """Run the documented display characterization sequence."""
+
+    if args.duration < 0:
+        raise ValueError(
+            "frame duration must be non-negative"
+        )
+
+    experiment = build_characterization(
+        duration_seconds=args.duration,
+    )
+
+    with open_controller(
+        "display-characterize",
+        args.port,
+        args.baud,
+        args.timeout,
+        args.capture_dir,
+    ) as (controller, capture):
+        runner = DisplayExperimentRunner(controller)
+
+        runner.run(
+            experiment,
+            callback=(
+                None
+                if args.json_output
+                else print_display_frame
+            ),
+        )
+
+        return LabResult(
+            command="display-characterize",
+            success=True,
+            value=(
+                f"{len(experiment.frames)} frames completed"
+            ),
+            detail=(
+                "Documented clear/write display experiment"
+            ),
+            capture_path=str(capture),
+            data={
+                "experiment": experiment.name,
+                "frame_count": len(experiment.frames),
+                "duration_seconds": args.duration,
+                "frames": [
+                    {
+                        "line1": frame.line1,
+                        "line2": frame.line2,
+                        "duration_seconds": (
+                            frame.duration_seconds
+                        ),
+                    }
+                    for frame in experiment.frames
+                ],
+            },
+        )
 
 
 def run_status(args) -> LabResult:
@@ -678,6 +863,75 @@ def build_parser():
         ),
     )
     fingerprint.set_defaults(handler=run_fingerprint)
+
+    timing = commands.add_parser(
+        "timing",
+        help="Measure documented display command transmission timing",
+    )
+    timing_commands = timing.add_subparsers(
+        dest="timing_operation",
+        required=True,
+    )
+
+    timing_clear = timing_commands.add_parser(
+        "clear",
+        help="Measure display-clear transmission latency",
+    )
+    timing_clear.add_argument("--count", type=int, default=25)
+    timing_clear.add_argument("--interval", type=float, default=0.05)
+    timing_clear.set_defaults(handler=run_display_timing)
+
+    timing_row = timing_commands.add_parser(
+        "row",
+        help="Measure one-row display-write transmission latency",
+    )
+    timing_row.add_argument("--row", type=int, choices=(0, 1), default=0)
+    timing_row.add_argument(
+        "--text",
+        default="ABCDEFGHIJKLMNOP",
+    )
+    timing_row.add_argument("--count", type=int, default=25)
+    timing_row.add_argument("--interval", type=float, default=0.05)
+    timing_row.set_defaults(handler=run_display_timing)
+
+    timing_frame = timing_commands.add_parser(
+        "frame",
+        help="Measure two-row frame transmission latency",
+    )
+    timing_frame.add_argument(
+        "--line1",
+        default="ABCDEFGHIJKLMNOP",
+    )
+    timing_frame.add_argument(
+        "--line2",
+        default="QRSTUVWXYZ012345",
+    )
+    timing_frame.add_argument("--count", type=int, default=25)
+    timing_frame.add_argument("--interval", type=float, default=0.05)
+    timing_frame.set_defaults(handler=run_display_timing)
+
+    display = commands.add_parser(
+        "display",
+        help="Run documented display experiments",
+    )
+    display_commands = display.add_subparsers(
+        dest="display_command",
+        required=True,
+    )
+
+    characterize = display_commands.add_parser(
+        "characterize",
+        help="Run the standard display characterization",
+    )
+    characterize.add_argument(
+        "--duration",
+        type=float,
+        default=1.0,
+        help="Seconds to display each frame",
+    )
+    characterize.set_defaults(
+        handler=run_display_characterize
+    )
 
     status = commands.add_parser("status")
     status.set_defaults(handler=run_status)
