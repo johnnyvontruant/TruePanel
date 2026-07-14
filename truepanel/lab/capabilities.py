@@ -322,13 +322,17 @@ def report_to_observations(
 
 @runtime_checkable
 class CapabilityProvider(Protocol):
-    """Provider that contributes a related family of capability probes."""
+    """Provider that detects a related family of capabilities."""
 
     name: str
     category: str
 
-    def probes(self) -> Iterable[CapabilityProbe]:
-        """Return capability probes owned by this provider."""
+    def detect(
+        self,
+        *,
+        allowed_safety: Iterable[ProbeSafety],
+    ) -> CapabilityDetectionReport:
+        """Run this provider's capability detection procedure."""
 
 
 @dataclass
@@ -352,7 +356,23 @@ class StaticCapabilityProvider:
             )
 
     def probes(self) -> Iterable[CapabilityProbe]:
+        """Return the simple probes owned by this provider."""
+
         return tuple(self.items)
+
+    def detect(
+        self,
+        *,
+        allowed_safety: Iterable[ProbeSafety],
+    ) -> CapabilityDetectionReport:
+        """Detect capabilities using this provider's probe collection."""
+
+        registry = CapabilityRegistry(self.probes())
+        detector = CapabilityDetector(registry)
+
+        return detector.detect(
+            allowed_safety=allowed_safety,
+        )
 
 
 @dataclass
@@ -458,7 +478,7 @@ class CapabilityProviderRegistry:
         if not isinstance(provider, CapabilityProvider):
             raise TypeError(
                 "capability provider must expose name, category, "
-                "and probes()"
+                "and detect()"
             )
 
         name = provider.name.strip().lower().replace(" ", "_")
@@ -540,12 +560,18 @@ class CapabilityProviderDetector:
                     "an empty category"
                 )
 
-            probe_registry = CapabilityRegistry(provider.probes())
-            detector = CapabilityDetector(probe_registry)
-
-            provider_report = detector.detect(
+            provider_report = provider.detect(
                 allowed_safety=allowed_safety,
             )
+
+            if not isinstance(
+                provider_report,
+                CapabilityDetectionReport,
+            ):
+                raise TypeError(
+                    f"capability provider {provider_name!r} "
+                    "must return CapabilityDetectionReport"
+                )
 
             report.providers.append(
                 CapabilityProviderResult(
