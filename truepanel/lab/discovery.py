@@ -208,7 +208,8 @@ def validate_discovery_plan(
 
     validate_survey_opcodes(
         opcodes,
-        allow_experimental=False,
+        allow_experimental_read_only=False,
+        allow_experimental_stateful=False,
         allow_documented_writes=False,
     )
 
