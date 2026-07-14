@@ -20,9 +20,16 @@ from truepanel.lab.capture import (
     open_controller,
     service_is_active,
 )
+from truepanel.lab.discovery import (
+    DiscoveryProbeResult,
+    run_discovery,
+)
 from truepanel.lab.experiments import (
     RepeatSample,
     run_repeat_experiment,
+)
+from truepanel.lab.planner import (
+    build_plan_from_expression,
 )
 
 
@@ -198,6 +205,122 @@ def run_monitor(args) -> LabResult:
 
 
 
+
+
+def run_plan(args) -> LabResult:
+    plan = build_plan_from_expression(
+        args.opcodes,
+        allow_experimental_read_only=(
+            args.allow_experimental_read_only
+        ),
+        allow_experimental_stateful=(
+            args.allow_experimental_stateful
+        ),
+        allow_documented_writes=(
+            args.allow_documented_writes
+        ),
+    )
+
+    categories = {}
+
+    for entry in plan.entries:
+        risk = entry.policy.risk.value
+        categories[risk] = categories.get(risk, 0) + 1
+
+    category_text = ", ".join(
+        f"{name}={count}"
+        for name, count in sorted(categories.items())
+    )
+
+    return LabResult(
+        command="plan",
+        success=True,
+        value=f"{plan.count} opcodes validated",
+        detail=category_text,
+        data=plan.as_dict(),
+    )
+
+def print_discovery_probe(
+    result: DiscoveryProbeResult,
+) -> None:
+    if result.success:
+        print(
+            f"{result.name:<10} "
+            f"opcode=0x{result.opcode:02X} "
+            f"value={result.value_hex} "
+            f"latency={result.latency_ms:.3f} ms "
+            f"[{result.response.response_name}]"
+        )
+    else:
+        print(
+            f"{result.name:<10} "
+            f"opcode=0x{result.opcode:02X} "
+            f"FAIL "
+            f"latency={result.latency_ms:.3f} ms "
+            f"[{result.response.classification.value}] "
+            f"{result.response.detail}"
+        )
+
+
+def run_discover(args) -> LabResult:
+    with open_controller(
+        "discover",
+        args.port,
+        args.baud,
+        args.timeout,
+        args.capture_dir,
+    ) as (controller, capture):
+        report = run_discovery(
+            controller,
+            probe_callback=(
+                None
+                if args.json_output
+                else print_discovery_probe
+            ),
+        )
+
+        latency = report.latency
+
+        if latency.count:
+            latency_detail = (
+                f"min={latency.minimum_ms:.3f} ms, "
+                f"avg={latency.average_ms:.3f} ms, "
+                f"median={latency.median_ms:.3f} ms, "
+                f"max={latency.maximum_ms:.3f} ms"
+            )
+        else:
+            latency_detail = "No successful latency samples"
+
+        identity = []
+
+        if report.board_id is not None:
+            identity.append(
+                f"board=0x{report.board_id:04X}"
+            )
+
+        if report.protocol_version is not None:
+            identity.append(
+                "protocol="
+                f"0x{report.protocol_version:04X}"
+            )
+
+        return LabResult(
+            command="discover",
+            success=report.healthy,
+            value=(
+                f"{report.successes}/"
+                f"{len(report.results)} probes successful"
+                + (
+                    "; " + ", ".join(identity)
+                    if identity
+                    else ""
+                )
+            ),
+            detail=latency_detail,
+            capture_path=str(capture),
+            data=report.as_dict(),
+        )
+
 def print_repeat_sample(sample: RepeatSample) -> None:
     if sample.success:
         print(
@@ -351,6 +474,38 @@ def build_parser():
     )
     repeat.set_defaults(handler=run_repeat)
 
+    discover = commands.add_parser(
+        "discover",
+        help="Run safe controller discovery",
+    )
+    discover.set_defaults(handler=run_discover)
+
+    plan = commands.add_parser(
+        "plan",
+        help="Validate an opcode survey without transmitting",
+    )
+    plan.add_argument(
+        "--opcodes",
+        required=True,
+        help=(
+            "Comma-separated opcodes and ranges, "
+            "for example 0x00,0x06-0x08"
+        ),
+    )
+    plan.add_argument(
+        "--allow-experimental-read-only",
+        action="store_true",
+    )
+    plan.add_argument(
+        "--allow-experimental-stateful",
+        action="store_true",
+    )
+    plan.add_argument(
+        "--allow-documented-writes",
+        action="store_true",
+    )
+    plan.set_defaults(handler=run_plan)
+
     return parser
 
 
@@ -371,6 +526,36 @@ def print_result(result: LabResult) -> None:
 
     if result.capture_path:
         print(f"Capture: {result.capture_path}")
+
+    if result.data and result.command == "discover":
+        board_id = result.data.get("board_id_hex")
+        protocol = result.data.get("protocol_version_hex")
+        buttons = result.data.get("button_status_hex")
+
+        print()
+        print("Discovery Identity")
+
+        if board_id:
+            print(f"  Board ID:         {board_id}")
+
+        if protocol:
+            print(f"  Protocol version: {protocol}")
+
+        if buttons:
+            print(f"  Button status:    {buttons}")
+
+    if result.data and result.command == "plan":
+        print()
+        print("Survey Plan")
+
+        for entry in result.data.get("entries", []):
+            policy = entry["policy"]
+
+            print(
+                f"  {entry['opcode_hex']} "
+                f"{policy['risk']}: "
+                f"{policy['reason']}"
+            )
 
     print("=" * 48)
 

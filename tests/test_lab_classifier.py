@@ -92,7 +92,7 @@ def test_timeout_classification():
 def test_opcode_policy():
     assert classify_opcode(0x00).risk == OpcodeRisk.SAFE_READ_ONLY
     assert classify_opcode(0x0C).risk == OpcodeRisk.DOCUMENTED_WRITE
-    assert classify_opcode(0x10).risk == OpcodeRisk.EXPERIMENTAL
+    assert classify_opcode(0x10).risk == OpcodeRisk.EXPERIMENTAL_STATEFUL
     assert classify_opcode(0xFF).risk == OpcodeRisk.BLOCKED
 
 
@@ -123,7 +123,8 @@ def test_blocked_opcode_cannot_be_authorized():
     try:
         validate_survey_opcodes(
             [0xFF],
-            allow_experimental=True,
+            allow_experimental_read_only=True,
+            allow_experimental_stateful=True,
             allow_documented_writes=True,
         )
     except PermissionError:
