@@ -1,292 +1,282 @@
 """
-Execution interlock for Project Stargate surveys.
+Project Stargate execution interlock.
 
-Hardware execution is limited to documented read-only A125 queries. Unknown
-opcodes, documented writes, and blocked commands cannot pass this interlock.
+This module makes policy decisions only. It does not write to serial ports,
+invoke controller methods, or mutate hardware state.
 """
 
-from __future__ import annotations
-
-import time
-from typing import Callable
-
-from truepanel.diagnostics.protocol import (
-    A125Reply,
-    A125Response,
-)
-from truepanel.lab.classifier import (
-    ResponseClassification,
-    classify_error,
-    classify_reply,
-)
-from truepanel.lab.execution import (
-    ExecutionAuthorization,
-    ExecutionContext,
-    ExecutionObservation,
-    ExecutionState,
-)
-from truepanel.lab.survey import (
-    OpcodeRisk,
-    SurveyPlan,
-)
+from dataclasses import dataclass, field
+from enum import Enum
+from uuid import uuid4
 
 
-ARMING_PHRASE = "STARGATE SAFE READ ONLY"
-
-SAFE_QUERY_RESPONSES = {
-    0x00: A125Response.BOARD_ID,
-    0x06: A125Response.BUTTON_STATUS,
-    0x07: A125Response.PROTOCOL_VERSION,
-}
+class DangerLevel(Enum):
+    SAFE = "safe"
+    EXPERIMENTAL = "experimental"
+    DANGEROUS = "dangerous"
+    FORBIDDEN = "forbidden"
 
 
-def validate_execution_context(
-    context: ExecutionContext,
-) -> None:
-    """Validate an execution request before any runner can begin."""
+class ExecutionMode(Enum):
+    SIMULATION = "simulation"
+    LIVE = "live"
 
-    if context.cooldown_seconds < 0:
-        raise ValueError(
-            "Execution cooldown cannot be negative"
-        )
 
-    if context.plan.count < 1:
-        raise ValueError(
-            "Execution plan must contain at least one opcode"
-        )
+class InterlockReason(Enum):
+    ALLOWED = "allowed"
+    SIMULATION_ALLOWED = "simulation_allowed"
+    UNKNOWN_OPCODE = "unknown_opcode"
+    FORBIDDEN_OPERATION = "forbidden_operation"
+    LIVE_MODE_REQUIRED = "live_mode_required"
+    SIMULATION_REQUIRED = "simulation_required"
+    AUTHORIZATION_REQUIRED = "authorization_required"
+    AUTHORIZATION_INVALID = "authorization_invalid"
+    FINGERPRINT_REQUIRED = "fingerprint_required"
+    FINGERPRINT_MISMATCH = "fingerprint_mismatch"
+    COOLDOWN_ACTIVE = "cooldown_active"
+    INVALID_REQUEST = "invalid_request"
 
-    for entry in context.plan.entries:
-        if entry.policy.risk != OpcodeRisk.SAFE_READ_ONLY:
-            raise PermissionError(
-                f"{entry.opcode_hex} cannot pass the hardware "
-                f"interlock because it is {entry.policy.risk.value}"
+
+@dataclass(frozen=True)
+class ExecutionRequest:
+    opcode: int
+    name: str
+    payload: bytes = b""
+    danger_level: DangerLevel = DangerLevel.EXPERIMENTAL
+    mode: ExecutionMode = ExecutionMode.SIMULATION
+    request_id: str = field(
+        default_factory=lambda: uuid4().hex
+    )
+    expected_controller_family: str = "A125"
+    known_opcode: bool = False
+    requires_live_hardware: bool = False
+
+    def __post_init__(self):
+        if not isinstance(self.opcode, int):
+            raise TypeError("opcode must be an integer")
+
+        if not 0 <= self.opcode <= 0xFF:
+            raise ValueError(
+                "opcode must be between 0x00 and 0xFF"
             )
 
-        if entry.opcode not in SAFE_QUERY_RESPONSES:
-            raise PermissionError(
-                f"{entry.opcode_hex} has no approved read-only runner"
-            )
+        if not self.name or not self.name.strip():
+            raise ValueError("name is required")
 
-    if context.authorization.hardware_requested:
-        if (
-            context.authorization.arming_phrase
-            != ARMING_PHRASE
-        ):
-            raise PermissionError(
-                "Hardware execution requires the exact arming phrase: "
-                f"{ARMING_PHRASE}"
-            )
-
-    context.state = ExecutionState.VALIDATED
+        if not isinstance(self.payload, bytes):
+            raise TypeError("payload must be bytes")
 
 
-def arm_execution(context: ExecutionContext) -> None:
-    """Validate and arm one execution context."""
+@dataclass(frozen=True)
+class InterlockDecision:
+    allowed: bool
+    reason: InterlockReason
+    message: str
+    simulation_only: bool = False
+    cooldown_remaining: float = 0.0
 
-    validate_execution_context(context)
-
-    if context.authorization.simulation:
-        context.state = ExecutionState.ARMED
-        return
-
-    if (
-        context.authorization.arming_phrase
-        != ARMING_PHRASE
+    @classmethod
+    def allow(
+        cls,
+        *,
+        reason=InterlockReason.ALLOWED,
+        message="Execution allowed",
+        simulation_only=False,
     ):
-        raise PermissionError(
-            "Execution authorization failed"
+        return cls(
+            allowed=True,
+            reason=reason,
+            message=message,
+            simulation_only=simulation_only,
         )
 
-    context.state = ExecutionState.ARMED
-
-
-def build_execution_context(
-    plan: SurveyPlan,
-    simulation: bool = True,
-    arming_phrase: str = "",
-    cooldown_seconds: float = 0.10,
-    stop_on_failure: bool = True,
-) -> ExecutionContext:
-    """Build and arm a survey execution context."""
-
-    context = ExecutionContext(
-        plan=plan,
-        authorization=ExecutionAuthorization(
-            simulation=bool(simulation),
-            arming_phrase=str(arming_phrase),
-        ),
-        cooldown_seconds=float(cooldown_seconds),
-        stop_on_failure=bool(stop_on_failure),
-    )
-
-    arm_execution(context)
-    return context
-
-
-def resolve_safe_query(
-    controller,
-    opcode: int,
-) -> tuple[Callable[[], int], int]:
-    """Resolve one approved read-only A125 query."""
-
-    methods = {
-        0x00: controller.query_board_id,
-        0x06: controller.query_buttons,
-        0x07: controller.query_protocol_version,
-    }
-
-    try:
-        query = methods[opcode]
-        response = SAFE_QUERY_RESPONSES[opcode]
-    except KeyError as error:
-        raise PermissionError(
-            f"Opcode 0x{opcode:02X} has no approved query runner"
-        ) from error
-
-    return query, int(response)
-
-
-def normalized_reply(
-    response_code: int,
-    value: int,
-) -> A125Reply:
-    """Construct a normalized classified response from a decoded value."""
-
-    value = int(value)
-
-    if not 0 <= value <= 0xFFFF:
-        raise ValueError(
-            "Read-only query value must fit in 16 bits"
+    @classmethod
+    def deny(
+        cls,
+        reason,
+        message,
+        *,
+        cooldown_remaining=0.0,
+    ):
+        return cls(
+            allowed=False,
+            reason=reason,
+            message=message,
+            cooldown_remaining=cooldown_remaining,
         )
 
-    return A125Reply(
-        preamble=0x53,
-        response=response_code,
-        payload=value.to_bytes(2, "big"),
-    )
 
+class ExecutionInterlock:
+    def __init__(
+        self,
+        *,
+        cooldown=None,
+        require_fingerprint=True,
+    ):
+        self.cooldown = cooldown
+        self.require_fingerprint = require_fingerprint
 
-def run_simulated_execution(
-    context: ExecutionContext,
-    callback: Callable[[ExecutionObservation], None] | None = None,
-) -> ExecutionContext:
-    """Execute a survey without opening or touching hardware."""
-
-    if context.state != ExecutionState.ARMED:
-        raise RuntimeError(
-            "Execution context must be armed before running"
-        )
-
-    context.mark_started()
-
-    for index, entry in enumerate(context.plan.entries):
-        observation = ExecutionObservation(
-            opcode=entry.opcode,
-            success=True,
-            simulated=True,
-            latency_ms=0.0,
-            detail="Simulation only; no bytes transmitted",
-        )
-
-        context.add(observation)
-
-        if callback is not None:
-            callback(observation)
-
-        if (
-            index + 1 < context.plan.count
-            and context.cooldown_seconds > 0
-        ):
-            time.sleep(context.cooldown_seconds)
-
-    context.mark_completed()
-    return context
-
-
-def run_hardware_execution(
-    context: ExecutionContext,
-    controller,
-    callback: Callable[[ExecutionObservation], None] | None = None,
-) -> ExecutionContext:
-    """Run approved read-only queries against an A125 controller."""
-
-    if context.state != ExecutionState.ARMED:
-        raise RuntimeError(
-            "Execution context must be armed before running"
-        )
-
-    if context.authorization.simulation:
-        raise RuntimeError(
-            "Simulation context cannot execute hardware queries"
-        )
-
-    context.mark_started()
-
-    for index, entry in enumerate(context.plan.entries):
-        started = time.perf_counter()
-
-        try:
-            query, expected_response = resolve_safe_query(
-                controller,
-                entry.opcode,
+    def evaluate(
+        self,
+        request,
+        *,
+        authorization=None,
+        controller_family=None,
+    ):
+        if not isinstance(request, ExecutionRequest):
+            return InterlockDecision.deny(
+                InterlockReason.INVALID_REQUEST,
+                "Request is not an ExecutionRequest",
             )
 
-            value = int(query())
-            elapsed_ms = (
-                time.perf_counter() - started
-            ) * 1000.0
+        if request.danger_level is DangerLevel.FORBIDDEN:
+            return InterlockDecision.deny(
+                InterlockReason.FORBIDDEN_OPERATION,
+                "Forbidden operations cannot be executed",
+            )
 
-            response = classify_reply(
-                normalized_reply(
-                    expected_response,
-                    value,
+        if (
+            request.requires_live_hardware
+            and request.mode is not ExecutionMode.LIVE
+        ):
+            return InterlockDecision.deny(
+                InterlockReason.LIVE_MODE_REQUIRED,
+                "This operation requires live hardware mode",
+            )
+
+        if not request.known_opcode:
+            if request.mode is ExecutionMode.LIVE:
+                return InterlockDecision.deny(
+                    InterlockReason.UNKNOWN_OPCODE,
+                    "Unknown opcodes are denied in live mode",
                 )
+
+            return InterlockDecision.allow(
+                reason=InterlockReason.SIMULATION_ALLOWED,
+                message=(
+                    "Unknown opcode permitted in simulation only"
+                ),
+                simulation_only=True,
             )
-
-            success = (
-                response.classification
-                == ResponseClassification.KNOWN_RESPONSE
-            )
-
-            observation = ExecutionObservation(
-                opcode=entry.opcode,
-                success=success,
-                simulated=False,
-                latency_ms=elapsed_ms,
-                value=value,
-                response=response,
-            )
-        except Exception as error:
-            elapsed_ms = (
-                time.perf_counter() - started
-            ) * 1000.0
-
-            observation = ExecutionObservation(
-                opcode=entry.opcode,
-                success=False,
-                simulated=False,
-                latency_ms=elapsed_ms,
-                response=classify_error(error),
-                detail=f"{type(error).__name__}: {error}",
-            )
-
-        context.add(observation)
-
-        if callback is not None:
-            callback(observation)
-
-        if not observation.success and context.stop_on_failure:
-            context.abort(
-                f"Stopped after failure at "
-                f"0x{entry.opcode:02X}"
-            )
-            return context
 
         if (
-            index + 1 < context.plan.count
-            and context.cooldown_seconds > 0
+            request.danger_level
+            is DangerLevel.EXPERIMENTAL
+            and request.mode is ExecutionMode.LIVE
         ):
-            time.sleep(context.cooldown_seconds)
+            return InterlockDecision.deny(
+                InterlockReason.SIMULATION_REQUIRED,
+                "Experimental operations are simulation-only",
+            )
 
-    context.mark_completed()
-    return context
+        if request.mode is ExecutionMode.SIMULATION:
+            return InterlockDecision.allow(
+                reason=InterlockReason.SIMULATION_ALLOWED,
+                message="Simulation execution allowed",
+                simulation_only=True,
+            )
+
+        fingerprint_decision = self._check_fingerprint(
+            request,
+            controller_family,
+        )
+        if fingerprint_decision is not None:
+            return fingerprint_decision
+
+        if request.danger_level is DangerLevel.DANGEROUS:
+            authorization_decision = self._check_authorization(
+                request,
+                authorization,
+            )
+            if authorization_decision is not None:
+                return authorization_decision
+
+        cooldown_decision = self._check_cooldown(request)
+        if cooldown_decision is not None:
+            return cooldown_decision
+
+        return InterlockDecision.allow(
+            message="Live execution allowed",
+        )
+
+    def record_execution(self, request):
+        if self.cooldown is not None:
+            self.cooldown.record(self._cooldown_key(request))
+
+    def _check_fingerprint(
+        self,
+        request,
+        controller_family,
+    ):
+        if not self.require_fingerprint:
+            return None
+
+        if not controller_family:
+            return InterlockDecision.deny(
+                InterlockReason.FINGERPRINT_REQUIRED,
+                "A live controller fingerprint is required",
+            )
+
+        if (
+            controller_family
+            != request.expected_controller_family
+        ):
+            return InterlockDecision.deny(
+                InterlockReason.FINGERPRINT_MISMATCH,
+                (
+                    "Controller fingerprint does not match "
+                    f"{request.expected_controller_family}"
+                ),
+            )
+
+        return None
+
+    @staticmethod
+    def _check_authorization(
+        request,
+        authorization,
+    ):
+        if authorization is None:
+            return InterlockDecision.deny(
+                InterlockReason.AUTHORIZATION_REQUIRED,
+                "Explicit authorization is required",
+            )
+
+        if not authorization.is_valid_for(
+            request.request_id
+        ):
+            return InterlockDecision.deny(
+                InterlockReason.AUTHORIZATION_INVALID,
+                (
+                    "Authorization is expired or belongs "
+                    "to another request"
+                ),
+            )
+
+        return None
+
+    def _check_cooldown(self, request):
+        if self.cooldown is None:
+            return None
+
+        key = self._cooldown_key(request)
+        remaining = self.cooldown.remaining(key)
+
+        if remaining > 0:
+            return InterlockDecision.deny(
+                InterlockReason.COOLDOWN_ACTIVE,
+                (
+                    "Execution cooldown active for "
+                    f"{remaining:.3f} seconds"
+                ),
+                cooldown_remaining=remaining,
+            )
+
+        return None
+
+    @staticmethod
+    def _cooldown_key(request):
+        return (
+            request.expected_controller_family,
+            request.opcode,
+        )

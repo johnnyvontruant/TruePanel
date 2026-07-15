@@ -1,208 +1,298 @@
-"""
-Tests for the Project Stargate Execution Interlock.
-
-Run with:
-
-    PYTHONPATH=. python3 tests/test_lab_interlock.py
-"""
-
-from __future__ import annotations
-
-from truepanel.lab.execution import ExecutionState
-from truepanel.lab.interlock import (
-    ARMING_PHRASE,
-    build_execution_context,
-    run_hardware_execution,
-    run_simulated_execution,
+from truepanel.lab.authorization import (
+    ExecutionAuthorization,
 )
-from truepanel.lab.planner import build_plan_from_expression
+from truepanel.lab.cooldown import CooldownTracker
+from truepanel.lab.interlock import (
+    DangerLevel,
+    ExecutionInterlock,
+    ExecutionMode,
+    ExecutionRequest,
+    InterlockReason,
+)
 
 
-class FakeController:
-    def query_board_id(self):
-        return 0x007D
+class FakeClock:
+    def __init__(self):
+        self.value = 10.0
 
-    def query_protocol_version(self):
-        return 0x0003
+    def __call__(self):
+        return self.value
 
-    def query_buttons(self):
-        return 0x0000
-
-
-class FailingController(FakeController):
-    def query_protocol_version(self):
-        raise TimeoutError("simulated timeout")
+    def advance(self, seconds):
+        self.value += seconds
 
 
-def safe_plan():
-    return build_plan_from_expression(
-        "0x00,0x06,0x07"
+def make_request(**overrides):
+    values = {
+        "opcode": 0x01,
+        "name": "board-query",
+        "danger_level": DangerLevel.SAFE,
+        "mode": ExecutionMode.SIMULATION,
+        "known_opcode": True,
+    }
+    values.update(overrides)
+
+    return ExecutionRequest(**values)
+
+
+def test_safe_simulation_allowed():
+    decision = ExecutionInterlock().evaluate(
+        make_request()
+    )
+
+    assert decision.allowed
+    assert decision.simulation_only
+    assert (
+        decision.reason
+        is InterlockReason.SIMULATION_ALLOWED
     )
 
 
-def test_simulation_arms_without_phrase():
-    context = build_execution_context(
-        safe_plan(),
-        simulation=True,
-        cooldown_seconds=0,
+def test_unknown_opcode_simulation_allowed():
+    request = make_request(
+        opcode=0x99,
+        known_opcode=False,
     )
 
-    assert context.state == ExecutionState.ARMED
-
-
-def test_simulation_completes():
-    context = build_execution_context(
-        safe_plan(),
-        simulation=True,
-        cooldown_seconds=0,
+    decision = ExecutionInterlock().evaluate(
+        request
     )
 
-    run_simulated_execution(context)
+    assert decision.allowed
+    assert decision.simulation_only
 
-    assert context.state == ExecutionState.COMPLETED
-    assert context.healthy
-    assert context.successes == 3
-    assert all(
-        observation.simulated
-        for observation in context.observations
+
+def test_unknown_opcode_live_denied():
+    request = make_request(
+        opcode=0x99,
+        known_opcode=False,
+        mode=ExecutionMode.LIVE,
+    )
+
+    decision = ExecutionInterlock().evaluate(
+        request,
+        controller_family="A125",
+    )
+
+    assert not decision.allowed
+    assert (
+        decision.reason
+        is InterlockReason.UNKNOWN_OPCODE
     )
 
 
-def test_hardware_requires_exact_phrase():
-    try:
-        build_execution_context(
-            safe_plan(),
-            simulation=False,
-            arming_phrase="close enough",
-            cooldown_seconds=0,
-        )
-    except PermissionError:
-        pass
-    else:
-        raise AssertionError(
-            "Incorrect arming phrase should fail"
-        )
-
-
-def test_hardware_arms_with_exact_phrase():
-    context = build_execution_context(
-        safe_plan(),
-        simulation=False,
-        arming_phrase=ARMING_PHRASE,
-        cooldown_seconds=0,
+def test_experimental_live_denied():
+    request = make_request(
+        danger_level=DangerLevel.EXPERIMENTAL,
+        mode=ExecutionMode.LIVE,
     )
 
-    assert context.state == ExecutionState.ARMED
-
-
-def test_stateful_opcode_rejected():
-    plan = build_plan_from_expression(
-        "0x10",
-        allow_experimental_stateful=True,
+    decision = ExecutionInterlock().evaluate(
+        request,
+        controller_family="A125",
     )
 
-    try:
-        build_execution_context(
-            plan,
-            simulation=True,
-            cooldown_seconds=0,
-        )
-    except PermissionError:
-        pass
-    else:
-        raise AssertionError(
-            "Experimental stateful opcode passed interlock"
-        )
-
-
-def test_documented_write_rejected():
-    plan = build_plan_from_expression(
-        "0x0C",
-        allow_documented_writes=True,
+    assert not decision.allowed
+    assert (
+        decision.reason
+        is InterlockReason.SIMULATION_REQUIRED
     )
 
-    try:
-        build_execution_context(
-            plan,
-            simulation=True,
-            cooldown_seconds=0,
-        )
-    except PermissionError:
-        pass
-    else:
-        raise AssertionError(
-            "Documented write passed read-only interlock"
-        )
 
-
-def test_hardware_execution():
-    context = build_execution_context(
-        safe_plan(),
-        simulation=False,
-        arming_phrase=ARMING_PHRASE,
-        cooldown_seconds=0,
+def test_forbidden_operation_always_denied():
+    request = make_request(
+        danger_level=DangerLevel.FORBIDDEN,
     )
 
-    run_hardware_execution(
-        context,
-        FakeController(),
+    decision = ExecutionInterlock().evaluate(
+        request
     )
 
-    assert context.state == ExecutionState.COMPLETED
-    assert context.healthy
-    assert context.successes == 3
-    assert [
-        observation.value
-        for observation in context.observations
-    ] == [
-        0x007D,
-        0x0000,
-        0x0003,
-    ]
-
-
-def test_failure_aborts_execution():
-    plan = build_plan_from_expression(
-        "0x00,0x07,0x06"
+    assert not decision.allowed
+    assert (
+        decision.reason
+        is InterlockReason.FORBIDDEN_OPERATION
     )
 
-    context = build_execution_context(
-        plan,
-        simulation=False,
-        arming_phrase=ARMING_PHRASE,
-        cooldown_seconds=0,
+
+def test_live_execution_requires_fingerprint():
+    request = make_request(
+        mode=ExecutionMode.LIVE,
     )
 
-    run_hardware_execution(
-        context,
-        FailingController(),
+    decision = ExecutionInterlock().evaluate(
+        request
     )
 
-    assert context.state == ExecutionState.ABORTED
-    assert context.failures == 1
-    assert len(context.observations) == 2
-    assert "0x07" in context.abort_reason
+    assert not decision.allowed
+    assert (
+        decision.reason
+        is InterlockReason.FINGERPRINT_REQUIRED
+    )
 
 
-def main():
-    tests = [
-        test_simulation_arms_without_phrase,
-        test_simulation_completes,
-        test_hardware_requires_exact_phrase,
-        test_hardware_arms_with_exact_phrase,
-        test_stateful_opcode_rejected,
-        test_documented_write_rejected,
-        test_hardware_execution,
-        test_failure_aborts_execution,
-    ]
+def test_fingerprint_mismatch_denied():
+    request = make_request(
+        mode=ExecutionMode.LIVE,
+    )
 
-    for test in tests:
-        test()
-        print(f"PASS: {test.__name__}")
+    decision = ExecutionInterlock().evaluate(
+        request,
+        controller_family="NOT-A125",
+    )
 
-    print()
-    print("Project Stargate Mission 3C.4: PASS")
+    assert not decision.allowed
+    assert (
+        decision.reason
+        is InterlockReason.FINGERPRINT_MISMATCH
+    )
 
 
-if __name__ == "__main__":
-    main()
+def test_safe_live_execution_allowed():
+    request = make_request(
+        mode=ExecutionMode.LIVE,
+    )
+
+    decision = ExecutionInterlock().evaluate(
+        request,
+        controller_family="A125",
+    )
+
+    assert decision.allowed
+    assert not decision.simulation_only
+
+
+def test_dangerous_live_requires_authorization():
+    request = make_request(
+        danger_level=DangerLevel.DANGEROUS,
+        mode=ExecutionMode.LIVE,
+    )
+
+    decision = ExecutionInterlock().evaluate(
+        request,
+        controller_family="A125",
+    )
+
+    assert not decision.allowed
+    assert (
+        decision.reason
+        is InterlockReason.AUTHORIZATION_REQUIRED
+    )
+
+
+def test_dangerous_live_accepts_matching_authorization():
+    request = make_request(
+        danger_level=DangerLevel.DANGEROUS,
+        mode=ExecutionMode.LIVE,
+    )
+    authorization = ExecutionAuthorization.issue(
+        request.request_id
+    )
+
+    decision = ExecutionInterlock().evaluate(
+        request,
+        authorization=authorization,
+        controller_family="A125",
+    )
+
+    assert decision.allowed
+
+
+def test_authorization_cannot_be_reused_for_other_request():
+    first = make_request(
+        danger_level=DangerLevel.DANGEROUS,
+        mode=ExecutionMode.LIVE,
+    )
+    second = make_request(
+        danger_level=DangerLevel.DANGEROUS,
+        mode=ExecutionMode.LIVE,
+    )
+    authorization = ExecutionAuthorization.issue(
+        first.request_id
+    )
+
+    decision = ExecutionInterlock().evaluate(
+        second,
+        authorization=authorization,
+        controller_family="A125",
+    )
+
+    assert not decision.allowed
+    assert (
+        decision.reason
+        is InterlockReason.AUTHORIZATION_INVALID
+    )
+
+
+def test_cooldown_blocks_repeated_live_execution():
+    clock = FakeClock()
+    cooldown = CooldownTracker(
+        cooldown_seconds=5,
+        clock=clock,
+    )
+    interlock = ExecutionInterlock(
+        cooldown=cooldown,
+    )
+    request = make_request(
+        mode=ExecutionMode.LIVE,
+    )
+
+    first = interlock.evaluate(
+        request,
+        controller_family="A125",
+    )
+    assert first.allowed
+
+    interlock.record_execution(request)
+
+    second = interlock.evaluate(
+        request,
+        controller_family="A125",
+    )
+
+    assert not second.allowed
+    assert (
+        second.reason
+        is InterlockReason.COOLDOWN_ACTIVE
+    )
+    assert second.cooldown_remaining == 5.0
+
+
+def test_cooldown_expires():
+    clock = FakeClock()
+    cooldown = CooldownTracker(
+        cooldown_seconds=5,
+        clock=clock,
+    )
+    interlock = ExecutionInterlock(
+        cooldown=cooldown,
+    )
+    request = make_request(
+        mode=ExecutionMode.LIVE,
+    )
+
+    interlock.record_execution(request)
+    clock.advance(5)
+
+    decision = interlock.evaluate(
+        request,
+        controller_family="A125",
+    )
+
+    assert decision.allowed
+
+
+def test_requires_live_hardware_rejects_simulation():
+    request = make_request(
+        requires_live_hardware=True,
+    )
+
+    decision = ExecutionInterlock().evaluate(
+        request
+    )
+
+    assert not decision.allowed
+    assert (
+        decision.reason
+        is InterlockReason.LIVE_MODE_REQUIRED
+    )
