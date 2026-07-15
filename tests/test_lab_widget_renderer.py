@@ -273,3 +273,87 @@ def test_compact_thermal_bar_requires_positive_width():
             50,
             width=0,
         )
+
+
+def test_history_line_renders_sparkline():
+    renderer = WidgetRenderer()
+
+    line = renderer.history_line(
+        "ACT",
+        [0.0, 0.5, 1.0],
+        width=12,
+    )
+
+    assert line == "ACT ..........+@"
+
+
+def test_history_line_keeps_latest_samples():
+    renderer = WidgetRenderer()
+
+    line = renderer.history_line(
+        "NET",
+        [1.0] * 20,
+        width=12,
+    )
+
+    assert line == "NET @@@@@@@@@@@@"
+
+
+def test_history_line_requires_label():
+    import pytest
+
+    renderer = WidgetRenderer()
+
+    with pytest.raises(
+        ValueError,
+        match="label is required",
+    ):
+        renderer.history_line(
+            "",
+            [0.5],
+        )
+
+
+def test_history_line_requires_positive_width():
+    import pytest
+
+    renderer = WidgetRenderer()
+
+    with pytest.raises(
+        ValueError,
+        match="greater than zero",
+    ):
+        renderer.history_line(
+            "ACT",
+            [0.5],
+            width=0,
+        )
+
+
+def test_history_line_supports_unicode_preview():
+    renderer = WidgetRenderer()
+
+    line = renderer.history_line(
+        "ACT",
+        [0.0, 0.5, 1.0],
+        width=3,
+        style="unicode",
+    )
+
+    assert line == "ACT ▁▅█         "
+
+
+def test_history_line_rejects_unknown_style():
+    import pytest
+
+    renderer = WidgetRenderer()
+
+    with pytest.raises(
+        ValueError,
+        match="style must be ascii or unicode",
+    ):
+        renderer.history_line(
+            "ACT",
+            [0.5],
+            style="hieroglyphic",
+        )

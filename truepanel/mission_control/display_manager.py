@@ -92,6 +92,7 @@ class DisplayManager:
 
         self.performance_history = []
         self.activity_history = []
+        self.network_history = []
         self.alert_flash_frame = 0
 
         self.builtin_dashboard_pages = {
@@ -369,35 +370,45 @@ class DisplayManager:
             canvas.text(
                 0,
                 0,
-                f"{status_icon(priority)} MISSION ALERT",
+                "MISSION ALERT",
                 width=LCD_WIDTH,
+                align="center",
             )
             canvas.text(
                 0,
                 1,
-                event.title,
-                width=LCD_WIDTH,
-                align="center",
+                widget_renderer.performance_bar_line(
+                    "ALT",
+                    100,
+                ),
             )
 
         elif alert_count:
             priority = Priority.WARNING
             event_obj = history[0]
 
+            watch_percent = min(
+                100,
+                max(1, alert_count) * 20,
+            )
+
             canvas.text(
                 0,
                 0,
-                f"{self.theme_engine.status(Priority.WARNING)} "
-                f"{self.theme_engine.text('system_watch', 'SYSTEM WATCH')}",
+                self.theme_engine.text(
+                    "system_watch",
+                    "SYSTEM WATCH",
+                ),
                 width=LCD_WIDTH,
+                align="center",
             )
             canvas.text(
                 0,
                 1,
-                f"{alert_count} Stored Alert"
-                + ("s" if alert_count != 1 else ""),
-                width=LCD_WIDTH,
-                align="center",
+                widget_renderer.performance_bar_line(
+                    "ALT",
+                    watch_percent,
+                ),
             )
 
         else:
@@ -407,17 +418,20 @@ class DisplayManager:
             canvas.text(
                 0,
                 0,
-                f"{self.theme_engine.status(Priority.HEALTHY)} "
-                f"{self.theme_engine.text('mission_ready', 'MISSION READY')}",
+                self.theme_engine.text(
+                    "mission_ready",
+                    "MISSION READY",
+                ),
                 width=LCD_WIDTH,
                 align="center",
             )
             canvas.text(
                 0,
                 1,
-                self.theme_engine.text("all_systems_go", "All Systems GO"),
-                width=LCD_WIDTH,
-                align="center",
+                widget_renderer.performance_bar_line(
+                    "SYS",
+                    100,
+                ),
             )
 
         return self.canvas_frame(
@@ -509,12 +523,15 @@ class DisplayManager:
         canvas.text(
             0,
             0,
-            f"{name[:9]} {percent:>3}%",
+            f"POOL {name[:6]:<6} {percent:>3}%",
         )
         canvas.text(
             0,
             1,
-            self.theme_engine.bar(percent, width=LCD_WIDTH),
+            widget_renderer.performance_bar_line(
+                "USE",
+                percent,
+            ),
         )
 
         if percent >= 95:
@@ -698,9 +715,15 @@ class DisplayManager:
         self.activity_history = self.activity_history[-16:]
 
         maximum = max(self.activity_history or [1])
-        activity_percent = (
-            0 if maximum <= 0 else (total / maximum) * 100
-        )
+
+        normalized_history = [
+            (
+                0.0
+                if maximum <= 0
+                else value / maximum
+            )
+            for value in self.activity_history
+        ]
 
         canvas = Canvas()
 
@@ -712,7 +735,6 @@ class DisplayManager:
                 width=LCD_WIDTH,
                 align="center",
             )
-            canvas.text(0, 1, "." * LCD_WIDTH)
         else:
             canvas.text(
                 0,
@@ -720,15 +742,15 @@ class DisplayManager:
                 f"R{self.rate_text(read_rate):>6} "
                 f"W{self.rate_text(write_rate):>6}",
             )
-            canvas.text(
-                0,
-                1,
-                activity_meter(
-                    activity_percent,
-                    maximum=100,
-                    width=LCD_WIDTH,
-                ),
-            )
+
+        canvas.text(
+            0,
+            1,
+            widget_renderer.history_line(
+                "ACT",
+                normalized_history,
+            ),
+        )
 
         return self.canvas_frame(
             canvas,
@@ -758,27 +780,36 @@ class DisplayManager:
             )
         )
 
-        ip_address = (
-            network.get("ip")
-            or network.get("address")
-            or state.get("ip_address")
-            or state.get("ip")
-            or "No Address"
-        )
+        total = upload + download
+
+        self.network_history.append(total)
+        self.network_history = self.network_history[-16:]
+
+        maximum = max(self.network_history or [1])
+
+        normalized_history = [
+            (
+                0.0
+                if maximum <= 0
+                else value / maximum
+            )
+            for value in self.network_history
+        ]
 
         canvas = Canvas()
         canvas.text(
             0,
             0,
-            f"^{self.rate_text(upload):<6} "
-            f"v{self.rate_text(download):<6}",
+            f"R{self.rate_text(download):>6} "
+            f"T{self.rate_text(upload):>6}",
         )
         canvas.text(
             0,
             1,
-            str(ip_address),
-            width=LCD_WIDTH,
-            align="center",
+            widget_renderer.history_line(
+                "NET",
+                normalized_history,
+            ),
         )
 
         return self.canvas_frame(

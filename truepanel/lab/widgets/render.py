@@ -137,6 +137,70 @@ class WidgetRenderer:
     def activity(self, frame: int) -> str:
         return Spinner().render(frame)
 
+    def history_line(
+        self,
+        label: str,
+        values,
+        *,
+        width: int = 12,
+        style: str = "ascii",
+    ) -> str:
+        """
+        Render a labeled history sparkline across one LCD row.
+
+        ASCII is the production default because the A125 character display
+        cannot reliably render Unicode block glyphs. Unicode remains available
+        for terminal previews and compatible display backends.
+        """
+
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError("label is required")
+
+        if width <= 0:
+            raise ValueError(
+                "width must be greater than zero"
+            )
+
+        if style not in {"ascii", "unicode"}:
+            raise ValueError(
+                "style must be ascii or unicode"
+            )
+
+        samples = list(values or ())[-width:]
+
+        if len(samples) < width:
+            samples = (
+                [0.0] * (width - len(samples))
+                + samples
+            )
+
+        sparkline = Sparkline(
+            width=width,
+        ).render(samples)
+
+        if style == "ascii":
+            sparkline = sparkline.translate(
+                str.maketrans(
+                    {
+                        "▁": ".",
+                        "▂": ":",
+                        "▃": "-",
+                        "▄": "=",
+                        "▅": "+",
+                        "▆": "*",
+                        "▇": "#",
+                        "█": "@",
+                    }
+                )
+            )
+
+        line = (
+            f"{label.strip().upper()[:3]:<3} "
+            f"{sparkline}"
+        )
+
+        return line[:LCD_WIDTH].ljust(LCD_WIDTH)
+
     @staticmethod
     def _percentage(value: float) -> int:
         try:
