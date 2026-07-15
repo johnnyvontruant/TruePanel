@@ -1,0 +1,6 @@
+{
+  "disabled": [],
+  "sources": {
+    "hello_panel": "/root/TruePanel/examples/plugins/hello_panel"
+  }
+}
