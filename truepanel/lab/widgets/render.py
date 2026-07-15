@@ -56,6 +56,59 @@ class WidgetRenderer:
             style="ascii",
         ).render_temperature(degrees)
 
+    def thermal_bar_line(
+        self,
+        degrees: float,
+        *,
+        minimum: float = 20,
+        maximum: float = 80,
+        width: int = 6,
+        style: str = "ascii",
+    ) -> str:
+        """
+        Render one compact temperature gauge.
+
+        The percentage represents the temperature's position within the
+        configured operating range.
+        """
+
+        if maximum <= minimum:
+            raise ValueError(
+                "maximum must be greater than minimum"
+            )
+
+        if width <= 0:
+            raise ValueError(
+                "width must be greater than zero"
+            )
+
+        try:
+            value = float(degrees)
+        except (TypeError, ValueError):
+            value = minimum
+
+        ratio = (
+            (value - minimum)
+            / (maximum - minimum)
+        )
+
+        percent = self._percentage(
+            ratio * 100
+        )
+
+        bar = ProgressBar(
+            width=width,
+            style=style,
+        ).render_percent(percent)
+
+        line = (
+            f"TMP "
+            f"{bar} "
+            f"{percent:>3}%"
+        )
+
+        return line[:LCD_WIDTH].ljust(LCD_WIDTH)
+
     def battery_level(
         self,
         percent: float,

@@ -181,3 +181,95 @@ def test_compact_performance_requires_positive_width():
             50,
             width=0,
         )
+
+
+def test_compact_thermal_bar():
+    renderer = WidgetRenderer()
+
+    line = renderer.thermal_bar_line(
+        50,
+        minimum=20,
+        maximum=80,
+    )
+
+    assert line == "TMP ###---  50% "
+
+
+def test_compact_thermal_bar_clamps_low():
+    renderer = WidgetRenderer()
+
+    line = renderer.thermal_bar_line(
+        -100,
+        minimum=20,
+        maximum=80,
+    )
+
+    assert line == "TMP ------   0% "
+
+
+def test_compact_thermal_bar_clamps_high():
+    renderer = WidgetRenderer()
+
+    line = renderer.thermal_bar_line(
+        500,
+        minimum=20,
+        maximum=80,
+    )
+
+    assert line == "TMP ###### 100% "
+
+
+def test_compact_thermal_bar_invalid_value_defaults_low():
+    renderer = WidgetRenderer()
+
+    line = renderer.thermal_bar_line(
+        "plasma",
+        minimum=20,
+        maximum=80,
+    )
+
+    assert line == "TMP ------   0% "
+
+
+def test_compact_thermal_bar_supports_blocks():
+    renderer = WidgetRenderer()
+
+    line = renderer.thermal_bar_line(
+        50,
+        minimum=20,
+        maximum=80,
+        style="blocks",
+    )
+
+    assert line == "TMP ███░░░  50% "
+
+
+def test_compact_thermal_bar_requires_valid_range():
+    import pytest
+
+    renderer = WidgetRenderer()
+
+    with pytest.raises(
+        ValueError,
+        match="maximum must be greater",
+    ):
+        renderer.thermal_bar_line(
+            50,
+            minimum=80,
+            maximum=20,
+        )
+
+
+def test_compact_thermal_bar_requires_positive_width():
+    import pytest
+
+    renderer = WidgetRenderer()
+
+    with pytest.raises(
+        ValueError,
+        match="greater than zero",
+    ):
+        renderer.thermal_bar_line(
+            50,
+            width=0,
+        )

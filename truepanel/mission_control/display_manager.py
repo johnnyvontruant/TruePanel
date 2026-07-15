@@ -574,8 +574,6 @@ class DisplayManager:
         drive = str(hottest.get("drive", "disk"))
         temp = self.integer(hottest.get("temp", 0))
 
-        gauge_percent = min(100, max(0, temp * 2))
-
         canvas = Canvas()
         canvas.text(
             0,
@@ -585,7 +583,11 @@ class DisplayManager:
         canvas.text(
             0,
             1,
-            self.theme_engine.bar(gauge_percent, width=LCD_WIDTH),
+            widget_renderer.thermal_bar_line(
+                temp,
+                minimum=20,
+                maximum=80,
+            ),
         )
 
         if temp >= 60:
