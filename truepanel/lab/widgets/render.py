@@ -93,6 +93,71 @@ class WidgetRenderer:
 
         return max(0, min(100, value))
 
+    def performance_bar_line(
+        self,
+        label: str,
+        percent: float,
+        *,
+        width: int = 6,
+        style: str = "ascii",
+    ) -> str:
+        """
+        Render one compact performance row.
+
+        A six-cell bar leaves enough room for a three-character label and a
+        right-aligned percentage on a 16-character LCD.
+        """
+
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError("label is required")
+
+        if width <= 0:
+            raise ValueError(
+                "width must be greater than zero"
+            )
+
+        value = self._percentage(percent)
+
+        bar = ProgressBar(
+            width=width,
+            style=style,
+        ).render_percent(value)
+
+        line = (
+            f"{label.strip().upper()[:3]:<3} "
+            f"{bar} "
+            f"{value:>3}%"
+        )
+
+        return line[:LCD_WIDTH].ljust(LCD_WIDTH)
+
+    def performance_bar_lines(
+        self,
+        cpu_percent: float,
+        ram_percent: float,
+        *,
+        width: int = 6,
+        style: str = "ascii",
+    ) -> tuple[str, str]:
+        """
+        Render graphical CPU and RAM rows for the Flight Deck.
+        """
+
+        return (
+            self.performance_bar_line(
+                "CPU",
+                cpu_percent,
+                width=width,
+                style=style,
+            ),
+            self.performance_bar_line(
+                "RAM",
+                ram_percent,
+                width=width,
+                style=style,
+            ),
+        )
+
     def performance_lines(
         self,
         cpu_percent: float,

@@ -76,3 +76,108 @@ def test_invalid_values_default_to_zero():
 
     assert line1 == "CPU Usage   0%  "
     assert line2 == "RAM Usage   0%  "
+
+
+def test_compact_performance_bars():
+    renderer = WidgetRenderer()
+
+    line1, line2 = renderer.performance_bar_lines(
+        50,
+        75,
+    )
+
+    assert line1 == "CPU ###---  50% "
+    assert line2 == "RAM ####--  75% "
+
+
+def test_compact_performance_lines_are_lcd_width():
+    renderer = WidgetRenderer()
+
+    lines = renderer.performance_bar_lines(
+        100,
+        100,
+    )
+
+    assert all(
+        len(line) == LCD_WIDTH
+        for line in lines
+    )
+
+
+def test_compact_performance_values_are_clamped():
+    renderer = WidgetRenderer()
+
+    line1, line2 = renderer.performance_bar_lines(
+        -50,
+        900,
+    )
+
+    assert line1 == "CPU ------   0% "
+    assert line2 == "RAM ###### 100% "
+
+
+def test_compact_performance_values_are_rounded():
+    renderer = WidgetRenderer()
+
+    line1, line2 = renderer.performance_bar_lines(
+        49.6,
+        24.5,
+    )
+
+    assert line1 == "CPU ###---  50% "
+    assert line2 == "RAM #-----  24% "
+
+
+def test_compact_performance_invalid_values_default_zero():
+    renderer = WidgetRenderer()
+
+    line1, line2 = renderer.performance_bar_lines(
+        None,
+        "warp-nine",
+    )
+
+    assert line1 == "CPU ------   0% "
+    assert line2 == "RAM ------   0% "
+
+
+def test_compact_performance_supports_block_style():
+    renderer = WidgetRenderer()
+
+    line = renderer.performance_bar_line(
+        "CPU",
+        50,
+        style="blocks",
+    )
+
+    assert line == "CPU ███░░░  50% "
+
+
+def test_compact_performance_requires_label():
+    import pytest
+
+    renderer = WidgetRenderer()
+
+    with pytest.raises(
+        ValueError,
+        match="label is required",
+    ):
+        renderer.performance_bar_line(
+            "",
+            50,
+        )
+
+
+def test_compact_performance_requires_positive_width():
+    import pytest
+
+    renderer = WidgetRenderer()
+
+    with pytest.raises(
+        ValueError,
+        match="greater than zero",
+    ):
+        renderer.performance_bar_line(
+            "CPU",
+            50,
+            width=0,
+        )
