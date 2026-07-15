@@ -1,3 +1,18 @@
+from .authorization import (
+    PROTOCOL_ARMING_PHRASE,
+    ProtocolAuthorization,
+)
+from .live_runner import ProtocolLiveRunner
+from .policy import ProtocolPolicy
+from .restore import (
+    ProtocolRestorer,
+    RestoreResult,
+)
+from .validator import (
+    ProtocolExperimentValidator,
+    ValidationReason,
+    ValidationResult,
+)
 """
 Project Stargate protocol-discovery framework.
 
@@ -31,6 +46,15 @@ from .sequence import (
 )
 
 __all__ = [
+    "PROTOCOL_ARMING_PHRASE",
+    "ProtocolAuthorization",
+    "ProtocolExperimentValidator",
+    "ProtocolLiveRunner",
+    "ProtocolPolicy",
+    "ProtocolRestorer",
+    "RestoreResult",
+    "ValidationReason",
+    "ValidationResult",
     "EvidenceConfidence",
     "EvidenceRecord",
     "EvidenceVerdict",
