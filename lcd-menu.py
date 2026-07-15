@@ -393,7 +393,9 @@ def maybe_show_alert():
     frame = display_manager.evaluate(state)
 
     if frame.interrupt:
-        buzzer.alert(frame.priority)
+        if alert_manager.should_beep(frame.event):
+            buzzer.alert(frame.priority)
+
         show_alert_transition(frame)
         time.sleep(frame.event.timeout)
         return True
