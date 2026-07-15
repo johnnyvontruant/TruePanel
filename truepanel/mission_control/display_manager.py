@@ -536,7 +536,7 @@ class DisplayManager:
         self.performance_history.append(max(cpu, ram))
         self.performance_history = self.performance_history[-16:]
 
-        line1, line2 = widget_renderer.performance_lines(
+        line1, line2 = widget_renderer.performance_bar_lines(
             cpu,
             ram,
         )
