@@ -31,7 +31,7 @@ from truepanel.lab.experiments import (
 from truepanel.lab.planner import (
     build_plan_from_expression,
 )
-from truepanel.lab.execution import (
+from truepanel.lab.survey_models import (
     ExecutionObservation,
 )
 from truepanel.lab.display_experiment import (
@@ -41,17 +41,18 @@ from truepanel.lab.display_runner import (
     DisplayExperimentRunner,
     FrameExecution,
 )
+from truepanel.lab.glyph_runner import (
+    GlyphAtlasRunner,
+    GlyphRunResult,
+)
 from truepanel.lab.display_timing import (
     DisplayTimingSample,
     measure_clear,
     measure_frame_write,
     measure_line_write,
 )
-from truepanel.lab.interlock import (
-    ARMING_PHRASE,
-    build_execution_context,
-    run_hardware_execution,
-    run_simulated_execution,
+from truepanel.lab.survey_service import (
+    SurveyService,
 )
 from truepanel.lab.fingerprint import (
     ControllerFingerprint,
@@ -65,6 +66,10 @@ from truepanel.lab.fingerprint_format import (
     render_fingerprint,
 )
 from truepanel.lab.service import LaboratoryService
+from truepanel.lab.application import (
+    LaboratoryApplicationConfiguration,
+    build_a125_laboratory_application,
+)
 
 
 @dataclass
@@ -222,10 +227,21 @@ def run_display_timing(args) -> LabResult:
             )
 
         elif args.timing_operation == "row":
+            if args.length is not None:
+                if not 0 <= args.length <= 16:
+                    raise ValueError(
+                        "length must be between 0 and 16"
+                    )
+
+                alphabet = "ABCDEFGHIJKLMNOP"
+                row_text = alphabet[:args.length]
+            else:
+                row_text = args.text
+
             result = measure_line_write(
                 controller,
                 row=args.row,
-                text=args.text,
+                text=row_text,
                 count=args.count,
                 interval=args.interval,
                 callback=callback,
@@ -267,6 +283,52 @@ def run_display_timing(args) -> LabResult:
                 f"{result.requested_count} successful"
             ),
             detail=detail,
+            capture_path=str(capture),
+            data=result.as_dict(),
+        )
+
+
+
+def print_glyph_result(
+    result: GlyphRunResult,
+) -> None:
+    page = result.page
+
+    print()
+    print(
+        f"Glyph Page {page.index}"
+    )
+    print(
+        f"Range : {page.label}"
+    )
+
+
+def run_glyph_page(args) -> LabResult:
+    with open_controller(
+        f"glyph-page-{args.page}",
+        args.port,
+        args.baud,
+        args.timeout,
+        args.capture_dir,
+    ) as (controller, capture):
+
+        runner = GlyphAtlasRunner(controller)
+
+        result = runner.display_page(
+            args.page
+        )
+
+        if not args.json_output:
+            print_glyph_result(result)
+
+        return LabResult(
+            command="glyph-page",
+            success=True,
+            value=result.page.label,
+            detail=(
+                f"Displayed glyph page "
+                f"{result.page.index}"
+            ),
             capture_path=str(capture),
             data=result.as_dict(),
         )
@@ -358,6 +420,80 @@ def run_status(args) -> LabResult:
     )
 
 
+def _build_identity_application(controller):
+    """
+    Build the application used by documented identity commands.
+
+    The CLI retains responsibility for opening the captured controller
+    context. All command selection and execution policy flows through the
+    laboratory application.
+    """
+
+    return build_a125_laboratory_application(
+        controller,
+        configuration=LaboratoryApplicationConfiguration(
+            cooldown_seconds=0,
+            require_fingerprint=True,
+        ),
+    )
+
+
+def _identity_execution_result(
+    *,
+    cli_command,
+    catalog_command,
+    controller,
+    capture,
+):
+    """
+    Execute one cataloged identity query and preserve the legacy LabResult
+    presentation contract.
+    """
+
+    application = _build_identity_application(
+        controller
+    )
+
+    execution = application.execute_live(
+        catalog_command
+    )
+
+    value_hex = execution.metadata.get(
+        "value_hex"
+    )
+
+    if value_hex is None and isinstance(
+        execution.data,
+        int,
+    ):
+        value_hex = f"0x{execution.data:04X}"
+
+    return LabResult(
+        command=cli_command,
+        success=execution.success,
+        value=value_hex or "",
+        detail=execution.decision.message,
+        capture_path=str(capture),
+        data={
+            "request_id": execution.request_id,
+            "catalog_command": catalog_command,
+            "opcode": execution.opcode,
+            "opcode_hex": (
+                f"0x{execution.opcode:02X}"
+            ),
+            "status": execution.status.value,
+            "decision": (
+                execution.decision.reason.value
+            ),
+            "duration_ms": execution.duration_ms,
+            "metadata": dict(
+                execution.metadata
+            ),
+            "error": execution.error,
+        },
+    )
+
+
 def run_board(args) -> LabResult:
     with open_controller(
         "board",
@@ -366,13 +502,11 @@ def run_board(args) -> LabResult:
         args.timeout,
         args.capture_dir,
     ) as (controller, capture):
-        value = controller.query_board_id()
-
-        return LabResult(
-            command="board",
-            success=True,
-            value=f"0x{value:04X}",
-            capture_path=str(capture),
+        return _identity_execution_result(
+            cli_command="board",
+            catalog_command="board-query",
+            controller=controller,
+            capture=capture,
         )
 
 
@@ -384,13 +518,11 @@ def run_version(args) -> LabResult:
         args.timeout,
         args.capture_dir,
     ) as (controller, capture):
-        value = controller.query_protocol_version()
-
-        return LabResult(
-            command="version",
-            success=True,
-            value=f"0x{value:04X}",
-            capture_path=str(capture),
+        return _identity_execution_result(
+            cli_command="version",
+            catalog_command="version-query",
+            controller=controller,
+            capture=capture,
         )
 
 
@@ -402,13 +534,11 @@ def run_buttons(args) -> LabResult:
         args.timeout,
         args.capture_dir,
     ) as (controller, capture):
-        value = controller.query_buttons()
-
-        return LabResult(
-            command="buttons",
-            success=True,
-            value=f"0x{value:04X}",
-            capture_path=str(capture),
+        return _identity_execution_result(
+            cli_command="buttons",
+            catalog_command="button-query",
+            controller=controller,
+            capture=capture,
         )
 
 
@@ -542,7 +672,9 @@ def run_survey(args) -> LabResult:
 
     simulation = not args.hardware
 
-    context = build_execution_context(
+    survey_service = SurveyService()
+
+    context = survey_service.prepare(
         plan=plan,
         simulation=simulation,
         arming_phrase=args.arm,
@@ -557,7 +689,7 @@ def run_survey(args) -> LabResult:
     )
 
     if simulation:
-        run_simulated_execution(
+        survey_service.run(
             context,
             callback=callback,
         )
@@ -571,9 +703,9 @@ def run_survey(args) -> LabResult:
             args.timeout,
             args.capture_dir,
         ) as (controller, capture):
-            run_hardware_execution(
+            survey_service.run(
                 context,
-                controller,
+                controller=controller,
                 callback=callback,
             )
 
@@ -889,6 +1021,16 @@ def build_parser():
     timing_row.add_argument(
         "--text",
         default="ABCDEFGHIJKLMNOP",
+        help="Explicit row text when --length is not used",
+    )
+    timing_row.add_argument(
+        "--length",
+        type=int,
+        default=None,
+        help=(
+            "Generate a deterministic payload from 0 to 16 bytes; "
+            "overrides --text"
+        ),
     )
     timing_row.add_argument("--count", type=int, default=25)
     timing_row.add_argument("--interval", type=float, default=0.05)
@@ -909,6 +1051,31 @@ def build_parser():
     timing_frame.add_argument("--count", type=int, default=25)
     timing_frame.add_argument("--interval", type=float, default=0.05)
     timing_frame.set_defaults(handler=run_display_timing)
+
+    glyphs = commands.add_parser(
+        "glyphs",
+        help="LCD character ROM exploration",
+    )
+
+    glyph_commands = glyphs.add_subparsers(
+        dest="glyph_command",
+        required=True,
+    )
+
+    glyph_page = glyph_commands.add_parser(
+        "page",
+        help="Display one glyph atlas page",
+    )
+
+    glyph_page.add_argument(
+        "page",
+        type=int,
+        choices=range(8),
+    )
+
+    glyph_page.set_defaults(
+        handler=run_glyph_page,
+    )
 
     display = commands.add_parser(
         "display",
