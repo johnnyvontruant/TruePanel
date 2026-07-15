@@ -1,4 +1,4 @@
-theme_pack: default
+theme_pack: tactical
 
 flightdeck:
   rotation_interval: 5
@@ -32,3 +32,75 @@ theme:
   critical_prefix: "X "
   info_prefix: "i "
   healthy_prefix: "O "
+
+buzzer:
+  enabled: true
+  backend: pcspkr
+  device: auto
+
+  startup: long
+  shutdown: short
+  warning: short
+  critical: long
+
+  short_frequency: 880
+  short_duration: 0.20
+  long_frequency: 660
+  long_duration: 0.65
+
+  cooldown: 30
+
+plugins:
+  path: plugins
+  external_enabled: true
+  disabled: []
+
+  # Third-party plugin settings live under their plugin ID.
+  config: {}
+
+history:
+  enabled: true
+
+  # Native installs use persistent application data under /var/lib.
+  path: /var/lib/truepanel/history/telemetry.jsonl
+
+  # One sample per minute keeps writes modest while preserving useful trends.
+  sample_interval: 60
+
+  retention_days: 30
+  max_samples: 50000
+
+  # Rewrite and prune the JSONL file after this many new samples.
+  compact_every: 250
+
+  # fsync on every sample is unnecessary for noncritical telemetry.
+  flush: false
+
+  lcd:
+    enabled: true
+
+    # Initial historical view displayed by the LCD.
+    window_hours: 1
+    points: 16
+
+    pages:
+      - history-cpu
+      - history-ram
+      - history-temperature
+      - history-capacity
+      - history-network
+      - history-zfs
+      - history-alerts
+
+graphics_engine:
+  enabled: true
+
+  # auto selects verified custom glyphs, configured ROM glyphs,
+  # or the safe ASCII fallback.
+  mode: auto
+
+  # Keep false until the A125 CGRAM command is verified.
+  custom_glyphs_verified: false
+
+  # Populate only after a successful character-ROM probe.
+  rom_levels: []

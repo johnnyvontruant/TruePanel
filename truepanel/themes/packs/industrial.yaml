@@ -1,0 +1,27 @@
+metadata:
+  name: Industrial
+  description: Utility-first plant-floor instrumentation.
+  author: TruePanel
+  version: "1.0"
+
+theme:
+  healthy_message: Plant Online
+  startup_title: TRUEPANEL
+  startup_subtitle: CONTROL UNIT
+  mission_ready: PLANT ONLINE
+  all_systems_go: ALL UNITS NORMAL
+  pool_healthy: STORAGE ONLINE
+  system_watch: INSPECTION DUE
+  alert_banner: UNIT FAILURE
+  warning_banner: WARNING
+
+graphics:
+  filled: "="
+  empty: "-"
+  healthy: "+"
+  info: "i"
+  warning: "!"
+  critical: "#"
+  activity_low: "."
+  activity_mid: "="
+  activity_high: "#"

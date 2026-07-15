@@ -100,16 +100,78 @@ class QnapLCD:
         if self.connection:
             self.connection.write(bytes([0x4d, 0x06]))
 
+    def _row_address(self, line):
+        # Preserve the existing driver convention:
+        # logical line 1 -> row 0x00
+        # logical line 2 -> row 0x01
+        line %= 2
+        return 0x00 if line else 0x01
+
+    def write_bytes(self, line, payload):
+        """
+        Write raw character bytes to one LCD row.
+
+        This supports LCD ROM byte values and custom-character slots without
+        UTF-8 transforming the payload.
+        """
+
+        if isinstance(payload, bytearray):
+            payload = bytes(payload)
+
+        if not isinstance(payload, bytes):
+            raise TypeError("payload must be bytes or bytearray")
+
+        payload = payload[:self.columns]
+        row = self._row_address(line)
+
+        print(f'RAW LINE {line}: {payload!r}')
+
+        if self.connection:
+            self.connection.write(
+                bytes([0x4d, 0x0c, row, len(payload)])
+            )
+            self.connection.write(payload)
+            self.connection.flush()
+
+    def write_text(self, line, message):
+        """
+        Write conservative single-byte text.
+
+        Latin-1 preserves byte values one-to-one. Unsupported characters are
+        replaced instead of becoming multi-byte UTF-8 sequences.
+        """
+
+        message = str(message)[:self.columns]
+        payload = message.encode("latin-1", errors="replace")
+        self.write_bytes(line, payload)
+
+    def write_frame(self, frame):
+        """
+        Write a two-row frame containing strings or raw byte payloads.
+        """
+
+        lines = getattr(frame, "lines", frame)
+
+        if not isinstance(lines, (list, tuple)):
+            raise TypeError("frame must provide two lines")
+
+        first = lines[0] if len(lines) >= 1 else b""
+        second = lines[1] if len(lines) >= 2 else b""
+
+        for line_number, value in ((1, first), (2, second)):
+            if isinstance(value, (bytes, bytearray)):
+                self.write_bytes(line_number, value)
+            else:
+                self.write_text(line_number, value)
+
     def write(self, line, msg):
-        # line is 1 or 2
+        """
+        Backward-compatible text and two-line frame writer.
+        """
+
         if isinstance(msg, list):
-            self.write(1, msg[0] if len(msg) >= 1 else '')
-            self.write(2, msg[1] if len(msg) >= 2 else '')
+            self.write_frame(msg)
+        elif isinstance(msg, (bytes, bytearray)):
+            self.write_bytes(line, msg)
         else:
-            print(f'LINE {line}: {msg}')
-            msg = msg[:self.columns]
-            line %= 2
-            line = 0x00 if line else 0x01
-            if self.connection:
-                self.connection.write(bytes([0x4d, 0x0c, line, len(msg)]))
-                self.connection.write(msg.encode('utf-8'))
+            self.write_text(line, msg)

@@ -1,0 +1,11 @@
+plugin_id: hello-panel
+name: Hello Panel
+version: "1.0.0"
+author: TruePanel Example
+description: Example third-party dashboard plugin.
+api_version: "1.0"
+requires_python: ">=3.11"
+requires_truepanel: ">=0.7"
+capabilities:
+  - dashboard
+license: MIT

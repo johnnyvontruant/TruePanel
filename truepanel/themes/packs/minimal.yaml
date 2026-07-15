@@ -1,0 +1,27 @@
+metadata:
+  name: Minimal
+  description: Sparse text and understated graphics.
+  author: TruePanel
+  version: "1.0"
+
+theme:
+  healthy_message: Ready
+  startup_title: TruePanel
+  startup_subtitle: Starting
+  mission_ready: READY
+  all_systems_go: Healthy
+  pool_healthy: Storage OK
+  system_watch: Alert Stored
+  alert_banner: ALERT
+  warning_banner: WARNING
+
+graphics:
+  filled: "="
+  empty: "-"
+  healthy: "+"
+  info: "."
+  warning: "!"
+  critical: "X"
+  activity_low: "."
+  activity_mid: "-"
+  activity_high: "="

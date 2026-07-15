@@ -4,6 +4,7 @@ import json
 import os
 import platform
 import subprocess
+import signal
 import threading
 import time
 
@@ -13,6 +14,8 @@ from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
 from truepanel.config.loader import load_config
 from truepanel.flightdeck.autopilot import AutoPilot
+from truepanel.hardware import Buzzer
+from truepanel.history import TelemetryRecorder
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
@@ -41,6 +44,9 @@ alert_manager = AlertManager()
 config = load_config()
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
+history_recorder = TelemetryRecorder(config.get("history", {}))
+buzzer = Buzzer(config.get("buzzer", {}))
+shutdown_requested = False
 
 mission.register(pool_watcher)
 mission.register(thermal_watcher)
@@ -65,12 +71,31 @@ def shell(cmd):
     return subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
 
 
+def refresh_state(force_history=False):
+    """
+    Refresh collector data and offer the new state to historical telemetry.
+
+    HistoryStore enforces its own sampling interval, so frequent collector
+    refreshes do not become frequent disk writes.
+    """
+
+    state = collector.update()
+
+    history_recorder.record(
+        state,
+        alert_count=len(alert_manager.get_history()),
+        force=force_history,
+    )
+
+    return state
+
+
 def get_state(max_age=5):
     last = collector.state.get("last_updated")
     now = time.time()
 
     if last is None or now - last > max_age:
-        collector.update()
+        return refresh_state()
 
     return collector.state
 
@@ -89,7 +114,7 @@ def show_startup_splash():
     write_lines("Display", "Ready", 1)
 
     try:
-        state = collector.update()
+        state = refresh_state(force_history=True)
         frame = autopilot.frame(state)
         write_lines(frame.line1, frame.line2, 2)
     except Exception:
@@ -311,7 +336,7 @@ def previous_mission_dashboard():
 
 
 def show_mission_control():
-    state = collector.update()
+    state = refresh_state()
     frame = display_manager.evaluate(state)
 
     lcd.clear()
@@ -358,11 +383,19 @@ def show_alert_transition(frame):
     lcd.write(0, detail.lines)
 
 
+def request_shutdown(signum=None, frame=None):
+    global shutdown_requested
+    shutdown_requested = True
+
+
 def maybe_show_alert():
-    state = collector.update()
+    state = refresh_state()
     frame = display_manager.evaluate(state)
 
     if frame.interrupt:
+        if alert_manager.should_beep(frame.event):
+            buzzer.alert(frame.priority)
+
         show_alert_transition(frame)
         time.sleep(frame.event.timeout)
         return True
@@ -427,23 +460,36 @@ def response_handler(command, data):
 def main():
     global lcd
 
+    signal.signal(signal.SIGTERM, request_shutdown)
+    signal.signal(signal.SIGINT, request_shutdown)
+
     lcd = qnaplcd.QnapLCD(PORT, PORT_SPEED, response_handler)
     lcd_on()
     lcd.reset()
     lcd.clear()
 
-    show_startup_splash()
+    try:
+        show_startup_splash()
+        buzzer.startup()
 
-    quit_requested = False
+        while not shutdown_requested:
+            add_ips_to_menu()
 
-    while not quit_requested:
-        add_ips_to_menu()
+            if not maybe_show_alert():
+                menu[menu_item]()
+                delay = 5 if menu[menu_item] == show_mission_home else 30
 
-        if not maybe_show_alert():
-            menu[menu_item]()
-            time.sleep(5 if menu[menu_item] == show_mission_home else 30)
-
-    lcd.backlight(False)
+                for _ in range(delay * 10):
+                    if shutdown_requested:
+                        break
+                    time.sleep(0.1)
+    finally:
+        try:
+            buzzer.shutdown()
+            write_lines("TruePanel", "Shutting Down", 0.5)
+            lcd.backlight(False)
+        except Exception:
+            pass
 
 
 main()

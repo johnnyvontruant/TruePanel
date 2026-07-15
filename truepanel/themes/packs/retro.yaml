@@ -1,0 +1,27 @@
+metadata:
+  name: Retro Terminal
+  description: Old-school terminal language with blinking-cursor energy.
+  author: TruePanel
+  version: "1.0"
+
+theme:
+  healthy_message: READY
+  startup_title: TRUEPANEL
+  startup_subtitle: BOOT ROM 2.0
+  mission_ready: SYSTEM READY
+  all_systems_go: OK_
+  pool_healthy: DISKS OK
+  system_watch: CHECK LOG
+  alert_banner: SYSTEM ERROR
+  warning_banner: WARNING
+
+graphics:
+  filled: "*"
+  empty: "."
+  healthy: ">"
+  info: ":"
+  warning: "!"
+  critical: "#"
+  activity_low: "."
+  activity_mid: "*"
+  activity_high: "#"

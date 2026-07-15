@@ -8,26 +8,25 @@ __pycache__/
 .idea/
 *.swp
 *.swo
-
 # OS files
 .DS_Store
 Thumbs.db
-
 # Environment
 .env
 .venv/
 venv/
-
 # Logs
 *.log
-
 # Temporary files
 *.tmp
 *.temp
-
 # Timestamped development backups
 development/backups/*.before-*.py
-
 # Ignore Python cache anywhere
 **/__pycache__/
 .quality-venv/
+# Local historical telemetry
+var/history/
+*.jsonl
+# Project Stargate protocol captures
+development/logs/
