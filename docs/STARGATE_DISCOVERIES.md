@@ -68,3 +68,22 @@ Verified across multiple repeated laboratory runs.
 - Payload Scaling Laboratory
 - 175 successful documented write operations
 - Median timing analysis
+
+## A125 command-response probe
+
+A header-only command probe produced deterministic NACK responses for:
+
+- 0x08
+- 0x09
+- 0x0A
+- 0x0B
+- 0x0E
+- 0x0F
+- 0x10
+
+Each response used the form:
+
+    53 FB <rejected opcode>
+
+Conclusion: these values are not accepted A125 command opcodes and do not wait
+for additional payload bytes.
