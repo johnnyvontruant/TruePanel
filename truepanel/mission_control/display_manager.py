@@ -16,7 +16,11 @@ from .constants import Priority
 from .event import MissionEvent
 from .renderer import render_event
 
-from truepanel.display import Canvas, sanitize
+from truepanel.display import (
+    Canvas,
+    NativeInstrumentRenderer,
+    sanitize,
+)
 from truepanel.themes import Theme
 from truepanel.display.widgets import (
     activity_meter,
@@ -75,6 +79,9 @@ class DisplayManager:
         self.config = config or {}
         self.theme = self.config.get("theme", {})
         self.theme_engine = Theme(self.config)
+        self.native_renderer = NativeInstrumentRenderer(
+    raw_blocks=False
+)
 
         self.registry = registry or self.config.get("registry")
 
@@ -553,23 +560,20 @@ class DisplayManager:
         self.performance_history.append(max(cpu, ram))
         self.performance_history = self.performance_history[-16:]
 
-        line1, line2 = widget_renderer.performance_bar_lines(
-            cpu,
-            ram,
-        )
-
-        canvas = Canvas()
-        canvas.text(0, 0, line1)
-        canvas.text(0, 1, line2)
-
         priority = (
             Priority.WARNING
             if cpu >= 90 or ram >= 90
             else Priority.INFO
         )
 
-        return self.canvas_frame(
-            canvas,
+        instrument = self.native_renderer.performance(
+            cpu,
+            ram,
+        )
+
+        return self.make_frame(
+            instrument.line1.decode("latin-1"),
+            instrument.line2.decode("latin-1"),
             priority=priority,
         )
 
@@ -591,22 +595,6 @@ class DisplayManager:
         drive = str(hottest.get("drive", "disk"))
         temp = self.integer(hottest.get("temp", 0))
 
-        canvas = Canvas()
-        canvas.text(
-            0,
-            0,
-            f"TEMP {drive[:5]:<5} {temp:>2}C",
-        )
-        canvas.text(
-            0,
-            1,
-            widget_renderer.thermal_bar_line(
-                temp,
-                minimum=20,
-                maximum=80,
-            ),
-        )
-
         if temp >= 60:
             priority = Priority.CRITICAL
         elif temp >= 50:
@@ -614,8 +602,16 @@ class DisplayManager:
         else:
             priority = Priority.HEALTHY
 
-        return self.canvas_frame(
-            canvas,
+        instrument = self.native_renderer.thermal(
+            drive,
+            temp,
+            minimum=20,
+            maximum=80,
+        )
+
+        return self.make_frame(
+            instrument.line1.decode("latin-1"),
+            instrument.line2.decode("latin-1"),
             priority=priority,
         )
 

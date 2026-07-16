@@ -40,7 +40,7 @@ def test_performance_dashboard_uses_compact_bars():
 
     assert frame.lines == [
         "CPU ###---  50% ",
-        "RAM ####--  75% ",
+        "RAM #####-  75% ",
     ]
 
 

@@ -159,7 +159,20 @@ def open_controller(
                 timeout=float(timeout),
             )
 
-            yield controller, path
+            controller.stop_auto_display()
+
+            try:
+                yield controller, path
+            finally:
+                try:
+                    controller.clear()
+                except Exception:
+                    pass
+
+                try:
+                    controller.start_auto_display()
+                except Exception:
+                    pass
     finally:
         if connection is not None:
             try:

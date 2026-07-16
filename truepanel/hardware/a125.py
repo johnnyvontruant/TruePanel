@@ -105,6 +105,20 @@ class A125Controller:
         self.send(packet)
         return packet
 
+    def stop_auto_display(self) -> bytes:
+        packet = encode_query(
+            A125Command.STOP_AUTO_DISPLAY
+        )
+        self.send(packet)
+        return packet
+
+    def start_auto_display(self) -> bytes:
+        packet = encode_query(
+            A125Command.START_AUTO_DISPLAY
+        )
+        self.send(packet)
+        return packet
+
     def reset(self) -> bytes:
         packet = encode_query(A125Command.RESET)
         self.send(packet)

@@ -79,7 +79,13 @@ def test_packet_encoding():
     assert encode_backlight(False) == bytes(
         [0x4D, 0x5E, 0x00]
     )
+    assert encode_query(
+        A125Command.STOP_AUTO_DISPLAY
+    ) == bytes([0x4D, 0x28])
 
+    assert encode_query(
+        A125Command.START_AUTO_DISPLAY
+    ) == bytes([0x4D, 0x29])
 
 def test_display_packets():
     assert encode_display_write(
@@ -151,18 +157,22 @@ def test_controller_writes():
     controller = A125Controller(transport)
 
     controller.clear()
+    controller.stop_auto_display()
+    controller.start_auto_display()
     controller.backlight(True)
     controller.write_text(0, "READY")
     controller.write_bytes(1, b"\x00\x01\x02")
 
     assert transport.writes == [
         bytes([0x4D, 0x0D]),
+        bytes([0x4D, 0x28]),
+        bytes([0x4D, 0x29]),
         bytes([0x4D, 0x5E, 0x01]),
         bytes([0x4D, 0x0C, 0x00, 0x05]) + b"READY",
         bytes(
             [0x4D, 0x0C, 0x01, 0x03, 0x00, 0x01, 0x02]
         ),
-    ]
+]
 
 
 def test_controller_queries():
