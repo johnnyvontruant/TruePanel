@@ -50,7 +50,9 @@ def test_manager_does_not_construct_hardware_eagerly():
         "a125",
         "buzzer",
         "enclosure",
+        "health",
         "inventory",
+        "smart",
         "topology",
     )
 
@@ -214,3 +216,48 @@ def test_unknown_controller_raises_key_error():
         match="Unknown hardware controller: warp_drive",
     ):
         manager.reset("warp_drive")
+
+
+def test_health_service_is_created_lazily():
+    inventory = FakeController()
+    smart = FakeController()
+    health = FakeController()
+    calls = []
+
+    manager = HardwareManager(
+        inventory_factory=lambda: calls.append("inventory") or inventory,
+        smart_factory=lambda: calls.append("smart") or smart,
+        health_factory=lambda: calls.append("health") or health,
+    )
+
+    assert calls == []
+    assert manager.health is health
+    assert calls == ["health"]
+    assert manager.loaded() == ("health",)
+
+
+def test_reset_inventory_discards_cached_health():
+    inventory_count = 0
+    health_count = 0
+
+    def inventory_factory():
+        nonlocal inventory_count
+        inventory_count += 1
+        return FakeController()
+
+    def health_factory():
+        nonlocal health_count
+        health_count += 1
+        return FakeController()
+
+    manager = HardwareManager(
+        inventory_factory=inventory_factory,
+        health_factory=health_factory,
+    )
+
+    first = manager.health
+    manager.reset("inventory")
+    second = manager.health
+
+    assert first is not second
+    assert health_count == 2

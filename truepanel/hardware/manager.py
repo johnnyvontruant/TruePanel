@@ -13,7 +13,9 @@ from typing import Any
 from .a125 import A125Controller
 from .buzzer import Buzzer
 from .enclosure import EnclosureController
+from .health import StorageHealthService
 from .inventory import StorageInventory
+from .smart import SmartctlProvider
 from .topology import TopologyResolver
 
 
@@ -52,6 +54,8 @@ class HardwareManager:
         a125_factory: Factory | None = None,
         topology_factory: Factory | None = None,
         inventory_factory: Factory | None = None,
+        smart_factory: Factory | None = None,
+        health_factory: Factory | None = None,
     ) -> None:
         self._factories: dict[str, Factory] = {
             "enclosure": enclosure_factory or EnclosureController,
@@ -59,6 +63,8 @@ class HardwareManager:
             "a125": a125_factory or A125Controller,
             "topology": topology_factory or self._create_topology,
             "inventory": inventory_factory or self._create_inventory,
+            "smart": smart_factory or self._create_smart,
+            "health": health_factory or self._create_health,
         }
 
         self._instances: dict[str, Any] = {}
@@ -79,6 +85,42 @@ class HardwareManager:
             enclosure=self.enclosure,
             topology=self.topology,
             config=hardware.get("inventory", {}),
+        )
+
+    def _create_smart(self) -> SmartctlProvider:
+        hardware = _load_hardware_config()
+        smart = hardware.get("smart", {})
+
+        if not isinstance(smart, dict):
+            smart = {}
+
+        return SmartctlProvider(
+            executable=str(smart.get("executable", "smartctl")),
+            timeout=float(smart.get("timeout", 10.0)),
+        )
+
+    def _create_health(self) -> StorageHealthService:
+        hardware = _load_hardware_config()
+        health = hardware.get("health", {})
+
+        if not isinstance(health, dict):
+            health = {}
+
+        return StorageHealthService(
+            inventory=self.inventory,
+            provider=self.smart,
+            warning_temperature_c=int(
+                health.get("warning_temperature_c", 45)
+            ),
+            critical_temperature_c=int(
+                health.get("critical_temperature_c", 55)
+            ),
+            nvme_warning_percentage_used=int(
+                health.get("nvme_warning_percentage_used", 80)
+            ),
+            nvme_critical_percentage_used=int(
+                health.get("nvme_critical_percentage_used", 95)
+            ),
         )
 
     def _get(self, name: str) -> Any:
@@ -111,6 +153,14 @@ class HardwareManager:
     def inventory(self) -> StorageInventory:
         return self._get("inventory")
 
+    @property
+    def smart(self) -> SmartctlProvider:
+        return self._get("smart")
+
+    @property
+    def health(self) -> StorageHealthService:
+        return self._get("health")
+
     def is_loaded(self, name: str) -> bool:
         return name in self._instances
 
@@ -129,6 +179,10 @@ class HardwareManager:
 
         if name in {"enclosure", "topology"}:
             self._instances.pop("inventory", None)
+            self._instances.pop("health", None)
+
+        if name in {"inventory", "smart"}:
+            self._instances.pop("health", None)
 
     def register(
         self,
