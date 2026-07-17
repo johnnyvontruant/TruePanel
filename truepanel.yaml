@@ -104,3 +104,11 @@ graphics_engine:
 
   # Populate only after a successful character-ROM probe.
   rom_levels: []
+
+hardware:
+  topology:
+    front_bays:
+      5:
+        serial: WSD9KX4V
+      6:
+        serial: WSD9QAWH

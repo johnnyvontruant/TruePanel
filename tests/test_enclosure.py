@@ -117,7 +117,9 @@ def test_reads_populated_slot(tmp_path):
     assert slot.active is True
     assert slot.enclosure == "6:0:0:0"
     assert slot.sysfs_path == slot_path
-    assert slot.display_name == "Bay 2"
+    assert slot.kernel_slot == 2
+    assert slot.physical_bay == 3
+    assert slot.display_name == "Bay 3"
 
 
 def test_reads_empty_slot(tmp_path):

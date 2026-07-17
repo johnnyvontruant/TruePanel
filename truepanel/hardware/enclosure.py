@@ -125,10 +125,22 @@ class EnclosureSlot:
         return f"/dev/{self.device}" if self.device else ""
 
     @property
-    def display_name(self) -> str:
-        """Return a human-friendly bay name."""
+    def kernel_slot(self) -> int:
+        """Return the zero-based slot number reported by Linux."""
 
-        return f"Bay {self.number}"
+        return self.number
+
+    @property
+    def physical_bay(self) -> int:
+        """Return the one-based bay number printed on the chassis."""
+
+        return self.number + 1
+
+    @property
+    def display_name(self) -> str:
+        """Return a human-friendly chassis bay name."""
+
+        return f"Bay {self.physical_bay}"
 
 
 class EnclosureController:

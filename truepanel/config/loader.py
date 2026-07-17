@@ -94,6 +94,11 @@ DEFAULT_CONFIG = {
         "activity_mid": "=",
         "activity_high": "#",
     },
+    "hardware": {
+        "topology": {
+            "front_bays": {},
+        },
+    },
     "buzzer": {
         "enabled": True,
         "backend": "serial_opcode",
