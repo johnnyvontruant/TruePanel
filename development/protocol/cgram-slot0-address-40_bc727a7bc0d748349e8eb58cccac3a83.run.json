@@ -1,0 +1,144 @@
+{
+  "completed_at": "2026-07-16T02:46:08.902159+00:00",
+  "duration_ms": 52263.967000000004,
+  "error": "",
+  "experiment": {
+    "controller_family": "A125",
+    "experiment_id": "bc727a7bc0d748349e8eb58cccac3a83",
+    "hypothesis": {
+      "expected_observation": "Character byte 0x00 changes into an alternating checkerboard glyph.",
+      "rejection_condition": "Character byte 0x00 retains its baseline shape, the packet is ignored, or the display becomes unstable.",
+      "statement": "A125 DISPLAY_WRITE address 0x40 may select HD44780 CGRAM slot zero.",
+      "title": "CGRAM slot-zero address probe"
+    },
+    "name": "cgram-slot0-address-40",
+    "repeat_count": 1,
+    "requires_restoration": true,
+    "risk": "display_only",
+    "sequence": {
+      "has_restore": true,
+      "step_count": 4,
+      "steps": [
+        {
+          "delay_seconds": 0.0,
+          "description": "Write checkerboard rows to candidate CGRAM address 0x40",
+          "operation": "transmit",
+          "payload": [
+            77,
+            12,
+            64,
+            8,
+            21,
+            10,
+            21,
+            10,
+            21,
+            10,
+            21,
+            10
+          ],
+          "payload_hex": "4D 0C 40 08 15 0A 15 0A 15 0A 15 0A"
+        },
+        {
+          "delay_seconds": 0.2,
+          "description": "Allow LCD controller processing",
+          "operation": "delay",
+          "payload": [],
+          "payload_hex": ""
+        },
+        {
+          "delay_seconds": 0.0,
+          "description": "Display and inspect character slot zero",
+          "operation": "display_verify",
+          "payload": [],
+          "payload_hex": ""
+        },
+        {
+          "delay_seconds": 0.0,
+          "description": "Clear display",
+          "operation": "restore",
+          "payload": [
+            77,
+            13
+          ],
+          "payload_hex": "4D 0D"
+        }
+      ],
+      "transmit_count": 1
+    }
+  },
+  "observations": [
+    {
+      "duration_ms": 0.0,
+      "experiment_id": "bc727a7bc0d748349e8eb58cccac3a83",
+      "metadata": {
+        "candidate_address": "0x40",
+        "packet_hex": "4D 0C 40 08 15 0A 15 0A 15 0A 15 0A",
+        "restore": {
+          "attempted": true,
+          "error": "",
+          "packet": [
+            77,
+            13
+          ],
+          "packet_hex": "4D 0D",
+          "succeeded": true
+        },
+        "target_slot": 0
+      },
+      "notes": "",
+      "outcome": "rejected",
+      "repeat_index": 1,
+      "response_bytes": [],
+      "response_hex": "",
+      "restored": true,
+      "timestamp": "2026-07-16T02:46:08.881019+00:00",
+      "visible_effect": "left side, from top to bottom is apostrophe, period, camma. the right side of the character is a solid vertical line"
+    }
+  ],
+  "simulation": false,
+  "started_at": "2026-07-16T02:45:16.638192+00:00",
+  "state": "completed",
+  "steps": [
+    {
+      "description": "Write checkerboard rows to candidate CGRAM address 0x40",
+      "duration_ms": 107.9218269987905,
+      "index": 1,
+      "operation": "transmit",
+      "payload": [
+        77,
+        12,
+        64,
+        8,
+        21,
+        10,
+        21,
+        10,
+        21,
+        10,
+        21,
+        10
+      ],
+      "payload_hex": "4D 0C 40 08 15 0A 15 0A 15 0A 15 0A",
+      "total": 4
+    },
+    {
+      "description": "Allow LCD controller processing",
+      "duration_ms": 200.06643799933954,
+      "index": 2,
+      "operation": "delay",
+      "payload": [],
+      "payload_hex": "",
+      "total": 4
+    },
+    {
+      "description": "Display and inspect character slot zero",
+      "duration_ms": 0.0012359996617306024,
+      "index": 3,
+      "operation": "display_verify",
+      "payload": [],
+      "payload_hex": "",
+      "total": 4
+    }
+  ]
+}

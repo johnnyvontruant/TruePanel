@@ -21,6 +21,10 @@ from truepanel.history import TelemetryRecorder
 from truepanel.themes import Theme, discover_theme_packs, load_theme_pack, validate_theme_pack
 from truepanel.plugins import load_plugins
 from truepanel.plugins.commands import add_plugin_subcommands, handle_plugin_command
+from truepanel.hardware.commands import (
+    add_hardware_subcommands,
+    handle_hardware_command,
+)
 
 
 SCENARIOS = [
@@ -237,6 +241,7 @@ def build_parser():
     subcommands.add_parser("run", help="Run TruePanel")
     subcommands.add_parser("doctor", help="Run TruePanel diagnostics")
     add_plugin_subcommands(subcommands)
+    add_hardware_subcommands(subcommands)
     subcommands.add_parser("version", help="Show TruePanel version")
 
     themes = subcommands.add_parser("themes", help="Manage theme packs")
@@ -342,6 +347,9 @@ def main():
     logger.info("TruePanel CLI starting")
 
     registry = load_plugins()
+
+    if handle_hardware_command(args):
+        return 0
 
     if args.command == "version":
         print_version(registry)

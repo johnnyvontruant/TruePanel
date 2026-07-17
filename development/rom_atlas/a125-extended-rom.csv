@@ -1,0 +1,20 @@
+hex,decimal,chart,match,category,useful,confidence,notes
+0x80,128,ROM Code A00,0010 xxxx0000,blank,yes,high,just a blank square
+0x81,129,ROM Code A00,1000 xxxx0000,blank,yes,high,just a blank square
+0x82,130,A00,1001,blank,yes,high,just a blank square
+0x83,131,ROM family A00,1010,blank,yes,high,just a blank square
+0x84,132,ROM Family A00,0001 xxxx0001,blank,yes,high,just blank squares
+0x85,133,ROM family A00,1000 xxxx0001,blank,yes,high,just blank squares
+0x86,134,ROM Family A00,1001 xxxx0001,blank,yes,high,just blank squares
+0x87,135,ROM family A00,0001 xxxx0010,blank,yes,high,just blank squares
+0x88,136,ROM Family A00,1000 xxxx0010,blank,yes,high,just blank squares
+0x89,137,ROM Family A00,1001 xxxx0010,blank,yes,high,just blank squares
+0x8A,138,Rom family A00,0001 0011,blank,yes,high,just blank squares
+0x8B,139,Rom Family A00,1000 xxxx0011,blank,yes,high,just blank squares
+0xA1,161,Rom Code A00,1010 xxxx0001,square in lower left corner,maybe,high,
+0xA2,162,A00,10100010,unknown,maybe,high,possibly working with the asian character set
+0xA3,163,A00,10100011,unknown,maybe,high,found in asian character set
+0xA4,164,A00,10100100,unknown,maybe,high,asian character set
+0xA5,165,A00,10100101,,maybe,high,asian character set
+0xA6,166,A00,10100110,character,maybe,high,asian character
+0xA7,167,A00,10100111,japanese character,maybe,high,"asian character, noticing a pattern"

@@ -1,0 +1,203 @@
+{
+  "session": "a125-extended-rom",
+  "range": {
+    "start": 128,
+    "start_hex": "0x80",
+    "end": 255,
+    "end_hex": "0xFF"
+  },
+  "updated_at": "2026-07-16T16:41:21",
+  "entry_count": 19,
+  "entries": [
+    {
+      "value": 128,
+      "hex": "0x80",
+      "chart": "ROM Code A00",
+      "match": "0010 xxxx0000",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just a blank square"
+    },
+    {
+      "value": 129,
+      "hex": "0x81",
+      "chart": "ROM Code A00",
+      "match": "1000 xxxx0000",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just a blank square"
+    },
+    {
+      "value": 130,
+      "hex": "0x82",
+      "chart": "A00",
+      "match": "1001",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just a blank square"
+    },
+    {
+      "value": 131,
+      "hex": "0x83",
+      "chart": "ROM family A00",
+      "match": "1010",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just a blank square"
+    },
+    {
+      "value": 132,
+      "hex": "0x84",
+      "chart": "ROM Family A00",
+      "match": "0001 xxxx0001",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just blank squares"
+    },
+    {
+      "value": 133,
+      "hex": "0x85",
+      "chart": "ROM family A00",
+      "match": "1000 xxxx0001",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just blank squares"
+    },
+    {
+      "value": 134,
+      "hex": "0x86",
+      "chart": "ROM Family A00",
+      "match": "1001 xxxx0001",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just blank squares"
+    },
+    {
+      "value": 135,
+      "hex": "0x87",
+      "chart": "ROM family A00",
+      "match": "0001 xxxx0010",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just blank squares"
+    },
+    {
+      "value": 136,
+      "hex": "0x88",
+      "chart": "ROM Family A00",
+      "match": "1000 xxxx0010",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just blank squares"
+    },
+    {
+      "value": 137,
+      "hex": "0x89",
+      "chart": "ROM Family A00",
+      "match": "1001 xxxx0010",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just blank squares"
+    },
+    {
+      "value": 138,
+      "hex": "0x8A",
+      "chart": "Rom family A00",
+      "match": "0001 0011",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just blank squares"
+    },
+    {
+      "value": 139,
+      "hex": "0x8B",
+      "chart": "Rom Family A00",
+      "match": "1000 xxxx0011",
+      "category": "blank",
+      "useful": "yes",
+      "confidence": "high",
+      "notes": "just blank squares"
+    },
+    {
+      "value": 161,
+      "hex": "0xA1",
+      "chart": "Rom Code A00",
+      "match": "1010 xxxx0001",
+      "category": "square in lower left corner",
+      "useful": "maybe",
+      "confidence": "high",
+      "notes": ""
+    },
+    {
+      "value": 162,
+      "hex": "0xA2",
+      "chart": "A00",
+      "match": "10100010",
+      "category": "unknown",
+      "useful": "maybe",
+      "confidence": "high",
+      "notes": "possibly working with the asian character set"
+    },
+    {
+      "value": 163,
+      "hex": "0xA3",
+      "chart": "A00",
+      "match": "10100011",
+      "category": "unknown",
+      "useful": "maybe",
+      "confidence": "high",
+      "notes": "found in asian character set"
+    },
+    {
+      "value": 164,
+      "hex": "0xA4",
+      "chart": "A00",
+      "match": "10100100",
+      "category": "unknown",
+      "useful": "maybe",
+      "confidence": "high",
+      "notes": "asian character set"
+    },
+    {
+      "value": 165,
+      "hex": "0xA5",
+      "chart": "A00",
+      "match": "10100101",
+      "category": "",
+      "useful": "maybe",
+      "confidence": "high",
+      "notes": "asian character set"
+    },
+    {
+      "value": 166,
+      "hex": "0xA6",
+      "chart": "A00",
+      "match": "10100110",
+      "category": "character",
+      "useful": "maybe",
+      "confidence": "high",
+      "notes": "asian character"
+    },
+    {
+      "value": 167,
+      "hex": "0xA7",
+      "chart": "A00",
+      "match": "10100111",
+      "category": "japanese character",
+      "useful": "maybe",
+      "confidence": "high",
+      "notes": "asian character, noticing a pattern"
+    }
+  ]
+}

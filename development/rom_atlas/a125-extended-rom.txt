@@ -1,0 +1,158 @@
+Project Stargate A125 ROM Atlas
+==================================
+
+Session: a125-extended-rom
+Range: 0x80-0xFF
+Entries: 19
+
+0x80 (128)
+  Chart:      ROM Code A00
+  Match:      0010 xxxx0000
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just a blank square
+
+0x81 (129)
+  Chart:      ROM Code A00
+  Match:      1000 xxxx0000
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just a blank square
+
+0x82 (130)
+  Chart:      A00
+  Match:      1001
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just a blank square
+
+0x83 (131)
+  Chart:      ROM family A00
+  Match:      1010
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just a blank square
+
+0x84 (132)
+  Chart:      ROM Family A00
+  Match:      0001 xxxx0001
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just blank squares
+
+0x85 (133)
+  Chart:      ROM family A00
+  Match:      1000 xxxx0001
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just blank squares
+
+0x86 (134)
+  Chart:      ROM Family A00
+  Match:      1001 xxxx0001
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just blank squares
+
+0x87 (135)
+  Chart:      ROM family A00
+  Match:      0001 xxxx0010
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just blank squares
+
+0x88 (136)
+  Chart:      ROM Family A00
+  Match:      1000 xxxx0010
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just blank squares
+
+0x89 (137)
+  Chart:      ROM Family A00
+  Match:      1001 xxxx0010
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just blank squares
+
+0x8A (138)
+  Chart:      Rom family A00
+  Match:      0001 0011
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just blank squares
+
+0x8B (139)
+  Chart:      Rom Family A00
+  Match:      1000 xxxx0011
+  Category:   blank
+  Useful:     yes
+  Confidence: high
+  Notes:      just blank squares
+
+0xA1 (161)
+  Chart:      Rom Code A00
+  Match:      1010 xxxx0001
+  Category:   square in lower left corner
+  Useful:     maybe
+  Confidence: high
+  Notes:      -
+
+0xA2 (162)
+  Chart:      A00
+  Match:      10100010
+  Category:   unknown
+  Useful:     maybe
+  Confidence: high
+  Notes:      possibly working with the asian character set
+
+0xA3 (163)
+  Chart:      A00
+  Match:      10100011
+  Category:   unknown
+  Useful:     maybe
+  Confidence: high
+  Notes:      found in asian character set
+
+0xA4 (164)
+  Chart:      A00
+  Match:      10100100
+  Category:   unknown
+  Useful:     maybe
+  Confidence: high
+  Notes:      asian character set
+
+0xA5 (165)
+  Chart:      A00
+  Match:      10100101
+  Category:   -
+  Useful:     maybe
+  Confidence: high
+  Notes:      asian character set
+
+0xA6 (166)
+  Chart:      A00
+  Match:      10100110
+  Category:   character
+  Useful:     maybe
+  Confidence: high
+  Notes:      asian character
+
+0xA7 (167)
+  Chart:      A00
+  Match:      10100111
+  Category:   japanese character
+  Useful:     maybe
+  Confidence: high
+  Notes:      asian character, noticing a pattern
