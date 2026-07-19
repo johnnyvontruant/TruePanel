@@ -6,7 +6,6 @@ history, decides whether an event should interrupt normal display flow, and
 controls one-shot audible alert notifications.
 """
 
-import time
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum
@@ -37,10 +36,10 @@ class AlertManager:
     ):
         self.interrupt_priority = interrupt_priority
 
-        # Display interruption cooldown state.
+        # Display interruption incident state.
         self.last_event_id = None
         self.last_event_message = None
-        self.last_event_time = 0
+        self.last_event_priority = None
 
         # Audible notification state.
         self.last_beep_event_id = None
@@ -52,21 +51,24 @@ class AlertManager:
     def is_alert(self, event):
         return event.priority >= self.interrupt_priority
 
-    def cooldown_expired(self, event):
-        now = time.time()
+    def reset_display_state(self):
+        self.last_event_id = None
+        self.last_event_message = None
+        self.last_event_priority = None
 
+    def cooldown_expired(self, event):
         same_event = (
             event.event_id == self.last_event_id
             and event.message == self.last_event_message
         )
 
-        if (
+        priority_increased = (
             same_event
-            and now - self.last_event_time < event.timeout
-        ):
-            return False
+            and self.last_event_priority is not None
+            and event.priority > self.last_event_priority
+        )
 
-        return True
+        return not same_event or priority_increased
 
     def record(self, event):
         if not self.is_alert(event):
@@ -140,6 +142,7 @@ class AlertManager:
 
     def evaluate(self, event):
         if not self.is_alert(event):
+            self.reset_display_state()
             self.reset_audible_state()
 
             return AlertDecision(
@@ -152,6 +155,8 @@ class AlertManager:
         self.record(event)
 
         if not self.cooldown_expired(event):
+            self.last_event_priority = event.priority
+
             return AlertDecision(
                 interrupt=False,
                 timeout=event.timeout,
@@ -161,7 +166,7 @@ class AlertManager:
 
         self.last_event_id = event.event_id
         self.last_event_message = event.message
-        self.last_event_time = time.time()
+        self.last_event_priority = event.priority
 
         return AlertDecision(
             interrupt=True,

@@ -59,3 +59,7 @@ Other compatible QNAP systems may work, but hardware writes must remain model-ve
 ## Earlier milestones
 
 The earlier `v0.7.0`, `v0.8.0-core`, `v0.9.0`, and `v1.0.0-rc0` tags preserve the development milestones that led to the stable platform.
+
+### Fixed
+
+- Persistent unchanged alerts interrupt once, then remain visible through normal Flight Deck status, SMART, queue, and history rotation.

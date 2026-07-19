@@ -1,0 +1,198 @@
+from pathlib import Path
+
+from truepanel.mission_control.alert_manager import (
+    AlertManager,
+    AlertState,
+)
+from truepanel.mission_control.constants import (
+    Category,
+    Priority,
+)
+from truepanel.mission_control.display_manager import (
+    DisplayManager,
+    DisplayMode,
+)
+from truepanel.mission_control.event import MissionEvent
+
+
+def make_event(
+    event_id="smart.pending",
+    message="sda 1",
+    priority=Priority.CRITICAL,
+):
+    return MissionEvent(
+        priority=priority,
+        title="PENDING SECT",
+        message=message,
+        category=Category.STORAGE,
+        timeout=15,
+        event_id=event_id,
+        source="smart_watcher",
+    )
+
+
+def test_unchanged_alert_interrupts_only_once():
+    manager = AlertManager()
+    alert = make_event()
+
+    first = manager.evaluate(alert)
+    repeated = manager.evaluate(alert)
+
+    assert first.interrupt is True
+    assert first.state is AlertState.NEW
+    assert repeated.interrupt is False
+    assert repeated.state is AlertState.ACTIVE
+
+
+def test_changed_message_interrupts_again():
+    manager = AlertManager()
+
+    manager.evaluate(
+        make_event(message="sda 1")
+    )
+
+    changed = manager.evaluate(
+        make_event(message="sda 2")
+    )
+
+    assert changed.interrupt is True
+
+
+def test_different_alert_interrupts_again():
+    manager = AlertManager()
+    manager.evaluate(make_event())
+
+    different = manager.evaluate(
+        make_event(
+            event_id="pool.degraded",
+            message="tank DEGRADED",
+        )
+    )
+
+    assert different.interrupt is True
+
+
+def test_priority_escalation_interrupts_again():
+    manager = AlertManager()
+
+    manager.evaluate(
+        make_event(
+            priority=Priority.WARNING,
+        )
+    )
+
+    escalated = manager.evaluate(
+        make_event(
+            priority=Priority.CRITICAL,
+        )
+    )
+
+    assert escalated.interrupt is True
+
+
+def test_lower_priority_does_not_repeat():
+    manager = AlertManager()
+
+    manager.evaluate(
+        make_event(
+            priority=Priority.CRITICAL,
+        )
+    )
+
+    lowered = manager.evaluate(
+        make_event(
+            priority=Priority.WARNING,
+        )
+    )
+
+    assert lowered.interrupt is False
+    assert lowered.state is AlertState.ACTIVE
+
+
+def test_recovery_rearms_interrupt():
+    manager = AlertManager()
+    alert = make_event()
+
+    manager.evaluate(alert)
+    assert manager.evaluate(alert).interrupt is False
+
+    healthy = MissionEvent(
+        priority=Priority.HEALTHY,
+        title="MISSION READY",
+        message="All systems healthy",
+        category=Category.SYSTEM,
+        timeout=5,
+        event_id="system.healthy",
+    )
+
+    manager.evaluate(healthy)
+
+    assert manager.evaluate(alert).interrupt is True
+
+
+class FixedMission:
+    def __init__(self, event):
+        self.event = event
+
+    def evaluate(self, state):
+        return self.event
+
+
+class EmptyRegistry:
+    dashboard_pages = []
+
+
+def test_persistent_smart_alert_remains_in_dashboard():
+    alert = make_event()
+    manager = AlertManager()
+
+    display = DisplayManager(
+        FixedMission(alert),
+        manager,
+        registry=EmptyRegistry(),
+    )
+
+    first = display.evaluate({})
+    repeated = display.evaluate({})
+
+    assert first.interrupt is True
+    assert repeated.interrupt is False
+
+    dashboard = display._dashboard_smart(
+        {
+            "smart": [
+                {
+                    "drive": "sda",
+                    "health": "PASSED",
+                    "pending": 1,
+                    "offline_uncorrectable": 0,
+                    "media_errors": 0,
+                    "critical_warning": "0x00",
+                }
+            ]
+        }
+    )
+
+    assert dashboard.mode == DisplayMode.DASHBOARD
+    assert dashboard.interrupt is False
+    assert "SMART ALERT" in " ".join(
+        dashboard.lines
+    )
+
+
+def test_lcd_loop_resumes_after_interrupt():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    assert (
+        "if maybe_show_alert():\n"
+        "                continue"
+        in source
+    )
+
+    assert (
+        "detail = "
+        "display_manager.render_alert_detail"
+        not in source
+    )

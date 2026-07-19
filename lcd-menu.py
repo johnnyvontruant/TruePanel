@@ -384,12 +384,6 @@ def next_alert_history():
 def show_alert_transition(frame):
     lcd.clear()
     lcd.write(0, frame.lines)
-    time.sleep(frame.timeout)
-
-    detail = display_manager.render_alert_detail(frame.event)
-    lcd.clear()
-    lcd.write(0, detail.lines)
-
 
 def request_shutdown(signum=None, frame=None):
     global shutdown_requested
@@ -483,8 +477,10 @@ def main():
         while not shutdown_requested:
             add_ips_to_menu()
 
-            if not maybe_show_alert():
-                menu[menu_item]()
+            if maybe_show_alert():
+                continue
+
+            menu[menu_item]()
                 delay = 5 if menu[menu_item] == show_mission_home else 30
 
                 for _ in range(delay * 10):
