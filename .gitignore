@@ -30,3 +30,13 @@ var/history/
 *.jsonl
 # Project Stargate protocol captures
 development/logs/
+.pytest_cache/
+.ruff_cache/
+*.bak
+*.before-*
+*.mission-*.bak
+development/firmware/
+development/tools/*.o
+development/tools/*_probe
+development/tools/*_census
+plugins/.truepanel-plugin-state.json
