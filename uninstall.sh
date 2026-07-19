@@ -4,7 +4,8 @@ set -euo pipefail
 APP_NAME="truepanel"
 INSTALL_DIR="/opt/truepanel"
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
-BIN_FILE="/usr/local/bin/truepanel"
+BIN_FILE="$INSTALL_DIR/bin/truepanel"
+LEGACY_BIN_FILE="/usr/local/bin/truepanel"
 
 echo "== TruePanel Uninstaller =="
 
@@ -23,7 +24,7 @@ echo "Removing service file..."
 rm -f "$SERVICE_FILE"
 
 echo "Removing CLI wrapper..."
-rm -f "$BIN_FILE"
+rm -f "$BIN_FILE" "$LEGACY_BIN_FILE"
 
 echo "Reloading systemd..."
 systemctl daemon-reload
