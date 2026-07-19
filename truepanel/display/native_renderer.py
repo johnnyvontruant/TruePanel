@@ -99,6 +99,8 @@ class NativeInstrumentRenderer:
     backends.
     """
 
+    TREND_LEVELS = " .:-=+*#"
+
     def __init__(
         self,
         *,
@@ -224,6 +226,141 @@ class NativeInstrumentRenderer:
         return line[:LCD_WIDTH].ljust(
             LCD_WIDTH,
             bytes((self.empty_cell,)),
+        )
+
+    def normalize_trend_values(
+        self,
+        values,
+        *,
+        width=7,
+    ) -> list[float]:
+        """
+        Normalize trend history into a fixed-width sequence.
+
+        Values from zero through one are treated as ratios. Larger values are
+        scaled relative to the largest visible sample. Missing leading samples
+        are represented by empty cells.
+        """
+
+        width = int(width)
+
+        if width <= 0:
+            raise ValueError(
+                "trend width must be greater than zero"
+            )
+
+        if width > 8:
+            raise ValueError(
+                "trend width cannot exceed eight cells"
+            )
+
+        def numeric(value):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return 0.0
+
+        samples = [
+            max(
+                0.0,
+                numeric(value),
+            )
+            for value in tuple(values)
+        ]
+
+        samples = samples[-width:]
+
+        if not samples:
+            return [0.0] * width
+
+        maximum = max(samples)
+
+        if maximum <= 0:
+            normalized = [
+                0.0
+                for _ in samples
+            ]
+        elif maximum <= 1.0:
+            normalized = [
+                min(
+                    1.0,
+                    value,
+                )
+                for value in samples
+            ]
+        else:
+            normalized = [
+                value / maximum
+                for value in samples
+            ]
+
+        return (
+            [0.0] * (
+                width - len(normalized)
+            )
+            + normalized
+        )
+
+    def trend_line(
+        self,
+        label,
+        values,
+        *,
+        width=7,
+    ) -> bytes:
+        """
+        Render a compact ASCII sparkline and current normalized percentage.
+
+        Safe ASCII density characters are used because the A125 laboratory has
+        confirmed a native full block but not programmable partial-height
+        glyphs.
+        """
+
+        if not isinstance(
+            label,
+            str,
+        ) or not label.strip():
+            raise ValueError(
+                "label is required"
+            )
+
+        normalized = self.normalize_trend_values(
+            values,
+            width=width,
+        )
+
+        sparkline = "".join(
+            self.TREND_LEVELS[
+                min(
+                    len(self.TREND_LEVELS) - 1,
+                    round(
+                        value
+                        * (
+                            len(self.TREND_LEVELS)
+                            - 1
+                        )
+                    ),
+                )
+            ]
+            for value in normalized
+        )
+
+        current = clamp_percentage(
+            normalized[-1] * 100
+        )
+
+        prefix = (
+            f"{label.strip().upper()[:3]:<3} "
+        )
+
+        line = (
+            f"{prefix}"
+            f"{sparkline}"
+            f" {current:>3}%"
+        )
+
+        return fit_text(
+            line
         )
 
     def performance(

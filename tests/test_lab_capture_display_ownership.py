@@ -21,6 +21,9 @@ class FakeSerial:
         self.timeout = timeout
         self.write_timeout = write_timeout
         self.writes = []
+        self.read_buffer = bytearray(
+            b"\x53\xFB\x28"
+        )
         self.closed = False
 
         self.__class__.instances.append(self)
@@ -31,7 +34,11 @@ class FakeSerial:
         return len(payload)
 
     def read(self, size):
-        return b""
+        payload = bytes(
+            self.read_buffer[:size]
+        )
+        del self.read_buffer[:size]
+        return payload
 
     def flush(self):
         return None

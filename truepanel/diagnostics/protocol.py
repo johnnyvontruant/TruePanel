@@ -52,6 +52,36 @@ class InvalidPacket(A125ProtocolError):
 class UnsupportedCommand(A125ProtocolError):
     """Controller returned NACK for a command."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        expected_response: int | None = None,
+        reason: int | None = None,
+        raw_reply: str | None = None,
+    ):
+        super().__init__(message)
+        self.expected_response = expected_response
+        self.reason = reason
+        self.raw_reply = raw_reply
+
+
+class UnexpectedResponse(A125ProtocolError):
+    """Controller returned a valid but unexpected response."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        expected_response: int | None = None,
+        actual_response: int | None = None,
+        raw_reply: str | None = None,
+    ):
+        super().__init__(message)
+        self.expected_response = expected_response
+        self.actual_response = actual_response
+        self.raw_reply = raw_reply
+
 
 @dataclass(frozen=True)
 class A125Packet:

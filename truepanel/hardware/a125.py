@@ -11,6 +11,7 @@ A pyserial Serial instance satisfies this contract.
 """
 
 from __future__ import annotations
+from collections import deque
 
 import threading
 import time
@@ -23,11 +24,15 @@ from truepanel.diagnostics.protocol import (
     A125Reply,
     A125Response,
     DEVICE_PREAMBLES,
+    A125ProtocolError,
     InvalidPacket,
+    UnexpectedResponse,
+    UnsupportedCommand,
     encode_backlight,
     encode_display_write,
     encode_query,
     expected_reply_payload_length,
+    describe_response,
 )
 
 
@@ -50,6 +55,34 @@ class A125Capabilities:
         return "ascii"
 
 
+@dataclass(frozen=True)
+class A125Transaction:
+    """One complete command/reply exchange with diagnostic metadata."""
+
+    command_name: str
+    response_name: str
+    tx_hex: str
+    rx_hex: str
+    latency_ms: float
+    classification: str
+    expected_response: str | None = None
+
+    def format(self) -> str:
+        expected = (
+            f" expected={self.expected_response}"
+            if self.expected_response
+            else ""
+        )
+
+        return (
+            f"TX {self.tx_hex} {self.command_name} | "
+            f"RX {self.rx_hex} {self.response_name} | "
+            f"{self.classification}"
+            f"{expected} | "
+            f"{self.latency_ms:.3f} ms"
+        )
+
+
 class A125Controller:
     def __init__(
         self,
@@ -59,6 +92,9 @@ class A125Controller:
         self.transport = transport
         self.timeout = float(timeout)
         self.lock = threading.RLock()
+
+        self.last_transaction = None
+        self.transaction_history = deque(maxlen=100)
 
     def _flush(self):
         flush = getattr(self.transport, "flush", None)
@@ -78,6 +114,111 @@ class A125Controller:
             self._flush()
 
         return encoded
+
+    @staticmethod
+    def _enum_name(value, enum_type=None) -> str:
+        if getattr(value, "name", None):
+            return value.name
+
+        if enum_type is not None:
+            try:
+                return enum_type(value).name
+            except (TypeError, ValueError):
+                pass
+
+        return f"0x{int(value):02X}"
+
+    def _record_transaction(
+        self,
+        encoded: bytes,
+        reply: A125Reply,
+        started_at: float,
+        expected_response=None,
+    ) -> A125Transaction:
+        try:
+            command = A125Command(encoded[1])
+            command_name = command.name
+        except (ValueError, IndexError):
+            command_name = (
+                f"UNKNOWN_0x{encoded[1]:02X}"
+                if len(encoded) > 1
+                else "UNKNOWN"
+            )
+
+        response_name = self._enum_name(
+            reply.response,
+            A125Response,
+        )
+        expected_name = (
+            self._enum_name(
+                expected_response,
+                A125Response,
+            )
+            if expected_response is not None
+            else None
+        )
+
+        if reply.response == A125Response.NACK:
+            classification = "NACK"
+        elif (
+            expected_response is not None
+            and reply.response == expected_response
+        ):
+            classification = "EXPECTED"
+        elif expected_response is not None:
+            classification = "UNEXPECTED"
+        elif reply.response == A125Response.ACK:
+            classification = "ACK"
+        else:
+            classification = "REPLY"
+
+        transaction = A125Transaction(
+            command_name=command_name,
+            response_name=response_name,
+            tx_hex=" ".join(
+                f"{byte:02X}" for byte in encoded
+            ),
+            rx_hex=reply.hex(),
+            latency_ms=(
+                time.perf_counter() - started_at
+            ) * 1000.0,
+            classification=classification,
+            expected_response=expected_name,
+        )
+
+        self.last_transaction = transaction
+        self.transaction_history.append(transaction)
+        return transaction
+
+    def format_last_transaction(self) -> str:
+        if self.last_transaction is None:
+            return "No A125 transaction recorded"
+
+        return self.last_transaction.format()
+
+    def exchange(
+        self,
+        packet: A125Packet | bytes,
+        expected_response=None,
+    ) -> tuple[bytes, A125Reply]:
+        """
+        Send one command, consume its reply, and record the transaction.
+        """
+
+        started_at = time.perf_counter()
+
+        with self.lock:
+            encoded = self.send(packet)
+            reply = self.read_reply()
+
+        self._record_transaction(
+            encoded,
+            reply,
+            started_at,
+            expected_response=expected_response,
+        )
+
+        return encoded, reply
 
     def write_bytes(self, row: int, payload: bytes) -> bytes:
         packet = encode_display_write(row, payload)
@@ -111,6 +252,22 @@ class A125Controller:
         )
         self.send(packet)
         return packet
+
+    def stop_auto_display_reply(self) -> A125Reply:
+        """
+        Stop automatic display mode and consume the associated response.
+
+        Some A125 firmware revisions return NACK with payload 0x28. The
+        important transport requirement is that this frame belongs to the
+        STOP_AUTO_DISPLAY command and must not remain queued for a later
+        query.
+        """
+
+        packet = encode_query(
+            A125Command.STOP_AUTO_DISPLAY
+        )
+        _, reply = self.exchange(packet)
+        return reply
 
     def start_auto_display(self) -> bytes:
         packet = encode_query(
@@ -191,15 +348,51 @@ class A125Controller:
             payload=payload,
         )
 
+    @staticmethod
+    def _require_response(
+        reply: A125Reply,
+        expected: A125Response,
+    ) -> None:
+        """
+        Validate a controller reply without discarding protocol evidence.
+
+        NACK replies retain their reason byte and raw frame. Other recognized
+        but unexpected replies are reported separately from malformed packets.
+        """
+
+        if reply.response == A125Response.NACK:
+            reason = reply.payload[0] if reply.payload else None
+            reason_text = (
+                f"0x{reason:02X}"
+                if reason is not None
+                else "missing"
+            )
+
+            raise UnsupportedCommand(
+                f"Controller returned NACK while expecting "
+                f"{expected.name}; reason={reason_text}; "
+                f"raw={reply.hex()}",
+                expected_response=int(expected),
+                reason=reason,
+                raw_reply=reply.hex(),
+            )
+
+        if reply.response != expected:
+            raise UnexpectedResponse(
+                f"Expected {expected.name}, received "
+                f"{describe_response(reply.response)} "
+                f"(0x{reply.response:02X}); raw={reply.hex()}",
+                expected_response=int(expected),
+                actual_response=int(reply.response),
+                raw_reply=reply.hex(),
+            )
+
     def query_board_id(self) -> int:
         with self.lock:
             self.request_board_id()
             reply = self.read_reply()
 
-        if reply.response != A125Response.BOARD_ID:
-            raise InvalidPacket(
-                f"Expected BOARD_ID, received 0x{reply.response:02X}"
-            )
+        self._require_response(reply, A125Response.BOARD_ID)
 
         value = reply.value_u16
 
@@ -213,11 +406,10 @@ class A125Controller:
             self.request_protocol_version()
             reply = self.read_reply()
 
-        if reply.response != A125Response.PROTOCOL_VERSION:
-            raise InvalidPacket(
-                "Expected PROTOCOL_VERSION, received "
-                f"0x{reply.response:02X}"
-            )
+        self._require_response(
+            reply,
+            A125Response.PROTOCOL_VERSION,
+        )
 
         value = reply.value_u16
 
@@ -228,14 +420,21 @@ class A125Controller:
 
     def query_buttons(self) -> int:
         with self.lock:
-            self.request_buttons()
+            started_at = time.perf_counter()
+            encoded = self.request_buttons()
             reply = self.read_reply()
 
-        if reply.response != A125Response.BUTTON_STATUS:
-            raise InvalidPacket(
-                "Expected BUTTON_STATUS, received "
-                f"0x{reply.response:02X}"
-            )
+        self._record_transaction(
+            encoded,
+            reply,
+            started_at,
+            expected_response=A125Response.BUTTON_STATUS,
+        )
+
+        self._require_response(
+            reply,
+            A125Response.BUTTON_STATUS,
+        )
 
         value = reply.value_u16
 
@@ -250,12 +449,12 @@ class A125Controller:
 
         try:
             board_id = self.query_board_id()
-        except (TimeoutError, InvalidPacket):
+        except (TimeoutError, A125ProtocolError):
             pass
 
         try:
             protocol_version = self.query_protocol_version()
-        except (TimeoutError, InvalidPacket):
+        except (TimeoutError, A125ProtocolError):
             pass
 
         return A125Capabilities(

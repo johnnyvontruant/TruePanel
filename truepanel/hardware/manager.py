@@ -12,6 +12,7 @@ from typing import Any
 
 from .a125 import A125Controller
 from .buzzer import Buzzer
+from .bay_leds import TVS671BayLedController
 from .enclosure import EnclosureController
 from .health import StorageHealthService
 from .inventory import StorageInventory
@@ -51,6 +52,7 @@ class HardwareManager:
         *,
         enclosure_factory: Factory | None = None,
         buzzer_factory: Factory | None = None,
+        bay_leds_factory: Factory | None = None,
         a125_factory: Factory | None = None,
         topology_factory: Factory | None = None,
         inventory_factory: Factory | None = None,
@@ -60,6 +62,10 @@ class HardwareManager:
         self._factories: dict[str, Factory] = {
             "enclosure": enclosure_factory or EnclosureController,
             "buzzer": buzzer_factory or _create_buzzer,
+            "bay_leds": (
+                bay_leds_factory
+                or self._create_bay_leds
+            ),
             "a125": a125_factory or A125Controller,
             "topology": topology_factory or self._create_topology,
             "inventory": inventory_factory or self._create_inventory,
@@ -68,6 +74,17 @@ class HardwareManager:
         }
 
         self._instances: dict[str, Any] = {}
+
+    def _create_bay_leds(
+        self,
+    ) -> TVS671BayLedController:
+        hardware = _load_hardware_config()
+        settings = hardware.get("bay_leds", {})
+
+        if not isinstance(settings, dict):
+            settings = {}
+
+        return TVS671BayLedController(settings)
 
     def _create_topology(self) -> TopologyResolver:
         hardware = _load_hardware_config()
@@ -136,6 +153,10 @@ class HardwareManager:
     @property
     def buzzer(self) -> Buzzer:
         return self._get("buzzer")
+
+    @property
+    def bay_leds(self) -> TVS671BayLedController:
+        return self._get("bay_leds")
 
     @property
     def a125(self) -> A125Controller:

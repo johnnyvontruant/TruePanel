@@ -158,7 +158,7 @@ def metric_frame(
     latest_text = formatter(latest)
     peak_text = formatter(peak)
 
-    line1 = f"{title} {label} {latest_text} P{peak_text}"
+    line1 = f"{title} {label} N{latest_text} P{peak_text}"
 
     return display_manager.make_frame(
         line1=line1[:LCD_WIDTH],

@@ -48,6 +48,7 @@ def test_manager_does_not_construct_hardware_eagerly():
     assert manager.loaded() == ()
     assert manager.registered() == (
         "a125",
+        "bay_leds",
         "buzzer",
         "enclosure",
         "health",

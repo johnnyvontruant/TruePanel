@@ -112,3 +112,18 @@ hardware:
         serial: WSD9KX4V
       6:
         serial: WSD9QAWH
+
+mission_control:
+  storage_health:
+    bay_leds_clear_on_start: true
+    bay_leds_enabled: true
+    # Poll full SMART health less frequently than the lightweight collector.
+    enabled: true
+    interval: 300
+
+    # Surface existing warning and critical drives once after startup.
+    emit_initial_conditions: true
+
+    # Preserve real hardware transitions for future replay tests.
+    record_events: true
+    event_log: /var/lib/truepanel/storage/events.jsonl

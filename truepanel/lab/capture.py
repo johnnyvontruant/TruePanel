@@ -159,7 +159,7 @@ def open_controller(
                 timeout=float(timeout),
             )
 
-            controller.stop_auto_display()
+            controller.stop_auto_display_reply()
 
             try:
                 yield controller, path

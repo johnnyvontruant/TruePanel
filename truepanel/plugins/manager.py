@@ -38,7 +38,6 @@ def builtin_plugin_classes():
     """
 
     from .core import CorePlugin
-    from .history import HistoricalLCDPlugin
     from .simulator import SimulatorPlugin
     from .status import PluginStatusPlugin
 
@@ -46,7 +45,6 @@ def builtin_plugin_classes():
         CorePlugin,
         SimulatorPlugin,
         PluginStatusPlugin,
-        HistoricalLCDPlugin,
     ]
 
 
@@ -275,9 +273,14 @@ def load_plugins(config=None):
     )
 
     state = load_state(plugin_root)
-    disabled = set(state.get("disabled", []))
+
+    disabled = {
+        normalize_plugin_id(item).replace("_", "-")
+        for item in state.get("disabled", [])
+    }
+
     disabled.update(
-        normalize_plugin_id(item)
+        normalize_plugin_id(item).replace("_", "-")
         for item in plugin_config.get("disabled", [])
     )
 
@@ -330,8 +333,9 @@ def load_plugins(config=None):
 
     for discovered in discover_external_plugins(plugin_root):
         plugin_id = discovered["plugin_id"]
+        disabled_id = normalize_plugin_id(plugin_id).replace("_", "-")
 
-        if plugin_id in disabled:
+        if disabled_id in disabled:
             registry.add_result(
                 PluginLoadResult(
                     plugin_id=plugin_id,

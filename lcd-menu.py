@@ -22,6 +22,9 @@ from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.healthy import healthy_watcher
 from truepanel.mission_control.watchers.pool import pool_watcher
 from truepanel.mission_control.watchers.smart import smart_watcher
+from truepanel.mission_control.watchers.storage_health import (
+    build_storage_health_watcher,
+)
 from truepanel.mission_control.watchers.thermal import thermal_watcher
 from truepanel.mission_control.watchers.zfs import zfs_watcher
 from truepanel.pages.fans import fan_pwm_page, fan_rpm_page
@@ -42,6 +45,7 @@ collector = TruePanelCollector()
 mission = MissionControl()
 alert_manager = AlertManager()
 config = load_config()
+storage_health_watcher = build_storage_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
 history_recorder = TelemetryRecorder(config.get("history", {}))
@@ -52,6 +56,10 @@ mission.register(pool_watcher)
 mission.register(thermal_watcher)
 mission.register(zfs_watcher)
 mission.register(smart_watcher)
+
+if storage_health_watcher is not None:
+    mission.register(storage_health_watcher)
+
 mission.register(healthy_watcher)
 
 

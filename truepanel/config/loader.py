@@ -15,6 +15,15 @@ except Exception:
 
 
 DEFAULT_CONFIG = {
+    "mission_control": {
+        "storage_health": {
+            "enabled": True,
+            "interval": 300,
+            "emit_initial_conditions": True,
+            "record_events": True,
+            "event_log": "/var/lib/truepanel/storage/events.jsonl",
+        },
+    },
     "history": {
         "enabled": True,
         "path": "/var/lib/truepanel/history/telemetry.jsonl",
