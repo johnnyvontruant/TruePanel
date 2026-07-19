@@ -1,114 +1,65 @@
 # TruePanel History
 
-TruePanel began as a simple goal: restore the built-in LCD on a QNAP TVS-671 running TrueNAS SCALE.
+## First light
 
-What started as a front-panel display experiment quickly became a native TrueNAS monitoring project.
+TruePanel began with a small collection of scripts intended to wake a QNAP front-panel LCD under a different operating system. The initial repository contained only a handful of files and depended heavily on inherited assumptions.
 
----
+## Becoming TruePanel
 
-## First Light
+The project gained its own name, visual identity, installer, configuration, service, documentation, and development workflow. Collector-first design replaced scattered direct reads, while Mission Control introduced priorities, structured events, alert history, and a calm default display policy.
 
-The first milestone was getting the LCD to respond under TrueNAS SCALE.
+## Flight Deck
 
-Early testing involved identifying the correct serial device and confirming that the QNAP front-panel LCD could still receive commands outside of QTS.
+The LCD evolved from static pages into Flight Deck: a rotating dashboard with AutoPilot, button pauses, startup sequences, night mode, themes, transitions, native A125 ROM graphics, custom CGRAM glyphs, instruments, gauges, trends, and plugin pages.
 
-After testing multiple ports, the working LCD configuration settled on:
+## Platform services
 
-```text
-/dev/ttyS1
-```
+TruePanel added:
 
-The first successful display output confirmed that the hardware was alive.
+- plugin API v1
+- hardware abstraction
+- storage inventory and topology
+- SMART and storage health services
+- ZFS operation watching
+- historical telemetry
+- simulation
+- diagnostics
+- guarded hardware commands
 
----
+## Project Stargate
 
-## Button Navigation
+Project Stargate formalized hardware research. Captures became sessions, commands became catalog entries, and live experiments gained simulation, classification, danger levels, interlocks, cooldowns, fingerprints, timing studies, and capability reports.
 
-Once the LCD was working, the next milestone was confirming that the front-panel buttons worked.
+This work identified and verified the A125 controller on the TVS-671, including board and protocol queries, button state, display ownership, ROM graphics, CGRAM behavior, and timing.
 
-The original menu system successfully cycled through pages and responded to button presses, proving that the LCD could become more than a static status screen.
+## Chassis integration
 
----
+Firmware archaeology and supervised probes mapped TVS-671 status LEDs and all six bay identify LEDs.
 
-## System Monitoring
-
-TruePanel then began adding TrueNAS-specific information:
-
-* CPU and RAM usage
-* ZFS pool health
-* Storage usage
-* Pool capacity progress bar
-
-This was the first step away from recreating the original QNAP menu and toward building a native TrueNAS dashboard.
-
----
-
-## Drive Temperatures
-
-The next major milestone was drive temperature support.
-
-TruePanel learned to read both SATA and NVMe temperature formats, sort drives by temperature, and show the hottest drives first.
-
-This made the LCD immediately more useful as a hardware health display.
-
----
-
-## The Collector
-
-The project changed direction when the collector architecture was introduced.
-
-Instead of each LCD page running its own system commands, TruePanel gained a central collector responsible for gathering system information once and exposing it through shared state.
-
-This became the foundation for future development.
-
----
-
-## ARC and ZFS Activity
-
-The collector then expanded to include:
-
-* ARC cache size
-* ARC hit ratio
-* ZFS scrub detection
-* ZFS resilver detection
-* Pool activity state
-
-This marked the point where TruePanel began evolving from an LCD menu into a telemetry engine for TrueNAS SCALE.
-
----
-
-## GitHub Launch
-
-TruePanel became its own GitHub project under:
+The production storage path now connects logical health to physical hardware:
 
 ```text
-johnnyvontruant/TruePanel
+drive fault -> matching bay LED -> rotating LCD detail page
+recovery    -> bay LED off      -> detail cleared
 ```
 
-The repository was cleaned, documentation was added, and development moved toward a more structured workflow using Git, branches, commits, and milestones.
+This replaced a redundant drive-fault interrupt screen while preserving structured event history.
 
----
+## Independence
 
-## Project Identity
+By July 2026, TruePanel had hundreds of tracked source and documentation files, a broad automated suite, a plugin platform, a hardware laboratory, and model-specific production controls. Only one file from the 2022 root commit remained unchanged, and it was retired during consolidation.
 
-The project adopted the name:
+The original lineage remains part of the Git record, but the living project is an independently developed TruePanel platform.
 
-```text
-TruePanel
-```
+## Consolidation milestone
 
-The name reflects the long-term goal: to become the front panel that TrueNAS deserves.
+On July 19, 2026:
 
----
-
-## Current Direction
-
-The next major milestone is the Decision Engine.
-
-The collector gathers facts.
-
-The Decision Engine will decide what matters.
-
-The LCD will display the most important system state automatically.
-
-This is the beginning of TruePanel becoming more than a dashboard. It is becoming a small, intelligent operations console for TrueNAS SCALE.
+- the modern hardware-aware platform was consolidated;
+- obsolete dashboard test generations were retired;
+- 861 tests passed;
+- generated artifacts and runtime state were removed;
+- 1.1 GB of extracted firmware was archived outside Git;
+- reusable Stargate tools were curated;
+- obsolete root utilities were retired;
+- the documentation was rebuilt around the current platform.

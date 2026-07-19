@@ -1,195 +1,117 @@
 # TruePanel Development Guide
 
-This document describes the development workflow, coding standards, and project conventions used by TruePanel.
+## Branches
 
-The goal is to keep the project organized, maintainable, and enjoyable to work on as it grows.
+### `main`
 
----
+`main` represents released or explicitly promoted platform state. It should remain deployable and documented.
 
-# Branch Strategy
+### `develop`
 
-TruePanel uses two primary branches.
+`develop` is the active integration branch. Completed feature work lands here after tests, cleanup, and documentation.
 
-## `main`
+### Feature branches
 
-The `main` branch should always represent the latest stable version of the project.
+Use focused branches for large or hazardous work, especially hardware research, protocol changes, plugins, and migrations.
 
-Code on `main` should:
+## Development workflow
 
-* Build successfully
-* Run correctly
-* Be suitable for public use
-
-Only completed features should be merged into `main`.
-
----
-
-## `develop`
-
-The `develop` branch is where active development occurs.
-
-New features, experiments, and refactoring should happen here before being merged into `main`.
-
-Future feature branches may include:
-
-```text
-feature/decision-engine
-feature/network
-feature/smart
-feature/config
-feature/alerts
+```bash
+git checkout develop
+git pull --ff-only origin develop
+git checkout -b feature/<name>
 ```
-
----
-
-# Commit Messages
-
-Commits should describe *what* changed.
-
-Examples:
-
-```text
-docs: add architecture guide
-docs: update roadmap
-feat: add decision engine
-feat: implement ARC statistics
-fix: correct SMART temperature parsing
-refactor: simplify collector update loop
-style: clean up LCD rendering
-```
-
-Small, focused commits are preferred over large commits containing unrelated changes.
-
----
-
-# Versioning
-
-TruePanel follows Semantic Versioning.
-
-Examples:
-
-```text
-0.6.0-dev
-0.6.1
-0.7.0
-0.8.0
-1.0.0
-```
-
-Each milestone also receives a codename.
-
-| Version | Codename        |
-| ------- | --------------- |
-| 0.6     | Sentinel        |
-| 0.7     | Mission Control |
-| 0.8     | Watchtower      |
-| 0.9     | Polaris         |
-| 1.0     | Beacon          |
-
----
-
-# Architecture
-
-Whenever possible, keep responsibilities separated.
-
-## Collector
-
-Collect system information.
-
-Never format display text.
-
----
-
-## Decision Engine
-
-Determine which information is most important.
-
-Never communicate directly with hardware.
-
----
-
-## Renderer
-
-Convert system state into LCD-friendly output.
-
-Never gather system information.
-
----
-
-## Display Driver
-
-Handle LCD communication and button input.
-
-Remain independent from monitoring logic.
-
----
-
-# Coding Style
-
-General guidelines:
-
-* Keep functions focused on a single task.
-* Prefer readable code over clever code.
-* Avoid duplicated logic.
-* Document unusual behavior.
-* Use descriptive variable names.
-* Minimize expensive shell commands.
-* Fail gracefully whenever possible.
-
----
-
-# Documentation
-
-Every significant feature should update the appropriate documentation.
-
-Examples:
-
-* README
-* CHANGELOG
-* ARCHITECTURE
-* ROADMAP
-
-Documentation should evolve alongside the code.
-
----
-
-# Testing
 
 Before committing:
 
-* Verify Python syntax.
-* Confirm the LCD initializes correctly.
-* Test button navigation.
-* Verify collector output.
-* Check new pages for display formatting.
-* Ensure no existing features have regressed.
-
-Typical commands:
-
 ```bash
-python3 -m py_compile collector.py lcd-menu.py
-sudo python3 collector.py
-sudo python3 lcd-menu.py
+python3 -m compileall -q truepanel
+python3 -m pytest -q
+git diff --check
+git status -sb
 ```
 
----
+Stage files explicitly. Do not use `git add .` in a repository containing local captures, firmware, plugins, or hardware experiments.
 
-# Definition of Done
+## Repository boundaries
 
-A feature is considered complete when:
+Commit:
 
-* The code functions correctly.
-* Existing functionality remains intact.
-* Documentation has been updated.
-* The feature has been tested on hardware.
-* The code is ready to merge into `main`.
+- production source
+- automated tests
+- durable documentation
+- reproducible laboratory source
+- example plugins
+- reference configuration
 
----
+Do not commit:
 
-# Long-Term Goal
+- extracted firmware
+- compiled probes
+- object files
+- caches
+- timestamped backups
+- hardware captures and logs
+- runtime plugin state
+- local telemetry
+- credentials
 
-Every change should move TruePanel toward becoming a stable, reliable monitoring platform for TrueNAS SCALE.
+## Architecture rules
 
-The project should remain approachable for new contributors while maintaining a clean and scalable architecture.
+- Collection does not decide presentation.
+- Watchers produce structured events.
+- Alert policy decides interruption.
+- Hardware controllers are lazy and testable.
+- Model-specific commands are disabled by default.
+- Experimental commands live behind Project Stargate interlocks.
+- Recovery behavior is as important as activation behavior.
+- The LCD width is always treated as a hard 16-character boundary.
 
-When in doubt, favor simplicity, reliability, and clarity.
+## Testing
+
+The suite covers unit, contract, integration, and hardware-abstraction behavior. Physical hardware tests remain separate and must be explicitly supervised.
+
+At the July 19, 2026 consolidation, the full suite passed 861 tests.
+
+When changing display behavior, update the current Flight Deck contract rather than preserving retired visual layouts. Git history already preserves earlier generations.
+
+## Hardware changes
+
+Before adding a write:
+
+1. identify the exact controller;
+2. document the address or register;
+3. verify the command on the intended model;
+4. verify restoration;
+5. isolate it behind a controller class;
+6. add duplicate suppression where useful;
+7. add tests with a recording transport;
+8. default the feature off for portable configurations;
+9. document the support boundary.
+
+## Documentation
+
+User-visible features are incomplete until the README, relevant technical manual, configuration reference, and history or roadmap are updated.
+
+## Commit messages
+
+Examples:
+
+```text
+feat: add verified TVS-671 bay identify LED control
+fix: consume A125 ownership reply
+docs: redefine TruePanel as an independent platform
+chore: curate Stargate laboratory source tree
+```
+
+## Release promotion
+
+A release candidate should have:
+
+- a clean `develop` tree;
+- a synchronized remote;
+- a complete passing suite;
+- current installation and hardware documentation;
+- reviewed `main`-only commits;
+- an explicit merge or release commit;
+- a tag when appropriate.

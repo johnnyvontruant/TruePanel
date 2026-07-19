@@ -1,119 +1,71 @@
 # TruePanel Roadmap
 
-TruePanel is being developed in small, focused milestones. Each release has a specific objective that moves the project closer to a polished, production-ready front panel for TrueNAS SCALE.
+## Current platform
 
----
+TruePanel currently provides:
 
-# Current Development
+- Mission Control and structured events
+- Flight Deck and AutoPilot
+- native A125 graphics and instruments
+- pool, SMART, thermal, ZFS, and storage health monitoring
+- physical TVS-671 bay fault indication
+- historical telemetry
+- plugin API v1
+- hardware abstraction and command services
+- Project Stargate laboratory and safety model
+- native TrueNAS SCALE installation
 
-## Version 0.6.0-dev "Sentinel"
+## Path to 1.0
 
-Current focus:
+### Stability
 
-* Collector architecture
-* Shared system state
-* CPU and memory monitoring
-* ZFS pool health
-* Storage usage
-* Drive temperature monitoring
-* ARC cache statistics
-* ZFS scrub and resilver detection
+- reconcile multiple simultaneous storage fault details on the LCD
+- complete service restart and upgrade recovery tests
+- harden configuration migration and validation
+- add release-grade logging and diagnostics summaries
+- define supported TrueNAS upgrade procedures
 
-Status: **In Development**
+### User experience
 
----
+- finalize dashboard page ordering and naming
+- add screenshots and hardware photographs
+- improve button navigation and acknowledgement flows
+- provide configuration examples for quiet, tactical, and night modes
+- expose clearer storage topology and bay labels
 
-# Version 0.7.0 "Mission Control"
+### Packaging
 
-Objective:
+- add complete project metadata and console entry points
+- define reproducible releases
+- add changelog and release notes
+- test clean installs from tagged archives
+- document backup and rollback procedures
 
-Teach TruePanel to understand what matters.
+### Hardware
 
-Planned features:
+- keep TVS-671 as the verified reference platform
+- create a formal model profile interface
+- validate additional QNAP models through Stargate
+- graduate status LED control only after production policy is defined
+- expand fan and thermal support without unsafe writes
 
-* Decision Engine
-* Mission Control home screen
-* Priority-based alert system
-* Live network throughput
-* Improved page management
+### Plugins
 
-Instead of cycling through information equally, TruePanel will learn to display the most important system status automatically.
+- publish stable capability contracts
+- expand example plugins
+- add compatibility checks and clearer isolation reports
+- document versioning and migration rules
 
----
+## Beyond 1.0
 
-# Version 0.8.0 "Watchtower"
+- remote status API
+- richer historical analysis
+- event export and notifications
+- additional LCD and OLED backends
+- declarative dashboard layouts
+- community hardware profiles
+- signed or verified plugin packages
 
-Objective:
+## Guiding rule
 
-Expand hardware awareness.
-
-Planned features:
-
-* SMART health reporting
-* CPU temperature
-* Fan speed monitoring (supported hardware)
-* Additional storage statistics
-* Improved hardware compatibility
-
----
-
-# Version 0.9.0 "Polaris"
-
-Objective:
-
-Customization and refinement.
-
-Planned features:
-
-* Configuration file
-* Custom page ordering
-* User-selectable refresh rates
-* Night mode and backlight options
-* Diagnostics mode
-* Improved logging
-
----
-
-# Version 1.0.0 "Beacon"
-
-Objective:
-
-First stable public release.
-
-Goals:
-
-* Complete documentation
-* Automated installation
-* Stable architecture
-* Community-tested hardware support
-* Long-term maintenance plan
-
-Version 1.0 represents the first feature-complete release of TruePanel.
-
----
-
-# Beyond 1.0
-
-Possible future enhancements include:
-
-* Web dashboard
-* Home Assistant integration
-* REST API
-* MQTT publishing
-* OLED and USB display support
-* Plugin architecture
-* Multiple display themes
-* Localization
-* Additional NAS platform support
-
----
-
-# Guiding Principle
-
-Every release should make TruePanel more useful, more reliable, and easier to maintain.
-
-Features will never be added simply because they are possible. Every addition should improve the experience of understanding the health of a TrueNAS system at a glance.
-
-The ultimate goal remains unchanged:
-
-> **Build the front panel that TrueNAS deserves.**
+New features should make the front panel more useful without making the appliance less trustworthy. Calm information, exact hardware control, and reproducible evidence remain the compass.

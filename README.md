@@ -1,336 +1,147 @@
 # TruePanel
 
 <p align="center">
-  <img src="assets/logo/truepanel-logo.svg" alt="TruePanel Logo" width="180">
+  <img src="assets/logo/truepanel-logo.svg" alt="TruePanel logo" width="180">
 </p>
 
-<h1 align="center">TruePanel</h1>
+<h3 align="center">Hardware-aware mission control for TrueNAS SCALE</h3>
 
-<h3 align="center">
-Mission Control for TrueNAS LCD Dashboards
-</h3>
+TruePanel turns supported QNAP front-panel hardware into a live operational dashboard for TrueNAS SCALE. It combines a rotating LCD Flight Deck, structured health monitoring, historical telemetry, guarded hardware controls, plugins, and a reverse-engineering laboratory built around reproducible safety rules.
 
-<p align="center">
-Transform compatible QNAP LCD hardware into a modern, modular dashboard for TrueNAS SCALE.
-</p>
+TruePanel began by adapting earlier QNAP LCD utilities, but the current project is an independently developed platform. The original lineage remains preserved in Git history and acknowledgements.
 
-<p align="center">
+## What TruePanel does
 
-![Status](https://img.shields.io/badge/status-active-success.svg)
-![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
-![Platform](https://img.shields.io/badge/platform-TrueNAS%20SCALE-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+- Rotates system, storage, network, thermal, and ZFS pages on a 16x2 front-panel LCD
+- Renders native A125 ROM graphics and custom CGRAM instruments
+- Tracks pool health, SMART state, drive temperatures, storage topology, and ZFS operations
+- Records historical telemetry for trends and diagnostics
+- Routes drive-specific faults to the matching physical bay identify LED
+- Keeps detailed storage information available on the LCD without redundant interrupt pages
+- Supports buttons, backlight, buzzer patterns, themes, plugins, simulation, and diagnostics
+- Provides Project Stargate tools for guarded A125 and QNAP hardware research
 
-</p>
+## Verified platform
 
----
+The production reference system is:
 
-# Overview
+- QNAP TVS-671
+- TrueNAS SCALE
+- Python 3.11
+- A125 LCD controller on `/dev/ttyS1` at 1200 baud
+- Six drive-bay identify LEDs through `/dev/i2c-0`, SMBus address `0x33`
 
-TruePanel breathes new life into compatible QNAP LCD front panels by transforming them into a dedicated Mission Control dashboard for TrueNAS SCALE.
+Other QNAP systems may share parts of this hardware design, but they must be treated as unverified until their controller paths and command maps are reproduced safely.
 
-Instead of letting the front-panel LCD sit unused, TruePanel continuously displays the health and status of your NAS, giving you instant visibility into the information that matters most.
+## Architecture at a glance
 
-Current dashboard capabilities include:
-
-- Storage Pool Health
-- CPU Utilization
-- Memory Usage
-- Network Activity
-- Drive Temperatures
-- SMART Alerts
-- Plugin Pages
-- Theme-aware Display Layouts
-
-TruePanel is designed around a modern modular architecture that allows new collectors, pages, plugins, themes, and hardware support to be added without changing the core application.
-
----
-
-# Why TruePanel?
-
-Most LCD projects simply display a handful of system statistics.
-
-TruePanel is designed to become an extensible dashboard platform.
-
-Its architecture emphasizes:
-
-- Clean software design
-- Modular components
-- Hardware abstraction
-- Plugin support
-- Reliability
-- Easy customization
-- Long-term maintainability
-
-Whether you're managing a home NAS or a rack of servers, TruePanel keeps critical information where it belongs:
-
-Right on the front panel.
-
----
-
-# Features
-
-## 🚀 Mission Control
-
-Coordinates collectors, shared state, page scheduling, and display rendering through a centralized control engine.
-
----
-
-## ✈️ FlightDeck
-
-Automatically rotates dashboard pages while allowing future support for priorities, alerts, and user customization.
-
----
-
-## 🔌 Plugin Framework
-
-Extend TruePanel by creating new dashboard pages without modifying the core project.
-
----
-
-## 📊 Collector Framework
-
-Independent collectors gather system information, making new data sources easy to add and maintain.
-
----
-
-## 🎨 Theme Engine
-
-Support multiple display themes and future community-created layouts.
-
----
-
-## 🖥 Hardware Abstraction
-
-Designed to support additional LCD hardware with minimal changes to the application itself.
-
----
-
-# Architecture
-
-```
-                +----------------------+
-                |      Collectors      |
-                +----------+-----------+
-                           |
-                           v
-                +----------------------+
-                |   Mission Control    |
-                +----------+-----------+
-                           |
-                           v
-                +----------------------+
-                |     Shared State     |
-                +----------+-----------+
-                           |
-                           v
-                +----------------------+
-                |      FlightDeck      |
-                +----------+-----------+
-                           |
-                           v
-                +----------------------+
-                |   Display Manager    |
-                +----------+-----------+
-                           |
-                           v
-                +----------------------+
-                |      LCD Driver      |
-                +----------------------+
+```text
+Collectors and hardware providers
+              |
+              v
+       Shared system state
+              |
+              v
+ Mission Control and watchers
+              |
+       +------+------+
+       |             |
+       v             v
+ Alert policy   Hardware indicators
+       |             |
+       +------+------+
+              v
+       Display Manager
+              |
+              v
+     Flight Deck / A125 LCD
 ```
 
-Each component has a single responsibility, making TruePanel easier to understand, test, and extend.
+The normal runtime is launched through:
 
----
-
-# Project Structure
-
-```
-truepanel/
-├── collectors/
-├── config/
-├── display/
-├── doctor/
-├── flightdeck/
-├── mission_control/
-├── pages/
-├── plugins/
-├── themes/
-├── utils/
-└── ...
+```text
+truepanel.py -> truepanel.cli -> lcd-menu.py
 ```
 
----
+Production installation lives under `/opt/truepanel`, with the service started through `/opt/truepanel/bin/truepanel run`.
 
-# Compatibility
-
-| Component | Status |
-|-----------|--------|
-| TrueNAS SCALE | ✅ Supported |
-| Python 3.11 | ✅ Supported |
-| Debian 12 | ✅ Tested |
-| QNAP LCD Hardware | ✅ Supported |
-
----
-
-# Supported Hardware
-
-### Currently Supported
-
-- Compatible QNAP LCD front panels
-
-### Planned
-
-- Additional QNAP models
-- USB LCD devices
-- OLED displays
-- Character LCD modules
-
----
-
-# Quick Start
-
-Clone the repository.
+## Installation
 
 ```bash
 git clone https://github.com/johnnyvontruant/TruePanel.git
 cd TruePanel
-bash install.sh
+sudo bash install.sh
 ```
 
-Start the service.
+Then verify:
 
 ```bash
-systemctl start truepanel
+sudo /opt/truepanel/bin/truepanel doctor
+sudo systemctl status truepanel
+sudo journalctl -u truepanel -f
 ```
 
-Enable automatic startup.
+TrueNAS administrators should read [Installation](docs/INSTALLATION.md) before deployment. TruePanel installs files under `/opt` and creates a systemd service, which may fall outside the configuration mechanisms officially supported by TrueNAS.
+
+## Command line
 
 ```bash
-systemctl enable truepanel
+truepanel doctor
+truepanel version
+truepanel plugins
+truepanel themes list
+truepanel hardware --help
+truepanel lab --help
+truepanel simulate --help
 ```
 
-Watch the live log.
+See [CLI Reference](docs/CLI.md).
 
-```bash
-journalctl -u truepanel -f
+## Documentation
+
+- [Documentation map](docs/README.md)
+- [Installation](docs/INSTALLATION.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Hardware support](docs/HARDWARE.md)
+- [CLI reference](docs/CLI.md)
+- [Project Stargate](docs/STARGATE.md)
+- [A125 protocol](docs/A125_PROTOCOL.md)
+- [Plugin API](docs/PLUGIN_API.md)
+- [Historical telemetry](docs/HISTORICAL_TELEMETRY.md)
+- [Development guide](docs/DEVELOPMENT.md)
+- [Project history](docs/HISTORY.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Philosophy](docs/PHILOSOPHY.md)
+
+## Repository structure
+
+```text
+truepanel/                 Production package
+tests/                     Automated test suite
+docs/                      User and developer documentation
+development/tools/         Reproducible Stargate laboratory tools
+examples/plugins/          External plugin examples
+plugins/                   Locally installed plugins and runtime state
+collector.py               TrueNAS state collector used by the live service
+lcd-menu.py                Production Flight Deck runtime
+truepanel.py               CLI compatibility launcher
+truepanel.yaml             Reference configuration
+install.sh                 Native installer
+uninstall.sh               Native uninstaller
 ```
 
-> **TrueNAS SCALE Note**
->
-> Use `bash install.sh` instead of `./install.sh`. Some TrueNAS SCALE systems mount directories using the `noexec` option, preventing scripts from executing directly.
+Generated captures, extracted firmware, compiled probes, caches, backups, runtime plugin state, and local telemetry are intentionally excluded from Git.
 
----
+## Safety
 
-# Tested Installation
+TruePanel can communicate with serial, SMBus, GPIO, Super I/O, buzzer, and enclosure hardware. Production controls are constrained to verified command maps. Project Stargate uses explicit interlocks, simulation modes, exclusive ownership, and narrow command catalogs.
 
-The installer has been validated on a clean TrueNAS SCALE installation using a fresh clone of the GitHub repository.
+Do not perform generic I2C scans, random register writes, or destructive storage experiments on production hardware.
 
-Current installer features include:
+## Project status
 
-- Automatic installation
-- TrueNAS SCALE compatible virtual environment
-- Automatic systemd service creation
-- Automatic service enablement
-- Safe reinstall support
-- Clean upgrade path
+TruePanel is active software. The consolidated platform passed 861 automated tests on July 19, 2026. Hardware support beyond the TVS-671 reference system remains experimental until independently verified.
 
----
+## License and lineage
 
-# Screenshots
-
-🚧 Coming Soon
-
-The Mission Control dashboard is evolving rapidly.
-
-Screenshots will be added as the interface reaches its first stable release.
-
----
-
-# Roadmap
-
-## ✅ Current
-
-- Mission Control
-- FlightDeck
-- Collector Framework
-- Plugin Framework
-- Theme Engine
-- Hardware Abstraction
-
----
-
-## 🚧 In Progress
-
-- AutoPilot
-- Configuration Manager
-- Documentation
-- Installer Improvements
-- Additional Dashboard Pages
-
----
-
-## 🛰 Planned
-
-- Sentinel Monitoring
-- REST API
-- Web Dashboard
-- Community Plugin Repository
-- Community Themes
-- Docker Images
-- Multiple LCD Hardware Targets
-
----
-
-# Contributing
-
-Contributions are always welcome.
-
-Whether you enjoy writing code, improving documentation, testing hardware, or sharing ideas, your help is appreciated.
-
-To contribute:
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your work
-4. Open a Pull Request
-
----
-
-# Design Philosophy
-
-TruePanel follows a few simple principles.
-
-- One component, one responsibility.
-- Reliability over complexity.
-- Keep the display readable.
-- Build for extensibility.
-- Document decisions.
-- Make contributions approachable.
-- Build software people enjoy using.
-
----
-
-# License
-
-Released under the MIT License.
-
-See the `LICENSE` file for details.
-
----
-
-# Acknowledgements
-
-Special thanks to everyone experimenting with QNAP LCD hardware, TrueNAS SCALE, and the home lab community.
-
-Your ideas, testing, bug reports, and feedback continue to shape the future of TruePanel.
-
----
-
-<p align="center">
-
-**Built by home lab enthusiasts, for home lab enthusiasts.**
-
-**Build cool things. Share what you create. Help the next person build something even better.**
-
-</p>
+TruePanel is distributed under the repository license. Earlier QNAP LCD work provided the initial spark; the modern architecture, Flight Deck, Mission Control, Project Stargate laboratory, telemetry, hardware abstraction, and TVS-671 controls were developed as TruePanel. Git history preserves the full lineage.
