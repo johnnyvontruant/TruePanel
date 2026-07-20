@@ -256,3 +256,40 @@ def test_alternating_alerts_do_not_retrigger_each_other():
     assert manager.evaluate(thermal).interrupt is True
     assert manager.evaluate(pending).interrupt is False
     assert manager.evaluate(thermal).interrupt is False
+
+def test_event_queue_does_not_capture_both_navigation_buttons():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    assert (
+        "if menu[menu_item] == show_event_queue:"
+        not in source
+    )
+
+
+def test_alert_history_does_not_capture_both_navigation_buttons():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    assert (
+        "if menu[menu_item] == show_alert_history:"
+        not in source
+    )
+
+
+def test_left_and_right_buttons_move_main_menu():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    assert (
+        "menu_item = (menu_item - 1) % len(menu)"
+        in source
+    )
+
+    assert (
+        "menu_item = (menu_item + 1) % len(menu)"
+        in source
+    )

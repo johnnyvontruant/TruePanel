@@ -439,16 +439,6 @@ def response_handler(command, data):
                 next_mission_dashboard()
                 return
 
-        if menu[menu_item] == show_alert_history:
-            if data in (0x01, 0x02):
-                next_alert_history()
-                return
-
-        if menu[menu_item] == show_event_queue:
-            if data in (0x01, 0x02):
-                next_event_queue()
-                return
-
         if data == 0x01:
             menu_item = (menu_item - 1) % len(menu)
 
