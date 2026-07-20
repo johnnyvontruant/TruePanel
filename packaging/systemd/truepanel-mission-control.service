@@ -1,0 +1,25 @@
+[Unit]
+Description=TruePanel Mission Control Web Dashboard
+Documentation=https://github.com/johnnyvontruant/TruePanel
+After=network-online.target truepanel.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/truepanel
+EnvironmentFile=-/etc/default/truepanel-mission-control
+ExecStart=/bin/python3 -m truepanel.web.service
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
