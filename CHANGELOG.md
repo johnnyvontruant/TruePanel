@@ -62,4 +62,6 @@ The earlier `v0.7.0`, `v0.8.0-core`, `v0.9.0`, and `v1.0.0-rc0` tags preserve th
 
 ### Fixed
 
+- Alert interruptions are latched per incident, preventing transient healthy samples or alternating warnings from repeatedly taking over Flight Deck.
+
 - Persistent unchanged alerts interrupt once, then remain visible through normal Flight Deck status, SMART, queue, and history rotation.

@@ -89,3 +89,23 @@ def test_installer_release_paths_are_consistent():
 
     assert 'INSTALL_DIR="/opt/truepanel"' in uninstaller
     assert 'BIN_FILE="$INSTALL_DIR/bin/truepanel"' in uninstaller
+
+def test_production_entrypoints_compile():
+    entrypoints = (
+        "truepanel.py",
+        "collector.py",
+        "lcd-menu.py",
+    )
+
+    for relative_path in entrypoints:
+        candidate = ROOT / relative_path
+
+        source = candidate.read_text(
+            encoding="utf-8",
+        )
+
+        compile(
+            source,
+            str(candidate),
+            "exec",
+        )

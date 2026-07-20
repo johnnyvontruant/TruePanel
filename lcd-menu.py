@@ -460,12 +460,17 @@ def response_handler(command, data):
 
 
 def main():
-    global lcd
+    global lcd, menu_item
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
 
-    lcd = qnaplcd.QnapLCD(PORT, PORT_SPEED, response_handler)
+    lcd = qnaplcd.QnapLCD(
+        PORT,
+        PORT_SPEED,
+        response_handler,
+    )
+
     lcd_on()
     lcd.reset()
     lcd.clear()
@@ -481,19 +486,33 @@ def main():
                 continue
 
             menu[menu_item]()
-                delay = 5 if menu[menu_item] == show_mission_home else 30
 
-                for _ in range(delay * 10):
-                    if shutdown_requested:
-                        break
-                    time.sleep(0.1)
+            delay = (
+                5
+                if menu[menu_item] == show_mission_home
+                else 30
+            )
+
+            for _ in range(delay * 10):
+                if shutdown_requested:
+                    break
+
+                time.sleep(0.1)
+
+            if not shutdown_requested:
+                menu_item = (
+                    menu_item + 1
+                ) % len(menu)
     finally:
         try:
             buzzer.shutdown()
-            write_lines("TruePanel", "Shutting Down", 0.5)
+            write_lines(
+                "TruePanel",
+                "Shutting Down",
+                0.5,
+            )
             lcd.backlight(False)
         except Exception:
             pass
-
 
 main()

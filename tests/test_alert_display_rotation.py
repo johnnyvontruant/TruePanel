@@ -125,7 +125,8 @@ def test_recovery_rearms_interrupt():
         event_id="system.healthy",
     )
 
-    manager.evaluate(healthy)
+    for _ in range(manager.recovery_observations):
+        manager.evaluate(healthy)
 
     assert manager.evaluate(alert).interrupt is True
 
@@ -196,3 +197,62 @@ def test_lcd_loop_resumes_after_interrupt():
         "display_manager.render_alert_detail"
         not in source
     )
+
+def test_transient_healthy_sample_does_not_rearm_alert():
+    manager = AlertManager()
+    alert = make_event()
+
+    healthy = MissionEvent(
+        priority=Priority.HEALTHY,
+        title="MISSION READY",
+        message="All systems healthy",
+        category=Category.SYSTEM,
+        timeout=5,
+        event_id="system.healthy",
+    )
+
+    assert manager.evaluate(alert).interrupt is True
+    assert manager.evaluate(healthy).interrupt is False
+    assert manager.evaluate(alert).interrupt is False
+
+
+def test_three_healthy_samples_rearm_alert():
+    manager = AlertManager()
+    alert = make_event()
+
+    healthy = MissionEvent(
+        priority=Priority.HEALTHY,
+        title="MISSION READY",
+        message="All systems healthy",
+        category=Category.SYSTEM,
+        timeout=5,
+        event_id="system.healthy",
+    )
+
+    assert manager.evaluate(alert).interrupt is True
+
+    for _ in range(3):
+        manager.evaluate(healthy)
+
+    assert manager.evaluate(alert).interrupt is True
+
+
+def test_alternating_alerts_do_not_retrigger_each_other():
+    manager = AlertManager()
+
+    pending = make_event(
+        event_id="smart.pending",
+        message="sda 1",
+        priority=Priority.CRITICAL,
+    )
+
+    thermal = make_event(
+        event_id="thermal.hot",
+        message="CPU 91C",
+        priority=Priority.WARNING,
+    )
+
+    assert manager.evaluate(pending).interrupt is True
+    assert manager.evaluate(thermal).interrupt is True
+    assert manager.evaluate(pending).interrupt is False
+    assert manager.evaluate(thermal).interrupt is False
