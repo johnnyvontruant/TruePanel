@@ -6,6 +6,8 @@ TruePanel follows semantic versioning. Release tags use the form `vMAJOR.MINOR.P
 
 ## [1.0.0]
 
+- Added a hardened Mission Control web companion service with read-only defaults, guarded Night Mode persistence, LAN deployment controls, and operator CLI commands.
+
 TruePanel 1.0.0 is the first stable release of the independent TruePanel platform.
 
 ### Flight Deck

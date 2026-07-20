@@ -134,3 +134,39 @@ TruePanel favors degraded operation over runtime collapse:
 The test suite covers protocol framing, transport ownership, hardware managers, widgets, dashboards, telemetry, storage health, bay LEDs, ZFS operations, plugins, Project Stargate policies, and integration seams.
 
 At the July 19, 2026 platform consolidation, the complete suite passed 861 tests.
+
+## Mission Control service boundary
+
+Mission Control is a companion process rather than part of the LCD runtime.
+
+```text
+Browser
+   |
+   v
+truepanel-mission-control.service
+   |
+   +--> telemetry snapshots
+   +--> history and capability APIs
+   +--> validated configuration policy
+   +--> atomic YAML persistence when explicitly enabled
+
+truepanel.service
+   |
+   +--> collectors
+   +--> Mission Control event policy
+   +--> Flight Deck rendering
+   +--> LCD buttons, buzzer, and approved hardware adapters
+```
+
+The web service may read shared TruePanel state and configuration, but HTTP handlers do not directly operate serial, I2C, sysfs, LEDs, fans, buttons, or the buzzer.
+
+Configuration persistence is guarded by all of these boundaries:
+
+1. Writes are disabled by default at service startup.
+2. Only supported Night Mode fields are accepted.
+3. Policy validation rejects unsafe alert suppression.
+4. Files are replaced atomically.
+5. A timestamped backup is created before replacement.
+6. The primary LCD service is not automatically restarted.
+
+This separation allows web development and service restarts without interrupting the Flight Deck.
