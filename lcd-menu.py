@@ -30,7 +30,7 @@ from truepanel.mission_control.watchers.zfs import zfs_watcher
 from truepanel.pages.fans import fan_pwm_page, fan_rpm_page
 
 
-DISPLAY_TIMEOUT = 30
+DISPLAY_TIMEOUT = 120
 PORT = "/dev/ttyS1"
 PORT_SPEED = 1200
 
@@ -384,12 +384,6 @@ def next_alert_history():
 def show_alert_transition(frame):
     lcd.clear()
     lcd.write(0, frame.lines)
-    time.sleep(frame.timeout)
-
-    detail = display_manager.render_alert_detail(frame.event)
-    lcd.clear()
-    lcd.write(0, detail.lines)
-
 
 def request_shutdown(signum=None, frame=None):
     global shutdown_requested
@@ -413,9 +407,6 @@ def maybe_show_alert():
 
 menu = [
     show_mission_home,
-    show_mission_control,
-    show_event_queue,
-    show_alert_history,
     show_truenas,
     show_version,
     show_uptime,
@@ -445,16 +436,6 @@ def response_handler(command, data):
                 next_mission_dashboard()
                 return
 
-        if menu[menu_item] == show_alert_history:
-            if data in (0x01, 0x02):
-                next_alert_history()
-                return
-
-        if menu[menu_item] == show_event_queue:
-            if data in (0x01, 0x02):
-                next_event_queue()
-                return
-
         if data == 0x01:
             menu_item = (menu_item - 1) % len(menu)
 
@@ -466,12 +447,17 @@ def response_handler(command, data):
 
 
 def main():
-    global lcd
+    global lcd, menu_item
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
 
-    lcd = qnaplcd.QnapLCD(PORT, PORT_SPEED, response_handler)
+    lcd = qnaplcd.QnapLCD(
+        PORT,
+        PORT_SPEED,
+        response_handler,
+    )
+
     lcd_on()
     lcd.reset()
     lcd.clear()
@@ -483,21 +469,31 @@ def main():
         while not shutdown_requested:
             add_ips_to_menu()
 
-            if not maybe_show_alert():
-                menu[menu_item]()
-                delay = 5 if menu[menu_item] == show_mission_home else 30
+            maybe_show_alert()
+            menu[menu_item]()
 
-                for _ in range(delay * 10):
-                    if shutdown_requested:
-                        break
-                    time.sleep(0.1)
+            delay = 5
+
+            for _ in range(delay * 10):
+                if shutdown_requested:
+                    break
+
+                time.sleep(0.1)
+
+            if not shutdown_requested:
+                menu_item = (
+                    menu_item + 1
+                ) % len(menu)
     finally:
         try:
             buzzer.shutdown()
-            write_lines("TruePanel", "Shutting Down", 0.5)
+            write_lines(
+                "TruePanel",
+                "Shutting Down",
+                0.5,
+            )
             lcd.backlight(False)
         except Exception:
             pass
-
 
 main()

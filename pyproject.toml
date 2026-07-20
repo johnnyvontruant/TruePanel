@@ -1,3 +1,76 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "truepanel"
+dynamic = ["version"]
+description = "Hardware-aware TrueNAS front-panel platform for compatible QNAP systems"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+  { name = "TruePanel contributors" },
+]
+keywords = [
+  "truenas",
+  "qnap",
+  "lcd",
+  "nas",
+  "hardware-monitoring",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: System :: Hardware",
+  "Topic :: System :: Monitoring",
+]
+dependencies = [
+  "pyserial>=3.5",
+  "psutil>=5.9",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+development = [
+  "pytest>=8",
+  "ruff>=0.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/johnnyvontruant/TruePanel"
+Documentation = "https://github.com/johnnyvontruant/TruePanel/tree/main/docs"
+Issues = "https://github.com/johnnyvontruant/TruePanel/issues"
+Repository = "https://github.com/johnnyvontruant/TruePanel"
+
+[tool.setuptools]
+include-package-data = true
+py-modules = ["collector"]
+
+[tool.setuptools.dynamic]
+version = { attr = "truepanel.__version__" }
+
+[tool.setuptools.packages.find]
+include = [
+  "truepanel*",
+  "qnaplcd*",
+]
+exclude = [
+  "development*",
+  "examples*",
+  "plugins*",
+  "serial*",
+  "tests*",
+]
+
+[tool.setuptools.package-data]
+"truepanel.themes" = ["packs/*.yaml"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py311"

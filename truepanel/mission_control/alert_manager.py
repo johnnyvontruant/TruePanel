@@ -6,7 +6,6 @@ history, decides whether an event should interrupt normal display flow, and
 controls one-shot audible alert notifications.
 """
 
-import time
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum
@@ -37,10 +36,15 @@ class AlertManager:
     ):
         self.interrupt_priority = interrupt_priority
 
-        # Display interruption cooldown state.
+        # Per-incident display interruption latches.
+        self.display_incidents = {}
+        self.healthy_observations = 0
+        self.recovery_observations = 3
+
+        # Compatibility fields for diagnostics.
         self.last_event_id = None
         self.last_event_message = None
-        self.last_event_time = 0
+        self.last_event_priority = None
 
         # Audible notification state.
         self.last_beep_event_id = None
@@ -52,21 +56,33 @@ class AlertManager:
     def is_alert(self, event):
         return event.priority >= self.interrupt_priority
 
-    def cooldown_expired(self, event):
-        now = time.time()
+    def reset_display_state(self):
+        self.display_incidents.clear()
+        self.healthy_observations = 0
+        self.last_event_id = None
+        self.last_event_message = None
+        self.last_event_priority = None
 
-        same_event = (
-            event.event_id == self.last_event_id
-            and event.message == self.last_event_message
+    def cooldown_expired(self, event):
+        previous = self.display_incidents.get(
+            event.event_id
         )
 
-        if (
-            same_event
-            and now - self.last_event_time < event.timeout
-        ):
-            return False
+        if previous is None:
+            return True
 
-        return True
+        previous_message, previous_priority = previous
+
+        message_changed = (
+            event.message != previous_message
+        )
+
+        priority_increased = (
+            event.message == previous_message
+            and event.priority > previous_priority
+        )
+
+        return message_changed or priority_increased
 
     def record(self, event):
         if not self.is_alert(event):
@@ -140,7 +156,14 @@ class AlertManager:
 
     def evaluate(self, event):
         if not self.is_alert(event):
+            self.healthy_observations += 1
             self.reset_audible_state()
+
+            if (
+                self.healthy_observations
+                >= self.recovery_observations
+            ):
+                self.reset_display_state()
 
             return AlertDecision(
                 interrupt=False,
@@ -149,19 +172,42 @@ class AlertManager:
                 state=AlertState.RESOLVED,
             )
 
+        self.healthy_observations = 0
         self.record(event)
 
-        if not self.cooldown_expired(event):
+        should_interrupt = self.cooldown_expired(
+            event
+        )
+
+        previous = self.display_incidents.get(
+            event.event_id
+        )
+
+        stored_priority = event.priority
+
+        if (
+            previous is not None
+            and previous[0] == event.message
+            and previous[1] > stored_priority
+        ):
+            stored_priority = previous[1]
+
+        self.display_incidents[event.event_id] = (
+            event.message,
+            stored_priority,
+        )
+
+        self.last_event_id = event.event_id
+        self.last_event_message = event.message
+        self.last_event_priority = stored_priority
+
+        if not should_interrupt:
             return AlertDecision(
                 interrupt=False,
                 timeout=event.timeout,
                 event=event,
                 state=AlertState.ACTIVE,
             )
-
-        self.last_event_id = event.event_id
-        self.last_event_message = event.message
-        self.last_event_time = time.time()
 
         return AlertDecision(
             interrupt=True,

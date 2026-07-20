@@ -1,7 +1,8 @@
+from truepanel import __version__
 from enum import Enum, IntEnum
 
 
-MISSION_CONTROL_VERSION = "0.7.0-dev"
+MISSION_CONTROL_VERSION = __version__
 
 
 class Priority(IntEnum):

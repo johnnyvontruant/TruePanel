@@ -145,3 +145,15 @@ TruePanel is active software. The consolidated platform passed 861 automated tes
 ## License and lineage
 
 TruePanel is distributed under the repository license. Earlier QNAP LCD work provided the initial spark; the modern architecture, Flight Deck, Mission Control, Project Stargate laboratory, telemetry, hardware abstraction, and TVS-671 controls were developed as TruePanel. Git history preserves the full lineage.
+
+## Stable release
+
+TruePanel 1.0.0 is the first stable release of the independent TruePanel platform.
+
+Release resources:
+
+- [Changelog](CHANGELOG.md)
+- [Installation guide](docs/INSTALLATION.md)
+- [Upgrade and rollback guide](docs/UPGRADING.md)
+- [Security policy](SECURITY.md)
+- [Contributing guide](CONTRIBUTING.md)

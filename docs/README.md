@@ -29,3 +29,12 @@ This directory is the operating manual for the modern TruePanel platform.
 - [Roadmap](ROADMAP.md)
 
 The Git history is the archive for retired implementations. The current tree is intentionally limited to production code, tests, durable documentation, and reproducible laboratory source.
+
+## Release operations
+
+- [Upgrade and rollback](UPGRADING.md)
+- [Release process](RELEASE.md)
+- [Changelog](../CHANGELOG.md)
+- [Security policy](../SECURITY.md)
+- [Contributing](../CONTRIBUTING.md)
+- [Code of conduct](../CODE_OF_CONDUCT.md)
