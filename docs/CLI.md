@@ -108,3 +108,47 @@ systemctl status truepanel
 journalctl -u truepanel -n 80 --no-pager
 journalctl -u truepanel -f
 ```
+
+## Mission Control
+
+Mission Control operator commands manage and inspect the web companion service.
+
+```bash
+truepanel mission-control
+truepanel mission-control status
+```
+
+Both forms display:
+
+- systemd load, enablement, and runtime state
+- HTTP health
+- configured bind address and port
+- an operator-friendly dashboard URL
+- read-only or guarded-write configuration mode
+
+Available actions:
+
+| Command | Purpose |
+| --- | --- |
+| `truepanel mission-control status` | Display service configuration and HTTP health |
+| `truepanel mission-control start` | Start the companion service |
+| `truepanel mission-control stop` | Stop the companion service |
+| `truepanel mission-control restart` | Restart the companion service |
+| `truepanel mission-control logs` | Follow the companion service journal |
+
+Examples:
+
+```bash
+sudo truepanel mission-control restart
+sudo truepanel mission-control logs
+```
+
+The status command does not load plugins, access LCD hardware, or modify configuration. Service-changing commands invoke systemd and may require root privileges.
+
+When the configured bind address is `0.0.0.0`, status displays this friendly URL:
+
+```text
+http://<BattleStation-IP>:8787
+```
+
+Use the actual TrueNAS management address in a browser.

@@ -92,10 +92,13 @@ truepanel plugins
 truepanel themes list
 truepanel hardware --help
 truepanel lab --help
+truepanel mission-control status
 truepanel simulate --help
 ```
 
 See [CLI Reference](docs/CLI.md).
+
+Mission Control runs as an independent web companion service. It is localhost-bound and read-only by default. See the [Installation Guide](docs/INSTALLATION.md) for LAN access and guarded-write configuration.
 
 ## Documentation
 

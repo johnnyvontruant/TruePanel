@@ -1,5 +1,7 @@
 INSTALL_DIR="/opt/truepanel"
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
+MISSION_CONTROL_SERVICE_FILE="/etc/systemd/system/truepanel-mission-control.service"
+MISSION_CONTROL_ENV_FILE="/etc/default/truepanel-mission-control"
 BIN_DIR="$INSTALL_DIR/bin"
 BIN_FILE="$BIN_DIR/truepanel"
 PYTHON_BIN=""
@@ -117,6 +119,17 @@ CLI
 
 chmod +x "$BIN_FILE"
 
+echo "Installing Mission Control service..."
+install -m 0644   "$INSTALL_DIR/packaging/systemd/truepanel-mission-control.service"   "$MISSION_CONTROL_SERVICE_FILE"
+
+echo "Creating Mission Control environment if needed..."
+if [ ! -f "$MISSION_CONTROL_ENV_FILE" ]; then
+  install -m 0644     "$INSTALL_DIR/packaging/systemd/truepanel-mission-control.env"     "$MISSION_CONTROL_ENV_FILE"
+else
+  echo "Preserving existing Mission Control environment:"
+  echo "  $MISSION_CONTROL_ENV_FILE"
+fi
+
 echo "Creating systemd service..."
 cat > "$SERVICE_FILE" <<SERVICE
 [Unit]
@@ -165,3 +178,23 @@ echo "  systemctl enable truepanel"
 echo
 echo "View logs with:"
 echo "  journalctl -u truepanel -f"
+echo
+echo "Mission Control is installed but remains disabled by default."
+echo
+echo "Configure Mission Control with:"
+echo "  $MISSION_CONTROL_ENV_FILE"
+echo
+echo "Start Mission Control with:"
+echo "  systemctl start truepanel-mission-control"
+echo
+echo "Enable Mission Control on boot with:"
+echo "  systemctl enable truepanel-mission-control"
+echo
+echo "View Mission Control logs with:"
+echo "  journalctl -u truepanel-mission-control -f"
+echo
+echo "Default Mission Control address:"
+echo "  http://127.0.0.1:8787"
+echo
+echo "LAN access requires setting TRUEPANEL_MC_HOST=0.0.0.0"
+echo "Configuration writes require setting TRUEPANEL_MC_ALLOW_CONFIG_WRITES=true"

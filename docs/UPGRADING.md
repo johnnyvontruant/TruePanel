@@ -73,3 +73,50 @@ Restore the saved configuration only when the previous release cannot understand
 After an upgrade, confirm normal LCD rotation and button behavior before running direct laboratory commands. Bay LEDs should be clear unless an active storage condition requests identification.
 
 Never run an A125 laboratory command while `truepanel.service` owns the serial controller.
+
+## Adding Mission Control to an existing installation
+
+Existing TruePanel installations can add the Mission Control companion service without replacing `truepanel.yaml` or stopping the primary LCD service.
+
+From an updated repository checkout:
+
+```bash
+cd ~/TruePanel
+
+sudo rsync -a --delete \
+  --exclude=__pycache__/ \
+  --exclude=*.pyc \
+  truepanel/ \
+  /opt/truepanel/truepanel/
+
+sudo install -m 0644 \
+  packaging/systemd/truepanel-mission-control.service \
+  /etc/systemd/system/truepanel-mission-control.service
+```
+
+Create the environment file only when one does not already exist:
+
+```bash
+if [ ! -f /etc/default/truepanel-mission-control ]; then
+  sudo install -m 0644 \
+    packaging/systemd/truepanel-mission-control.env \
+    /etc/default/truepanel-mission-control
+fi
+```
+
+Reload systemd and start the companion service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now truepanel-mission-control
+sudo /opt/truepanel/bin/truepanel mission-control status
+```
+
+Preserve these files during upgrades:
+
+- `/opt/truepanel/truepanel.yaml`
+- `/etc/default/truepanel-mission-control`
+
+Review the environment file after upgrading. New installations remain localhost-bound and read-only unless an administrator deliberately changes those settings.
+
+To roll back the companion service, restore the previous `/opt/truepanel/truepanel/web` package and systemd unit from the deployment backup, run `systemctl daemon-reload`, and restart `truepanel-mission-control`. The primary `truepanel.service` can remain running throughout the rollback.

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TruePanel Mission Control</title>
+<style>
+:root{color-scheme:dark;--bg:#05080d;--panel:#0d141e;--edge:#1e2d3d;--text:#edf6ff;--muted:#8fa4b8;--accent:#39a7ff;--good:#50d890;--warn:#ffc857;--bad:#ff5d73}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#10263b 0,var(--bg) 42%);color:var(--text);font-family:system-ui,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.4rem 2rem;border-bottom:1px solid var(--edge);background:rgba(5,8,13,.9)}
+h1{margin:0;font-size:1.3rem;letter-spacing:.04em}
+.sub,.detail{color:var(--muted);font-size:.88rem}
+.sub{margin-top:.25rem}
+.badge{border:1px solid rgba(80,216,144,.5);background:rgba(80,216,144,.1);color:var(--good);padding:.45rem .7rem;border-radius:999px;font-size:.8rem;font-weight:700}
+.badge.bad{border-color:rgba(255,93,115,.5);background:rgba(255,93,115,.1);color:var(--bad)}
+main{max-width:1400px;margin:0 auto;padding:1.5rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+.card{background:linear-gradient(145deg,rgba(18,29,43,.95),rgba(9,14,22,.95));border:1px solid var(--edge);border-radius:14px;padding:1.1rem}
+.card.wide{grid-column:1/-1}
+.card h2{margin:0 0 1rem;color:var(--muted);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase}
+.metric{font-size:2rem;font-weight:750;line-height:1}
+.row{display:flex;justify-content:space-between;gap:1rem;padding:.55rem 0;border-bottom:1px solid rgba(143,164,184,.13)}
+.row:last-child{border-bottom:0}
+.label{color:var(--muted)}
+.value{text-align:right;font-variant-numeric:tabular-nums}
+.good{color:var(--good)}
+.warn{color:var(--warn)}
+.bad{color:var(--bad)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem}
+.field{display:flex;flex-direction:column;gap:.4rem}
+.field label{color:var(--muted);font-size:.8rem}
+input[type=number]{width:100%;background:#080d14;color:var(--text);border:1px solid var(--edge);border-radius:8px;padding:.65rem}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.55rem 0}
+.switch input{width:1.2rem;height:1.2rem}
+.actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1rem}
+button{border:1px solid var(--edge);border-radius:8px;padding:.7rem 1rem;background:#132030;color:var(--text);font-weight:700;cursor:pointer}
+button.primary{background:#0d5f99;border-color:#238fd5}
+button.danger{background:#6e2430;border-color:#a84050}
+button:disabled{opacity:.45;cursor:not-allowed}
+.notice{display:none;margin-top:1rem;padding:.8rem;border-radius:8px;border:1px solid var(--edge);background:#09111a;white-space:pre-wrap}
+.notice.show{display:block}
+.diff{margin-top:1rem}
+.diff code{color:var(--accent)}
+footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
+@media(max-width:640px){header,main{padding:1rem}}
+</style>
+</head>
+<body>
+<header><div><h1>TruePanel Mission Control</h1><div class="sub">Flight Deck telemetry and guarded configuration</div></div><div id="connection" class="badge">Connecting</div></header>
+<main><section class="grid">
+<article class="card"><h2>CPU</h2><div id="cpu" class="metric">--</div><div id="load" class="detail">Awaiting telemetry</div></article>
+<article class="card"><h2>Memory</h2><div id="ram" class="metric">--</div></article>
+<article class="card"><h2>Fan 1</h2><div id="fan1" class="metric">--</div><div id="pwm1" class="detail">PWM unavailable</div></article>
+<article class="card"><h2>Fan 2</h2><div id="fan2" class="metric">--</div><div id="pwm2" class="detail">PWM unavailable</div></article>
+<article class="card wide"><h2>Storage Pools</h2><div id="pools" class="detail">Awaiting pool telemetry</div></article>
+<article class="card"><h2>Drive Temperatures</h2><div id="temps" class="detail">Awaiting temperature telemetry</div></article>
+<article class="card"><h2>Network</h2><div id="network" class="detail">Awaiting network telemetry</div></article>
+<article class="card wide"><h2>Night Mode Configuration</h2>
+<div class="form-grid">
+<div class="field"><label for="idleAfter">Idle delay, seconds</label><input id="idleAfter" type="number" min="60" max="86400" step="60"></div>
+<div class="field"><label for="rotationInterval">Rotation interval, seconds</label><input id="rotationInterval" type="number" min="5" max="3600" step="5"></div>
+<div><div class="switch"><label for="nightEnabled">Night mode enabled</label><input id="nightEnabled" type="checkbox"></div><div class="switch"><label for="suppressInfo">Suppress information pages</label><input id="suppressInfo" type="checkbox"></div></div>
+<div><div class="switch"><label for="backlightOff">Turn backlight off</label><input id="backlightOff" type="checkbox"></div><div class="switch"><label for="wakeOnButton">Wake on front-panel button</label><input id="wakeOnButton" type="checkbox"></div></div>
+</div>
+<div class="actions"><button id="reloadPolicy">Reload</button><button id="previewPolicy" class="primary">Preview Changes</button><button id="savePolicy" class="danger" disabled>Save Configuration</button></div>
+<div id="writeMode" class="detail">Checking configuration write policy</div>
+<div id="policyNotice" class="notice"></div>
+<div id="policyDiff" class="diff"></div>
+</article>
+<article class="card wide"><h2>Mission Control Status</h2><div class="row"><span class="label">Host</span><span id="hostname" class="value">--</span></div><div class="row"><span class="label">Configuration mode</span><span id="configMode" class="value">Checking</span></div><div class="row"><span class="label">Hardware writes</span><span class="value">Disabled</span></div><div class="row"><span class="label">Last refresh</span><span id="updated" class="value">--</span></div></article>
+</section></main>
+<footer>TruePanel v1.1 Mission Control</footer>
+<script>
+const q=id=>document.getElementById(id);
+const val=(v,f="--")=>v===null||v===undefined||v===""?f:String(v);
+const rows=(items,fn)=>Array.isArray(items)&&items.length?items.map(fn).join(""):`<div class="detail">No telemetry available</div>`;
+let writesEnabled=false;
+function render(data){const s=data.system||{},f=data.fans||{},st=data.storage||{};q("cpu").textContent=Math.round(s.cpu_percent||0)+"%";q("ram").textContent=Math.round(s.ram_percent||0)+"%";q("load").textContent=(s.load_average||[]).length?"Load "+s.load_average.join(" / "):"Load unavailable";q("fan1").textContent=val(f.fan1_rpm,"0")+" RPM";q("fan2").textContent=val(f.fan2_rpm,"0")+" RPM";q("pwm1").textContent="PWM "+val(f.pwm1,"0")+" · "+val(f.pwm1_mode);q("pwm2").textContent="PWM "+val(f.pwm2,"0")+" · "+val(f.pwm2_mode);q("hostname").textContent=val(s.hostname);q("updated").textContent=new Date(data.timestamp*1000).toLocaleTimeString();q("pools").innerHTML=rows(st.pools,p=>`<div class="row"><span class="label">${val(p.name,"Pool")}</span><span class="value">${val(p.health||p.status)} · ${val(p.percent_used??p.used_percent??p.capacity)}%</span></div>`);q("temps").innerHTML=rows(st.temperatures,d=>`<div class="row"><span class="label">${val(d.name||d.device||d.disk,"Drive")}</span><span class="value">${val(d.temperature??d.temp??d.temperature_c)}°C</span></div>`);q("network").innerHTML=rows(data.network,n=>`<div class="row"><span class="label">${val(n.name||n.interface,"Interface")}</span><span class="value">${val(n.address||n.ip,"No address")}</span></div>`)}
+function formPatch(){return{enabled:q("nightEnabled").checked,idle_after:Number(q("idleAfter").value),rotation_interval:Number(q("rotationInterval").value),suppress_info:q("suppressInfo").checked,backlight_off:q("backlightOff").checked,wake_on_button:q("wakeOnButton").checked}}
+function fillPolicy(p){q("nightEnabled").checked=!!p.enabled;q("idleAfter").value=p.idle_after;q("rotationInterval").value=p.rotation_interval;q("suppressInfo").checked=!!p.suppress_info;q("backlightOff").checked=!!p.backlight_off;q("wakeOnButton").checked=!!p.wake_on_button}
+function notice(message,tone=""){q("policyNotice").textContent=message;q("policyNotice").className="notice show "+tone}
+function renderDiff(preview){const fields=preview.changed_fields||[];if(!fields.length){q("policyDiff").innerHTML=`<div class="detail">No configuration changes detected.</div>`;return}q("policyDiff").innerHTML="<h3>Proposed Changes</h3>"+fields.map(name=>`<div class="row"><span class="label"><code>${name}</code></span><span class="value">${val(preview.current[name])} → ${val(preview.proposed[name])}</span></div>`).join("")}
+async function loadPolicy(){const r=await fetch("/api/v1/config/night-mode");const data=await r.json();if(!r.ok)throw Error(data.message||"Could not load policy");writesEnabled=!!data.writes_enabled;fillPolicy(data.night_mode||{});q("savePolicy").disabled=!writesEnabled;q("writeMode").textContent=writesEnabled?"Guarded configuration writes enabled":"Read-only mode. Relaunch with --allow-config-writes to save.";q("configMode").textContent=writesEnabled?"Guarded writes enabled":"Read only";q("configMode").className="value "+(writesEnabled?"warn":"good")}
+async function previewPolicy(){const r=await fetch("/api/v1/config/night-mode/preview",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({night_mode:formPatch()})});const data=await r.json();if(!r.ok)throw Error(data.message||"Preview rejected");renderDiff(data.preview);notice(data.preview.changed?"Preview ready. Review changes before saving.":"No changes to save.","good")}
+async function savePolicy(){if(!writesEnabled)throw Error("Configuration writes are disabled");if(!confirm("Save the validated Night Mode configuration? Manual TruePanel restart required."))return;const r=await fetch("/api/v1/config/night-mode/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({night_mode:formPatch(),dry_run:false})});const data=await r.json();if(!r.ok)throw Error(data.message||"Save failed");notice(data.persisted?"Configuration saved. Backup: "+val(data.backup_path,"none")+"\nManual TruePanel restart required.":"No configuration changes were written.",data.persisted?"warn":"good");await loadPolicy()}
+async function refresh(){try{const r=await fetch("/api/v1/status");if(!r.ok)throw Error();render(await r.json());q("connection").textContent="Mission Ready";q("connection").className="badge"}catch(error){q("connection").textContent="Disconnected";q("connection").className="badge bad"}}
+q("reloadPolicy").addEventListener("click",()=>loadPolicy().then(()=>notice("Policy reloaded.","good")).catch(error=>notice(error.message,"bad")));
+q("previewPolicy").addEventListener("click",()=>previewPolicy().catch(error=>notice(error.message,"bad")));
+q("savePolicy").addEventListener("click",()=>savePolicy().catch(error=>notice(error.message,"bad")));
+refresh();loadPolicy().catch(error=>notice(error.message,"bad"));setInterval(refresh,5000);
+</script>
+</body>
+</html>
