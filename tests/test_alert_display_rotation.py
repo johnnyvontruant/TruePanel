@@ -188,7 +188,7 @@ def test_lcd_loop_resumes_after_interrupt():
 
     expected = (
         "            maybe_show_alert()\n"
-        "            render_menu_page()"
+        "            menu[menu_item]()"
     )
 
     assert expected in source
@@ -341,7 +341,7 @@ def test_interrupt_timeout_is_followed_by_normal_page_render():
 
     expected = (
         "            maybe_show_alert()\n"
-        "            render_menu_page()"
+        "            menu[menu_item]()"
     )
 
     assert expected in source

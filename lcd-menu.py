@@ -419,63 +419,6 @@ menu = [
 ]
 
 
-def page_counter():
-    total = max(1, len(menu))
-    current = (menu_item % total) + 1
-
-    return f"{current:02d}/{total:02d}"
-
-
-def add_page_counter(lines):
-    first = (
-        str(lines[0])
-        if len(lines) >= 1
-        else ""
-    )
-
-    second = (
-        str(lines[1])
-        if len(lines) >= 2
-        else ""
-    )
-
-    counter = page_counter()
-    title_width = max(
-        0,
-        16 - len(counter),
-    )
-
-    first = (
-        first[:title_width].ljust(title_width)
-        + counter
-    )
-
-    return [
-        first[:16],
-        second[:16],
-    ]
-
-
-def render_menu_page():
-    original_write = lcd.write
-
-    def counted_write(line, message):
-        if isinstance(message, (list, tuple)):
-            message = add_page_counter(message)
-
-        return original_write(
-            line,
-            message,
-        )
-
-    lcd.write = counted_write
-
-    try:
-        menu[menu_item]()
-    finally:
-        lcd.write = original_write
-
-
 def response_handler(command, data):
     global menu_item
 
@@ -500,7 +443,7 @@ def response_handler(command, data):
             menu_item = (menu_item + 1) % len(menu)
 
     if prev_menu != menu_item:
-        render_menu_page()
+        menu[menu_item]()
 
 
 def main():
@@ -527,7 +470,7 @@ def main():
             add_ips_to_menu()
 
             maybe_show_alert()
-            render_menu_page()
+            menu[menu_item]()
 
             delay = 5
 
