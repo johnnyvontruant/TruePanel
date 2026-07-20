@@ -407,9 +407,6 @@ def maybe_show_alert():
 
 menu = [
     show_mission_home,
-    show_mission_control,
-    show_event_queue,
-    show_alert_history,
     show_truenas,
     show_version,
     show_uptime,
@@ -473,6 +470,7 @@ def main():
             add_ips_to_menu()
 
             if maybe_show_alert():
+                menu[menu_item]()
                 continue
 
             menu[menu_item]()

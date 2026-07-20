@@ -186,11 +186,13 @@ def test_lcd_loop_resumes_after_interrupt():
         encoding="utf-8",
     )
 
-    assert (
+    expected = (
         "if maybe_show_alert():\n"
+        "                menu[menu_item]()\n"
         "                continue"
-        in source
     )
+
+    assert expected in source
 
     assert (
         "detail = "
@@ -293,3 +295,33 @@ def test_left_and_right_buttons_move_main_menu():
         "menu_item = (menu_item + 1) % len(menu)"
         in source
     )
+
+def test_primary_menu_excludes_alert_diagnostic_pages():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    start = source.index("menu = [")
+    end = source.index(
+        "]",
+        start,
+    )
+
+    menu_source = source[start:end]
+
+    assert "show_mission_control," not in menu_source
+    assert "show_event_queue," not in menu_source
+    assert "show_alert_history," not in menu_source
+
+
+def test_interrupt_timeout_is_followed_by_normal_page_render():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    expected = """            if maybe_show_alert():
+                menu[menu_item]()
+                continue
+"""
+
+    assert expected in source

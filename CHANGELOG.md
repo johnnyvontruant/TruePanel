@@ -62,6 +62,8 @@ The earlier `v0.7.0`, `v0.8.0-core`, `v0.9.0`, and `v1.0.0-rc0` tags preserve th
 
 ### Fixed
 
+- Mission Control, Event Queue, and Alert History diagnostic views no longer occupy the primary LCD rotation; a persistent incident interrupts once and then returns immediately to normal Flight Deck pages.
+
 - Left and right hardware buttons now always escape Event Queue and Alert History pages instead of redrawing a single entry indefinitely.
 
 - Alert interruptions are latched per incident, preventing transient healthy samples or alternating warnings from repeatedly taking over Flight Deck.
