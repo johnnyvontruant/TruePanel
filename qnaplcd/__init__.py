@@ -21,32 +21,62 @@ class QnapLCD:
         self.lines = 2
         self.columns = 16
 
+        self.handler = handler
+        self.reader = None
+        self.stop_event = Event()
+
         try:
-            self.connection = serial.Serial(self.port, self.speed, timeout=None)
+            self.connection = serial.Serial(
+                self.port,
+                self.speed,
+                timeout=0.25,
+            )
         except serial.SerialException as se:
             self.connection = None
             print('error', se)
 
-        if handler:
-            self.handler = handler
-            self.reader = Thread(target=self.serial_reader)
+        if handler and self.connection:
+            self.reader = Thread(
+                target=self.serial_reader,
+                name="qnaplcd-reader",
+                daemon=True,
+            )
             self.reader.start()
 
     def _read_bytes(self, bytes=1):
-        if self.connection:
-            data = self.connection.read(bytes)
-            if bytes == 1:
-                return data[0]
+        connection = self.connection
 
-            return data
+        if not connection:
+            return None
 
-        return None
+        try:
+            data = connection.read(bytes)
+        except (
+            serial.SerialException,
+            OSError,
+        ):
+            return None
+
+        if not data or len(data) < bytes:
+            return None
+
+        if bytes == 1:
+            return data[0]
+
+        return data
 
     def serial_reader(self):
-        while True:
+        while not self.stop_event.is_set():
             preamble = self._read_bytes()
+
+            if preamble is None:
+                continue
+
             if preamble == 0x53 or preamble == 0x83:
-                cmd =  self._read_bytes()
+                cmd = self._read_bytes()
+
+                if cmd is None:
+                    continue
                 if cmd == 0x01:
                     report = self._read_bytes(2)
                     report = report[0] * 256 + report[1]
@@ -72,6 +102,42 @@ class QnapLCD:
                 if cmd == 0xFB:
                     nack_cmd = self._read_bytes()
                     self.handler('Nack', nack_cmd)
+
+    def close(self):
+        """Stop the reader thread and close the serial connection."""
+
+        self.stop_event.set()
+
+        connection = self.connection
+        self.connection = None
+
+        if connection:
+            try:
+                connection.cancel_read()
+            except (
+                AttributeError,
+                serial.SerialException,
+                OSError,
+            ):
+                pass
+
+            try:
+                connection.close()
+            except (
+                serial.SerialException,
+                OSError,
+            ):
+                pass
+
+        reader = self.reader
+
+        if (
+            reader is not None
+            and reader is not current_thread()
+        ):
+            reader.join(timeout=1.0)
+
+        self.reader = None
 
     def backlight(self, on=True):
         if self.connection:

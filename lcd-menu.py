@@ -78,7 +78,11 @@ def lcd_on():
     if lcd_timer:
         lcd_timer.cancel()
 
-    lcd_timer = threading.Timer(DISPLAY_TIMEOUT, lambda: lcd.backlight(False))
+    lcd_timer = threading.Timer(
+        DISPLAY_TIMEOUT,
+        lambda: lcd.backlight(False),
+    )
+    lcd_timer.daemon = True
     lcd_timer.start()
 
 
@@ -492,6 +496,9 @@ def main():
                     menu_item + 1
                 ) % len(menu)
     finally:
+        if lcd_timer is not None:
+            lcd_timer.cancel()
+
         try:
             buzzer.shutdown()
             write_lines(
@@ -502,5 +509,10 @@ def main():
             lcd.backlight(False)
         except Exception:
             pass
+        finally:
+            try:
+                lcd.close()
+            except Exception:
+                pass
 
 main()
