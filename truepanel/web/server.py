@@ -10,6 +10,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from truepanel.config.policy import (
+    ConfigurationError,
+    ConfigurationPolicyService,
+)
+
 from .snapshot import SnapshotService
 
 LOGGER = logging.getLogger("truepanel.web")
@@ -31,6 +36,7 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             "/api/v1/status": self._status,
             "/api/v1/history": self._history,
             "/api/v1/capabilities": self._capabilities,
+            "/api/v1/config/night-mode": self._night_mode,
             "/healthz": self._health,
         }
         handler = routes.get(parsed.path)
@@ -40,6 +46,12 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         handler(parsed)
 
     def do_POST(self):
+        parsed = urlparse(self.path)
+
+        if parsed.path == "/api/v1/config/night-mode/preview":
+            self._night_mode_preview(parsed)
+            return
+
         self._write_blocked()
 
     def do_PUT(self):
@@ -84,6 +96,98 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
     def _capabilities(self, parsed):
         del parsed
         self._json(self.snapshot_service.capabilities())
+
+    def _night_mode(self, parsed):
+        del parsed
+        service = ConfigurationPolicyService(
+            self.snapshot_service.config
+        )
+        self._json(
+            {
+                "read_only": True,
+                "night_mode": service.night_mode.as_dict(),
+            }
+        )
+
+    def _night_mode_preview(self, parsed):
+        del parsed
+
+        raw_length = self.headers.get("Content-Length", "0")
+
+        try:
+            content_length = int(raw_length)
+        except (TypeError, ValueError):
+            content_length = 0
+
+        if content_length < 1 or content_length > 16384:
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": "Preview body must be between 1 and 16384 bytes.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        raw_body = self.rfile.read(content_length)
+
+        try:
+            payload = json.loads(raw_body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self._json(
+                {
+                    "error": "invalid_json",
+                    "message": "Preview body must contain valid JSON.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if not isinstance(payload, dict):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": "Preview body must be a JSON object.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        patch = payload.get("night_mode", payload)
+
+        if not isinstance(patch, dict):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": "night_mode must be a JSON object.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        service = ConfigurationPolicyService(
+            self.snapshot_service.config
+        )
+
+        try:
+            preview = service.preview_night_mode(patch)
+        except ConfigurationError as error:
+            self._json(
+                {
+                    "error": "configuration_rejected",
+                    "message": str(error),
+                },
+                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+            return
+
+        self._json(
+            {
+                "read_only": True,
+                "persisted": False,
+                "preview": preview.as_dict(),
+            }
+        )
 
     def _health(self, parsed):
         del parsed
