@@ -25,6 +25,10 @@ from truepanel.hardware.commands import (
     add_hardware_subcommands,
     handle_hardware_command,
 )
+from truepanel.web.operations import (
+    add_mission_control_subcommands,
+    handle_mission_control_command,
+)
 
 
 SCENARIOS = [
@@ -242,6 +246,7 @@ def build_parser():
     subcommands.add_parser("doctor", help="Run TruePanel diagnostics")
     add_plugin_subcommands(subcommands)
     add_hardware_subcommands(subcommands)
+    add_mission_control_subcommands(subcommands)
     subcommands.add_parser("version", help="Show TruePanel version")
 
     themes = subcommands.add_parser("themes", help="Manage theme packs")
@@ -345,6 +350,15 @@ def main():
 
     logger = setup_logging(args.log_level)
     logger.info("TruePanel CLI starting")
+
+    mission_control_result = (
+        handle_mission_control_command(args)
+    )
+
+    if mission_control_result is not None:
+        raise SystemExit(
+            mission_control_result
+        )
 
     registry = load_plugins()
 
