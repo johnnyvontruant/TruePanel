@@ -112,7 +112,8 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         )
         self._json(
             {
-                "read_only": True,
+                "read_only": not self.server.allow_config_writes,
+                "writes_enabled": self.server.allow_config_writes,
                 "night_mode": service.night_mode.as_dict(),
             }
         )
