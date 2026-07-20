@@ -104,12 +104,19 @@ function renderFans(f){
         channel=>{
             const rpm=Number(channel.rpm||0);
             const alarm=channel.alarm===true;
-            const status=alarm&&rpm===0
-                ?`<span class="warn">No tach signal</span>`
-                :`${rpm} RPM`;
-            const detail=`PWM ${val(channel.pwm,"--")} · ${val(channel.pwm_mode,"Unavailable")}`;
+            const monitored=channel.monitored===true;
+            const status=!monitored&&rpm===0
+                ?`<span class="detail">Not monitored</span>`
+                :alarm&&rpm===0
+                    ?`<span class="warn">No tach signal</span>`
+                    :`${rpm} RPM`;
+            const detail=`Channel ${val(channel.number,"?")} · PWM ${val(channel.pwm,"--")} · ${val(channel.pwm_mode,"Unavailable")}`;
+            const label=val(
+                channel.label,
+                `Fan ${val(channel.number,"?")}`
+            );
 
-            return`<div class="row"><span class="label">Fan ${val(channel.number,"?")}<br><span class="detail">${detail}</span></span><span class="value">${status}</span></div>`;
+            return`<div class="row"><span class="label">${label}<br><span class="detail">${detail}</span></span><span class="value">${status}</span></div>`;
         }
     );
 }

@@ -106,6 +106,18 @@ graphics_engine:
   rom_levels: []
 
 hardware:
+  fans:
+    channels:
+      1:
+        label: Rear Fan 1
+        monitored: true
+      2:
+        label: Rear Fan 2
+        monitored: true
+      3:
+        label: Unused Header
+        monitored: false
+
   topology:
     front_bays:
       5:

@@ -309,8 +309,7 @@ class SnapshotService:
 
         return []
 
-    @staticmethod
-    def _fan_payload() -> dict[str, Any]:
+    def _fan_payload(self) -> dict[str, Any]:
         try:
             payload = dict(
                 get_fan_status()
@@ -318,6 +317,25 @@ class SnapshotService:
             )
         except Exception:
             payload = {}
+
+        hardware_config = self.config.get(
+            "hardware",
+            {},
+        )
+        fan_config = hardware_config.get(
+            "fans",
+            {},
+        )
+        configured_channels = fan_config.get(
+            "channels",
+            {},
+        )
+
+        if not isinstance(
+            configured_channels,
+            dict,
+        ):
+            configured_channels = {}
 
         channels = []
 
@@ -355,9 +373,41 @@ class SnapshotService:
                 "alarm"
             )
 
+            channel_config = (
+                configured_channels.get(
+                    number,
+                )
+                or configured_channels.get(
+                    str(number),
+                )
+                or {}
+            )
+
+            if not isinstance(
+                channel_config,
+                dict,
+            ):
+                channel_config = {}
+
+            label = str(
+                channel_config.get(
+                    "label",
+                    f"Fan {number}",
+                )
+            )
+
+            monitored = bool(
+                channel_config.get(
+                    "monitored",
+                    False,
+                )
+            )
+
             channels.append(
                 {
                     "number": number,
+                    "label": label,
+                    "monitored": monitored,
                     "rpm": int(
                         channel.get(
                             "rpm",

@@ -81,7 +81,26 @@ def test_status_snapshot_is_read_only(
 
     service = SnapshotService(
         collector=FakeCollector(),
-        config={},
+        config={
+            "hardware": {
+                "fans": {
+                    "channels": {
+                        1: {
+                            "label": "Rear Fan 1",
+                            "monitored": True,
+                        },
+                        2: {
+                            "label": "Rear Fan 2",
+                            "monitored": True,
+                        },
+                        3: {
+                            "label": "Unused Header",
+                            "monitored": False,
+                        },
+                    }
+                }
+            }
+        },
         history_path=(
             tmp_path
             / "history.jsonl"
@@ -121,6 +140,8 @@ def test_status_snapshot_is_read_only(
         ][2]
         == {
             "number": 3,
+            "label": "Unused Header",
+            "monitored": False,
             "rpm": 0,
             "alarm": True,
             "pwm": 178,
