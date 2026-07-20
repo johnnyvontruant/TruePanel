@@ -10,6 +10,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from truepanel.config.persistence import (
+    ConfigurationPersistenceError,
+    ConfigurationPersistenceService,
+)
 from truepanel.config.policy import (
     ConfigurationError,
     ConfigurationPolicyService,
@@ -50,6 +54,10 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/v1/config/night-mode/preview":
             self._night_mode_preview(parsed)
+            return
+
+        if parsed.path == "/api/v1/config/night-mode/save":
+            self._night_mode_save(parsed)
             return
 
         self._write_blocked()
@@ -189,6 +197,133 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             }
         )
 
+    def _night_mode_save(self, parsed):
+        del parsed
+
+        if not self.server.allow_config_writes:
+            self._json(
+                {
+                    "error": "configuration_writes_disabled",
+                    "message": (
+                        "Configuration writes require "
+                        "--allow-config-writes."
+                    ),
+                },
+                status=HTTPStatus.FORBIDDEN,
+            )
+            return
+
+        raw_length = self.headers.get("Content-Length", "0")
+
+        try:
+            content_length = int(raw_length)
+        except (TypeError, ValueError):
+            content_length = 0
+
+        if content_length < 1 or content_length > 16384:
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Save body must be between "
+                        "1 and 16384 bytes."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        raw_body = self.rfile.read(content_length)
+
+        try:
+            payload = json.loads(raw_body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self._json(
+                {
+                    "error": "invalid_json",
+                    "message": "Save body must contain valid JSON.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if not isinstance(payload, dict):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": "Save body must be a JSON object.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        patch = payload.get("night_mode")
+        dry_run = payload.get("dry_run", False)
+
+        if not isinstance(patch, dict):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": "night_mode must be a JSON object.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if not isinstance(dry_run, bool):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": "dry_run must be boolean.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        service = ConfigurationPersistenceService(
+            self.server.config_path,
+            self.snapshot_service.config,
+        )
+
+        try:
+            result = service.save_night_mode(
+                patch,
+                dry_run=dry_run,
+            )
+        except ConfigurationError as error:
+            self._json(
+                {
+                    "error": "configuration_rejected",
+                    "message": str(error),
+                },
+                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+            return
+        except ConfigurationPersistenceError as error:
+            self._json(
+                {
+                    "error": "configuration_persistence_failed",
+                    "message": str(error),
+                },
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+
+        if result.persisted:
+            self.snapshot_service.config = result.proposed
+
+        response = result.as_dict()
+        response.update(
+            {
+                "restart_required": bool(
+                    result.persisted and result.changed
+                ),
+                "restart_performed": False,
+                "writes_enabled": True,
+            }
+        )
+        self._json(response)
+
     def _health(self, parsed):
         del parsed
         self._json({"status": "ok", "service": "truepanel-mission-control", "read_only": True})
@@ -217,13 +352,34 @@ class MissionControlServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, address, snapshot_service=None):
+    def __init__(
+        self,
+        address,
+        snapshot_service=None,
+        *,
+        allow_config_writes=False,
+        config_path="truepanel.yaml",
+    ):
         self.snapshot_service = snapshot_service or SnapshotService()
+        self.allow_config_writes = bool(allow_config_writes)
+        self.config_path = Path(config_path)
         super().__init__(address, MissionControlRequestHandler)
 
 
-def serve(host="127.0.0.1", port=8787, snapshot_service=None):
-    server = MissionControlServer((host, int(port)), snapshot_service=snapshot_service)
+def serve(
+    host="127.0.0.1",
+    port=8787,
+    snapshot_service=None,
+    *,
+    allow_config_writes=False,
+    config_path="truepanel.yaml",
+):
+    server = MissionControlServer(
+        (host, int(port)),
+        snapshot_service=snapshot_service,
+        allow_config_writes=allow_config_writes,
+        config_path=config_path,
+    )
     LOGGER.info("Mission Control listening on http://%s:%s", host, port)
     try:
         server.serve_forever()
@@ -237,13 +393,31 @@ def build_parser():
     parser = argparse.ArgumentParser(description="Run the read-only TruePanel Mission Control dashboard")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8787)
+    parser.add_argument(
+        "--allow-config-writes",
+        action="store_true",
+        help=(
+            "Enable guarded configuration persistence. "
+            "Disabled by default."
+        ),
+    )
+    parser.add_argument(
+        "--config-path",
+        default="truepanel.yaml",
+        help="Configuration file used for guarded writes.",
+    )
     return parser
 
 
 def main():
     args = build_parser().parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    serve(host=args.host, port=args.port)
+    serve(
+        host=args.host,
+        port=args.port,
+        allow_config_writes=args.allow_config_writes,
+        config_path=args.config_path,
+    )
 
 
 if __name__ == "__main__":
