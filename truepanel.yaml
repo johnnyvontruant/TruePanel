@@ -126,6 +126,13 @@ hardware:
         serial: WSD9QAWH
 
 mission_control:
+  fan_health:
+    enabled: true
+    interval: 10
+    minimum_rpm: 300
+    consecutive_failures: 3
+    emit_initial_conditions: false
+
   storage_health:
     bay_leds_clear_on_start: true
     bay_leds_enabled: true

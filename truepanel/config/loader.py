@@ -23,6 +23,13 @@ DEFAULT_CONFIG = {
             "record_events": True,
             "event_log": "/var/lib/truepanel/storage/events.jsonl",
         },
+        "fan_health": {
+            "enabled": True,
+            "interval": 10,
+            "minimum_rpm": 300,
+            "consecutive_failures": 3,
+            "emit_initial_conditions": False,
+        },
     },
     "history": {
         "enabled": True,

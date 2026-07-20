@@ -19,6 +19,9 @@ from truepanel.history import TelemetryRecorder
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
+from truepanel.mission_control.watchers.fan_health import (
+    build_fan_health_watcher,
+)
 from truepanel.mission_control.watchers.healthy import healthy_watcher
 from truepanel.mission_control.watchers.pool import pool_watcher
 from truepanel.mission_control.watchers.smart import smart_watcher
@@ -46,6 +49,7 @@ mission = MissionControl()
 alert_manager = AlertManager()
 config = load_config()
 storage_health_watcher = build_storage_health_watcher(config)
+fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
 history_recorder = TelemetryRecorder(config.get("history", {}))
@@ -59,6 +63,9 @@ mission.register(smart_watcher)
 
 if storage_health_watcher is not None:
     mission.register(storage_health_watcher)
+
+if fan_health_watcher is not None:
+    mission.register(fan_health_watcher)
 
 mission.register(healthy_watcher)
 
