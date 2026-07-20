@@ -469,10 +469,7 @@ def main():
         while not shutdown_requested:
             add_ips_to_menu()
 
-            if maybe_show_alert():
-                menu[menu_item]()
-                continue
-
+            maybe_show_alert()
             menu[menu_item]()
 
             delay = (

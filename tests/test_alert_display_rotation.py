@@ -187,12 +187,32 @@ def test_lcd_loop_resumes_after_interrupt():
     )
 
     expected = (
-        "if maybe_show_alert():\n"
-        "                menu[menu_item]()\n"
-        "                continue"
+        "            maybe_show_alert()\n"
+        "            menu[menu_item]()"
     )
 
     assert expected in source
+
+
+def test_alert_check_cannot_skip_menu_advancement():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    loop_start = source.index(
+        "        while not shutdown_requested:"
+    )
+
+    loop_end = source.index(
+        "    finally:",
+        loop_start,
+    )
+
+    loop_source = source[loop_start:loop_end]
+
+    assert "if maybe_show_alert():" not in loop_source
+    assert "maybe_show_alert()" in loop_source
+    assert "menu_item + 1" in loop_source
 
     assert (
         "detail = "
@@ -319,9 +339,9 @@ def test_interrupt_timeout_is_followed_by_normal_page_render():
         encoding="utf-8",
     )
 
-    expected = """            if maybe_show_alert():
-                menu[menu_item]()
-                continue
-"""
+    expected = (
+        "            maybe_show_alert()\n"
+        "            menu[menu_item]()"
+    )
 
     assert expected in source
