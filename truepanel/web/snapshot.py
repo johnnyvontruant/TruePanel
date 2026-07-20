@@ -319,8 +319,80 @@ class SnapshotService:
         except Exception:
             payload = {}
 
+        channels = []
+
+        for channel in (
+            payload.get(
+                "fan_channels",
+                [],
+            )
+            or []
+        ):
+            if not isinstance(
+                channel,
+                dict,
+            ):
+                continue
+
+            try:
+                number = int(
+                    channel.get(
+                        "number",
+                        0,
+                    )
+                    or 0
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+            if number <= 0:
+                continue
+
+            alarm = channel.get(
+                "alarm"
+            )
+
+            channels.append(
+                {
+                    "number": number,
+                    "rpm": int(
+                        channel.get(
+                            "rpm",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "alarm": (
+                        bool(alarm)
+                        if alarm is not None
+                        else None
+                    ),
+                    "pwm": int(
+                        channel.get(
+                            "pwm",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "pwm_mode": str(
+                        channel.get(
+                            "pwm_mode",
+                            "Unavailable",
+                        )
+                    ),
+                }
+            )
+
         return {
-            "available": bool(payload),
+            "available": bool(
+                payload.get(
+                    "available",
+                    payload,
+                )
+            ),
             "fan1_rpm": int(
                 payload.get(
                     "fan1_rpm",
@@ -361,4 +433,5 @@ class SnapshotService:
                     "Unavailable",
                 )
             ),
+            "channels": channels,
         }

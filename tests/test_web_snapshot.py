@@ -53,6 +53,29 @@ def test_status_snapshot_is_read_only(
             "pwm2": 187,
             "pwm1_mode": "Auto",
             "pwm2_mode": "Auto",
+            "fan_channels": [
+                {
+                    "number": 1,
+                    "rpm": 1500,
+                    "alarm": False,
+                    "pwm": 187,
+                    "pwm_mode": "Auto",
+                },
+                {
+                    "number": 2,
+                    "rpm": 1450,
+                    "alarm": False,
+                    "pwm": 187,
+                    "pwm_mode": "Auto",
+                },
+                {
+                    "number": 3,
+                    "rpm": 0,
+                    "alarm": True,
+                    "pwm": 178,
+                    "pwm_mode": "Auto",
+                },
+            ],
         },
     )
 
@@ -90,6 +113,19 @@ def test_status_snapshot_is_read_only(
             "fan1_rpm"
         ]
         == 1500
+    )
+
+    assert (
+        payload["fans"][
+            "channels"
+        ][2]
+        == {
+            "number": 3,
+            "rpm": 0,
+            "alarm": True,
+            "pwm": 178,
+            "pwm_mode": "Auto",
+        }
     )
 
     assert (
