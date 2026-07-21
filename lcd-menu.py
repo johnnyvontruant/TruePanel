@@ -17,6 +17,9 @@ from truepanel.flightdeck.autopilot import AutoPilot
 from truepanel.hardware import Buzzer
 from truepanel.history import TelemetryRecorder
 from truepanel.mission_control import MissionControl
+from truepanel.hardware.bay_led_animation import (
+    build_bay_led_startup_animation,
+)
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.fan_health import (
@@ -54,6 +57,11 @@ display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
 history_recorder = TelemetryRecorder(config.get("history", {}))
 buzzer = Buzzer(config.get("buzzer", {}))
+bay_led_startup_animation = (
+    build_bay_led_startup_animation(
+        config
+    )
+)
 shutdown_requested = False
 
 mission.register(pool_watcher)
@@ -474,6 +482,9 @@ def main():
     lcd.clear()
 
     try:
+        if bay_led_startup_animation is not None:
+            bay_led_startup_animation.run()
+
         show_startup_splash()
         buzzer.startup()
 

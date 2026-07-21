@@ -14,6 +14,12 @@ flightdeck:
     delay: 0.18
     diagnostics: true
 
+    bay_led_animation:
+      enabled: true
+      step_delay: 0.12
+      pulse_hold: 0.35
+      clear_when_finished: true
+
   night_mode:
     enabled: true
     idle_after: 1800

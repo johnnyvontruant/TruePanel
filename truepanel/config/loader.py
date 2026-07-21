@@ -68,6 +68,12 @@ DEFAULT_CONFIG = {
         "startup": {
             "enabled": True,
             "delay": 0.75,
+            "bay_led_animation": {
+                "enabled": False,
+                "step_delay": 0.12,
+                "pulse_hold": 0.35,
+                "clear_when_finished": True,
+            },
             "frames": [
                 ["TruePanel", "Flight Deck"],
                 ["Mission Ctrl", "Online"],
