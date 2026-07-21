@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 
 DEFAULT_BAY_LED_ANIMATION_CONFIG = {
     "enabled": False,
-    "step_delay": 0.12,
+    "step_delay": 1.0,
     "pulse_hold": 0.35,
     "clear_when_finished": True,
 }
@@ -83,7 +83,7 @@ class BayLedStartupAnimation:
         self,
         controller,
         *,
-        step_delay: float = 0.12,
+        step_delay: float = 1.0,
         pulse_hold: float = 0.35,
         clear_when_finished: bool = True,
         sleeper: Callable[[float], None] = time.sleep,
@@ -217,7 +217,7 @@ def build_bay_led_startup_animation(
         controller,
         step_delay=settings.get(
             "step_delay",
-            0.12,
+            1.0,
         ),
         pulse_hold=settings.get(
             "pulse_hold",

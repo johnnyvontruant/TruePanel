@@ -70,7 +70,7 @@ DEFAULT_CONFIG = {
             "delay": 0.75,
             "bay_led_animation": {
                 "enabled": False,
-                "step_delay": 0.12,
+                "step_delay": 1.0,
                 "pulse_hold": 0.35,
                 "clear_when_finished": True,
             },

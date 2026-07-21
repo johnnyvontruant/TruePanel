@@ -175,7 +175,7 @@ def test_partial_config_retains_defaults():
     )
 
     assert settings["enabled"] is True
-    assert settings["step_delay"] == 0.12
+    assert settings["step_delay"] == 1.0
     assert settings["pulse_hold"] == 0.35
     assert settings["clear_when_finished"] is True
 
@@ -189,7 +189,7 @@ def test_project_default_config_contains_animation_settings():
 
     assert settings == {
         "enabled": False,
-        "step_delay": 0.12,
+        "step_delay": 1.0,
         "pulse_hold": 0.35,
         "clear_when_finished": True,
     }
