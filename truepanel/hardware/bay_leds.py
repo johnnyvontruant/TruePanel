@@ -293,6 +293,50 @@ class TVS671BayLedController:
             else on_command + 1
         )
 
+    @classmethod
+    def error_command(
+        cls,
+        bay: int,
+        enabled: bool,
+    ) -> int:
+        """
+        Return the verified steady red error-LED command for one bay.
+
+        TVS-671 firmware maps Bay 1 to 0x82/0x83 and increments
+        the command pair by two for each subsequent bay.
+        """
+
+        bay = cls.validate_bay(bay)
+        on_command = 0x80 + (bay * 2)
+
+        return (
+            on_command
+            if enabled
+            else on_command + 1
+        )
+
+    @classmethod
+    def present_command(
+        cls,
+        bay: int,
+        enabled: bool,
+    ) -> int:
+        """
+        Return the verified green presence-LED command for one bay.
+
+        TVS-671 model firmware maps Bay 1 to 0x42/0x43 and increments
+        the command pair by two for each subsequent bay.
+        """
+
+        bay = cls.validate_bay(bay)
+        on_command = 0x40 + (bay * 2)
+
+        return (
+            on_command
+            if enabled
+            else on_command + 1
+        )
+
     def set_identify(
         self,
         bay: int,
@@ -325,6 +369,85 @@ class TVS671BayLedController:
 
         return True
 
+    def set_error(
+        self,
+        bay: int,
+        enabled: bool,
+        *,
+        force: bool = False,
+    ) -> bool:
+        """
+        Control the verified steady red error LED for one physical bay.
+        """
+
+        bay = self.validate_bay(bay)
+        enabled = bool(enabled)
+
+        state_key = ("error", bay)
+
+        if (
+            not force
+            and self._states.get(state_key) is enabled
+        ):
+            return False
+
+        command = self.error_command(
+            bay,
+            enabled,
+        )
+
+        self.command_writer(command)
+        self._states[state_key] = enabled
+
+        LOGGER.info(
+            "TVS-671 Bay %d error LED %s",
+            bay,
+            "ON" if enabled else "OFF",
+        )
+
+        return True
+
+    def set_present(
+        self,
+        bay: int,
+        enabled: bool,
+        *,
+        force: bool = False,
+    ) -> bool:
+        """
+        Control the verified green presence LED for one physical bay.
+
+        This method intentionally does not share cached state with the
+        red identify channel because the two channels are independent.
+        """
+
+        bay = self.validate_bay(bay)
+        enabled = bool(enabled)
+
+        state_key = ("present", bay)
+
+        if (
+            not force
+            and self._states.get(state_key) is enabled
+        ):
+            return False
+
+        command = self.present_command(
+            bay,
+            enabled,
+        )
+
+        self.command_writer(command)
+        self._states[state_key] = enabled
+
+        LOGGER.info(
+            "TVS-671 Bay %d presence LED %s",
+            bay,
+            "ON" if enabled else "OFF",
+        )
+
+        return True
+
     def clear_all(self) -> None:
         for bay in range(
             self.MIN_BAY,
@@ -341,7 +464,12 @@ class TVS671BayLedController:
         return tuple(
             bay
             for bay, enabled in sorted(
-                self._states.items()
+                (
+                    key,
+                    enabled,
+                )
+                for key, enabled in self._states.items()
+                if isinstance(key, int)
             )
             if enabled
         )
