@@ -117,6 +117,14 @@ DEFAULT_CONFIG = {
         "activity_high": "#",
     },
     "hardware": {
+        "fan_control": {
+            "enabled": False,
+            "command_timeout": 300,
+            "controlled_channels": [
+                1,
+                2,
+            ],
+        },
         "topology": {
             "front_bays": {},
         },

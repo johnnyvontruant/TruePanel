@@ -112,6 +112,13 @@ graphics_engine:
   rom_levels: []
 
 hardware:
+  fan_control:
+    enabled: false
+    command_timeout: 300
+    controlled_channels:
+      - 1
+      - 2
+
   fans:
     channels:
       1:

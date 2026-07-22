@@ -134,7 +134,15 @@ class SnapshotService:
                 "available": False,
                 "planned": True,
                 "fan_telemetry": True,
-                "fan_control": False,
+                "fan_control": bool(
+                    hardware.get(
+                        "fan_control",
+                        {},
+                    ).get(
+                        "enabled",
+                        False,
+                    )
+                ),
                 "bay_leds": bool(
                     hardware.get(
                         "bay_leds"
@@ -484,4 +492,146 @@ class SnapshotService:
                 )
             ),
             "channels": channels,
+            "control": self._fan_control_payload(
+                controller_available=bool(
+                    payload.get(
+                        "available",
+                        payload,
+                    )
+                )
+            ),
+        }
+
+    def _fan_control_payload(
+        self,
+        *,
+        controller_available: bool,
+    ) -> dict[str, Any]:
+        hardware_config = self.config.get(
+            "hardware",
+            {},
+        )
+
+        control_config = hardware_config.get(
+            "fan_control",
+            {},
+        )
+
+        if not isinstance(
+            control_config,
+            dict,
+        ):
+            control_config = {}
+
+        enabled = bool(
+            control_config.get(
+                "enabled",
+                False,
+            )
+        )
+
+        try:
+            command_timeout = max(
+                0,
+                int(
+                    control_config.get(
+                        "command_timeout",
+                        300,
+                    )
+                ),
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            command_timeout = 300
+
+        raw_channels = control_config.get(
+            "controlled_channels",
+            [
+                1,
+                2,
+            ],
+        )
+
+        if not isinstance(
+            raw_channels,
+            (
+                list,
+                tuple,
+            ),
+        ):
+            raw_channels = [
+                1,
+                2,
+            ]
+
+        controlled_channels = []
+
+        for channel in raw_channels:
+            try:
+                number = int(
+                    channel
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+            if (
+                number in (
+                    1,
+                    2,
+                )
+                and number
+                not in controlled_channels
+            ):
+                controlled_channels.append(
+                    number
+                )
+
+        if not controlled_channels:
+            controlled_channels = [
+                1,
+                2,
+            ]
+
+        if not enabled:
+            reason = (
+                "Fan control is disabled."
+            )
+        elif not controller_available:
+            reason = (
+                "Fintek fan controller is unavailable."
+            )
+        else:
+            reason = (
+                "Fan control is configured but "
+                "not connected to Mission Control."
+            )
+
+        return {
+            "configured": bool(
+                control_config
+            ),
+            "enabled": enabled,
+            "available": bool(
+                controller_available
+            ),
+            "connected": False,
+            "active_profile": (
+                "automatic"
+            ),
+            "requested_profile": (
+                "automatic"
+            ),
+            "command_timeout": (
+                command_timeout
+            ),
+            "controlled_channels": (
+                controlled_channels
+            ),
+            "remaining_seconds": None,
+            "last_reason": reason,
         }

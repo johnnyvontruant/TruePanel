@@ -267,3 +267,197 @@ def test_capabilities_disable_writes(
         ]["fan_control"]
         is False
     )
+
+
+def test_fan_control_status_is_disabled_by_default(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {
+            "available": True,
+            "fan_channels": [],
+        },
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={
+            "hardware": {
+                "fan_control": {
+                    "enabled": False,
+                    "command_timeout": 300,
+                    "controlled_channels": [
+                        1,
+                        2,
+                    ],
+                }
+            }
+        },
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+    )
+
+    control = service.status()[
+        "fans"
+    ]["control"]
+
+    assert control == {
+        "configured": True,
+        "enabled": False,
+        "available": True,
+        "connected": False,
+        "active_profile": (
+            "automatic"
+        ),
+        "requested_profile": (
+            "automatic"
+        ),
+        "command_timeout": 300,
+        "controlled_channels": [
+            1,
+            2,
+        ],
+        "remaining_seconds": None,
+        "last_reason": (
+            "Fan control is disabled."
+        ),
+    }
+
+
+def test_fan_control_status_reports_missing_controller(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {
+            "available": False,
+            "fan_channels": [],
+        },
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={
+            "hardware": {
+                "fan_control": {
+                    "enabled": True,
+                }
+            }
+        },
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+    )
+
+    control = service.status()[
+        "fans"
+    ]["control"]
+
+    assert control["enabled"] is True
+    assert control["available"] is False
+    assert control["connected"] is False
+    assert control["last_reason"] == (
+        "Fintek fan controller is unavailable."
+    )
+
+
+def test_fan_control_capability_follows_feature_flag(
+    tmp_path,
+):
+    disabled = SnapshotService(
+        collector=FakeCollector(),
+        config={
+            "hardware": {
+                "fan_control": {
+                    "enabled": False,
+                }
+            }
+        },
+        history_path=(
+            tmp_path
+            / "disabled.jsonl"
+        ),
+    )
+
+    enabled = SnapshotService(
+        collector=FakeCollector(),
+        config={
+            "hardware": {
+                "fan_control": {
+                    "enabled": True,
+                }
+            }
+        },
+        history_path=(
+            tmp_path
+            / "enabled.jsonl"
+        ),
+    )
+
+    assert (
+        disabled.capabilities()[
+            "hardware_controls"
+        ]["fan_control"]
+        is False
+    )
+
+    assert (
+        enabled.capabilities()[
+            "hardware_controls"
+        ]["fan_control"]
+        is True
+    )
+
+
+def test_snapshot_does_not_import_fan_control_modules():
+    import json
+    import subprocess
+    import sys
+
+    script = """
+import json
+import sys
+
+from truepanel.web.snapshot import SnapshotService
+
+SnapshotService()
+
+modules = sorted(
+    name
+    for name in sys.modules
+    if name in {
+        "truepanel.hardware.fan_control",
+        "truepanel.hardware.fan_executor",
+        "truepanel.hardware.fan_service",
+    }
+)
+
+print(json.dumps(modules))
+"""
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            script,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(
+        result.stdout
+    ) == []
