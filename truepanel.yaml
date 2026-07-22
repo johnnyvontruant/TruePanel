@@ -115,6 +115,7 @@ hardware:
   fan_control:
     enabled: true
     command_timeout: 300
+    afterburners_timeout: 120
     controlled_channels:
       - 1
       - 2

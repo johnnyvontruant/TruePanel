@@ -72,6 +72,7 @@ def healthy_status():
 def build_service(
     *,
     timeout=300,
+    afterburners_timeout=120,
 ):
     clock = FakeClock()
     executor = FakeExecutor()
@@ -80,6 +81,9 @@ def build_service(
         FanControlInterlock(),
         executor,
         command_timeout=timeout,
+        afterburners_timeout=(
+            afterburners_timeout
+        ),
         clock=clock,
     )
 
@@ -319,10 +323,11 @@ def test_automatic_state_can_escalate_to_afterburners():
     ) == 1
 
 
-def test_afterburners_has_no_deadman_expiry():
-    service, executor, clock = (
+def test_manual_afterburners_gets_separate_expiry():
+    service, _, clock = (
         build_service(
-            timeout=30
+            timeout=30,
+            afterburners_timeout=120,
         )
     )
 
@@ -333,25 +338,110 @@ def test_afterburners_has_no_deadman_expiry():
         telemetry_fresh=False,
     )
 
-    clock.advance(
-        3600
+    status = service.status()
+
+    assert (
+        status.active_profile
+        is FanProfile.AFTERBURNERS
+    )
+    assert status.expires_at == (
+        clock()
+        + 120
+    )
+    assert status.remaining_seconds == 120
+
+
+def test_manual_afterburners_expiry_restores_automatic():
+    service, executor, clock = (
+        build_service(
+            afterburners_timeout=30,
+        )
     )
 
-    result = service.tick(
+    service.request_profile(
+        "afterburners",
         fan_status={},
         temperatures_c=(),
         telemetry_fresh=False,
     )
 
-    assert result is None
+    clock.advance(31)
+
+    decision = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    assert decision is not None
+    assert decision.force_automatic
+    assert (
+        service.active_profile
+        is FanProfile.AUTOMATIC
+    )
+    assert len(executor.decisions) == 2
+
+
+def test_safety_afterburners_has_no_expiry():
+    service, executor, clock = (
+        build_service(
+            afterburners_timeout=30,
+        )
+    )
+
+    decision = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    assert decision is not None
     assert (
         service.active_profile
         is FanProfile.AFTERBURNERS
     )
     assert service.expires_at is None
-    assert len(
-        executor.decisions
-    ) == 1
+
+    clock.advance(3600)
+
+    result = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    assert result is None
+    assert service.expires_at is None
+    assert len(executor.decisions) == 1
+
+
+def test_repeated_manual_afterburners_restarts_expiry():
+    service, _, clock = (
+        build_service(
+            afterburners_timeout=120,
+        )
+    )
+
+    service.request_profile(
+        "afterburners",
+        fan_status={},
+        temperatures_c=(),
+        telemetry_fresh=False,
+    )
+
+    first_expiry = service.expires_at
+
+    clock.advance(30)
+
+    service.request_profile(
+        "afterburners",
+        fan_status={},
+        temperatures_c=(),
+        telemetry_fresh=False,
+    )
+
+    assert service.expires_at == (
+        clock()
+        + 120
+    )
+    assert service.expires_at > first_expiry
 
 
 def test_explicit_automatic_clears_expiry():

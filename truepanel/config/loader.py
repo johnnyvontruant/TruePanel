@@ -120,6 +120,7 @@ DEFAULT_CONFIG = {
         "fan_control": {
             "enabled": False,
             "command_timeout": 300,
+            "afterburners_timeout": 120,
             "controlled_channels": [
                 1,
                 2,

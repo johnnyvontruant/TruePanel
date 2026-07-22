@@ -31,6 +31,7 @@ def enabled_config():
             "fan_control": {
                 "enabled": True,
                 "command_timeout": 120,
+                "afterburners_timeout": 90,
                 "controlled_channels": [
                     1,
                     2,
@@ -133,6 +134,7 @@ def test_enabled_runtime_constructs_full_chain():
             interlock,
             executor,
             command_timeout,
+            afterburners_timeout,
         ):
             super().__init__()
             created["interlock"] = (
@@ -143,6 +145,9 @@ def test_enabled_runtime_constructs_full_chain():
             )
             created["timeout"] = (
                 command_timeout
+            )
+            created["afterburners_timeout"] = (
+                afterburners_timeout
             )
 
     runtime = build_fan_control_runtime(
@@ -166,6 +171,10 @@ def test_enabled_runtime_constructs_full_chain():
         2,
     )
     assert created["timeout"] == 120.0
+    assert (
+        created["afterburners_timeout"]
+        == 90.0
+    )
 
     payload = runtime.status_payload()
 
@@ -199,10 +208,12 @@ def test_service_construction_failure_closes_executor():
         interlock,
         executor,
         command_timeout,
+        afterburners_timeout,
     ):
         del interlock
         del executor
         del command_timeout
+        del afterburners_timeout
         raise RuntimeError(
             "simulated failure"
         )

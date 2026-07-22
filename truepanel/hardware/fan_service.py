@@ -37,8 +37,9 @@ class FanControlService:
     """
     Coordinate profile requests and continuous safety enforcement.
 
-    Normal manual profiles expire back to Automatic. Afterburners remains
-    active until explicitly changed because it is always a safe cooling state.
+    Normal manual profiles expire back to Automatic. Manually requested
+    Afterburners uses a separate timeout, while safety-forced Afterburners
+    remains active until the emergency condition is explicitly cleared.
     """
 
     def __init__(
@@ -47,6 +48,7 @@ class FanControlService:
         executor: FanHardwareExecutor,
         *,
         command_timeout: float = 300.0,
+        afterburners_timeout: float = 120.0,
         clock: Callable[[], float] = time.monotonic,
     ):
         self.interlock = interlock
@@ -54,6 +56,10 @@ class FanControlService:
         self.command_timeout = max(
             0.0,
             float(command_timeout),
+        )
+        self.afterburners_timeout = max(
+            0.0,
+            float(afterburners_timeout),
         )
         self.clock = clock
 
@@ -74,6 +80,8 @@ class FanControlService:
     def _set_state(
         self,
         decision: FanControlDecision,
+        *,
+        manual_request: bool = False,
     ) -> None:
         now = self.clock()
 
@@ -87,18 +95,30 @@ class FanControlService:
 
         if (
             decision.effective_profile
-            in (
-                FanProfile.AUTOMATIC,
-                FanProfile.AFTERBURNERS,
-            )
-            or self.command_timeout <= 0
+            is FanProfile.AUTOMATIC
         ):
             self.expires_at = None
-        else:
+        elif (
+            decision.effective_profile
+            is FanProfile.AFTERBURNERS
+        ):
+            if (
+                manual_request
+                and self.afterburners_timeout > 0
+            ):
+                self.expires_at = (
+                    now
+                    + self.afterburners_timeout
+                )
+            else:
+                self.expires_at = None
+        elif self.command_timeout > 0:
             self.expires_at = (
                 now
                 + self.command_timeout
             )
+        else:
+            self.expires_at = None
 
     def request_profile(
         self,
@@ -128,7 +148,8 @@ class FanControlService:
             decision
         )
         self._set_state(
-            decision
+            decision,
+            manual_request=True,
         )
 
         LOGGER.info(

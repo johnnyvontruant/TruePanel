@@ -67,6 +67,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Control runtime</span><span id="fanControlConnection" class="value">Checking</span></div>
 <div class="row"><span class="label">Active profile</span><span id="fanActiveProfile" class="value">Automatic</span></div>
 <div class="row"><span class="label">Requested profile</span><span id="fanRequestedProfile" class="value">Automatic</span></div>
+<div class="row"><span class="label">Automatic restore</span><span id="fanControlCountdown" class="value">Not scheduled</span></div>
 </div>
 <div class="control-actions">
 <button id="fanAutomatic" class="primary" disabled>Restore Automatic</button>
@@ -163,6 +164,32 @@ function renderFanControl(control){
     q("fanControlConnection").className="value "+(connected?"good":"bad");
     q("fanActiveProfile").textContent=profileLabel(active);
     q("fanRequestedProfile").textContent=profileLabel(requested);
+
+    const remaining=Number(
+        control&&control.remaining_seconds
+    );
+
+    if(
+        Number.isFinite(remaining)
+        && remaining>0
+    ){
+        const seconds=Math.ceil(remaining);
+        const minutes=Math.floor(seconds/60);
+        const remainder=seconds%60;
+
+        q("fanControlCountdown").textContent=
+            minutes>0
+                ?`${minutes}m ${String(remainder).padStart(2,"0")}s remaining`
+                :`${remainder}s remaining`;
+        q("fanControlCountdown").className="value warn";
+    }else{
+        q("fanControlCountdown").textContent=
+            active==="afterburners"
+                ?"Safety hold, no timeout"
+                :"Not scheduled";
+        q("fanControlCountdown").className="value";
+    }
+
     q("fanAutomatic").disabled=!connected||active==="automatic";
     q("fanAfterburners").disabled=!connected||active==="afterburners";
 
@@ -224,7 +251,8 @@ async function engageAfterburners(){
     const approved=confirm(
         "ENGAGE AFTERBURNERS?\n\n"
         +"Both controlled fans will switch to full PWM. "
-        +"Use Restore Automatic to return control to the motherboard."
+        +"Manual Afterburners will automatically restore motherboard "
+        +"control after two minutes."
     );
 
     if(!approved){

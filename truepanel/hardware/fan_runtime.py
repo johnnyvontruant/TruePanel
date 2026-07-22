@@ -231,6 +231,22 @@ def build_fan_control_runtime(
         timeout = 300.0
 
     try:
+        afterburners_timeout = max(
+            0.0,
+            float(
+                settings.get(
+                    "afterburners_timeout",
+                    120,
+                )
+            ),
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        afterburners_timeout = 120.0
+
+    try:
         base = controller_factory()
 
         if base is None:
@@ -252,10 +268,13 @@ def build_fan_control_runtime(
 
         try:
             service = service_factory(
-                interlock,
-                executor,
-                command_timeout=timeout,
-            )
+                    interlock,
+                    executor,
+                    command_timeout=timeout,
+                    afterburners_timeout=(
+                        afterburners_timeout
+                    ),
+                )
         except Exception:
             executor.close()
             raise

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import logging
 import os
 import platform
 import subprocess
@@ -48,6 +49,8 @@ from truepanel.mission_control.watchers.thermal import thermal_watcher
 from truepanel.mission_control.watchers.zfs import zfs_watcher
 from truepanel.pages.fans import fan_pwm_page, fan_rpm_page
 
+
+LOGGER = logging.getLogger(__name__)
 
 DISPLAY_TIMEOUT = 120
 PORT = "/dev/ttyS1"
@@ -178,6 +181,28 @@ def fan_command_telemetry():
             telemetry_fresh
         ),
     }
+
+
+def reconcile_fan_control():
+    if not fan_control_runtime.connected:
+        return None
+
+    telemetry = fan_command_telemetry()
+
+    decision = fan_control_runtime.service.tick(
+        fan_status=telemetry["fan_status"],
+        temperatures_c=(
+            telemetry["temperatures_c"]
+        ),
+        telemetry_fresh=(
+            telemetry["telemetry_fresh"]
+        ),
+    )
+
+    if decision is not None:
+        publish_fan_control_status()
+
+    return decision
 
 
 def build_fan_command_server():
@@ -619,6 +644,13 @@ def main():
             fan_command_server.start()
 
         while not shutdown_requested:
+            try:
+                reconcile_fan_control()
+            except Exception:
+                LOGGER.exception(
+                    "Fan-control reconciliation failed"
+                )
+
             publish_fan_control_status()
             add_ips_to_menu()
 

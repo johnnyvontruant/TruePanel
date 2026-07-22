@@ -93,3 +93,12 @@ def test_dashboard_preserves_direct_hardware_boundary():
     assert "/sys/" not in source
     assert "pwm1_enable" not in source
     assert "pwm2_enable" not in source
+
+
+def test_dashboard_shows_afterburners_countdown():
+    source = dashboard_source()
+
+    assert 'id="fanControlCountdown"' in source
+    assert "remaining_seconds" in source
+    assert "remaining" in source
+    assert "automatically restore" in source
