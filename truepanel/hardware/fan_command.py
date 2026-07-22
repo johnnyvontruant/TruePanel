@@ -76,6 +76,13 @@ class FanCommandProcessor:
             [],
             None,
         ] | None = None,
+        event_recorder: Callable[
+            [
+                Any,
+                Mapping[str, Any],
+            ],
+            None,
+        ] | None = None,
     ):
         self.runtime = runtime
         self.telemetry_provider = (
@@ -83,6 +90,9 @@ class FanCommandProcessor:
         )
         self.status_publisher = (
             status_publisher
+        )
+        self.event_recorder = (
+            event_recorder
         )
 
     def process(
@@ -230,6 +240,17 @@ class FanCommandProcessor:
                     f"{error}"
                 ),
             )
+
+        if self.event_recorder is not None:
+            try:
+                self.event_recorder(
+                    decision,
+                    telemetry,
+                )
+            except Exception:
+                LOGGER.exception(
+                    "Could not record fan-control event"
+                )
 
         if self.status_publisher is not None:
             try:

@@ -34,6 +34,10 @@ DEFAULT_CONFIG = {
     "history": {
         "enabled": True,
         "path": "/var/lib/truepanel/history/telemetry.jsonl",
+        "fan_control_path": (
+            "/var/lib/truepanel/history/"
+            "fan-control.jsonl"
+        ),
         "sample_interval": 60,
         "retention_days": 30,
         "max_samples": 50000,

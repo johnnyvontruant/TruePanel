@@ -419,3 +419,70 @@ def test_socket_rejects_invalid_json(
     finally:
         client.close()
         server.stop()
+
+
+def test_event_is_recorded_after_command():
+    recorded = []
+
+    processor = FanCommandProcessor(
+        FakeRuntime(),
+        telemetry_provider=telemetry,
+        event_recorder=lambda decision, current: (
+            recorded.append(
+                {
+                    "decision": decision,
+                    "telemetry": current,
+                }
+            )
+        ),
+    )
+
+    response = processor.process(
+        {
+            "profile": "automatic",
+        }
+    )
+
+    assert response["ok"] is True
+    assert len(recorded) == 1
+    assert (
+        recorded[0]["decision"]
+        .effective_profile
+        is FanProfile.AUTOMATIC
+    )
+    assert (
+        recorded[0]["telemetry"][
+            "telemetry_fresh"
+        ]
+        is True
+    )
+
+
+def test_event_recorder_failure_does_not_block_command():
+    def fail_recording(
+        decision,
+        current,
+    ):
+        del decision
+        del current
+        raise OSError(
+            "history unavailable"
+        )
+
+    processor = FanCommandProcessor(
+        FakeRuntime(),
+        telemetry_provider=telemetry,
+        event_recorder=fail_recording,
+    )
+
+    response = processor.process(
+        {
+            "profile": "automatic",
+        }
+    )
+
+    assert response["ok"] is True
+    assert (
+        response["effective_profile"]
+        == "automatic"
+    )

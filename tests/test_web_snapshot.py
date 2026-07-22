@@ -614,3 +614,86 @@ def test_snapshot_ignores_stale_fan_control_bridge(
         control["last_reason"]
         == "Fan control is disabled."
     )
+
+
+def test_fan_control_history_payload(
+    tmp_path,
+):
+    history_path = (
+        tmp_path
+        / "fan-control.jsonl"
+    )
+
+    history_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "timestamp": 1,
+                        "source": "manual",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "timestamp": 2,
+                        "source": "timeout",
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "telemetry.jsonl"
+        ),
+        fan_control_history_path=(
+            history_path
+        ),
+    )
+
+    payload = (
+        service
+        .fan_control_history_payload(
+            limit=1
+        )
+    )
+
+    assert payload["read_only"] is True
+    assert payload["count"] == 1
+    assert (
+        payload["events"][0]["source"]
+        == "timeout"
+    )
+
+
+def test_fan_control_history_limit_is_bounded(
+    tmp_path,
+):
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "telemetry.jsonl"
+        ),
+        fan_control_history_path=(
+            tmp_path
+            / "fan-control.jsonl"
+        ),
+    )
+
+    payload = (
+        service
+        .fan_control_history_payload(
+            limit=10000
+        )
+    )
+
+    assert payload["count"] == 0
+    assert payload["read_only"] is True

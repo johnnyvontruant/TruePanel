@@ -21,3 +21,10 @@ __all__ = [
     "sample_from_state",
     "summary",
 ]
+
+
+from .fan_control import (
+    DEFAULT_FAN_CONTROL_HISTORY_PATH,
+    FanControlHistory,
+    event_from_decision,
+)

@@ -44,6 +44,9 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             "/index.html": self._dashboard,
             "/api/v1/status": self._status,
             "/api/v1/history": self._history,
+            "/api/v1/fans/history": (
+                self._fan_history
+            ),
             "/api/v1/capabilities": self._capabilities,
             "/api/v1/config/night-mode": self._night_mode,
             "/healthz": self._health,
@@ -109,6 +112,28 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         except (TypeError, ValueError):
             limit = 240
         self._json(self.snapshot_service.history(limit=limit))
+
+    def _fan_history(self, parsed):
+        query = parse_qs(parsed.query)
+        raw_limit = query.get(
+            "limit",
+            ["20"],
+        )[0]
+
+        try:
+            limit = int(raw_limit)
+        except (
+            TypeError,
+            ValueError,
+        ):
+            limit = 20
+
+        self._json(
+            self.snapshot_service
+            .fan_control_history_payload(
+                limit=limit
+            )
+        )
 
     def _capabilities(self, parsed):
         del parsed

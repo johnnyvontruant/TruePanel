@@ -69,6 +69,7 @@ history:
 
   # Native installs use persistent application data under /var/lib.
   path: /var/lib/truepanel/history/telemetry.jsonl
+  fan_control_path: /var/lib/truepanel/history/fan-control.jsonl
 
   # One sample per minute keeps writes modest while preserving useful trends.
   sample_interval: 60

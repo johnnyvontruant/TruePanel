@@ -14,6 +14,10 @@ from truepanel.config.loader import load_config
 from truepanel.hardware.fans import (
     get_status as get_fan_status,
 )
+from truepanel.history.fan_control import (
+    DEFAULT_FAN_CONTROL_HISTORY_PATH,
+    FanControlHistory,
+)
 from truepanel.hardware.fan_status_bridge import (
     DEFAULT_FAN_CONTROL_STATUS_PATH,
     FanControlStatusBridge,
@@ -54,6 +58,7 @@ class SnapshotService:
         config=None,
         history_path=None,
         fan_control_status_path=None,
+        fan_control_history_path=None,
         clock=None,
     ):
         self.collector = (
@@ -94,6 +99,16 @@ class SnapshotService:
             or configured_path
         )
 
+        self.fan_control_history = FanControlHistory(
+            fan_control_history_path
+            or history_config.get(
+                "fan_control_path",
+                DEFAULT_FAN_CONTROL_HISTORY_PATH,
+            ),
+            enabled=True,
+            clock=self.clock,
+        )
+
     def status(self) -> dict[str, Any]:
         state = dict(
             self.collector.update()
@@ -117,6 +132,32 @@ class SnapshotService:
             "capabilities": (
                 self.capabilities()
             ),
+        }
+
+    def fan_control_history_payload(
+        self,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        limit = max(
+            1,
+            min(
+                int(limit),
+                200,
+            ),
+        )
+
+        events = self.fan_control_history.read(
+            limit=limit
+        )
+
+        return {
+            "schema_version": 1,
+            "read_only": True,
+            "path": str(
+                self.fan_control_history.path
+            ),
+            "count": len(events),
+            "events": events,
         }
 
     def capabilities(self) -> dict[str, Any]:

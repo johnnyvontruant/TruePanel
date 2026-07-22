@@ -102,3 +102,14 @@ def test_dashboard_shows_afterburners_countdown():
     assert "remaining_seconds" in source
     assert "remaining" in source
     assert "automatically restore" in source
+
+
+def test_dashboard_shows_fan_control_history():
+    source = dashboard_source()
+
+    assert 'id="fanHistory"' in source
+    assert "Recent Fan Activity" in source
+    assert "/api/v1/fans/history?limit=8" in source
+    assert "renderFanHistory" in source
+    assert "Automatic restore" in source
+    assert "Safety escalation" in source

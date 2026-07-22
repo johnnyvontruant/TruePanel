@@ -36,6 +36,25 @@ class FakeSnapshotService:
             }
         }
 
+    def fan_control_history_payload(
+        self,
+        limit=20,
+    ):
+        return {
+            "schema_version": 1,
+            "read_only": True,
+            "count": 1,
+            "events": [
+                {
+                    "timestamp": 100.0,
+                    "source": "manual",
+                    "effective_profile": (
+                        "afterburners"
+                    ),
+                }
+            ][-limit:],
+        }
+
     def capabilities(self):
         return {}
 
@@ -332,4 +351,29 @@ def test_runtime_rejection_status_is_preserved():
     assert status == 403
     assert payload["status"] == (
         "disabled"
+    )
+
+
+def test_fan_history_endpoint_is_read_only():
+    client = FakeFanCommandClient()
+
+    with running_server(client) as base_url:
+        with urlopen(
+            base_url
+            + "/api/v1/fans/history?limit=1",
+            timeout=5,
+        ) as response:
+            status = response.status
+            payload = json.load(
+                response
+            )
+
+    assert status == 200
+    assert payload["read_only"] is True
+    assert payload["count"] == 1
+    assert (
+        payload["events"][0][
+            "effective_profile"
+        ]
+        == "afterburners"
     )

@@ -16,7 +16,11 @@ from truepanel.display.widgets import progress_bar
 from truepanel.config.loader import load_config
 from truepanel.flightdeck.autopilot import AutoPilot
 from truepanel.hardware import Buzzer
-from truepanel.history import TelemetryRecorder
+from truepanel.history import (
+    FanControlHistory,
+    TelemetryRecorder,
+    event_from_decision,
+)
 from truepanel.mission_control import MissionControl
 from truepanel.hardware.bay_led_animation import (
     build_bay_led_startup_animation,
@@ -78,6 +82,27 @@ fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
 history_recorder = TelemetryRecorder(config.get("history", {}))
+fan_control_history = FanControlHistory(
+    config.get(
+        "history",
+        {},
+    ).get(
+        "fan_control_path",
+        (
+            "/var/lib/truepanel/history/"
+            "fan-control.jsonl"
+        ),
+    ),
+    enabled=bool(
+        config.get(
+            "history",
+            {},
+        ).get(
+            "enabled",
+            True,
+        )
+    ),
+)
 buzzer = Buzzer(config.get("buzzer", {}))
 bay_led_startup_animation = (
     build_bay_led_startup_animation(
@@ -183,6 +208,26 @@ def fan_command_telemetry():
     }
 
 
+def record_fan_control_event(
+    decision,
+    telemetry,
+    *,
+    source,
+):
+    try:
+        fan_control_history.append(
+            event_from_decision(
+                decision,
+                source=source,
+                telemetry=telemetry,
+            )
+        )
+    except Exception:
+        LOGGER.exception(
+            "Could not append fan-control history"
+        )
+
+
 def reconcile_fan_control():
     if not fan_control_runtime.connected:
         return None
@@ -200,6 +245,24 @@ def reconcile_fan_control():
     )
 
     if decision is not None:
+        source = (
+            "timeout"
+            if decision.force_automatic
+            and "expired" in (
+                decision.reason.lower()
+            )
+            else "safety"
+        )
+
+        post_transition_telemetry = (
+            fan_command_telemetry()
+        )
+
+        record_fan_control_event(
+            decision,
+            post_transition_telemetry,
+            source=source,
+        )
         publish_fan_control_status()
 
     return decision
@@ -216,6 +279,13 @@ def build_fan_command_server():
         ),
         status_publisher=(
             publish_fan_control_status
+        ),
+        event_recorder=lambda decision, telemetry: (
+            record_fan_control_event(
+                decision,
+                fan_command_telemetry(),
+                source="manual",
+            )
         ),
     )
 
