@@ -23,6 +23,9 @@ from truepanel.hardware.bay_led_animation import (
 from truepanel.hardware.fan_status_bridge import (
     FanControlStatusBridge,
 )
+from truepanel.hardware.fan_runtime import (
+    build_fan_control_runtime,
+)
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.fan_health import (
@@ -55,6 +58,9 @@ mission = MissionControl()
 alert_manager = AlertManager()
 config = load_config()
 fan_control_status_bridge = FanControlStatusBridge()
+fan_control_runtime = build_fan_control_runtime(
+    config
+)
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -83,45 +89,20 @@ mission.register(healthy_watcher)
 
 
 def publish_fan_control_status(
-    reason="Fan control is disabled.",
+    reason=None,
 ):
-    control_config = (
-        config.get(
-            "hardware",
-            {},
-        ).get(
-            "fan_control",
-            {},
-        )
+    payload = (
+        fan_control_runtime
+        .status_payload()
     )
 
-    enabled = bool(
-        control_config.get(
-            "enabled",
-            False,
-        )
-    )
+    if reason is not None:
+        payload[
+            "last_reason"
+        ] = reason
 
     fan_control_status_bridge.publish(
-        {
-            "enabled": enabled,
-            "connected": False,
-            "active_profile": (
-                "automatic"
-            ),
-            "requested_profile": (
-                "automatic"
-            ),
-            "remaining_seconds": None,
-            "last_reason": (
-                reason
-                if not enabled
-                else (
-                    "Fan control is enabled but "
-                    "not yet connected."
-                )
-            ),
-        }
+        payload
     )
 
 
@@ -557,9 +538,14 @@ def main():
                 ) % len(menu)
     finally:
         try:
+            fan_control_runtime.shutdown()
+        except Exception:
+            pass
+
+        try:
             publish_fan_control_status(
                 "TruePanel is shutting down; "
-                "Automatic control remains active."
+                "Automatic restoration requested."
             )
         except Exception:
             pass
