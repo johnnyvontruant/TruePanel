@@ -113,7 +113,7 @@ graphics_engine:
 
 hardware:
   fan_control:
-    enabled: false
+    enabled: true
     command_timeout: 300
     controlled_channels:
       - 1
