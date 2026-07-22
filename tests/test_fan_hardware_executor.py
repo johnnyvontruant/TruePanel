@@ -458,3 +458,58 @@ def test_missing_attribute_is_rejected(
         FanHardwareExecutor(
             base
         )
+
+
+def test_executor_enters_manual_mode_before_pwm_write(
+    tmp_path,
+):
+    base = create_fake_sysfs(
+        tmp_path
+        / "hwmon"
+    )
+
+    writes = []
+
+    def recording_writer(
+        path,
+        value,
+    ):
+        writes.append(
+            (
+                path.name,
+                int(value),
+            )
+        )
+        path.write_text(
+            str(int(value))
+        )
+
+    executor = FanHardwareExecutor(
+        base,
+        writer=recording_writer,
+    )
+
+    executor.apply(
+        manual_decision(
+            pwm=225
+        )
+    )
+
+    assert writes[:4] == [
+        (
+            "pwm1_enable",
+            1,
+        ),
+        (
+            "pwm2_enable",
+            1,
+        ),
+        (
+            "pwm1",
+            225,
+        ),
+        (
+            "pwm2",
+            225,
+        ),
+    ]

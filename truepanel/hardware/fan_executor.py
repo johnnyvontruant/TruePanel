@@ -229,22 +229,23 @@ class FanHardwareExecutor:
         )
 
         try:
-            # Stage the requested PWM while automatic control is still active.
-            for channel in self.controlled_channels:
-                self.writer(
-                    self._pwm_path(
-                        channel
-                    ),
-                    pwm,
-                )
-
-            # Enter manual mode only after every PWM value is staged.
+            # The Fintek driver permits PWM writes only while the channel is
+            # in manual mode. Enter manual mode at the existing PWM first,
+            # then apply the requested value.
             for channel in self.controlled_channels:
                 self.writer(
                     self._mode_path(
                         channel
                     ),
                     self.MANUAL_MODE,
+                )
+
+            for channel in self.controlled_channels:
+                self.writer(
+                    self._pwm_path(
+                        channel
+                    ),
+                    pwm,
                 )
         except Exception:
             LOGGER.exception(
