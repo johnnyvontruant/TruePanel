@@ -14,6 +14,10 @@ from truepanel.config.loader import load_config
 from truepanel.hardware.fans import (
     get_status as get_fan_status,
 )
+from truepanel.hardware.fan_status_bridge import (
+    DEFAULT_FAN_CONTROL_STATUS_PATH,
+    FanControlStatusBridge,
+)
 
 
 DEFAULT_HISTORY_PATH = Path(
@@ -49,6 +53,7 @@ class SnapshotService:
         collector=None,
         config=None,
         history_path=None,
+        fan_control_status_path=None,
         clock=None,
     ):
         self.collector = (
@@ -64,6 +69,14 @@ class SnapshotService:
         self.clock = (
             clock
             or time.time
+        )
+
+        self.fan_control_bridge = (
+            FanControlStatusBridge(
+                fan_control_status_path
+                or DEFAULT_FAN_CONTROL_STATUS_PATH,
+                clock=self.clock,
+            )
         )
 
         history_config = self.config.get(
@@ -597,6 +610,63 @@ class SnapshotService:
                 2,
             ]
 
+        runtime_status = (
+            self.fan_control_bridge.read(
+                max_age=30.0,
+            )
+        )
+
+        if runtime_status is not None:
+            return {
+                "configured": bool(
+                    control_config
+                ),
+                "enabled": bool(
+                    runtime_status[
+                        "enabled"
+                    ]
+                ),
+                "available": bool(
+                    controller_available
+                ),
+                "connected": bool(
+                    runtime_status[
+                        "connected"
+                    ]
+                ),
+                "active_profile": (
+                    runtime_status[
+                        "active_profile"
+                    ]
+                ),
+                "requested_profile": (
+                    runtime_status[
+                        "requested_profile"
+                    ]
+                ),
+                "command_timeout": (
+                    command_timeout
+                ),
+                "controlled_channels": (
+                    controlled_channels
+                ),
+                "remaining_seconds": (
+                    runtime_status[
+                        "remaining_seconds"
+                    ]
+                ),
+                "last_reason": (
+                    runtime_status[
+                        "last_reason"
+                    ]
+                ),
+                "status_age_seconds": (
+                    runtime_status[
+                        "age_seconds"
+                    ]
+                ),
+            }
+
         if not enabled:
             reason = (
                 "Fan control is disabled."
@@ -607,8 +677,7 @@ class SnapshotService:
             )
         else:
             reason = (
-                "Fan control is configured but "
-                "not connected to Mission Control."
+                "Fan-control runtime status is unavailable."
             )
 
         return {

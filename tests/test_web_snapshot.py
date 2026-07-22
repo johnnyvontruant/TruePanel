@@ -461,3 +461,148 @@ print(json.dumps(modules))
     assert json.loads(
         result.stdout
     ) == []
+
+
+def test_snapshot_reads_fresh_fan_control_bridge(
+    monkeypatch,
+    tmp_path,
+):
+    from truepanel.hardware.fan_status_bridge import (
+        FanControlStatusBridge,
+    )
+
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {
+            "available": True,
+            "fan_channels": [],
+        },
+    )
+
+    status_path = (
+        tmp_path
+        / "fan-control-status.json"
+    )
+
+    bridge = FanControlStatusBridge(
+        status_path,
+        clock=lambda: 100.0,
+    )
+
+    bridge.publish(
+        {
+            "enabled": False,
+            "connected": False,
+            "active_profile": (
+                "automatic"
+            ),
+            "requested_profile": (
+                "automatic"
+            ),
+            "last_reason": (
+                "Published by LCD runtime."
+            ),
+        }
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={
+            "hardware": {
+                "fan_control": {
+                    "enabled": False,
+                }
+            }
+        },
+        fan_control_status_path=(
+            status_path
+        ),
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        clock=lambda: 100.0,
+    )
+
+    control = service.status()[
+        "fans"
+    ]["control"]
+
+    assert control["connected"] is False
+    assert (
+        control["last_reason"]
+        == "Published by LCD runtime."
+    )
+    assert (
+        control["status_age_seconds"]
+        == 0.0
+    )
+
+
+def test_snapshot_ignores_stale_fan_control_bridge(
+    monkeypatch,
+    tmp_path,
+):
+    from truepanel.hardware.fan_status_bridge import (
+        FanControlStatusBridge,
+    )
+
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {
+            "available": True,
+            "fan_channels": [],
+        },
+    )
+
+    status_path = (
+        tmp_path
+        / "fan-control-status.json"
+    )
+
+    bridge = FanControlStatusBridge(
+        status_path,
+        clock=lambda: 100.0,
+    )
+
+    bridge.publish(
+        {
+            "connected": True,
+            "last_reason": "Old status",
+        }
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={
+            "hardware": {
+                "fan_control": {
+                    "enabled": False,
+                }
+            }
+        },
+        fan_control_status_path=(
+            status_path
+        ),
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        clock=lambda: 131.0,
+    )
+
+    control = service.status()[
+        "fans"
+    ]["control"]
+
+    assert control["connected"] is False
+    assert (
+        control["last_reason"]
+        == "Fan control is disabled."
+    )

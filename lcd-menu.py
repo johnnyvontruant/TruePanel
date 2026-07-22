@@ -20,6 +20,9 @@ from truepanel.mission_control import MissionControl
 from truepanel.hardware.bay_led_animation import (
     build_bay_led_startup_animation,
 )
+from truepanel.hardware.fan_status_bridge import (
+    FanControlStatusBridge,
+)
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.fan_health import (
@@ -51,6 +54,7 @@ collector = TruePanelCollector()
 mission = MissionControl()
 alert_manager = AlertManager()
 config = load_config()
+fan_control_status_bridge = FanControlStatusBridge()
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -76,6 +80,49 @@ if fan_health_watcher is not None:
     mission.register(fan_health_watcher)
 
 mission.register(healthy_watcher)
+
+
+def publish_fan_control_status(
+    reason="Fan control is disabled.",
+):
+    control_config = (
+        config.get(
+            "hardware",
+            {},
+        ).get(
+            "fan_control",
+            {},
+        )
+    )
+
+    enabled = bool(
+        control_config.get(
+            "enabled",
+            False,
+        )
+    )
+
+    fan_control_status_bridge.publish(
+        {
+            "enabled": enabled,
+            "connected": False,
+            "active_profile": (
+                "automatic"
+            ),
+            "requested_profile": (
+                "automatic"
+            ),
+            "remaining_seconds": None,
+            "last_reason": (
+                reason
+                if not enabled
+                else (
+                    "Fan control is enabled but "
+                    "not yet connected."
+                )
+            ),
+        }
+    )
 
 
 def lcd_on():
@@ -487,8 +534,10 @@ def main():
 
         show_startup_splash()
         buzzer.startup()
+        publish_fan_control_status()
 
         while not shutdown_requested:
+            publish_fan_control_status()
             add_ips_to_menu()
 
             maybe_show_alert()
@@ -507,6 +556,14 @@ def main():
                     menu_item + 1
                 ) % len(menu)
     finally:
+        try:
+            publish_fan_control_status(
+                "TruePanel is shutting down; "
+                "Automatic control remains active."
+            )
+        except Exception:
+            pass
+
         if lcd_timer is not None:
             lcd_timer.cancel()
 

@@ -1,0 +1,177 @@
+import json
+
+from truepanel.hardware.fan_status_bridge import (
+    FanControlStatusBridge,
+)
+
+
+class FakeClock:
+    def __init__(
+        self,
+        value=100.0,
+    ):
+        self.value = float(
+            value
+        )
+
+    def __call__(self):
+        return self.value
+
+
+def test_bridge_publishes_and_reads_status(
+    tmp_path,
+):
+    clock = FakeClock()
+    path = (
+        tmp_path
+        / "fan-control-status.json"
+    )
+
+    bridge = FanControlStatusBridge(
+        path,
+        clock=clock,
+    )
+
+    bridge.publish(
+        {
+            "enabled": False,
+            "connected": False,
+            "active_profile": (
+                "automatic"
+            ),
+            "requested_profile": (
+                "automatic"
+            ),
+            "remaining_seconds": None,
+            "last_reason": (
+                "Fan control is disabled."
+            ),
+        }
+    )
+
+    payload = bridge.read()
+
+    assert payload is not None
+    assert payload["timestamp"] == 100.0
+    assert payload["age_seconds"] == 0.0
+    assert payload["enabled"] is False
+    assert payload["connected"] is False
+    assert (
+        payload["active_profile"]
+        == "automatic"
+    )
+
+
+def test_bridge_replaces_file_atomically(
+    tmp_path,
+):
+    clock = FakeClock()
+    path = (
+        tmp_path
+        / "fan-control-status.json"
+    )
+
+    bridge = FanControlStatusBridge(
+        path,
+        clock=clock,
+    )
+
+    bridge.publish(
+        {
+            "last_reason": "first",
+        }
+    )
+
+    first_inode = path.stat().st_ino
+
+    clock.value = 101.0
+
+    bridge.publish(
+        {
+            "last_reason": "second",
+        }
+    )
+
+    second_inode = path.stat().st_ino
+
+    assert first_inode != second_inode
+    assert json.loads(
+        path.read_text()
+    )["last_reason"] == "second"
+
+
+def test_bridge_rejects_stale_status(
+    tmp_path,
+):
+    clock = FakeClock()
+    path = (
+        tmp_path
+        / "fan-control-status.json"
+    )
+
+    bridge = FanControlStatusBridge(
+        path,
+        clock=clock,
+    )
+
+    bridge.publish(
+        {
+            "connected": True,
+        }
+    )
+
+    clock.value += 31
+
+    assert (
+        bridge.read(
+            max_age=30
+        )
+        is None
+    )
+
+
+def test_bridge_rejects_invalid_json(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "fan-control-status.json"
+    )
+    path.write_text(
+        "not-json"
+    )
+
+    bridge = FanControlStatusBridge(
+        path
+    )
+
+    assert bridge.read() is None
+
+
+def test_bridge_normalizes_unknown_profiles(
+    tmp_path,
+):
+    bridge = FanControlStatusBridge(
+        tmp_path
+        / "fan-control-status.json"
+    )
+
+    published = bridge.publish(
+        {
+            "active_profile": (
+                "warp-eleven"
+            ),
+            "requested_profile": (
+                "ludicrous"
+            ),
+        }
+    )
+
+    assert (
+        published["active_profile"]
+        == "automatic"
+    )
+    assert (
+        published["requested_profile"]
+        == "automatic"
+    )
