@@ -16,7 +16,7 @@ flightdeck:
 
     bay_led_animation:
       enabled: true
-      step_delay: 1.0
+      step_delay: 0.65
       pulse_hold: 0.35
       clear_when_finished: true
 
