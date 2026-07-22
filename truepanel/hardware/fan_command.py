@@ -16,11 +16,6 @@ import threading
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from truepanel.hardware.fan_control import (
-    FanProfile,
-)
-
-
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_FAN_CONTROL_SOCKET_PATH = Path(
@@ -32,6 +27,16 @@ AFTERBURNERS_CONFIRMATION = (
 )
 
 MAX_REQUEST_BYTES = 4096
+
+AUTOMATIC_PROFILE = "automatic"
+AFTERBURNERS_PROFILE = "afterburners"
+
+ALLOWED_COMMAND_PROFILES = frozenset(
+    {
+        AUTOMATIC_PROFILE,
+        AFTERBURNERS_PROFILE,
+    }
+)
 
 
 class FanCommandError(RuntimeError):
@@ -104,10 +109,9 @@ class FanCommandProcessor:
             )
         ).strip().lower()
 
-        if profile not in {
-            FanProfile.AUTOMATIC.value,
-            FanProfile.AFTERBURNERS.value,
-        }:
+        if profile not in (
+            ALLOWED_COMMAND_PROFILES
+        ):
             return _response(
                 ok=False,
                 status="profile_locked",
@@ -116,8 +120,8 @@ class FanCommandProcessor:
                     "Afterburners are currently available."
                 ),
                 allowed_profiles=[
-                    FanProfile.AUTOMATIC.value,
-                    FanProfile.AFTERBURNERS.value,
+                    AUTOMATIC_PROFILE,
+                    AFTERBURNERS_PROFILE,
                 ],
             )
 
@@ -142,7 +146,7 @@ class FanCommandProcessor:
 
         if (
             profile
-            == FanProfile.AFTERBURNERS.value
+            == AFTERBURNERS_PROFILE
             and request.get(
                 "confirmation"
             )
@@ -595,6 +599,9 @@ class FanCommandClient:
 
 __all__ = [
     "AFTERBURNERS_CONFIRMATION",
+    "AFTERBURNERS_PROFILE",
+    "ALLOWED_COMMAND_PROFILES",
+    "AUTOMATIC_PROFILE",
     "DEFAULT_FAN_CONTROL_SOCKET_PATH",
     "FanCommandClient",
     "FanCommandError",

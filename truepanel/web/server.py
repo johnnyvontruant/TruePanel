@@ -18,6 +18,11 @@ from truepanel.config.policy import (
     ConfigurationError,
     ConfigurationPolicyService,
 )
+from truepanel.hardware.fan_command import (
+    AFTERBURNERS_CONFIRMATION,
+    FanCommandClient,
+    FanCommandError,
+)
 
 from .snapshot import SnapshotService
 
@@ -58,6 +63,10 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/v1/config/night-mode/save":
             self._night_mode_save(parsed)
+            return
+
+        if parsed.path == "/api/v1/fans/profile":
+            self._fan_profile(parsed)
             return
 
         self._write_blocked()
@@ -325,6 +334,263 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         )
         self._json(response)
 
+    def _fan_profile(self, parsed):
+        del parsed
+
+        raw_length = self.headers.get(
+            "Content-Length",
+            "0",
+        )
+
+        try:
+            content_length = int(
+                raw_length
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            content_length = 0
+
+        if (
+            content_length < 1
+            or content_length > 4096
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Fan profile body must be "
+                        "between 1 and 4096 bytes."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        raw_body = self.rfile.read(
+            content_length
+        )
+
+        try:
+            payload = json.loads(
+                raw_body.decode(
+                    "utf-8"
+                )
+            )
+        except (
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ):
+            self._json(
+                {
+                    "error": "invalid_json",
+                    "message": (
+                        "Fan profile body must "
+                        "contain valid JSON."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if not isinstance(
+            payload,
+            dict,
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Fan profile body must "
+                        "be a JSON object."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        allowed_fields = {
+            "profile",
+            "confirmation",
+        }
+
+        unknown_fields = sorted(
+            set(payload)
+            - allowed_fields
+        )
+
+        if unknown_fields:
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Unknown fan profile fields: "
+                        + ", ".join(
+                            unknown_fields
+                        )
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        profile = payload.get(
+            "profile"
+        )
+
+        if not isinstance(
+            profile,
+            str,
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "profile must be a string."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        profile = profile.strip().lower()
+
+        if profile not in {
+            "automatic",
+            "afterburners",
+        }:
+            self._json(
+                {
+                    "error": "profile_locked",
+                    "message": (
+                        "Only Automatic and "
+                        "Afterburners are currently "
+                        "available."
+                    ),
+                    "allowed_profiles": [
+                        "automatic",
+                        "afterburners",
+                    ],
+                },
+                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+            return
+
+        confirmation = payload.get(
+            "confirmation"
+        )
+
+        if (
+            confirmation is not None
+            and not isinstance(
+                confirmation,
+                str,
+            )
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "confirmation must be "
+                        "a string."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if (
+            profile == "afterburners"
+            and confirmation
+            != AFTERBURNERS_CONFIRMATION
+        ):
+            self._json(
+                {
+                    "error": (
+                        "confirmation_required"
+                    ),
+                    "message": (
+                        "Afterburners requires "
+                        "explicit confirmation."
+                    ),
+                    "confirmation_required": (
+                        AFTERBURNERS_CONFIRMATION
+                    ),
+                },
+                status=HTTPStatus.CONFLICT,
+            )
+            return
+
+        try:
+            response = (
+                self.server
+                .fan_command_client
+                .request(
+                    profile,
+                    confirmation=confirmation,
+                )
+            )
+        except FanCommandError as error:
+            self._json(
+                {
+                    "error": (
+                        "fan_command_unavailable"
+                    ),
+                    "message": str(
+                        error
+                    ),
+                },
+                status=(
+                    HTTPStatus
+                    .SERVICE_UNAVAILABLE
+                ),
+            )
+            return
+
+        if response.get(
+            "ok"
+        ) is True:
+            self._json(
+                response,
+                status=HTTPStatus.OK,
+            )
+            return
+
+        status_name = response.get(
+            "status",
+            "command_rejected",
+        )
+
+        status_map = {
+            "disabled": (
+                HTTPStatus.FORBIDDEN
+            ),
+            "disconnected": (
+                HTTPStatus.SERVICE_UNAVAILABLE
+            ),
+            "confirmation_required": (
+                HTTPStatus.CONFLICT
+            ),
+            "profile_locked": (
+                HTTPStatus.UNPROCESSABLE_ENTITY
+            ),
+            "telemetry_unavailable": (
+                HTTPStatus.SERVICE_UNAVAILABLE
+            ),
+            "execution_failed": (
+                HTTPStatus.INTERNAL_SERVER_ERROR
+            ),
+        }
+
+        self._json(
+            response,
+            status=status_map.get(
+                status_name,
+                HTTPStatus.BAD_REQUEST,
+            ),
+        )
+
     def _health(self, parsed):
         del parsed
         self._json({"status": "ok", "service": "truepanel-mission-control", "read_only": True})
@@ -360,10 +626,15 @@ class MissionControlServer(ThreadingHTTPServer):
         *,
         allow_config_writes=False,
         config_path="truepanel.yaml",
+        fan_command_client=None,
     ):
         self.snapshot_service = snapshot_service or SnapshotService()
         self.allow_config_writes = bool(allow_config_writes)
         self.config_path = Path(config_path)
+        self.fan_command_client = (
+            fan_command_client
+            or FanCommandClient()
+        )
         super().__init__(address, MissionControlRequestHandler)
 
 
@@ -374,12 +645,14 @@ def serve(
     *,
     allow_config_writes=False,
     config_path="truepanel.yaml",
+    fan_command_client=None,
 ):
     server = MissionControlServer(
         (host, int(port)),
         snapshot_service=snapshot_service,
         allow_config_writes=allow_config_writes,
         config_path=config_path,
+        fan_command_client=fan_command_client,
     )
     LOGGER.info("Mission Control listening on http://%s:%s", host, port)
     try:
