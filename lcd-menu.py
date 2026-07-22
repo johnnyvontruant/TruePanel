@@ -26,6 +26,13 @@ from truepanel.hardware.fan_status_bridge import (
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
 )
+from truepanel.hardware.fan_command import (
+    FanCommandProcessor,
+    FanCommandServer,
+)
+from truepanel.hardware.fans import (
+    get_status as get_fan_status,
+)
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.fan_health import (
@@ -61,6 +68,8 @@ fan_control_status_bridge = FanControlStatusBridge()
 fan_control_runtime = build_fan_control_runtime(
     config
 )
+
+fan_command_server = None
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -103,6 +112,90 @@ def publish_fan_control_status(
 
     fan_control_status_bridge.publish(
         payload
+    )
+
+
+def fan_command_telemetry():
+    state = get_state(
+        max_age=5
+    )
+
+    temperatures_c = []
+
+    for item in (
+        state.get(
+            "temps",
+            [],
+        )
+        or []
+    ):
+        if not isinstance(
+            item,
+            dict,
+        ):
+            continue
+
+        value = item.get(
+            "temperature_c",
+            item.get(
+                "temperature"
+            ),
+        )
+
+        try:
+            temperatures_c.append(
+                float(value)
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            continue
+
+    last_updated = state.get(
+        "last_updated"
+    )
+    telemetry_fresh = False
+
+    try:
+        telemetry_fresh = (
+            time.time()
+            - float(last_updated)
+            <= 10
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        telemetry_fresh = False
+
+    return {
+        "fan_status": get_fan_status(),
+        "temperatures_c": tuple(
+            temperatures_c
+        ),
+        "telemetry_fresh": (
+            telemetry_fresh
+        ),
+    }
+
+
+def build_fan_command_server():
+    if not fan_control_runtime.enabled:
+        return None
+
+    processor = FanCommandProcessor(
+        fan_control_runtime,
+        telemetry_provider=(
+            fan_command_telemetry
+        ),
+        status_publisher=(
+            publish_fan_control_status
+        ),
+    )
+
+    return FanCommandServer(
+        processor
     )
 
 
@@ -495,6 +588,7 @@ def response_handler(command, data):
 
 def main():
     global lcd, menu_item
+    global fan_command_server
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
@@ -517,6 +611,13 @@ def main():
         buzzer.startup()
         publish_fan_control_status()
 
+        fan_command_server = (
+            build_fan_command_server()
+        )
+
+        if fan_command_server is not None:
+            fan_command_server.start()
+
         while not shutdown_requested:
             publish_fan_control_status()
             add_ips_to_menu()
@@ -537,6 +638,14 @@ def main():
                     menu_item + 1
                 ) % len(menu)
     finally:
+        if fan_command_server is not None:
+            try:
+                fan_command_server.stop()
+            except Exception:
+                pass
+            finally:
+                fan_command_server = None
+
         try:
             fan_control_runtime.shutdown()
         except Exception:

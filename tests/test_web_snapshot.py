@@ -302,6 +302,10 @@ def test_fan_control_status_is_disabled_by_default(
             tmp_path
             / "history.jsonl"
         ),
+        fan_control_status_path=(
+            tmp_path
+            / "disabled-fan-control-status.json"
+        ),
     )
 
     control = service.status()[
@@ -358,6 +362,10 @@ def test_fan_control_status_reports_missing_controller(
         history_path=(
             tmp_path
             / "history.jsonl"
+        ),
+        fan_control_status_path=(
+            tmp_path
+            / "missing-controller-status.json"
         ),
     )
 
