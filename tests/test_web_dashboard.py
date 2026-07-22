@@ -15,7 +15,8 @@ def test_dashboard_contract():
     assert "TruePanel Mission Control" in source
     assert "/api/v1/status" in source
     assert "setInterval(refresh,5000)" in source
-    assert "Hardware writes" in source
+    assert "Direct hardware access" in source
+    assert "Guarded socket only" in source
 
 
 def test_dashboard_has_night_mode_controls():
@@ -50,5 +51,45 @@ def test_dashboard_requires_confirmation_before_save():
 def test_dashboard_preserves_hardware_write_lock():
     source = dashboard_source()
 
-    assert "Hardware writes" in source
+    assert "Direct hardware access" in source
     assert ">Disabled<" in source
+    assert "Guarded socket only" in source
+
+
+def test_dashboard_has_guarded_fan_controls():
+    source = dashboard_source()
+
+    assert 'id="fanAutomatic"' in source
+    assert 'id="fanAfterburners"' in source
+    assert 'id="fanActiveProfile"' in source
+    assert 'id="fanControlConnection"' in source
+    assert "/api/v1/fans/profile" in source
+
+
+def test_dashboard_requires_afterburners_confirmation():
+    source = dashboard_source()
+
+    assert "ENGAGE AFTERBURNERS?" in source
+    assert "ENGAGE_AFTERBURNERS" in source
+    assert 'requestFanProfile(' in source
+
+
+def test_dashboard_exposes_only_safe_profiles():
+    source = dashboard_source()
+
+    assert 'requestFanProfile("automatic")' in source
+    assert '"afterburners",' in source
+
+    assert 'requestFanProfile("quiet")' not in source
+    assert 'requestFanProfile("balanced")' not in source
+    assert 'requestFanProfile("cooling_boost")' not in source
+
+
+def test_dashboard_preserves_direct_hardware_boundary():
+    source = dashboard_source()
+
+    assert "Direct hardware access" in source
+    assert "Guarded socket only" in source
+    assert "/sys/" not in source
+    assert "pwm1_enable" not in source
+    assert "pwm2_enable" not in source
