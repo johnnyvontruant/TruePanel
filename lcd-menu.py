@@ -170,7 +170,10 @@ def fan_command_telemetry():
         value = item.get(
             "temperature_c",
             item.get(
-                "temperature"
+                "temperature",
+                item.get(
+                    "temp"
+                ),
             ),
         )
 
