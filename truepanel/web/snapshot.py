@@ -701,6 +701,38 @@ class SnapshotService:
                         "last_reason"
                     ]
                 ),
+                "control_authority": (
+                    runtime_status.get(
+                        "control_authority",
+                        "automatic",
+                    )
+                ),
+                "safety_hold": bool(
+                    runtime_status.get(
+                        "safety_hold",
+                        False,
+                    )
+                ),
+                "recovery_pending": bool(
+                    runtime_status.get(
+                        "recovery_pending",
+                        False,
+                    )
+                ),
+                "recovery_healthy_cycles": int(
+                    runtime_status.get(
+                        "recovery_healthy_cycles",
+                        0,
+                    )
+                    or 0
+                ),
+                "recovery_required_cycles": int(
+                    runtime_status.get(
+                        "recovery_required_cycles",
+                        3,
+                    )
+                    or 3
+                ),
                 "status_age_seconds": (
                     runtime_status[
                         "age_seconds"
@@ -744,4 +776,15 @@ class SnapshotService:
             ),
             "remaining_seconds": None,
             "last_reason": reason,
+            "control_authority": "automatic",
+            "safety_hold": False,
+            "recovery_pending": False,
+            "recovery_healthy_cycles": 0,
+            "recovery_required_cycles": int(
+                control_config.get(
+                    "safety_recovery_cycles",
+                    3,
+                )
+                or 3
+            ),
         }

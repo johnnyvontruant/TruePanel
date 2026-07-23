@@ -53,6 +53,11 @@ class FanControlRuntime:
                 "last_reason": (
                     "Fan control is disabled."
                 ),
+                "control_authority": "automatic",
+                "safety_hold": False,
+                "recovery_pending": False,
+                "recovery_healthy_cycles": 0,
+                "recovery_required_cycles": 3,
             }
 
         if self.service is None:
@@ -69,6 +74,11 @@ class FanControlRuntime:
                         "connected safely."
                     )
                 ),
+                "control_authority": "automatic",
+                "safety_hold": False,
+                "recovery_pending": False,
+                "recovery_healthy_cycles": 0,
+                "recovery_required_cycles": 3,
             }
 
         status = self.service.status()
@@ -87,6 +97,21 @@ class FanControlRuntime:
             ),
             "last_reason": (
                 status.last_reason
+            ),
+            "control_authority": (
+                status.control_authority
+            ),
+            "safety_hold": (
+                status.safety_hold
+            ),
+            "recovery_pending": (
+                status.recovery_pending
+            ),
+            "recovery_healthy_cycles": (
+                status.recovery_healthy_cycles
+            ),
+            "recovery_required_cycles": (
+                status.recovery_required_cycles
             ),
         }
 

@@ -31,6 +31,11 @@ class FanControlStatus:
     remaining_seconds: float | None
     last_reason: str
     closed: bool
+    control_authority: str
+    safety_hold: bool
+    recovery_pending: bool
+    recovery_healthy_cycles: int
+    recovery_required_cycles: int
 
 
 class FanControlService:
@@ -409,6 +414,26 @@ class FanControlService:
                 - self.clock(),
             )
 
+        safety_hold = (
+            self.active_profile
+            is FanProfile.AFTERBURNERS
+            and self.expires_at is None
+        )
+
+        if safety_hold:
+            control_authority = "safety"
+        elif (
+            self.active_profile
+            is FanProfile.AUTOMATIC
+        ):
+            control_authority = "automatic"
+        else:
+            control_authority = "manual"
+
+        recovery_count = int(
+            self._safety_recovery_count
+        )
+
         return FanControlStatus(
             active_profile=self.active_profile,
             requested_profile=self.requested_profile,
@@ -416,6 +441,18 @@ class FanControlService:
             remaining_seconds=remaining,
             last_reason=self.last_reason,
             closed=self._closed,
+            control_authority=control_authority,
+            safety_hold=safety_hold,
+            recovery_pending=bool(
+                safety_hold
+                and recovery_count > 0
+            ),
+            recovery_healthy_cycles=(
+                recovery_count
+            ),
+            recovery_required_cycles=(
+                self.safety_recovery_cycles
+            ),
         )
 
     def shutdown(self) -> None:

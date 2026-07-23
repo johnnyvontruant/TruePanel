@@ -12,6 +12,11 @@ class FakeStatus:
     requested_profile = FanProfile.BALANCED
     remaining_seconds = 42.0
     last_reason = "Balanced profile active."
+    control_authority = "manual"
+    safety_hold = False
+    recovery_pending = False
+    recovery_healthy_cycles = 0
+    recovery_required_cycles = 3
 
 
 class FakeService:
@@ -86,6 +91,11 @@ def test_disabled_runtime_constructs_nothing():
         "last_reason": (
             "Fan control is disabled."
         ),
+        "control_authority": "automatic",
+        "safety_hold": False,
+        "recovery_pending": False,
+        "recovery_healthy_cycles": 0,
+        "recovery_required_cycles": 3,
     }
 
 

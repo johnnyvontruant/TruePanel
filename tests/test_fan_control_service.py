@@ -771,3 +771,56 @@ def test_stale_telemetry_resets_safety_recovery_counter():
         service.active_profile
         is FanProfile.AUTOMATIC
     )
+
+
+def test_status_identifies_manual_authority():
+    service, _, _ = build_service()
+
+    service.request_profile(
+        FanProfile.AFTERBURNERS,
+        fan_status=healthy_status(),
+        temperatures_c=(40,),
+    )
+
+    status = service.status()
+
+    assert status.control_authority == "manual"
+    assert status.safety_hold is False
+    assert status.recovery_pending is False
+
+
+def test_status_identifies_safety_hold():
+    service, _, _ = build_service()
+
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    status = service.status()
+
+    assert status.control_authority == "safety"
+    assert status.safety_hold is True
+    assert status.recovery_healthy_cycles == 0
+    assert status.recovery_required_cycles == 3
+
+
+def test_status_reports_safety_recovery_progress():
+    service, _, _ = build_service()
+
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    status = service.status()
+
+    assert status.safety_hold is True
+    assert status.recovery_pending is True
+    assert status.recovery_healthy_cycles == 1
+    assert status.recovery_required_cycles == 3

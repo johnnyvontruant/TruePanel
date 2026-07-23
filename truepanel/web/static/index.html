@@ -159,6 +159,26 @@ function renderFanControl(control){
     const connected=enabled&&control.connected===true;
     const active=val(control&&control.active_profile,"automatic");
     const requested=val(control&&control.requested_profile,"automatic");
+    const authority=val(
+        control&&control.control_authority,
+        active==="afterburners"
+            ?"safety"
+            :active==="automatic"
+                ?"automatic"
+                :"manual"
+    );
+    const safetyHold=Boolean(
+        control&&control.safety_hold
+    );
+    const recoveryCount=Number(
+        control&&control.recovery_healthy_cycles
+    )||0;
+    const recoveryRequired=Math.max(
+        1,
+        Number(
+            control&&control.recovery_required_cycles
+        )||3
+    );
 
     q("fanControlConnection").textContent=connected
         ?"Connected"
@@ -187,15 +207,30 @@ function renderFanControl(control){
                 :`${remainder}s remaining`;
         q("fanControlCountdown").className="value warn";
     }else{
-        q("fanControlCountdown").textContent=
-            active==="afterburners"
-                ?"Safety hold, no timeout"
-                :"Not scheduled";
-        q("fanControlCountdown").className="value";
+        if(safetyHold){
+            q("fanControlCountdown").textContent=
+                recoveryCount>0
+                    ?`Safety recovery ${recoveryCount} / ${recoveryRequired}`
+                    :"Safety hold active";
+            q("fanControlCountdown").className=
+                "value warn";
+        }else{
+            q("fanControlCountdown").textContent=
+                authority==="manual"
+                    ?"Manual control active"
+                    :"Not scheduled";
+            q("fanControlCountdown").className=
+                "value";
+        }
     }
 
-    q("fanAutomatic").disabled=!connected||active==="automatic";
-    q("fanAfterburners").disabled=!connected||active==="afterburners";
+    q("fanAutomatic").disabled=
+        !connected
+        ||active==="automatic"
+        ||safetyHold;
+    q("fanAfterburners").disabled=
+        !connected
+        ||active==="afterburners";
 
     const reason=val(
         control&&control.last_reason,

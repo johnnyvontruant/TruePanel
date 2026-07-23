@@ -332,6 +332,11 @@ def test_fan_control_status_is_disabled_by_default(
         "last_reason": (
             "Fan control is disabled."
         ),
+        "control_authority": "automatic",
+        "safety_hold": False,
+        "recovery_pending": False,
+        "recovery_healthy_cycles": 0,
+        "recovery_required_cycles": 3,
     }
 
 
