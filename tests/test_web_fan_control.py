@@ -259,7 +259,45 @@ def test_afterburners_confirmation_is_forwarded():
     ]
 
 
-def test_locked_profile_is_rejected_before_socket():
+def test_normal_profiles_are_forwarded_to_socket():
+    client = FakeFanCommandClient()
+
+    with running_server(
+        client
+    ) as base_url:
+        for profile in (
+            "quiet",
+            "balanced",
+            "cooling_boost",
+        ):
+            status, payload = post_json(
+                base_url
+                + "/api/v1/fans/profile",
+                {
+                    "profile": profile,
+                },
+            )
+
+            assert status == 200
+            assert payload["ok"] is True
+
+    assert client.calls == [
+        {
+            "profile": "quiet",
+            "confirmation": None,
+        },
+        {
+            "profile": "balanced",
+            "confirmation": None,
+        },
+        {
+            "profile": "cooling_boost",
+            "confirmation": None,
+        },
+    ]
+
+
+def test_unknown_profile_is_rejected_before_socket():
     client = FakeFanCommandClient()
 
     with running_server(
@@ -269,13 +307,13 @@ def test_locked_profile_is_rejected_before_socket():
             base_url
             + "/api/v1/fans/profile",
             {
-                "profile": "quiet",
+                "profile": "warp_nine",
             },
         )
 
     assert status == 422
     assert payload["error"] == (
-        "profile_locked"
+        "unknown_profile"
     )
     assert client.calls == []
 

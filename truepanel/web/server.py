@@ -481,22 +481,24 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
 
         profile = profile.strip().lower()
 
-        if profile not in {
+        allowed_profiles = {
             "automatic",
+            "quiet",
+            "balanced",
+            "cooling_boost",
             "afterburners",
-        }:
+        }
+
+        if profile not in allowed_profiles:
             self._json(
                 {
-                    "error": "profile_locked",
+                    "error": "unknown_profile",
                     "message": (
-                        "Only Automatic and "
-                        "Afterburners are currently "
-                        "available."
+                        "Unknown fan profile."
                     ),
-                    "allowed_profiles": [
-                        "automatic",
-                        "afterburners",
-                    ],
+                    "allowed_profiles": sorted(
+                        allowed_profiles
+                    ),
                 },
                 status=HTTPStatus.UNPROCESSABLE_ENTITY,
             )

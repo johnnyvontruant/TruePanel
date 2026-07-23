@@ -119,20 +119,24 @@ class FanCommandProcessor:
             )
         ).strip().lower()
 
-        if profile not in (
-            ALLOWED_COMMAND_PROFILES
-        ):
+        allowed_profiles = {
+            "automatic",
+            "quiet",
+            "balanced",
+            "cooling_boost",
+            "afterburners",
+        }
+
+        if profile not in allowed_profiles:
             return _response(
                 ok=False,
-                status="profile_locked",
+                status="unknown_profile",
                 message=(
-                    "Only Automatic and "
-                    "Afterburners are currently available."
+                    "Unknown fan profile."
                 ),
-                allowed_profiles=[
-                    AUTOMATIC_PROFILE,
-                    AFTERBURNERS_PROFILE,
-                ],
+                allowed_profiles=sorted(
+                    allowed_profiles
+                ),
             )
 
         if not self.runtime.enabled:

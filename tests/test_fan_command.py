@@ -235,31 +235,38 @@ def test_afterburners_with_confirmation_is_accepted():
     )
 
 
-def test_lower_profiles_remain_locked():
+def test_lower_profiles_are_forwarded():
     runtime = FakeRuntime()
     processor = FanCommandProcessor(
         runtime,
         telemetry_provider=telemetry,
     )
 
-    for profile in (
+    profiles = (
         "quiet",
         "balanced",
         "cooling_boost",
-    ):
+    )
+
+    for profile in profiles:
         response = processor.process(
             {
                 "profile": profile,
             }
         )
 
-        assert response["ok"] is False
-        assert (
-            response["status"]
-            == "profile_locked"
-        )
+        assert response["ok"] is True
 
-    assert runtime.service.requests == []
+    assert len(
+        runtime.service.requests
+    ) == 3
+
+    assert [
+        request["profile"]
+        for request in runtime.service.requests
+    ] == list(
+        profiles
+    )
 
 
 def test_disabled_runtime_rejects_request():
