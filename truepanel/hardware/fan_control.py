@@ -54,6 +54,7 @@ class FanControlInterlock:
         maximum_temperature_c: int = 65,
         emergency_temperature_c: int = 75,
         minimum_manual_pwm: int = 170,
+        profile_pwm: Mapping | None = None,
     ):
         self.controlled_channels = tuple(
             int(channel)
@@ -76,6 +77,48 @@ class FanControlInterlock:
                 int(minimum_manual_pwm),
             ),
         )
+
+        self.profile_pwm = dict(
+            PROFILE_PWM
+        )
+
+        for raw_profile, raw_pwm in (
+            profile_pwm
+            or {}
+        ).items():
+            try:
+                profile = self.normalize_profile(
+                    raw_profile
+                )
+                pwm = int(
+                    raw_pwm
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+            if profile in (
+                FanProfile.AUTOMATIC,
+                FanProfile.AFTERBURNERS,
+            ):
+                continue
+
+            self.profile_pwm[
+                profile
+            ] = max(
+                self.minimum_manual_pwm,
+                min(
+                    255,
+                    pwm,
+                ),
+            )
+
+        # Emergency cooling is deliberately immutable.
+        self.profile_pwm[
+            FanProfile.AFTERBURNERS
+        ] = 255
 
         if (
             self.emergency_temperature_c
@@ -251,7 +294,7 @@ class FanControlInterlock:
                     ),
                 )
 
-        pwm = PROFILE_PWM[
+        pwm = self.profile_pwm[
             requested
         ]
 

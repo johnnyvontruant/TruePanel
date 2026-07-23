@@ -325,3 +325,111 @@ def test_invalid_channels_fall_back_to_verified_pair():
         1,
         2,
     )
+
+
+def test_configured_profiles_reach_runtime_factories():
+    created = {}
+
+    class Executor:
+        def close(self):
+            pass
+
+    class Service(FakeService):
+        def __init__(
+            self,
+            interlock,
+            executor,
+            **kwargs,
+        ):
+            super().__init__()
+            created["service_kwargs"] = kwargs
+
+    def interlock_factory(
+        **kwargs,
+    ):
+        created["interlock_kwargs"] = kwargs
+        return object()
+
+    runtime = build_fan_control_runtime(
+        {
+            "hardware": {
+                "fan_control": {
+                    "enabled": True,
+                    "profiles": {
+                        "quiet": {
+                            "pwm": 180,
+                            "timeout": 45,
+                        },
+                        "balanced": {
+                            "pwm": 205,
+                            "timeout": 90,
+                        },
+                        "cooling_boost": {
+                            "pwm": 235,
+                            "timeout": 180,
+                        },
+                        "afterburners": {
+                            "pwm": 200,
+                            "timeout": 60,
+                        },
+                    },
+                }
+            }
+        },
+        controller_factory=lambda: (
+            "/fake/hwmon"
+        ),
+        interlock_factory=interlock_factory,
+        executor_factory=lambda *args, **kwargs: (
+            Executor()
+        ),
+        service_factory=Service,
+    )
+
+    assert runtime.connected is True
+
+    profile_pwm = created[
+        "interlock_kwargs"
+    ]["profile_pwm"]
+
+    assert (
+        profile_pwm[
+            FanProfile.QUIET
+        ]
+        == 180
+    )
+    assert (
+        profile_pwm[
+            FanProfile.BALANCED
+        ]
+        == 205
+    )
+    assert (
+        profile_pwm[
+            FanProfile.COOLING_BOOST
+        ]
+        == 235
+    )
+    assert (
+        profile_pwm[
+            FanProfile.AFTERBURNERS
+        ]
+        == 255
+    )
+
+    timeouts = created[
+        "service_kwargs"
+    ]["profile_timeouts"]
+
+    assert (
+        timeouts[
+            FanProfile.QUIET
+        ]
+        == 45
+    )
+    assert (
+        timeouts[
+            FanProfile.AFTERBURNERS
+        ]
+        == 60
+    )

@@ -824,3 +824,72 @@ def test_status_reports_safety_recovery_progress():
     assert status.recovery_pending is True
     assert status.recovery_healthy_cycles == 1
     assert status.recovery_required_cycles == 3
+
+
+def test_profile_specific_timeout_is_used():
+    clock = FakeClock()
+    executor = FakeExecutor()
+
+    service = FanControlService(
+        FanControlInterlock(),
+        executor,
+        command_timeout=300,
+        afterburners_timeout=120,
+        profile_timeouts={
+            "quiet": 45,
+            "balanced": 90,
+            "cooling_boost": 180,
+            "afterburners": 60,
+        },
+        clock=clock,
+    )
+
+    service.request_profile(
+        "quiet",
+        fan_status=healthy_status(),
+        temperatures_c=(45,),
+    )
+
+    assert service.expires_at == (
+        clock()
+        + 45
+    )
+
+
+def test_safety_forced_afterburners_has_no_timeout():
+    clock = FakeClock()
+    executor = FakeExecutor()
+
+    service = FanControlService(
+        FanControlInterlock(),
+        executor,
+        profile_timeouts={
+            "afterburners": 10,
+        },
+        clock=clock,
+    )
+
+    service.request_profile(
+        "quiet",
+        fan_status={
+            "fan_channels": [
+                {
+                    "number": 1,
+                    "rpm": 0,
+                    "alarm": True,
+                },
+                {
+                    "number": 2,
+                    "rpm": 1500,
+                    "alarm": False,
+                },
+            ]
+        },
+        temperatures_c=(45,),
+    )
+
+    assert (
+        service.active_profile
+        is FanProfile.AFTERBURNERS
+    )
+    assert service.expires_at is None

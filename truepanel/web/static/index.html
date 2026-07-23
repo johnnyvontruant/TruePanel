@@ -70,8 +70,11 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Automatic restore</span><span id="fanControlCountdown" class="value">Not scheduled</span></div>
 </div>
 <div class="control-actions">
-<button id="fanAutomatic" class="primary" disabled>Restore Automatic</button>
-<button id="fanAfterburners" class="danger" disabled>Engage Afterburners</button>
+<button id="fanAutomatic" class="primary" data-fan-profile="automatic" disabled>Automatic</button>
+<button id="fanQuiet" data-fan-profile="quiet" disabled>Quiet</button>
+<button id="fanBalanced" data-fan-profile="balanced" disabled>Balanced</button>
+<button id="fanCoolingBoost" data-fan-profile="cooling_boost" disabled>Cooling Boost</button>
+<button id="fanAfterburners" class="danger" data-fan-profile="afterburners" disabled>Afterburners</button>
 </div>
 <div id="fanControlMessage" class="control-message">Checking fan-control runtime</div>
 </div>
@@ -224,13 +227,17 @@ function renderFanControl(control){
         }
     }
 
-    q("fanAutomatic").disabled=
-        !connected
-        ||active==="automatic"
-        ||safetyHold;
-    q("fanAfterburners").disabled=
-        !connected
-        ||active==="afterburners";
+    document.querySelectorAll(
+        "[data-fan-profile]"
+    ).forEach(
+        button=>{
+            const profile=button.dataset.fanProfile;
+            button.disabled=
+                !connected
+                ||profile===active
+                ||safetyHold;
+        }
+    );
 
     const reason=val(
         control&&control.last_reason,
@@ -359,8 +366,13 @@ async function loadPolicy(){const r=await fetch("/api/v1/config/night-mode");con
 async function previewPolicy(){const r=await fetch("/api/v1/config/night-mode/preview",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({night_mode:formPatch()})});const data=await r.json();if(!r.ok)throw Error(data.message||"Preview rejected");renderDiff(data.preview);notice(data.preview.changed?"Preview ready. Review changes before saving.":"No changes to save.","good")}
 async function savePolicy(){if(!writesEnabled)throw Error("Configuration writes are disabled");if(!confirm("Save the validated Night Mode configuration? Manual TruePanel restart required."))return;const r=await fetch("/api/v1/config/night-mode/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({night_mode:formPatch(),dry_run:false})});const data=await r.json();if(!r.ok)throw Error(data.message||"Save failed");notice(data.persisted?"Configuration saved. Backup: "+val(data.backup_path,"none")+"\nManual TruePanel restart required.":"No configuration changes were written.",data.persisted?"warn":"good");await loadPolicy()}
 async function requestFanProfile(profile,confirmation=null){
-    q("fanAutomatic").disabled=true;
-    q("fanAfterburners").disabled=true;
+    document.querySelectorAll(
+        "[data-fan-profile]"
+    ).forEach(
+        button=>{
+            button.disabled=true;
+        }
+    );
     q("fanControlMessage").textContent="Sending guarded fan command";
     q("fanControlMessage").className="control-message warn";
 
@@ -391,9 +403,19 @@ async function requestFanProfile(profile,confirmation=null){
     q("fanControlMessage").className="control-message good";
     await refresh();
 }
-async function restoreAutomatic(){
-    await requestFanProfile("automatic");
+async function selectFanProfile(
+    profile
+){
+    if(profile==="afterburners"){
+        await engageAfterburners();
+        return;
+    }
+
+    await requestFanProfile(
+        profile
+    );
 }
+
 async function engageAfterburners(){
     const approved=confirm(
         "ENGAGE AFTERBURNERS?\n\n"
@@ -415,8 +437,26 @@ async function refresh(){try{const r=await fetch("/api/v1/status");if(!r.ok)thro
 q("reloadPolicy").addEventListener("click",()=>loadPolicy().then(()=>notice("Policy reloaded.","good")).catch(error=>notice(error.message,"bad")));
 q("previewPolicy").addEventListener("click",()=>previewPolicy().catch(error=>notice(error.message,"bad")));
 q("savePolicy").addEventListener("click",()=>savePolicy().catch(error=>notice(error.message,"bad")));
-q("fanAutomatic").addEventListener("click",()=>restoreAutomatic().catch(error=>{q("fanControlMessage").textContent=error.message;q("fanControlMessage").className="control-message bad";refresh()}));
-q("fanAfterburners").addEventListener("click",()=>engageAfterburners().catch(error=>{q("fanControlMessage").textContent=error.message;q("fanControlMessage").className="control-message bad";refresh()}));
+document.querySelectorAll(
+    "[data-fan-profile]"
+).forEach(
+    button=>{
+        button.addEventListener(
+            "click",
+            ()=>selectFanProfile(
+                button.dataset.fanProfile
+            ).catch(
+                error=>{
+                    q("fanControlMessage").textContent=
+                        error.message;
+                    q("fanControlMessage").className=
+                        "control-message bad";
+                    refresh();
+                }
+            )
+        );
+    }
+);
 refresh();loadPolicy().catch(error=>notice(error.message,"bad"));setInterval(refresh,5000);
 </script>
 </body>

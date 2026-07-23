@@ -55,6 +55,7 @@ class FanControlService:
         command_timeout: float = 300.0,
         afterburners_timeout: float = 120.0,
         safety_recovery_cycles: int = 3,
+        profile_timeouts: Mapping | None = None,
         clock: Callable[[], float] = time.monotonic,
     ):
         self.interlock = interlock
@@ -71,6 +72,50 @@ class FanControlService:
             1,
             int(safety_recovery_cycles),
         )
+
+        self.profile_timeouts = {
+            FanProfile.QUIET: (
+                self.command_timeout
+            ),
+            FanProfile.BALANCED: (
+                self.command_timeout
+            ),
+            FanProfile.COOLING_BOOST: (
+                self.command_timeout
+            ),
+            FanProfile.AFTERBURNERS: (
+                self.afterburners_timeout
+            ),
+        }
+
+        for raw_profile, raw_timeout in (
+            profile_timeouts
+            or {}
+        ).items():
+            try:
+                profile = (
+                    self.interlock
+                    .normalize_profile(
+                        raw_profile
+                    )
+                )
+                timeout = max(
+                    0.0,
+                    float(
+                        raw_timeout
+                    ),
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+            if profile is not FanProfile.AUTOMATIC:
+                self.profile_timeouts[
+                    profile
+                ] = timeout
+
         self.clock = clock
 
         self.active_profile = FanProfile.AUTOMATIC
@@ -109,24 +154,38 @@ class FanControlService:
             is FanProfile.AUTOMATIC
         ):
             self.expires_at = None
-        elif (
+            return
+
+        if not manual_request:
+            self.expires_at = None
+            return
+
+        manual_afterburners = (
+            decision.requested_profile
+            is FanProfile.AFTERBURNERS
+            and decision.effective_profile
+            is FanProfile.AFTERBURNERS
+        )
+
+        safety_afterburners = (
             decision.effective_profile
             is FanProfile.AFTERBURNERS
-        ):
-            if (
-                manual_request
-                and self.afterburners_timeout > 0
-            ):
-                self.expires_at = (
-                    now
-                    + self.afterburners_timeout
-                )
-            else:
-                self.expires_at = None
-        elif self.command_timeout > 0:
+            and not manual_afterburners
+        )
+
+        if safety_afterburners:
+            self.expires_at = None
+            return
+
+        timeout = self.profile_timeouts.get(
+            decision.effective_profile,
+            self.command_timeout,
+        )
+
+        if timeout > 0:
             self.expires_at = (
                 now
-                + self.command_timeout
+                + timeout
             )
         else:
             self.expires_at = None

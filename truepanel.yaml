@@ -121,6 +121,22 @@ hardware:
     # Require consecutive healthy reconciliation cycles before
     # releasing a safety-forced Afterburners hold.
     safety_recovery_cycles: 3
+
+    profiles:
+      quiet:
+        pwm: 170
+        timeout: 300
+      balanced:
+        pwm: 194
+        timeout: 300
+      cooling_boost:
+        pwm: 225
+        timeout: 300
+      afterburners:
+        # Emergency cooling is always clamped to full PWM.
+        pwm: 255
+        timeout: 120
+
     controlled_channels:
       - 1
       - 2

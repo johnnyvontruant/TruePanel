@@ -17,7 +17,9 @@ from truepanel.hardware.discovery import (
     find_fintek_hwmon,
 )
 from truepanel.hardware.fan_control import (
+    PROFILE_PWM,
     FanControlInterlock,
+    FanProfile,
 )
 from truepanel.hardware.fan_executor import (
     FanHardwareExecutor,
@@ -175,6 +177,117 @@ def _normalize_channels(
     )
 
 
+def _normalize_profiles(
+    settings: Mapping[str, Any],
+    *,
+    command_timeout: float,
+    afterburners_timeout: float,
+) -> tuple[
+    dict[FanProfile, int],
+    dict[FanProfile, float],
+]:
+    raw_profiles = settings.get(
+        "profiles",
+        {},
+    )
+
+    if not isinstance(
+        raw_profiles,
+        Mapping,
+    ):
+        raw_profiles = {}
+
+    pwm_values = {
+        profile: int(pwm)
+        for profile, pwm in (
+            PROFILE_PWM.items()
+        )
+        if pwm is not None
+    }
+
+    timeouts = {
+        FanProfile.QUIET: command_timeout,
+        FanProfile.BALANCED: command_timeout,
+        FanProfile.COOLING_BOOST: command_timeout,
+        FanProfile.AFTERBURNERS: (
+            afterburners_timeout
+        ),
+    }
+
+    for profile in (
+        FanProfile.QUIET,
+        FanProfile.BALANCED,
+        FanProfile.COOLING_BOOST,
+        FanProfile.AFTERBURNERS,
+    ):
+        raw = raw_profiles.get(
+            profile.value,
+            {},
+        )
+
+        if not isinstance(
+            raw,
+            Mapping,
+        ):
+            continue
+
+        if (
+            profile
+            is not FanProfile.AFTERBURNERS
+        ):
+            try:
+                pwm_values[
+                    profile
+                ] = max(
+                    170,
+                    min(
+                        255,
+                        int(
+                            raw.get(
+                                "pwm",
+                                pwm_values[
+                                    profile
+                                ],
+                            )
+                        ),
+                    ),
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                pass
+
+        try:
+            timeouts[
+                profile
+            ] = max(
+                0.0,
+                float(
+                    raw.get(
+                        "timeout",
+                        timeouts[
+                            profile
+                        ],
+                    )
+                ),
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            pass
+
+    pwm_values[
+        FanProfile.AFTERBURNERS
+    ] = 255
+
+    return (
+        pwm_values,
+        timeouts,
+    )
+
+
 def build_fan_control_runtime(
     config: Mapping[str, Any],
     *,
@@ -287,6 +400,16 @@ def build_fan_control_runtime(
     ):
         safety_recovery_cycles = 3
 
+    profile_pwm, profile_timeouts = (
+        _normalize_profiles(
+            settings,
+            command_timeout=timeout,
+            afterburners_timeout=(
+                afterburners_timeout
+            ),
+        )
+    )
+
     try:
         base = controller_factory()
 
@@ -298,8 +421,17 @@ def build_fan_control_runtime(
                 ),
             )
 
+        interlock_kwargs = {
+            "controlled_channels": channels,
+        }
+
+        if "profiles" in settings:
+            interlock_kwargs[
+                "profile_pwm"
+            ] = profile_pwm
+
         interlock = interlock_factory(
-            controlled_channels=channels,
+            **interlock_kwargs
         )
 
         executor = executor_factory(
@@ -308,17 +440,26 @@ def build_fan_control_runtime(
         )
 
         try:
+            service_kwargs = {
+                "command_timeout": timeout,
+                "afterburners_timeout": (
+                    afterburners_timeout
+                ),
+                "safety_recovery_cycles": (
+                    safety_recovery_cycles
+                ),
+            }
+
+            if "profiles" in settings:
+                service_kwargs[
+                    "profile_timeouts"
+                ] = profile_timeouts
+
             service = service_factory(
-                    interlock,
-                    executor,
-                    command_timeout=timeout,
-                    afterburners_timeout=(
-                        afterburners_timeout
-                    ),
-                    safety_recovery_cycles=(
-                        safety_recovery_cycles
-                    ),
-                )
+                interlock,
+                executor,
+                **service_kwargs,
+            )
         except Exception:
             executor.close()
             raise
