@@ -1,3 +1,4 @@
+import threading
 import time
 
 import qnaplcd
@@ -85,3 +86,109 @@ def test_close_without_handler(
     lcd.close()
 
     assert lcd.connection is None
+
+
+class BlockingSerial:
+    def __init__(
+        self,
+        port,
+        speed,
+        timeout=None,
+    ):
+        del port
+        del speed
+        del timeout
+        self.read_started = (
+            threading.Event()
+        )
+        self.read_released = (
+            threading.Event()
+        )
+        self.closed = False
+        self.closed_while_reading = False
+
+    def read(self, size=1):
+        del size
+        self.read_started.set()
+        self.read_released.wait(
+            timeout=1.0
+        )
+
+        if self.closed:
+            self.closed_while_reading = True
+
+        return b""
+
+    def write(self, payload):
+        return len(payload)
+
+    def flush(self):
+        return None
+
+    def cancel_read(self):
+        self.read_released.set()
+
+    def close(self):
+        if not self.read_released.is_set():
+            self.closed_while_reading = True
+
+        self.closed = True
+
+
+def test_close_joins_reader_before_serial_close(
+    monkeypatch,
+):
+    created = []
+
+    def factory(*args, **kwargs):
+        serial = BlockingSerial(
+            *args,
+            **kwargs,
+        )
+        created.append(serial)
+        return serial
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        factory,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: None
+    )
+    serial = created[0]
+
+    assert serial.read_started.wait(
+        timeout=1.0
+    )
+
+    lcd.close()
+
+    assert serial.closed is True
+    assert (
+        serial.closed_while_reading
+        is False
+    )
+    assert lcd.connection is None
+    assert lcd.reader is None
+
+
+def test_close_is_idempotent(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        FakeSerial,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: None
+    )
+
+    lcd.close()
+    lcd.close()
+
+    assert lcd.connection is None
+    assert lcd.reader is None

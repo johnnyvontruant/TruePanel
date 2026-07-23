@@ -104,12 +104,12 @@ class QnapLCD:
                     self.handler('Nack', nack_cmd)
 
     def close(self):
-        """Stop the reader thread and close the serial connection."""
+        """Stop the reader thread before closing the serial connection."""
 
         self.stop_event.set()
 
         connection = self.connection
-        self.connection = None
+        reader = self.reader
 
         if connection:
             try:
@@ -121,6 +121,13 @@ class QnapLCD:
             ):
                 pass
 
+        if (
+            reader is not None
+            and reader is not current_thread()
+        ):
+            reader.join(timeout=1.0)
+
+        if connection:
             try:
                 connection.close()
             except (
@@ -129,14 +136,7 @@ class QnapLCD:
             ):
                 pass
 
-        reader = self.reader
-
-        if (
-            reader is not None
-            and reader is not current_thread()
-        ):
-            reader.join(timeout=1.0)
-
+        self.connection = None
         self.reader = None
 
     def backlight(self, on=True):
