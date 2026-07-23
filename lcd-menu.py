@@ -699,11 +699,6 @@ def main():
     lcd.clear()
 
     try:
-        if bay_led_startup_animation is not None:
-            bay_led_startup_animation.run()
-
-        show_startup_splash()
-        buzzer.startup()
         publish_fan_control_status()
 
         fan_command_server = (
@@ -712,6 +707,12 @@ def main():
 
         if fan_command_server is not None:
             fan_command_server.start()
+
+        if bay_led_startup_animation is not None:
+            bay_led_startup_animation.run()
+
+        show_startup_splash()
+        buzzer.startup()
 
         while not shutdown_requested:
             try:
