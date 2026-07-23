@@ -175,3 +175,39 @@ def test_bridge_normalizes_unknown_profiles(
         published["requested_profile"]
         == "automatic"
     )
+
+
+def test_bridge_preserves_fan_safety_state(
+    tmp_path,
+):
+    bridge = FanControlStatusBridge(
+        tmp_path / "fan-status.json",
+        clock=lambda: 100.0,
+    )
+
+    bridge.publish(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "afterburners",
+            "requested_profile": "afterburners",
+            "remaining_seconds": None,
+            "last_reason": "Recovery underway.",
+            "control_authority": "safety",
+            "safety_hold": True,
+            "recovery_pending": True,
+            "recovery_healthy_cycles": 2,
+            "recovery_required_cycles": 3,
+        }
+    )
+
+    payload = bridge.read(
+        max_age=30.0
+    )
+
+    assert payload is not None
+    assert payload["control_authority"] == "safety"
+    assert payload["safety_hold"] is True
+    assert payload["recovery_pending"] is True
+    assert payload["recovery_healthy_cycles"] == 2
+    assert payload["recovery_required_cycles"] == 3

@@ -80,3 +80,73 @@ def test_pwm_page_remains_read_only_display(
         "PWM1 174 Auto",
         "PWM2 174 Auto",
     ]
+
+
+def test_fan_control_page_shows_automatic():
+    assert fans.fan_control_page(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "automatic",
+            "safety_hold": False,
+        }
+    ) == [
+        "FAN CONTROL",
+        "AUTOMATIC",
+    ]
+
+
+def test_fan_control_page_shows_manual_countdown():
+    assert fans.fan_control_page(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "afterburners",
+            "remaining_seconds": 87.9,
+            "safety_hold": False,
+        }
+    ) == [
+        "FAN MANUAL",
+        "AFTERBURNERS 87s",
+    ]
+
+
+def test_fan_control_page_shows_safety_hold():
+    assert fans.fan_control_page(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "afterburners",
+            "safety_hold": True,
+            "recovery_healthy_cycles": 0,
+            "recovery_required_cycles": 3,
+        }
+    ) == [
+        "FAN SAFETY",
+        "HOLD ACTIVE",
+    ]
+
+
+def test_fan_control_page_shows_recovery():
+    assert fans.fan_control_page(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "afterburners",
+            "safety_hold": True,
+            "recovery_healthy_cycles": 2,
+            "recovery_required_cycles": 3,
+        }
+    ) == [
+        "FAN RECOVERY",
+        "2 / 3 HEALTHY",
+    ]
+
+
+def test_fan_control_page_handles_missing_status():
+    assert fans.fan_control_page(
+        None
+    ) == [
+        "FAN CONTROL",
+        "STATUS UNKNOWN",
+    ]

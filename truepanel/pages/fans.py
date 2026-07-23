@@ -50,3 +50,131 @@ def fan_pwm_page():
         f"PWM1 {pwm1:>3} {mode1[:4]}"[:LCD_WIDTH],
         f"PWM2 {pwm2:>3} {mode2[:4]}"[:LCD_WIDTH],
     ]
+
+
+def _profile_label(
+    profile,
+):
+    return str(
+        profile
+        or "automatic"
+    ).replace(
+        "_",
+        " ",
+    ).upper()
+
+
+def fan_control_page(
+    status=None,
+):
+    status = status or {}
+
+    if not status:
+        return [
+            "FAN CONTROL",
+            "STATUS UNKNOWN",
+        ]
+
+    if not status.get(
+        "enabled",
+        False,
+    ):
+        return [
+            "FAN CONTROL",
+            "DISABLED",
+        ]
+
+    if not status.get(
+        "connected",
+        False,
+    ):
+        return [
+            "FAN CONTROL",
+            "UNAVAILABLE",
+        ]
+
+    active = str(
+        status.get(
+            "active_profile",
+            "automatic",
+        )
+    ).strip().lower()
+
+    safety_hold = bool(
+        status.get(
+            "safety_hold",
+            False,
+        )
+    )
+
+    recovery_count = max(
+        0,
+        int(
+            status.get(
+                "recovery_healthy_cycles",
+                0,
+            )
+            or 0
+        ),
+    )
+    recovery_required = max(
+        1,
+        int(
+            status.get(
+                "recovery_required_cycles",
+                3,
+            )
+            or 3
+        ),
+    )
+
+    if safety_hold:
+        if recovery_count > 0:
+            return [
+                "FAN RECOVERY",
+                (
+                    f"{recovery_count} / "
+                    f"{recovery_required} HEALTHY"
+                )[:LCD_WIDTH],
+            ]
+
+        return [
+            "FAN SAFETY",
+            "HOLD ACTIVE",
+        ]
+
+    remaining = status.get(
+        "remaining_seconds"
+    )
+
+    if (
+        active != "automatic"
+        and remaining is not None
+    ):
+        try:
+            seconds = max(
+                0,
+                int(
+                    float(remaining)
+                ),
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            seconds = 0
+
+        return [
+            "FAN MANUAL",
+            (
+                f"{_profile_label(active)} "
+                f"{seconds}s"
+            )[:LCD_WIDTH],
+        ]
+
+    return [
+        "FAN CONTROL",
+        _profile_label(
+            active
+        )[:LCD_WIDTH],
+    ]

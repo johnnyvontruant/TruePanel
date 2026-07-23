@@ -51,7 +51,11 @@ from truepanel.mission_control.watchers.storage_health import (
 )
 from truepanel.mission_control.watchers.thermal import thermal_watcher
 from truepanel.mission_control.watchers.zfs import zfs_watcher
-from truepanel.pages.fans import fan_pwm_page, fan_rpm_page
+from truepanel.pages.fans import (
+    fan_control_page,
+    fan_pwm_page,
+    fan_rpm_page,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -565,6 +569,20 @@ def show_fan_rpm():
     lcd.write(0, fan_rpm_page())
 
 
+def show_fan_control():
+    status = fan_control_status_bridge.read(
+        max_age=30.0
+    )
+
+    lcd.clear()
+    lcd.write(
+        0,
+        fan_control_page(
+            status
+        ),
+    )
+
+
 def show_fan_pwm():
     lcd.clear()
     lcd.write(0, fan_pwm_page())
@@ -666,6 +684,7 @@ menu = [
     show_zpool,
     show_drive_temps,
     show_fan_rpm,
+    show_fan_control,
     show_fan_pwm,
 ]
 

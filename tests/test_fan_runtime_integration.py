@@ -121,3 +121,35 @@ def test_lcd_records_reconcile_source_from_classifier():
         "record_fan_control_event("
         in reconcile
     )
+
+
+def test_lcd_wires_fan_control_status_page():
+    text = Path("lcd-menu.py").read_text()
+
+    assert "fan_control_page" in text
+    assert "def show_fan_control():" in text
+    assert (
+        "fan_control_status_bridge.read("
+        in text
+    )
+
+
+def test_fan_control_page_sits_between_rpm_and_pwm():
+    text = Path("lcd-menu.py").read_text()
+
+    menu_start = text.index(
+        "menu = ["
+    )
+    menu_end = text.index(
+        "]",
+        menu_start,
+    )
+    menu = text[
+        menu_start:menu_end
+    ]
+
+    assert (
+        menu.index("show_fan_rpm")
+        < menu.index("show_fan_control")
+        < menu.index("show_fan_pwm")
+    )

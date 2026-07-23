@@ -108,6 +108,44 @@ class FanControlStatusBridge:
                     "Fan control status unavailable.",
                 )
             ),
+            "control_authority": str(
+                payload.get(
+                    "control_authority",
+                    "automatic",
+                )
+            ).strip().lower(),
+            "safety_hold": bool(
+                payload.get(
+                    "safety_hold",
+                    False,
+                )
+            ),
+            "recovery_pending": bool(
+                payload.get(
+                    "recovery_pending",
+                    False,
+                )
+            ),
+            "recovery_healthy_cycles": max(
+                0,
+                int(
+                    payload.get(
+                        "recovery_healthy_cycles",
+                        0,
+                    )
+                    or 0
+                ),
+            ),
+            "recovery_required_cycles": max(
+                1,
+                int(
+                    payload.get(
+                        "recovery_required_cycles",
+                        3,
+                    )
+                    or 3
+                ),
+            ),
         }
 
         self.path.parent.mkdir(
@@ -276,6 +314,44 @@ class FanControlStatusBridge:
                     "last_reason",
                     "Fan control status unavailable.",
                 )
+            ),
+            "control_authority": str(
+                payload.get(
+                    "control_authority",
+                    "automatic",
+                )
+            ).strip().lower(),
+            "safety_hold": bool(
+                payload.get(
+                    "safety_hold",
+                    False,
+                )
+            ),
+            "recovery_pending": bool(
+                payload.get(
+                    "recovery_pending",
+                    False,
+                )
+            ),
+            "recovery_healthy_cycles": max(
+                0,
+                int(
+                    payload.get(
+                        "recovery_healthy_cycles",
+                        0,
+                    )
+                    or 0
+                ),
+            ),
+            "recovery_required_cycles": max(
+                1,
+                int(
+                    payload.get(
+                        "recovery_required_cycles",
+                        3,
+                    )
+                    or 3
+                ),
             ),
         }
 
