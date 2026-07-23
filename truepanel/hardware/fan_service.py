@@ -212,6 +212,78 @@ class FanControlService:
 
         self._ensure_open()
 
+        evaluation_profile = self.active_profile
+
+        if evaluation_profile in (
+            FanProfile.AUTOMATIC,
+            FanProfile.AFTERBURNERS,
+        ):
+            # Probe safety with a controllable manual profile. A healthy
+            # result must not replace Automatic or an active Afterburners
+            # command.
+            evaluation_profile = FanProfile.BALANCED
+
+        decision = self.interlock.evaluate(
+            evaluation_profile,
+            fan_status=fan_status,
+            temperatures_c=temperatures_c,
+            telemetry_fresh=telemetry_fresh,
+        )
+
+        if (
+            decision.effective_profile
+            is FanProfile.AFTERBURNERS
+        ):
+            if (
+                self.active_profile
+                is FanProfile.AFTERBURNERS
+            ):
+                if self.expires_at is None:
+                    # Safety already owns Afterburners. Avoid duplicate
+                    # decisions and repeated PWM writes.
+                    return None
+
+                # Convert timed manual Afterburners into an unlimited
+                # safety hold without writing the same PWM again.
+                self._set_state(
+                    decision
+                )
+
+                LOGGER.warning(
+                    "Manual Afterburners converted to safety hold: %s",
+                    decision.reason,
+                )
+
+                return decision
+
+            self.executor.apply(
+                decision
+            )
+            self._set_state(
+                decision
+            )
+
+            LOGGER.warning(
+                "Fan safety reconciliation changed profile to %s: %s",
+                decision.effective_profile.value,
+                decision.reason,
+            )
+
+            return decision
+
+        if self.active_profile is FanProfile.AFTERBURNERS:
+            if self._expire_if_needed():
+                return FanControlDecision(
+                    accepted=True,
+                    requested_profile=FanProfile.AUTOMATIC,
+                    effective_profile=FanProfile.AUTOMATIC,
+                    pwm=None,
+                    reason=self.last_reason,
+                    force_automatic=True,
+                )
+
+            return None
+
         if self._expire_if_needed():
             return FanControlDecision(
                 accepted=True,
@@ -221,23 +293,6 @@ class FanControlService:
                 reason=self.last_reason,
                 force_automatic=True,
             )
-
-        if self.active_profile is FanProfile.AFTERBURNERS:
-            return None
-
-        evaluation_profile = self.active_profile
-
-        if evaluation_profile is FanProfile.AUTOMATIC:
-            # Use a manual profile only as a safety probe. A healthy result
-            # must not be applied because motherboard control remains active.
-            evaluation_profile = FanProfile.BALANCED
-
-        decision = self.interlock.evaluate(
-            evaluation_profile,
-            fan_status=fan_status,
-            temperatures_c=temperatures_c,
-            telemetry_fresh=telemetry_fresh,
-        )
 
         if self.active_profile is FanProfile.AUTOMATIC:
             if (

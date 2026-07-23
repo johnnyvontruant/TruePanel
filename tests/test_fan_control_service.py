@@ -532,3 +532,97 @@ def test_context_manager_restores_on_exit():
 
     assert executor.closed
     assert service.status().closed
+
+
+
+def test_expired_manual_afterburners_remains_active_during_emergency():
+    service, executor, clock = (
+        build_service(
+            afterburners_timeout=10,
+        )
+    )
+
+    service.request_profile(
+        FanProfile.AFTERBURNERS,
+        fan_status=healthy_status(),
+        temperatures_c=(40,),
+    )
+
+    clock.advance(11)
+
+    decision = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    assert decision is not None
+    assert (
+        decision.effective_profile
+        is FanProfile.AFTERBURNERS
+    )
+    assert (
+        service.active_profile
+        is FanProfile.AFTERBURNERS
+    )
+    assert service.expires_at is None
+    assert len(executor.decisions) == 1
+    assert all(
+        applied.effective_profile
+        is not FanProfile.AUTOMATIC
+        for applied in executor.decisions
+    )
+
+
+def test_manual_afterburners_converts_to_unlimited_safety_hold():
+    service, executor, _ = (
+        build_service(
+            afterburners_timeout=120,
+        )
+    )
+
+    service.request_profile(
+        FanProfile.AFTERBURNERS,
+        fan_status=healthy_status(),
+        temperatures_c=(40,),
+    )
+
+    assert service.expires_at is not None
+    apply_count = len(executor.decisions)
+
+    decision = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    assert decision is not None
+    assert (
+        decision.effective_profile
+        is FanProfile.AFTERBURNERS
+    )
+    assert service.expires_at is None
+    assert len(executor.decisions) == apply_count
+
+
+def test_existing_safety_hold_remains_silent():
+    service, executor, _ = (
+        build_service(
+            afterburners_timeout=30,
+        )
+    )
+
+    first = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    assert first is not None
+    apply_count = len(executor.decisions)
+
+    second = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(77,),
+    )
+
+    assert second is None
+    assert service.expires_at is None
+    assert len(executor.decisions) == apply_count
