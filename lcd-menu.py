@@ -228,6 +228,27 @@ def record_fan_control_event(
         )
 
 
+def fan_control_event_source(
+    decision,
+):
+    reason_lower = decision.reason.lower()
+
+    if (
+        decision.force_automatic
+        and "safety recovery confirmed"
+        in reason_lower
+    ):
+        return "recovery"
+
+    if (
+        decision.force_automatic
+        and "expired" in reason_lower
+    ):
+        return "timeout"
+
+    return "safety"
+
+
 def reconcile_fan_control():
     if not fan_control_runtime.connected:
         return None
@@ -245,13 +266,8 @@ def reconcile_fan_control():
     )
 
     if decision is not None:
-        source = (
-            "timeout"
-            if decision.force_automatic
-            and "expired" in (
-                decision.reason.lower()
-            )
-            else "safety"
+        source = fan_control_event_source(
+            decision
         )
 
         post_transition_telemetry = (
