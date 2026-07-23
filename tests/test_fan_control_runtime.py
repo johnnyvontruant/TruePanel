@@ -135,6 +135,7 @@ def test_enabled_runtime_constructs_full_chain():
             executor,
             command_timeout,
             afterburners_timeout,
+            safety_recovery_cycles,
         ):
             super().__init__()
             created["interlock"] = (
@@ -148,6 +149,9 @@ def test_enabled_runtime_constructs_full_chain():
             )
             created["afterburners_timeout"] = (
                 afterburners_timeout
+            )
+            created["safety_recovery_cycles"] = (
+                safety_recovery_cycles
             )
 
     runtime = build_fan_control_runtime(
@@ -174,6 +178,10 @@ def test_enabled_runtime_constructs_full_chain():
     assert (
         created["afterburners_timeout"]
         == 90.0
+    )
+    assert (
+        created["safety_recovery_cycles"]
+        == 3
     )
 
     payload = runtime.status_payload()
@@ -209,11 +217,13 @@ def test_service_construction_failure_closes_executor():
         executor,
         command_timeout,
         afterburners_timeout,
+        safety_recovery_cycles,
     ):
         del interlock
         del executor
         del command_timeout
         del afterburners_timeout
+        del safety_recovery_cycles
         raise RuntimeError(
             "simulated failure"
         )

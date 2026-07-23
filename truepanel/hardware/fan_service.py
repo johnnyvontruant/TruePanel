@@ -49,6 +49,7 @@ class FanControlService:
         *,
         command_timeout: float = 300.0,
         afterburners_timeout: float = 120.0,
+        safety_recovery_cycles: int = 3,
         clock: Callable[[], float] = time.monotonic,
     ):
         self.interlock = interlock
@@ -61,6 +62,10 @@ class FanControlService:
             0.0,
             float(afterburners_timeout),
         )
+        self.safety_recovery_cycles = max(
+            1,
+            int(safety_recovery_cycles),
+        )
         self.clock = clock
 
         self.active_profile = FanProfile.AUTOMATIC
@@ -69,6 +74,7 @@ class FanControlService:
         self.last_reason = (
             "Motherboard automatic control active."
         )
+        self._safety_recovery_count = 0
         self._closed = False
 
     def _ensure_open(self) -> None:
@@ -234,6 +240,8 @@ class FanControlService:
             decision.effective_profile
             is FanProfile.AFTERBURNERS
         ):
+            self._safety_recovery_count = 0
+
             if (
                 self.active_profile
                 is FanProfile.AFTERBURNERS
@@ -272,17 +280,68 @@ class FanControlService:
             return decision
 
         if self.active_profile is FanProfile.AFTERBURNERS:
-            if self._expire_if_needed():
-                return FanControlDecision(
-                    accepted=True,
-                    requested_profile=FanProfile.AUTOMATIC,
-                    effective_profile=FanProfile.AUTOMATIC,
-                    pwm=None,
-                    reason=self.last_reason,
-                    force_automatic=True,
-                )
+            if self.expires_at is not None:
+                if self._expire_if_needed():
+                    return FanControlDecision(
+                        accepted=True,
+                        requested_profile=FanProfile.AUTOMATIC,
+                        effective_profile=FanProfile.AUTOMATIC,
+                        pwm=None,
+                        reason=self.last_reason,
+                        force_automatic=True,
+                    )
 
-            return None
+                return None
+
+            if not telemetry_fresh:
+                self._safety_recovery_count = 0
+                self.last_reason = (
+                    "Safety recovery paused because "
+                    "telemetry is stale."
+                )
+                return None
+
+            self._safety_recovery_count += 1
+
+            if (
+                self._safety_recovery_count
+                < self.safety_recovery_cycles
+            ):
+                self.last_reason = (
+                    "Safety recovery telemetry healthy "
+                    f"({self._safety_recovery_count}/"
+                    f"{self.safety_recovery_cycles})."
+                )
+                return None
+
+            recovery = FanControlDecision(
+                accepted=True,
+                requested_profile=FanProfile.AUTOMATIC,
+                effective_profile=FanProfile.AUTOMATIC,
+                pwm=None,
+                reason=(
+                    "Safety recovery confirmed after "
+                    f"{self.safety_recovery_cycles} "
+                    "healthy telemetry cycles; "
+                    "returning to Automatic."
+                ),
+                force_automatic=True,
+            )
+
+            self.executor.apply(
+                recovery
+            )
+            self._set_state(
+                recovery
+            )
+            self._safety_recovery_count = 0
+
+            LOGGER.warning(
+                "Fan safety hold cleared after %s healthy cycles",
+                self.safety_recovery_cycles,
+            )
+
+            return recovery
 
         if self._expire_if_needed():
             return FanControlDecision(

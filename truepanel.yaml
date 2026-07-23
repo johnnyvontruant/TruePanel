@@ -117,6 +117,10 @@ hardware:
     enabled: true
     command_timeout: 300
     afterburners_timeout: 120
+
+    # Require consecutive healthy reconciliation cycles before
+    # releasing a safety-forced Afterburners hold.
+    safety_recovery_cycles: 3
     controlled_channels:
       - 1
       - 2

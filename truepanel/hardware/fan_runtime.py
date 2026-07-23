@@ -247,6 +247,22 @@ def build_fan_control_runtime(
         afterburners_timeout = 120.0
 
     try:
+        safety_recovery_cycles = max(
+            1,
+            int(
+                settings.get(
+                    "safety_recovery_cycles",
+                    3,
+                )
+            ),
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        safety_recovery_cycles = 3
+
+    try:
         base = controller_factory()
 
         if base is None:
@@ -273,6 +289,9 @@ def build_fan_control_runtime(
                     command_timeout=timeout,
                     afterburners_timeout=(
                         afterburners_timeout
+                    ),
+                    safety_recovery_cycles=(
+                        safety_recovery_cycles
                     ),
                 )
         except Exception:

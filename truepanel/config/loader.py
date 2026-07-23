@@ -125,6 +125,7 @@ DEFAULT_CONFIG = {
             "enabled": False,
             "command_timeout": 300,
             "afterburners_timeout": 120,
+            "safety_recovery_cycles": 3,
             "controlled_channels": [
                 1,
                 2,

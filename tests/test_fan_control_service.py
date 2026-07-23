@@ -626,3 +626,148 @@ def test_existing_safety_hold_remains_silent():
     assert second is None
     assert service.expires_at is None
     assert len(executor.decisions) == apply_count
+
+
+def test_safety_hold_requires_consecutive_healthy_cycles():
+    service, executor, _ = build_service()
+    service.safety_recovery_cycles = 3
+
+    emergency = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    assert emergency is not None
+    assert (
+        service.active_profile
+        is FanProfile.AFTERBURNERS
+    )
+
+    apply_count = len(executor.decisions)
+
+    first = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+    second = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    assert first is None
+    assert second is None
+    assert (
+        service.active_profile
+        is FanProfile.AFTERBURNERS
+    )
+    assert len(executor.decisions) == apply_count
+
+    third = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    assert third is not None
+    assert third.force_automatic
+    assert (
+        service.active_profile
+        is FanProfile.AUTOMATIC
+    )
+    assert len(executor.decisions) == (
+        apply_count + 1
+    )
+
+
+def test_unsafe_sample_resets_safety_recovery_counter():
+    service, executor, _ = build_service()
+    service.safety_recovery_cycles = 3
+
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    unsafe = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    assert unsafe is None
+
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    assert (
+        service.active_profile
+        is FanProfile.AFTERBURNERS
+    )
+
+    recovery = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    assert recovery is not None
+    assert (
+        service.active_profile
+        is FanProfile.AUTOMATIC
+    )
+    assert len(executor.decisions) == 2
+
+
+def test_stale_telemetry_resets_safety_recovery_counter():
+    service, _, _ = build_service()
+    service.safety_recovery_cycles = 2
+
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(76,),
+    )
+
+    service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    stale = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+        telemetry_fresh=False,
+    )
+
+    assert stale is None
+    assert (
+        service.active_profile
+        is FanProfile.AFTERBURNERS
+    )
+
+    first = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+    second = service.tick(
+        fan_status=healthy_status(),
+        temperatures_c=(51,),
+    )
+
+    assert first is None
+    assert second is not None
+    assert (
+        service.active_profile
+        is FanProfile.AUTOMATIC
+    )
