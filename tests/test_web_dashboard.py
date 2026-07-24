@@ -77,12 +77,21 @@ def test_dashboard_requires_afterburners_confirmation():
 def test_dashboard_exposes_only_safe_profiles():
     source = dashboard_source()
 
-    assert 'requestFanProfile("automatic")' in source
-    assert '"afterburners",' in source
+    for profile in (
+        "automatic",
+        "quiet",
+        "balanced",
+        "cooling_boost",
+        "afterburners",
+    ):
+        assert (
+            f'data-fan-profile="{profile}"'
+            in source
+        )
 
-    assert 'requestFanProfile("quiet")' not in source
-    assert 'requestFanProfile("balanced")' not in source
-    assert 'requestFanProfile("cooling_boost")' not in source
+    assert "selectFanProfile(" in source
+    assert "requestFanProfile(" in source
+    assert "ENGAGE_AFTERBURNERS" in source
 
 
 def test_dashboard_preserves_direct_hardware_boundary():
@@ -113,3 +122,21 @@ def test_dashboard_shows_fan_control_history():
     assert "renderFanHistory" in source
     assert "Automatic restore" in source
     assert "Safety escalation" in source
+
+def test_dashboard_uses_measured_fan_rpm_scale():
+    source = dashboard_source()
+
+    assert "FAN_GAUGE_MAX_RPM=2000" in source
+    assert "fanGaugePercent" in source
+    assert "Math.min(" in source
+    assert 'role="meter"' in source
+    assert "calibrated range" in source
+
+
+def test_dashboard_shows_calibrated_profile_targets():
+    source = dashboard_source()
+
+    assert "≈ 1,400 RPM" in source
+    assert "≈ 1,550 RPM" in source
+    assert "≈ 1,750 RPM" in source
+    assert "≈ 1,950 RPM" in source

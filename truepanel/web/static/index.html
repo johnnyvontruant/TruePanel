@@ -51,6 +51,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .notice.show{display:block}
 .diff{margin-top:1rem}
 .diff code{color:var(--accent)}
+.fan-reading{display:flex;min-width:190px;flex-direction:column;align-items:flex-end;gap:.3rem}
+.fan-gauge{width:180px;height:8px;overflow:hidden;border:1px solid var(--edge);border-radius:999px;background:#09111a}
+.fan-gauge-fill{height:100%;width:0;background:var(--accent);transition:width .35s ease}
+.fan-scale{font-size:.7rem;color:var(--muted)}
+.profile-target{display:block;margin-top:.15rem;font-size:.68rem;color:var(--muted);font-weight:400}
 footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 @media(max-width:640px){header,main{padding:1rem}}
 </style>
@@ -70,11 +75,11 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Automatic restore</span><span id="fanControlCountdown" class="value">Not scheduled</span></div>
 </div>
 <div class="control-actions">
-<button id="fanAutomatic" class="primary" data-fan-profile="automatic" disabled>Automatic</button>
-<button id="fanQuiet" data-fan-profile="quiet" disabled>Quiet</button>
-<button id="fanBalanced" data-fan-profile="balanced" disabled>Balanced</button>
-<button id="fanCoolingBoost" data-fan-profile="cooling_boost" disabled>Cooling Boost</button>
-<button id="fanAfterburners" class="danger" data-fan-profile="afterburners" disabled>Afterburners</button>
+<button id="fanAutomatic" class="primary" data-fan-profile="automatic" disabled>Automatic<span class="profile-target">Motherboard controlled</span></button>
+<button id="fanQuiet" data-fan-profile="quiet" disabled>Quiet<span class="profile-target">≈ 1,400 RPM</span></button>
+<button id="fanBalanced" data-fan-profile="balanced" disabled>Balanced<span class="profile-target">≈ 1,550 RPM</span></button>
+<button id="fanCoolingBoost" data-fan-profile="cooling_boost" disabled>Cooling Boost<span class="profile-target">≈ 1,750 RPM</span></button>
+<button id="fanAfterburners" class="danger" data-fan-profile="afterburners" disabled>Afterburners<span class="profile-target">≈ 1,950 RPM</span></button>
 </div>
 <div id="fanControlMessage" class="control-message">Checking fan-control runtime</div>
 </div>
@@ -105,6 +110,21 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 const q=id=>document.getElementById(id);
 const val=(v,f="--")=>v===null||v===undefined||v===""?f:String(v);
 const rows=(items,fn)=>Array.isArray(items)&&items.length?items.map(fn).join(""):`<div class="detail">No telemetry available</div>`;
+const FAN_GAUGE_MAX_RPM=2000;
+function fanGaugePercent(rpm){
+    const value=Number(rpm);
+
+    if(!Number.isFinite(value)||value<=0){
+        return 0;
+    }
+
+    return Math.min(
+        100,
+        Math.round(
+            value/FAN_GAUGE_MAX_RPM*100
+        )
+    );
+}
 function fanChannels(f){
     if(Array.isArray(f.channels)&&f.channels.length){
         return f.channels;
@@ -136,11 +156,20 @@ function renderFans(f){
             const rpm=Number(channel.rpm||0);
             const alarm=channel.alarm===true;
             const monitored=channel.monitored===true;
+            const gaugePercent=fanGaugePercent(
+                rpm
+            );
             const status=!monitored&&rpm===0
                 ?`<span class="detail">Not monitored</span>`
                 :alarm&&rpm===0
                     ?`<span class="warn">No tach signal</span>`
-                    :`${rpm} RPM`;
+                    :`<span class="fan-reading">
+                        <span>${rpm} RPM</span>
+                        <span class="fan-gauge" role="meter" aria-label="${val(channel.label,`Fan ${val(channel.number,"?")}`)} speed" aria-valuemin="0" aria-valuemax="${FAN_GAUGE_MAX_RPM}" aria-valuenow="${rpm}">
+                            <span class="fan-gauge-fill" style="width:${gaugePercent}%"></span>
+                        </span>
+                        <span class="fan-scale">0–${FAN_GAUGE_MAX_RPM} RPM calibrated range</span>
+                    </span>`;
             const detail=`Channel ${val(channel.number,"?")} · PWM ${val(channel.pwm,"--")} · ${val(channel.pwm_mode,"Unavailable")}`;
             const label=val(
                 channel.label,
