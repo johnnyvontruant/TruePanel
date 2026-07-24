@@ -41,3 +41,6 @@ development/tools/*_probe
 development/tools/*_census
 plugins/.truepanel-plugin-state.json
 development/beacon/
+
+# Generated calibration and laboratory reports
+development/logs/
