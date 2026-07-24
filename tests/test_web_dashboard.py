@@ -140,3 +140,13 @@ def test_dashboard_shows_calibrated_profile_targets():
     assert "≈ 1,550 RPM" in source
     assert "≈ 1,750 RPM" in source
     assert "≈ 1,950 RPM" in source
+
+
+def test_dashboard_shows_observe_only_thermal_recommendation():
+    source = dashboard_source()
+
+    assert 'id="fanThermalRecommendation"' in source
+    assert 'id="fanThermalTemperature"' in source
+    assert "thermal_recommended_profile" in source
+    assert "thermal_hottest_temperature_c" in source
+    assert "Observe only" in source

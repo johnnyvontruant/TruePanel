@@ -146,6 +146,53 @@ class FanControlStatusBridge:
                     or 3
                 ),
             ),
+            "thermal_policy_mode": (
+                "observe_only"
+                if str(
+                    payload.get(
+                        "thermal_policy_mode",
+                        "observe_only",
+                    )
+                ).strip().lower()
+                == "observe_only"
+                else "disabled"
+            ),
+            "thermal_recommended_profile": _safe_profile(
+                payload.get(
+                    "thermal_recommended_profile",
+                    "automatic",
+                )
+            ),
+            "thermal_hottest_temperature_c": (
+                float(
+                    payload[
+                        "thermal_hottest_temperature_c"
+                    ]
+                )
+                if payload.get(
+                    "thermal_hottest_temperature_c"
+                )
+                is not None
+                else None
+            ),
+            "thermal_recommendation_reason": str(
+                payload.get(
+                    "thermal_recommendation_reason",
+                    "Thermal recommendation unavailable.",
+                )
+            ),
+            "thermal_recommendation_changed": bool(
+                payload.get(
+                    "thermal_recommendation_changed",
+                    False,
+                )
+            ),
+            "thermal_telemetry_valid": bool(
+                payload.get(
+                    "thermal_telemetry_valid",
+                    False,
+                )
+            ),
         }
 
         self.path.parent.mkdir(
@@ -352,6 +399,53 @@ class FanControlStatusBridge:
                     )
                     or 3
                 ),
+            ),
+            "thermal_policy_mode": (
+                "observe_only"
+                if str(
+                    payload.get(
+                        "thermal_policy_mode",
+                        "observe_only",
+                    )
+                ).strip().lower()
+                == "observe_only"
+                else "disabled"
+            ),
+            "thermal_recommended_profile": _safe_profile(
+                payload.get(
+                    "thermal_recommended_profile",
+                    "automatic",
+                )
+            ),
+            "thermal_hottest_temperature_c": (
+                float(
+                    payload[
+                        "thermal_hottest_temperature_c"
+                    ]
+                )
+                if payload.get(
+                    "thermal_hottest_temperature_c"
+                )
+                is not None
+                else None
+            ),
+            "thermal_recommendation_reason": str(
+                payload.get(
+                    "thermal_recommendation_reason",
+                    "Thermal recommendation unavailable.",
+                )
+            ),
+            "thermal_recommendation_changed": bool(
+                payload.get(
+                    "thermal_recommendation_changed",
+                    False,
+                )
+            ),
+            "thermal_telemetry_valid": bool(
+                payload.get(
+                    "thermal_telemetry_valid",
+                    False,
+                )
             ),
         }
 

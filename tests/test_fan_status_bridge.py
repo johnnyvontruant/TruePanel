@@ -211,3 +211,46 @@ def test_bridge_preserves_fan_safety_state(
     assert payload["recovery_pending"] is True
     assert payload["recovery_healthy_cycles"] == 2
     assert payload["recovery_required_cycles"] == 3
+
+
+def test_bridge_preserves_observe_only_thermal_status(
+    tmp_path,
+):
+    bridge = FanControlStatusBridge(
+        tmp_path / "fan-status.json",
+        clock=lambda: 100.0,
+    )
+
+    bridge.publish(
+        {
+            "enabled": True,
+            "connected": True,
+            "thermal_policy_mode": "observe_only",
+            "thermal_recommended_profile": "balanced",
+            "thermal_hottest_temperature_c": 47.0,
+            "thermal_recommendation_reason": (
+                "Thermal recommendation remains balanced."
+            ),
+            "thermal_recommendation_changed": False,
+            "thermal_telemetry_valid": True,
+        }
+    )
+
+    payload = bridge.read(
+        max_age=30.0
+    )
+
+    assert payload is not None
+    assert (
+        payload["thermal_policy_mode"]
+        == "observe_only"
+    )
+    assert (
+        payload["thermal_recommended_profile"]
+        == "balanced"
+    )
+    assert (
+        payload["thermal_hottest_temperature_c"]
+        == 47.0
+    )
+    assert payload["thermal_telemetry_valid"] is True

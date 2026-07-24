@@ -28,6 +28,10 @@ from truepanel.hardware.bay_led_animation import (
 from truepanel.hardware.fan_status_bridge import (
     FanControlStatusBridge,
 )
+
+from truepanel.hardware.thermal_fan_policy import (
+    ThermalFanPolicy,
+)
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
 )
@@ -129,6 +133,17 @@ if fan_health_watcher is not None:
 mission.register(healthy_watcher)
 
 
+thermal_fan_policy = ThermalFanPolicy(
+    balanced_temperature_c=42,
+    cooling_boost_temperature_c=50,
+    afterburners_temperature_c=60,
+    hysteresis_c=3,
+    minimum_dwell_seconds=30,
+)
+
+thermal_fan_recommendation = None
+
+
 def publish_fan_control_status(
     reason=None,
 ):
@@ -141,6 +156,60 @@ def publish_fan_control_status(
         payload[
             "last_reason"
         ] = reason
+
+    recommendation = (
+        thermal_fan_recommendation
+    )
+
+    payload[
+        "thermal_policy_mode"
+    ] = "observe_only"
+
+    if recommendation is None:
+        payload[
+            "thermal_recommended_profile"
+        ] = "automatic"
+        payload[
+            "thermal_hottest_temperature_c"
+        ] = None
+        payload[
+            "thermal_recommendation_reason"
+        ] = (
+            "Thermal observer is awaiting telemetry."
+        )
+        payload[
+            "thermal_recommendation_changed"
+        ] = False
+        payload[
+            "thermal_telemetry_valid"
+        ] = False
+    else:
+        payload[
+            "thermal_recommended_profile"
+        ] = (
+            recommendation
+            .recommended_profile
+            .value
+        )
+        payload[
+            "thermal_hottest_temperature_c"
+        ] = (
+            recommendation
+            .hottest_temperature_c
+        )
+        payload[
+            "thermal_recommendation_reason"
+        ] = recommendation.reason
+        payload[
+            "thermal_recommendation_changed"
+        ] = bool(
+            recommendation.changed
+        )
+        payload[
+            "thermal_telemetry_valid"
+        ] = bool(
+            recommendation.telemetry_valid
+        )
 
     fan_control_status_bridge.publish(
         payload
@@ -215,6 +284,33 @@ def fan_command_telemetry():
     }
 
 
+
+def observe_thermal_fan_policy(
+    telemetry=None,
+):
+    global thermal_fan_recommendation
+
+    if telemetry is None:
+        telemetry = fan_command_telemetry()
+
+    thermal_fan_recommendation = (
+        thermal_fan_policy.evaluate(
+            telemetry.get(
+                "temperatures_c",
+                (),
+            ),
+            telemetry_fresh=bool(
+                telemetry.get(
+                    "telemetry_fresh",
+                    False,
+                )
+            ),
+        )
+    )
+
+    return thermal_fan_recommendation
+
+
 def record_fan_control_event(
     decision,
     telemetry,
@@ -261,6 +357,9 @@ def reconcile_fan_control():
         return None
 
     telemetry = fan_command_telemetry()
+    observe_thermal_fan_policy(
+        telemetry
+    )
 
     decision = fan_control_runtime.service.tick(
         fan_status=telemetry["fan_status"],
@@ -737,6 +836,7 @@ def main():
     lcd.clear()
 
     try:
+        observe_thermal_fan_policy()
         publish_fan_control_status()
 
         fan_command_server = (
@@ -760,6 +860,7 @@ def main():
                     "Fan-control reconciliation failed"
                 )
 
+            observe_thermal_fan_policy()
             publish_fan_control_status()
             add_ips_to_menu()
 

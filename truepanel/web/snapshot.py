@@ -738,6 +738,44 @@ class SnapshotService:
                         "age_seconds"
                     ]
                 ),
+                "thermal_policy_mode": (
+                    runtime_status.get(
+                        "thermal_policy_mode",
+                        "observe_only",
+                    )
+                ),
+                "thermal_recommended_profile": (
+                    runtime_status.get(
+                        "thermal_recommended_profile",
+                        "automatic",
+                    )
+                ),
+                "thermal_hottest_temperature_c": (
+                    runtime_status.get(
+                        "thermal_hottest_temperature_c"
+                    )
+                ),
+                "thermal_recommendation_reason": (
+                    runtime_status.get(
+                        "thermal_recommendation_reason",
+                        (
+                            "Thermal recommendation "
+                            "unavailable."
+                        ),
+                    )
+                ),
+                "thermal_recommendation_changed": bool(
+                    runtime_status.get(
+                        "thermal_recommendation_changed",
+                        False,
+                    )
+                ),
+                "thermal_telemetry_valid": bool(
+                    runtime_status.get(
+                        "thermal_telemetry_valid",
+                        False,
+                    )
+                ),
             }
 
         if not enabled:
@@ -787,4 +825,12 @@ class SnapshotService:
                 )
                 or 3
             ),
+            "thermal_policy_mode": "observe_only",
+            "thermal_recommended_profile": "automatic",
+            "thermal_hottest_temperature_c": None,
+            "thermal_recommendation_reason": (
+                "Thermal observer status is unavailable."
+            ),
+            "thermal_recommendation_changed": False,
+            "thermal_telemetry_valid": False,
         }

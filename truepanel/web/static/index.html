@@ -72,6 +72,8 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Control runtime</span><span id="fanControlConnection" class="value">Checking</span></div>
 <div class="row"><span class="label">Active profile</span><span id="fanActiveProfile" class="value">Automatic</span></div>
 <div class="row"><span class="label">Requested profile</span><span id="fanRequestedProfile" class="value">Automatic</span></div>
+<div class="row"><span class="label">Thermal recommendation</span><span id="fanThermalRecommendation" class="value">Awaiting telemetry</span></div>
+<div class="row"><span class="label">Observer temperature</span><span id="fanThermalTemperature" class="value">--</span></div>
 <div class="row"><span class="label">Automatic restore</span><span id="fanControlCountdown" class="value">Not scheduled</span></div>
 </div>
 <div class="control-actions">
@@ -220,6 +222,35 @@ function renderFanControl(control){
     q("fanControlConnection").className="value "+(connected?"good":"bad");
     q("fanActiveProfile").textContent=profileLabel(active);
     q("fanRequestedProfile").textContent=profileLabel(requested);
+
+    const thermalProfile=val(
+        control&&control.thermal_recommended_profile,
+        "automatic"
+    );
+    const thermalValid=Boolean(
+        control&&control.thermal_telemetry_valid
+    );
+    const thermalTemperature=Number(
+        control&&control.thermal_hottest_temperature_c
+    );
+
+    q("fanThermalRecommendation").textContent=
+        thermalValid
+            ?`${profileLabel(thermalProfile)} · Observe only`
+            :"Awaiting valid telemetry";
+
+    q("fanThermalRecommendation").className=
+        "value "+(
+            thermalValid
+                ?"good"
+                :"warn"
+        );
+
+    q("fanThermalTemperature").textContent=
+        thermalValid
+        &&Number.isFinite(thermalTemperature)
+            ?`${thermalTemperature.toFixed(1)}°C`
+            :"--";
 
     const remaining=Number(
         control&&control.remaining_seconds

@@ -337,6 +337,14 @@ def test_fan_control_status_is_disabled_by_default(
         "recovery_pending": False,
         "recovery_healthy_cycles": 0,
         "recovery_required_cycles": 3,
+        "thermal_policy_mode": "observe_only",
+        "thermal_recommended_profile": "automatic",
+        "thermal_hottest_temperature_c": None,
+        "thermal_recommendation_reason": (
+            "Thermal observer status is unavailable."
+        ),
+        "thermal_recommendation_changed": False,
+        "thermal_telemetry_valid": False,
     }
 
 

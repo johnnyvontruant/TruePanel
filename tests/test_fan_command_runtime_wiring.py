@@ -126,3 +126,32 @@ def test_status_publishes_before_command_socket():
     )
 
     assert status_publish < socket_start
+
+
+def test_lcd_publishes_observe_only_thermal_policy():
+    text = source()
+
+    assert "ThermalFanPolicy" in text
+    assert "def observe_thermal_fan_policy(" in text
+    assert '"thermal_policy_mode"' in text
+    assert '"thermal_recommended_profile"' in text
+    assert "observe_thermal_fan_policy()" in text
+
+
+def test_observer_does_not_request_profiles():
+    text = source()
+
+    observer_start = text.index(
+        "def observe_thermal_fan_policy("
+    )
+    observer_end = text.index(
+        "def record_fan_control_event(",
+        observer_start,
+    )
+    observer = text[
+        observer_start:observer_end
+    ]
+
+    assert "request_profile(" not in observer
+    assert "service.tick(" not in observer
+    assert "executor" not in observer
