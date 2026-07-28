@@ -52,7 +52,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .diff{margin-top:1rem}
 .diff code{color:var(--accent)}
 .fan-reading{display:flex;min-width:190px;flex-direction:column;align-items:flex-end;gap:.3rem}
-.fan-gauge{width:180px;height:8px;overflow:hidden;border:1px solid var(--edge);border-radius:999px;background:#09111a}
+.fan-gauge{display:block;width:180px;height:8px;overflow:hidden;border:1px solid var(--edge);border-radius:999px;background:#09111a}
 .fan-gauge-fill{display:block;height:100%;width:0;background:var(--accent);transition:width .35s ease}
 .fan-scale{font-size:.7rem;color:var(--muted)}
 .profile-target{display:block;margin-top:.15rem;font-size:.68rem;color:var(--muted);font-weight:400}
@@ -81,7 +81,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <button id="fanQuiet" data-fan-profile="quiet" disabled>Quiet<span class="profile-target">≈ 1,400 RPM</span></button>
 <button id="fanBalanced" data-fan-profile="balanced" disabled>Balanced<span class="profile-target">≈ 1,550 RPM</span></button>
 <button id="fanCoolingBoost" data-fan-profile="cooling_boost" disabled>Cooling Boost<span class="profile-target">≈ 1,750 RPM</span></button>
-<button id="fanAfterburners" class="danger" data-fan-profile="afterburners" disabled>Afterburners<span class="profile-target">≈ 1,950 RPM</span></button>
+<button id="fanAfterburners" class="danger" data-fan-profile="afterburners" disabled>Afterburners<span class="profile-target">≈ 1,925 RPM</span></button>
 </div>
 <div id="fanControlMessage" class="control-message">Checking fan-control runtime</div>
 </div>
@@ -116,7 +116,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 const q=id=>document.getElementById(id);
 const val=(v,f="--")=>v===null||v===undefined||v===""?f:String(v);
 const rows=(items,fn)=>Array.isArray(items)&&items.length?items.map(fn).join(""):`<div class="detail">No telemetry available</div>`;
-const FAN_GAUGE_MAX_RPM=2000;
+const FAN_GAUGE_MAX_RPM=2100;
 function fanGaugePercent(rpm){
     const value=Number(rpm);
 

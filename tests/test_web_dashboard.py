@@ -126,9 +126,10 @@ def test_dashboard_shows_fan_control_history():
 def test_dashboard_uses_measured_fan_rpm_scale():
     source = dashboard_source()
 
-    assert "FAN_GAUGE_MAX_RPM=2000" in source
+    assert "FAN_GAUGE_MAX_RPM=2100" in source
     assert "fanGaugePercent" in source
     assert "Math.min(" in source
+    assert ".fan-gauge{display:block" in source
     assert 'role="meter"' in source
     assert "calibrated range" in source
 
@@ -139,7 +140,7 @@ def test_dashboard_shows_calibrated_profile_targets():
     assert "≈ 1,400 RPM" in source
     assert "≈ 1,550 RPM" in source
     assert "≈ 1,750 RPM" in source
-    assert "≈ 1,950 RPM" in source
+    assert "≈ 1,925 RPM" in source
 
 
 def test_dashboard_shows_observe_only_thermal_recommendation():
