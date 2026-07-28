@@ -18,6 +18,10 @@ from truepanel.history.fan_control import (
     DEFAULT_FAN_CONTROL_HISTORY_PATH,
     FanControlHistory,
 )
+from truepanel.history.thermal_observer import (
+    DEFAULT_THERMAL_OBSERVER_HISTORY_PATH,
+    ThermalObserverHistory,
+)
 from truepanel.hardware.fan_status_bridge import (
     DEFAULT_FAN_CONTROL_STATUS_PATH,
     FanControlStatusBridge,
@@ -59,6 +63,7 @@ class SnapshotService:
         history_path=None,
         fan_control_status_path=None,
         fan_control_history_path=None,
+        thermal_observer_history_path=None,
         clock=None,
     ):
         self.collector = (
@@ -109,6 +114,20 @@ class SnapshotService:
             clock=self.clock,
         )
 
+        self.thermal_observer_history = (
+            ThermalObserverHistory(
+                thermal_observer_history_path
+                or history_config.get(
+                    "thermal_observer_path",
+                    (
+                        DEFAULT_THERMAL_OBSERVER_HISTORY_PATH
+                    ),
+                ),
+                enabled=True,
+                clock=self.clock,
+            )
+        )
+
     def status(self) -> dict[str, Any]:
         state = dict(
             self.collector.update()
@@ -155,6 +174,36 @@ class SnapshotService:
             "read_only": True,
             "path": str(
                 self.fan_control_history.path
+            ),
+            "count": len(events),
+            "events": events,
+        }
+
+    def thermal_observer_history_payload(
+        self,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        limit = max(
+            1,
+            min(
+                int(limit),
+                200,
+            ),
+        )
+
+        events = (
+            self.thermal_observer_history
+            .read(
+                limit=limit
+            )
+        )
+
+        return {
+            "schema_version": 1,
+            "read_only": True,
+            "policy_mode": "observe_only",
+            "path": str(
+                self.thermal_observer_history.path
             ),
             "count": len(events),
             "events": events,

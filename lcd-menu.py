@@ -19,7 +19,9 @@ from truepanel.hardware import Buzzer
 from truepanel.history import (
     FanControlHistory,
     TelemetryRecorder,
+    ThermalObserverHistory,
     event_from_decision,
+    event_from_recommendation,
 )
 from truepanel.mission_control import MissionControl
 from truepanel.hardware.bay_led_animation import (
@@ -111,6 +113,30 @@ fan_control_history = FanControlHistory(
         )
     ),
 )
+thermal_observer_history = ThermalObserverHistory(
+    config.get(
+        "history",
+        {},
+    ).get(
+        "thermal_observer_path",
+        (
+            "/var/lib/truepanel/history/"
+            "thermal-observer.jsonl"
+        ),
+    ),
+    enabled=bool(
+        config.get(
+            "history",
+            {},
+        ).get(
+            "enabled",
+            True,
+        )
+    ),
+)
+
+thermal_observer_last_signature = None
+
 buzzer = Buzzer(config.get("buzzer", {}))
 bay_led_startup_animation = (
     build_bay_led_startup_animation(
@@ -289,11 +315,12 @@ def observe_thermal_fan_policy(
     telemetry=None,
 ):
     global thermal_fan_recommendation
+    global thermal_observer_last_signature
 
     if telemetry is None:
         telemetry = fan_command_telemetry()
 
-    thermal_fan_recommendation = (
+    recommendation = (
         thermal_fan_policy.evaluate(
             telemetry.get(
                 "temperatures_c",
@@ -308,7 +335,55 @@ def observe_thermal_fan_policy(
         )
     )
 
-    return thermal_fan_recommendation
+    thermal_fan_recommendation = recommendation
+
+    signature = (
+        recommendation
+        .recommended_profile
+        .value,
+        bool(
+            recommendation.telemetry_valid
+        ),
+    )
+
+    if (
+        signature
+        != thermal_observer_last_signature
+    ):
+        runtime_status = (
+            fan_control_runtime
+            .status_payload()
+        )
+
+        try:
+            thermal_observer_history.append(
+                event_from_recommendation(
+                    recommendation,
+                    active_profile=(
+                        runtime_status.get(
+                            "active_profile",
+                            "automatic",
+                        )
+                    ),
+                    control_authority=(
+                        runtime_status.get(
+                            "control_authority",
+                            "automatic",
+                        )
+                    ),
+                )
+            )
+        except Exception:
+            LOGGER.exception(
+                "Could not append thermal "
+                "observer history"
+            )
+
+        thermal_observer_last_signature = (
+            signature
+        )
+
+    return recommendation
 
 
 def record_fan_control_event(

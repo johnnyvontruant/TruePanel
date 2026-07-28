@@ -150,3 +150,23 @@ def test_dashboard_shows_observe_only_thermal_recommendation():
     assert "thermal_recommended_profile" in source
     assert "thermal_hottest_temperature_c" in source
     assert "Observe only" in source
+
+
+def test_dashboard_shows_thermal_observer_history():
+    source = dashboard_source()
+
+    assert (
+        "Recent Thermal Recommendations"
+        in source
+    )
+    assert 'id="thermalHistory"' in source
+    assert (
+        "/api/v1/fans/"
+        "thermal-history?limit=8"
+        in source
+    )
+    assert "renderThermalHistory" in source
+    assert "loadThermalHistory" in source
+    assert "Telemetry unavailable" in source
+    assert "Observe only" in source
+

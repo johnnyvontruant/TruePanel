@@ -28,3 +28,8 @@ from .fan_control import (
     FanControlHistory,
     event_from_decision,
 )
+
+from .thermal_observer import (
+    ThermalObserverHistory,
+    event_from_recommendation,
+)

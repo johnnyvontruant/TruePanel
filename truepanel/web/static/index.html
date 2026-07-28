@@ -89,6 +89,10 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <h3>Recent Fan Activity</h3>
 <div id="fanHistory" class="detail">No fan-control events recorded</div>
 </div>
+<div class="history-panel">
+<h3>Recent Thermal Recommendations</h3>
+<div id="thermalHistory" class="detail">No thermal recommendations recorded</div>
+</div>
 </article>
 <article class="card wide"><h2>Storage Pools</h2><div id="pools" class="detail">Awaiting pool telemetry</div></article>
 <article class="card"><h2>Drive Temperatures</h2><div id="temps" class="detail">Awaiting temperature telemetry</div></article>
@@ -403,6 +407,116 @@ function renderFanHistory(payload){
         }
     ).join("");
 }
+function thermalHistoryState(event){
+    if(
+        !event
+        ||event.telemetry_valid!==true
+    ){
+        return{
+            label:"Telemetry unavailable",
+            className:"warn"
+        };
+    }
+
+    return{
+        label:profileLabel(
+            event.recommended_profile
+        ),
+        className:"good"
+    };
+}
+
+function renderThermalHistory(payload){
+    const events=Array.isArray(
+        payload&&payload.events
+    )
+        ?[...payload.events].reverse()
+        :[];
+
+    if(!events.length){
+        q("thermalHistory").innerHTML=
+            `<div class="detail">No thermal recommendations recorded</div>`;
+        return;
+    }
+
+    q("thermalHistory").innerHTML=events.map(
+        event=>{
+            const timestamp=Number(
+                event.timestamp||0
+            );
+
+            const when=timestamp>0
+                ?new Date(
+                    timestamp*1000
+                ).toLocaleString()
+                :"Unknown time";
+
+            const state=thermalHistoryState(
+                event
+            );
+
+            const temperature=Number(
+                event.hottest_temperature_c
+            );
+
+            const temperatureText=
+                Number.isFinite(temperature)
+                    ?`${temperature.toFixed(1)}°C`
+                    :"No valid temperature";
+
+            const active=profileLabel(
+                event.active_profile
+            );
+
+            const authority=profileLabel(
+                event.control_authority
+            );
+
+            const reason=val(
+                event.reason,
+                "Thermal recommendation recorded"
+            );
+
+            return`
+                <div class="row">
+                    <span class="label">
+                        ${when}
+                        <br>
+                        <span class="detail">
+                            ${temperatureText}
+                            · Active ${active}
+                            · Authority ${authority}
+                        </span>
+                    </span>
+                    <span class="value ${state.className}">
+                        ${state.label}
+                        <br>
+                        <span class="detail">
+                            ${reason}
+                        </span>
+                    </span>
+                </div>
+            `;
+        }
+    ).join("");
+}
+
+async function loadThermalHistory(){
+    const response=await fetch(
+        "/api/v1/fans/thermal-history?limit=8"
+    );
+
+    if(!response.ok){
+        throw Error(
+            "Could not load thermal history"
+        );
+    }
+
+    renderThermalHistory(
+        await response.json()
+    );
+}
+
 async function loadFanHistory(){
     const response=await fetch(
         "/api/v1/fans/history?limit=8"
@@ -493,7 +607,7 @@ async function engageAfterburners(){
         "ENGAGE_AFTERBURNERS"
     );
 }
-async function refresh(){try{const r=await fetch("/api/v1/status");if(!r.ok)throw Error();render(await r.json());await loadFanHistory();q("connection").textContent="Mission Ready";q("connection").className="badge"}catch(error){q("connection").textContent="Disconnected";q("connection").className="badge bad";q("fanAutomatic").disabled=true;q("fanAfterburners").disabled=true;q("fanControlMessage").textContent="Mission Control is disconnected.";q("fanControlMessage").className="control-message bad"}}
+async function refresh(){try{const r=await fetch("/api/v1/status");if(!r.ok)throw Error();render(await r.json());await loadFanHistory();await loadThermalHistory();q("connection").textContent="Mission Ready";q("connection").className="badge"}catch(error){q("connection").textContent="Disconnected";q("connection").className="badge bad";q("fanAutomatic").disabled=true;q("fanAfterburners").disabled=true;q("fanControlMessage").textContent="Mission Control is disconnected.";q("fanControlMessage").className="control-message bad"}}
 q("reloadPolicy").addEventListener("click",()=>loadPolicy().then(()=>notice("Policy reloaded.","good")).catch(error=>notice(error.message,"bad")));
 q("previewPolicy").addEventListener("click",()=>previewPolicy().catch(error=>notice(error.message,"bad")));
 q("savePolicy").addEventListener("click",()=>savePolicy().catch(error=>notice(error.message,"bad")));
