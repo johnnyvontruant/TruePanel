@@ -149,6 +149,18 @@ DEFAULT_CONFIG = {
                 2,
             ],
         },
+        "thermal_policy": {
+            # The production-safe default observes and recommends only.
+            #
+            # automatic_control is a dormant contract. It cannot issue
+            # fan commands until a separately reviewed actuator gate exists.
+            "mode": "observe_only",
+            "balanced_temperature_c": 42.0,
+            "cooling_boost_temperature_c": 50.0,
+            "afterburners_temperature_c": 60.0,
+            "hysteresis_c": 3.0,
+            "minimum_dwell_seconds": 30.0,
+        },
         "topology": {
             "front_bays": {},
         },

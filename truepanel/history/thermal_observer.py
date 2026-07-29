@@ -48,6 +48,8 @@ def event_from_recommendation(
     *,
     active_profile: str = "automatic",
     control_authority: str = "automatic",
+    policy_mode: str = "observe_only",
+    previous_recommended_profile: str = "automatic",
     timestamp: float | None = None,
 ) -> dict[str, Any]:
     """Build a normalized thermal-observer history event."""
@@ -70,6 +72,61 @@ def event_from_recommendation(
         None,
     )
 
+    recommended_profile = _safe_profile(
+        recommended
+    )
+    previous_profile = _safe_profile(
+        previous_recommended_profile
+    )
+    active_profile = _safe_profile(
+        active_profile
+    )
+
+    ranks = {
+        "automatic": 0,
+        "quiet": 1,
+        "balanced": 2,
+        "cooling_boost": 3,
+        "afterburners": 4,
+    }
+
+    if recommended_profile == previous_profile:
+        transition_direction = "steady"
+    elif (
+        ranks[recommended_profile]
+        > ranks[previous_profile]
+    ):
+        transition_direction = "upshift"
+    else:
+        transition_direction = "downshift"
+
+    telemetry_valid = bool(
+        getattr(
+            recommendation,
+            "telemetry_valid",
+            False,
+        )
+    )
+
+    if not telemetry_valid:
+        profile_alignment = "telemetry_unavailable"
+    elif recommended_profile == active_profile:
+        profile_alignment = "aligned"
+    else:
+        profile_alignment = "action_recommended"
+
+    policy_mode = str(
+        policy_mode
+        or "observe_only"
+    ).strip().lower()
+
+    if policy_mode not in {
+        "disabled",
+        "observe_only",
+        "automatic_control",
+    }:
+        policy_mode = "observe_only"
+
     return {
         "schema_version": 1,
         "event_type": "thermal_observer",
@@ -78,13 +135,12 @@ def event_from_recommendation(
             if timestamp is not None
             else time.time()
         ),
-        "policy_mode": "observe_only",
-        "recommended_profile": _safe_profile(
-            recommended
-        ),
-        "active_profile": _safe_profile(
-            active_profile
-        ),
+        "policy_mode": policy_mode,
+        "recommended_profile": recommended_profile,
+        "previous_recommended_profile": previous_profile,
+        "transition_direction": transition_direction,
+        "profile_alignment": profile_alignment,
+        "active_profile": active_profile,
         "control_authority": str(
             control_authority
             or "automatic"
@@ -94,13 +150,7 @@ def event_from_recommendation(
             if hottest is not None
             else None
         ),
-        "telemetry_valid": bool(
-            getattr(
-                recommendation,
-                "telemetry_valid",
-                False,
-            )
-        ),
+        "telemetry_valid": telemetry_valid,
         "recommendation_changed": bool(
             getattr(
                 recommendation,
@@ -155,9 +205,21 @@ class ThermalObserverHistory:
                 self.clock(),
             )
         )
-        normalized["policy_mode"] = (
-            "observe_only"
-        )
+        policy_mode = str(
+            normalized.get(
+                "policy_mode",
+                "observe_only",
+            )
+        ).strip().lower()
+
+        if policy_mode not in {
+            "disabled",
+            "observe_only",
+            "automatic_control",
+        }:
+            policy_mode = "observe_only"
+
+        normalized["policy_mode"] = policy_mode
         normalized[
             "recommended_profile"
         ] = _safe_profile(
@@ -172,6 +234,52 @@ class ThermalObserverHistory:
                 )
             )
         )
+        normalized[
+            "previous_recommended_profile"
+        ] = _safe_profile(
+            normalized.get(
+                "previous_recommended_profile",
+                "automatic",
+            )
+        )
+
+        transition_direction = str(
+            normalized.get(
+                "transition_direction",
+                "steady",
+            )
+        ).strip().lower()
+
+        if transition_direction not in {
+            "steady",
+            "upshift",
+            "downshift",
+        }:
+            transition_direction = "steady"
+
+        normalized[
+            "transition_direction"
+        ] = transition_direction
+
+        profile_alignment = str(
+            normalized.get(
+                "profile_alignment",
+                "telemetry_unavailable",
+            )
+        ).strip().lower()
+
+        if profile_alignment not in {
+            "aligned",
+            "action_recommended",
+            "telemetry_unavailable",
+        }:
+            profile_alignment = (
+                "telemetry_unavailable"
+            )
+
+        normalized[
+            "profile_alignment"
+        ] = profile_alignment
         normalized["control_authority"] = str(
             normalized.get(
                 "control_authority",

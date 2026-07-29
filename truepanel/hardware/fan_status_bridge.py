@@ -21,6 +21,49 @@ DEFAULT_FAN_CONTROL_STATUS_PATH = Path(
 )
 
 
+THERMAL_POLICY_MODES = {
+    "disabled",
+    "observe_only",
+    "automatic_control",
+}
+
+
+def normalize_thermal_policy_mode(
+    value: Any,
+) -> str:
+    """Normalize unknown modes toward the safe observe-only state."""
+
+    mode = str(
+        value
+        or "observe_only"
+    ).strip().lower()
+
+    if mode not in THERMAL_POLICY_MODES:
+        return "observe_only"
+
+    return mode
+
+
+def thermal_profile_alignment(
+    *,
+    recommended_profile: Any,
+    active_profile: Any,
+    telemetry_valid: bool,
+) -> str:
+    """Describe policy agreement without requesting a fan-profile change."""
+
+    if not telemetry_valid:
+        return "telemetry_unavailable"
+
+    if (
+        _safe_profile(recommended_profile)
+        == _safe_profile(active_profile)
+    ):
+        return "aligned"
+
+    return "action_recommended"
+
+
 def _safe_profile(
     value: Any,
 ) -> str:
@@ -147,15 +190,12 @@ class FanControlStatusBridge:
                 ),
             ),
             "thermal_policy_mode": (
-                "observe_only"
-                if str(
+                normalize_thermal_policy_mode(
                     payload.get(
                         "thermal_policy_mode",
                         "observe_only",
                     )
-                ).strip().lower()
-                == "observe_only"
-                else "disabled"
+                )
             ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(
@@ -191,6 +231,24 @@ class FanControlStatusBridge:
                 payload.get(
                     "thermal_telemetry_valid",
                     False,
+                )
+            ),
+            "thermal_profile_alignment": (
+                thermal_profile_alignment(
+                    recommended_profile=payload.get(
+                        "thermal_recommended_profile",
+                        "automatic",
+                    ),
+                    active_profile=payload.get(
+                        "active_profile",
+                        "automatic",
+                    ),
+                    telemetry_valid=bool(
+                        payload.get(
+                            "thermal_telemetry_valid",
+                            False,
+                        )
+                    ),
                 )
             ),
         }
@@ -401,15 +459,12 @@ class FanControlStatusBridge:
                 ),
             ),
             "thermal_policy_mode": (
-                "observe_only"
-                if str(
+                normalize_thermal_policy_mode(
                     payload.get(
                         "thermal_policy_mode",
                         "observe_only",
                     )
-                ).strip().lower()
-                == "observe_only"
-                else "disabled"
+                )
             ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(
@@ -447,10 +502,31 @@ class FanControlStatusBridge:
                     False,
                 )
             ),
+            "thermal_profile_alignment": (
+                thermal_profile_alignment(
+                    recommended_profile=payload.get(
+                        "thermal_recommended_profile",
+                        "automatic",
+                    ),
+                    active_profile=payload.get(
+                        "active_profile",
+                        "automatic",
+                    ),
+                    telemetry_valid=bool(
+                        payload.get(
+                            "thermal_telemetry_valid",
+                            False,
+                        )
+                    ),
+                )
+            ),
         }
 
 
 __all__ = [
     "DEFAULT_FAN_CONTROL_STATUS_PATH",
     "FanControlStatusBridge",
+    "THERMAL_POLICY_MODES",
+    "normalize_thermal_policy_mode",
+    "thermal_profile_alignment",
 ]

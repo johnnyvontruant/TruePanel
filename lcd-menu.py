@@ -159,15 +159,70 @@ if fan_health_watcher is not None:
 mission.register(healthy_watcher)
 
 
+thermal_policy_config = (
+    config.get(
+        "hardware",
+        {},
+    ).get(
+        "thermal_policy",
+        {},
+    )
+)
+
+thermal_policy_mode = str(
+    thermal_policy_config.get(
+        "mode",
+        "observe_only",
+    )
+).strip().lower()
+
+if thermal_policy_mode not in {
+    "disabled",
+    "observe_only",
+    "automatic_control",
+}:
+    LOGGER.warning(
+        "Unknown thermal policy mode %r; "
+        "using observe_only.",
+        thermal_policy_mode,
+    )
+    thermal_policy_mode = "observe_only"
+
 thermal_fan_policy = ThermalFanPolicy(
-    balanced_temperature_c=42,
-    cooling_boost_temperature_c=50,
-    afterburners_temperature_c=60,
-    hysteresis_c=3,
-    minimum_dwell_seconds=30,
+    balanced_temperature_c=float(
+        thermal_policy_config.get(
+            "balanced_temperature_c",
+            42,
+        )
+    ),
+    cooling_boost_temperature_c=float(
+        thermal_policy_config.get(
+            "cooling_boost_temperature_c",
+            50,
+        )
+    ),
+    afterburners_temperature_c=float(
+        thermal_policy_config.get(
+            "afterburners_temperature_c",
+            60,
+        )
+    ),
+    hysteresis_c=float(
+        thermal_policy_config.get(
+            "hysteresis_c",
+            3,
+        )
+    ),
+    minimum_dwell_seconds=float(
+        thermal_policy_config.get(
+            "minimum_dwell_seconds",
+            30,
+        )
+    ),
 )
 
 thermal_fan_recommendation = None
+thermal_observer_previous_profile = "automatic"
 
 
 def publish_fan_control_status(
@@ -189,7 +244,7 @@ def publish_fan_control_status(
 
     payload[
         "thermal_policy_mode"
-    ] = "observe_only"
+    ] = thermal_policy_mode
 
     if recommendation is None:
         payload[
@@ -314,26 +369,42 @@ def fan_command_telemetry():
 def observe_thermal_fan_policy(
     telemetry=None,
 ):
+    """
+    Evaluate and publish thermal guidance without actuating fan control.
+
+    The automatic_control mode is intentionally unarmed. This observer does
+    not request profiles, invoke the command socket, or write fan hardware.
+    """
+
     global thermal_fan_recommendation
     global thermal_observer_last_signature
+    global thermal_observer_previous_profile
 
     if telemetry is None:
         telemetry = fan_command_telemetry()
 
-    recommendation = (
-        thermal_fan_policy.evaluate(
-            telemetry.get(
-                "temperatures_c",
+    if thermal_policy_mode == "disabled":
+        recommendation = (
+            thermal_fan_policy.evaluate(
                 (),
-            ),
-            telemetry_fresh=bool(
-                telemetry.get(
-                    "telemetry_fresh",
-                    False,
-                )
-            ),
+                telemetry_fresh=False,
+            )
         )
-    )
+    else:
+        recommendation = (
+            thermal_fan_policy.evaluate(
+                telemetry.get(
+                    "temperatures_c",
+                    (),
+                ),
+                telemetry_fresh=bool(
+                    telemetry.get(
+                        "telemetry_fresh",
+                        False,
+                    )
+                ),
+            )
+        )
 
     thermal_fan_recommendation = recommendation
 
@@ -371,6 +442,10 @@ def observe_thermal_fan_policy(
                             "automatic",
                         )
                     ),
+                    policy_mode=thermal_policy_mode,
+                    previous_recommended_profile=(
+                        thermal_observer_previous_profile
+                    ),
                 )
             )
         except Exception:
@@ -381,6 +456,11 @@ def observe_thermal_fan_policy(
 
         thermal_observer_last_signature = (
             signature
+        )
+        thermal_observer_previous_profile = (
+            recommendation
+            .recommended_profile
+            .value
         )
 
     return recommendation

@@ -141,6 +141,20 @@ hardware:
       - 1
       - 2
 
+  thermal_policy:
+    # Supported modes:
+    #   disabled
+    #   observe_only
+    #   automatic_control
+    #
+    # automatic_control is currently unarmed and non-actuating.
+    mode: observe_only
+    balanced_temperature_c: 42
+    cooling_boost_temperature_c: 50
+    afterburners_temperature_c: 60
+    hysteresis_c: 3
+    minimum_dwell_seconds: 30
+
   fans:
     channels:
       1:

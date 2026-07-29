@@ -73,6 +73,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Active profile</span><span id="fanActiveProfile" class="value">Automatic</span></div>
 <div class="row"><span class="label">Requested profile</span><span id="fanRequestedProfile" class="value">Automatic</span></div>
 <div class="row"><span class="label">Thermal recommendation</span><span id="fanThermalRecommendation" class="value">Awaiting telemetry</span></div>
+<div class="row"><span class="label">Recommendation alignment</span><span id="fanThermalAlignment" class="value">Awaiting telemetry</span></div>
 <div class="row"><span class="label">Observer temperature</span><span id="fanThermalTemperature" class="value">--</span></div>
 <div class="row"><span class="label">Automatic restore</span><span id="fanControlCountdown" class="value">Not scheduled</span></div>
 </div>
@@ -238,17 +239,55 @@ function renderFanControl(control){
         control&&control.thermal_hottest_temperature_c
     );
 
+    const policyMode=val(
+        control&&control.thermal_policy_mode,
+        "observe_only"
+    );
+
+    const policyModeLabel=
+        policyMode==="automatic_control"
+            ?"Automatic control · Unarmed"
+            :policyMode==="disabled"
+                ?"Disabled"
+                :"Observe only";
+
+    const alignment=val(
+        control&&control.thermal_profile_alignment,
+        thermalValid
+            ?thermalProfile===active
+                ?"aligned"
+                :"action_recommended"
+            :"telemetry_unavailable"
+    );
+
     q("fanThermalRecommendation").textContent=
         thermalValid
-            ?`${profileLabel(thermalProfile)} · Observe only`
+            ?`${profileLabel(thermalProfile)} · ${policyModeLabel}`
             :"Awaiting valid telemetry";
 
     q("fanThermalRecommendation").className=
         "value "+(
-            thermalValid
+            thermalValid&&alignment==="aligned"
                 ?"good"
                 :"warn"
         );
+
+    if(alignment==="aligned"){
+        q("fanThermalAlignment").textContent=
+            "Aligned with active profile";
+        q("fanThermalAlignment").className=
+            "value good";
+    }else if(alignment==="action_recommended"){
+        q("fanThermalAlignment").textContent=
+            `Action recommended: ${profileLabel(thermalProfile)}`;
+        q("fanThermalAlignment").className=
+            "value warn";
+    }else{
+        q("fanThermalAlignment").textContent=
+            "Telemetry unavailable";
+        q("fanThermalAlignment").className=
+            "value warn";
+    }
 
     q("fanThermalTemperature").textContent=
         thermalValid
@@ -418,11 +457,33 @@ function thermalHistoryState(event){
         };
     }
 
+    const alignment=val(
+        event.profile_alignment,
+        "action_recommended"
+    );
+
+    const direction=val(
+        event.transition_direction,
+        "steady"
+    );
+
+    const prefix=
+        direction==="upshift"
+            ?"↑ "
+            :direction==="downshift"
+                ?"↓ "
+                :"";
+
     return{
-        label:profileLabel(
-            event.recommended_profile
-        ),
-        className:"good"
+        label:
+            prefix
+            +profileLabel(
+                event.recommended_profile
+            ),
+        className:
+            alignment==="aligned"
+                ?"good"
+                :"warn"
     };
 }
 
