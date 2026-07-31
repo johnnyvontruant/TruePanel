@@ -315,6 +315,43 @@ class FanControlStatusBridge:
                     False,
                 )
             ),
+            "thermal_dry_run": bool(
+                payload.get(
+                    "thermal_dry_run",
+                    True,
+                )
+            ),
+            "thermal_control_state": str(
+                payload.get(
+                    "thermal_control_state",
+                    "awaiting_evaluation",
+                )
+            ),
+            "thermal_control_reason": str(
+                payload.get(
+                    "thermal_control_reason",
+                    (
+                        "Thermal control status "
+                        "is unavailable."
+                    ),
+                )
+            ),
+            "thermal_simulated_profile": _safe_profile(
+                payload.get(
+                    "thermal_simulated_profile",
+                    "automatic",
+                )
+            ),
+            "thermal_control_cooldown_remaining": max(
+                0.0,
+                float(
+                    payload.get(
+                        "thermal_control_cooldown_remaining",
+                        0.0,
+                    )
+                    or 0.0
+                ),
+            ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(
                     "thermal_recommended_profile",
@@ -631,6 +668,43 @@ class FanControlStatusBridge:
                     "thermal_operator_armed",
                     False,
                 )
+            ),
+            "thermal_dry_run": bool(
+                payload.get(
+                    "thermal_dry_run",
+                    True,
+                )
+            ),
+            "thermal_control_state": str(
+                payload.get(
+                    "thermal_control_state",
+                    "awaiting_evaluation",
+                )
+            ),
+            "thermal_control_reason": str(
+                payload.get(
+                    "thermal_control_reason",
+                    (
+                        "Thermal control status "
+                        "is unavailable."
+                    ),
+                )
+            ),
+            "thermal_simulated_profile": _safe_profile(
+                payload.get(
+                    "thermal_simulated_profile",
+                    "automatic",
+                )
+            ),
+            "thermal_control_cooldown_remaining": max(
+                0.0,
+                float(
+                    payload.get(
+                        "thermal_control_cooldown_remaining",
+                        0.0,
+                    )
+                    or 0.0
+                ),
             ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(

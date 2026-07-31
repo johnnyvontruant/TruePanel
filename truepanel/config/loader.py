@@ -157,6 +157,9 @@ DEFAULT_CONFIG = {
             "mode": "observe_only",
             # Both mode and operator arming must permit actuation.
             "operator_armed": False,
+            # Dry-run evaluates automatic control without requesting
+            # a fan profile. Live actuation requires this to be False.
+            "dry_run": True,
             # Additional protection against rapid profile downshifts.
             "command_cooldown_seconds": 30.0,
             "balanced_temperature_c": 42.0,

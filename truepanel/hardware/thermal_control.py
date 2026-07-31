@@ -72,6 +72,7 @@ class ThermalControlCoordinator:
         *,
         policy_mode: str = "observe_only",
         operator_armed: bool = False,
+        dry_run: bool = True,
         command_cooldown_seconds: float = 30.0,
         clock: Callable[[], float] | None = None,
     ):
@@ -87,6 +88,9 @@ class ThermalControlCoordinator:
         self.operator_armed = bool(
             operator_armed
         )
+        self.dry_run = bool(
+            dry_run
+        )
         self.command_cooldown_seconds = float(
             command_cooldown_seconds
         )
@@ -95,6 +99,7 @@ class ThermalControlCoordinator:
         self.owns_control = False
         self.last_requested_profile: FanProfile | None = None
         self.last_command_at: float | None = None
+        self.simulated_profile = FanProfile.AUTOMATIC
 
     @staticmethod
     def _profile(
@@ -112,6 +117,7 @@ class ThermalControlCoordinator:
         *,
         policy_mode: str | None = None,
         operator_armed: bool | None = None,
+        dry_run: bool | None = None,
     ) -> None:
         """Update runtime arming configuration without actuating hardware."""
 
@@ -123,6 +129,11 @@ class ThermalControlCoordinator:
         if operator_armed is not None:
             self.operator_armed = bool(
                 operator_armed
+            )
+
+        if dry_run is not None:
+            self.dry_run = bool(
+                dry_run
             )
 
     def _cooldown_remaining(
@@ -288,6 +299,38 @@ class ThermalControlCoordinator:
 
         if not readiness["armed"]:
             if (
+                self.dry_run
+                and self.simulated_profile
+                is not FanProfile.AUTOMATIC
+            ):
+                self.simulated_profile = (
+                    FanProfile.AUTOMATIC
+                )
+                self.last_requested_profile = (
+                    FanProfile.AUTOMATIC
+                )
+                self.last_command_at = float(
+                    self.clock()
+                )
+                self.owns_control = False
+
+                return ThermalControlResult(
+                    state="simulated",
+                    requested_profile=(
+                        FanProfile.AUTOMATIC
+                    ),
+                    decision=None,
+                    readiness=readiness,
+                    reason=(
+                        "Dry run simulated returning "
+                        "to motherboard automatic "
+                        "control because thermal "
+                        "readiness became blocked."
+                    ),
+                    owns_control=False,
+                )
+
+            if (
                 self.owns_control
                 and active_profile
                 is not FanProfile.AUTOMATIC
@@ -303,6 +346,9 @@ class ThermalControlCoordinator:
                 )
 
             self.owns_control = False
+            self.simulated_profile = (
+                FanProfile.AUTOMATIC
+            )
 
             return ThermalControlResult(
                 state="blocked",
@@ -322,10 +368,58 @@ class ThermalControlCoordinator:
                 owns_control=False,
             )
 
+        comparison_profile = (
+            self.simulated_profile
+            if self.dry_run
+            else active_profile
+        )
+
         if (
             recommended_profile
             is FanProfile.AUTOMATIC
         ):
+            if self.dry_run:
+                if (
+                    self.simulated_profile
+                    is not FanProfile.AUTOMATIC
+                ):
+                    self.simulated_profile = (
+                        FanProfile.AUTOMATIC
+                    )
+                    self.last_requested_profile = (
+                        FanProfile.AUTOMATIC
+                    )
+                    self.last_command_at = float(
+                        self.clock()
+                    )
+
+                    return ThermalControlResult(
+                        state="simulated",
+                        requested_profile=(
+                            FanProfile.AUTOMATIC
+                        ),
+                        decision=None,
+                        readiness=readiness,
+                        reason=(
+                            "Dry run simulated returning "
+                            "to motherboard automatic "
+                            "control."
+                        ),
+                        owns_control=False,
+                    )
+
+                return ThermalControlResult(
+                    state="aligned",
+                    requested_profile=None,
+                    decision=None,
+                    readiness=readiness,
+                    reason=(
+                        "Dry-run profile already matches "
+                        "motherboard automatic control."
+                    ),
+                    owns_control=False,
+                )
+
             if (
                 self.owns_control
                 or active_profile
@@ -352,11 +446,13 @@ class ThermalControlCoordinator:
                 owns_control=False,
             )
 
-        if active_profile is recommended_profile:
-            self.owns_control = True
+        if comparison_profile is recommended_profile:
             self.last_requested_profile = (
                 recommended_profile
             )
+
+            if not self.dry_run:
+                self.owns_control = True
 
             return ThermalControlResult(
                 state="aligned",
@@ -364,10 +460,19 @@ class ThermalControlCoordinator:
                 decision=None,
                 readiness=readiness,
                 reason=(
-                    "Active fan profile already matches "
+                    "Simulated fan profile already matches "
                     "the thermal recommendation."
+                    if self.dry_run
+                    else (
+                        "Active fan profile already matches "
+                        "the thermal recommendation."
+                    )
                 ),
-                owns_control=True,
+                owns_control=(
+                    False
+                    if self.dry_run
+                    else True
+                ),
             )
 
         cooldown_remaining = (
@@ -379,7 +484,7 @@ class ThermalControlCoordinator:
                 recommended_profile
             ]
             > _PROFILE_RANK[
-                active_profile
+                comparison_profile
             ]
         )
 
@@ -402,6 +507,32 @@ class ThermalControlCoordinator:
                 cooldown_remaining=(
                     cooldown_remaining
                 ),
+            )
+
+        if self.dry_run:
+            self.simulated_profile = (
+                recommended_profile
+            )
+            self.last_requested_profile = (
+                recommended_profile
+            )
+            self.last_command_at = float(
+                self.clock()
+            )
+            self.owns_control = False
+
+            return ThermalControlResult(
+                state="simulated",
+                requested_profile=(
+                    recommended_profile
+                ),
+                decision=None,
+                readiness=readiness,
+                reason=(
+                    "Dry run simulated thermal profile "
+                    f"{recommended_profile.value}."
+                ),
+                owns_control=False,
             )
 
         decision = self._request(

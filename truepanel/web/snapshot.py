@@ -793,6 +793,45 @@ class SnapshotService:
                         "observe_only",
                     )
                 ),
+                "thermal_operator_armed": bool(
+                    runtime_status.get(
+                        "thermal_operator_armed",
+                        False,
+                    )
+                ),
+                "thermal_dry_run": bool(
+                    runtime_status.get(
+                        "thermal_dry_run",
+                        True,
+                    )
+                ),
+                "thermal_control_state": (
+                    runtime_status.get(
+                        "thermal_control_state",
+                        "awaiting_evaluation",
+                    )
+                ),
+                "thermal_control_reason": (
+                    runtime_status.get(
+                        "thermal_control_reason",
+                        (
+                            "Thermal control status "
+                            "is unavailable."
+                        ),
+                    )
+                ),
+                "thermal_simulated_profile": (
+                    runtime_status.get(
+                        "thermal_simulated_profile",
+                        "automatic",
+                    )
+                ),
+                "thermal_control_cooldown_remaining": (
+                    runtime_status.get(
+                        "thermal_control_cooldown_remaining",
+                        0.0,
+                    )
+                ),
                 "thermal_recommended_profile": (
                     runtime_status.get(
                         "thermal_recommended_profile",
@@ -898,6 +937,14 @@ class SnapshotService:
                 or 3
             ),
             "thermal_policy_mode": "observe_only",
+            "thermal_operator_armed": False,
+            "thermal_dry_run": True,
+            "thermal_control_state": "blocked",
+            "thermal_control_reason": (
+                "Thermal control is unavailable."
+            ),
+            "thermal_simulated_profile": "automatic",
+            "thermal_control_cooldown_remaining": 0.0,
             "thermal_recommended_profile": "automatic",
             "thermal_hottest_temperature_c": None,
             "thermal_recommendation_reason": (

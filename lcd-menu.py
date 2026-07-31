@@ -231,6 +231,13 @@ thermal_operator_armed = bool(
     )
 )
 
+thermal_dry_run = bool(
+    thermal_policy_config.get(
+        "dry_run",
+        True,
+    )
+)
+
 thermal_command_cooldown_seconds = float(
     thermal_policy_config.get(
         "command_cooldown_seconds",
@@ -243,6 +250,7 @@ thermal_control_coordinator = (
         fan_control_runtime.service,
         policy_mode=thermal_policy_mode,
         operator_armed=thermal_operator_armed,
+        dry_run=thermal_dry_run,
         command_cooldown_seconds=(
             thermal_command_cooldown_seconds
         ),
@@ -278,6 +286,49 @@ def publish_fan_control_status(
     payload[
         "thermal_operator_armed"
     ] = thermal_operator_armed
+
+    payload[
+        "thermal_dry_run"
+    ] = thermal_dry_run
+
+    control_result = (
+        thermal_control_last_result
+    )
+
+    payload[
+        "thermal_control_state"
+    ] = (
+        control_result.state
+        if control_result is not None
+        else "awaiting_evaluation"
+    )
+
+    payload[
+        "thermal_control_reason"
+    ] = (
+        control_result.reason
+        if control_result is not None
+        else (
+            "Thermal control has not completed "
+            "an evaluation cycle."
+        )
+    )
+
+    payload[
+        "thermal_simulated_profile"
+    ] = (
+        thermal_control_coordinator
+        .simulated_profile
+        .value
+    )
+
+    payload[
+        "thermal_control_cooldown_remaining"
+    ] = (
+        control_result.cooldown_remaining
+        if control_result is not None
+        else 0.0
+    )
 
     if recommendation is None:
         payload[

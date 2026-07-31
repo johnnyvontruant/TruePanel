@@ -126,12 +126,14 @@ def coordinator(
     clock=None,
     mode="automatic_control",
     armed=True,
+    dry_run=False,
     cooldown=30,
 ):
     return ThermalControlCoordinator(
         service,
         policy_mode=mode,
         operator_armed=armed,
+        dry_run=dry_run,
         command_cooldown_seconds=(
             cooldown
         ),
@@ -668,3 +670,194 @@ def test_thermal_transition_uses_existing_history():
         "record_fan_control_event("
         in reconcile
     )
+
+
+def test_dry_run_simulates_without_service_request():
+    service = FakeService()
+
+    control = ThermalControlCoordinator(
+        service,
+        policy_mode="automatic_control",
+        operator_armed=True,
+        dry_run=True,
+        command_cooldown_seconds=30,
+    )
+
+    result = control.evaluate(
+        Recommendation(
+            FanProfile.BALANCED
+        ),
+        telemetry=telemetry(),
+        runtime_status=runtime_status(),
+    )
+
+    assert result.state == "simulated"
+    assert result.decision is None
+    assert result.owns_control is False
+    assert (
+        result.requested_profile
+        is FanProfile.BALANCED
+    )
+    assert (
+        control.simulated_profile
+        is FanProfile.BALANCED
+    )
+    assert service.requests == []
+
+
+def test_dry_run_does_not_repeat_simulated_profile():
+    service = FakeService()
+
+    control = ThermalControlCoordinator(
+        service,
+        policy_mode="automatic_control",
+        operator_armed=True,
+        dry_run=True,
+    )
+
+    control.evaluate(
+        Recommendation(
+            FanProfile.BALANCED
+        ),
+        telemetry=telemetry(),
+        runtime_status=runtime_status(),
+    )
+
+    result = control.evaluate(
+        Recommendation(
+            FanProfile.BALANCED
+        ),
+        telemetry=telemetry(),
+        runtime_status=runtime_status(),
+    )
+
+    assert result.state == "aligned"
+    assert service.requests == []
+
+
+def test_dry_run_upshift_bypasses_cooldown():
+    service = FakeService()
+    clock = FakeClock()
+
+    control = ThermalControlCoordinator(
+        service,
+        policy_mode="automatic_control",
+        operator_armed=True,
+        dry_run=True,
+        command_cooldown_seconds=300,
+        clock=clock,
+    )
+
+    control.evaluate(
+        Recommendation(
+            FanProfile.BALANCED
+        ),
+        telemetry=telemetry(),
+        runtime_status=runtime_status(),
+    )
+
+    clock.advance(1)
+
+    result = control.evaluate(
+        Recommendation(
+            FanProfile.COOLING_BOOST
+        ),
+        telemetry=telemetry(),
+        runtime_status=runtime_status(),
+    )
+
+    assert result.state == "simulated"
+    assert (
+        control.simulated_profile
+        is FanProfile.COOLING_BOOST
+    )
+    assert service.requests == []
+
+
+def test_dry_run_downshift_obeys_cooldown():
+    service = FakeService()
+    clock = FakeClock()
+
+    control = ThermalControlCoordinator(
+        service,
+        policy_mode="automatic_control",
+        operator_armed=True,
+        dry_run=True,
+        command_cooldown_seconds=30,
+        clock=clock,
+    )
+
+    control.evaluate(
+        Recommendation(
+            FanProfile.COOLING_BOOST
+        ),
+        telemetry=telemetry(),
+        runtime_status=runtime_status(),
+    )
+
+    clock.advance(10)
+
+    result = control.evaluate(
+        Recommendation(
+            FanProfile.BALANCED
+        ),
+        telemetry=telemetry(),
+        runtime_status=runtime_status(),
+    )
+
+    assert result.state == "cooldown"
+    assert result.cooldown_remaining == 20
+    assert (
+        control.simulated_profile
+        is FanProfile.COOLING_BOOST
+    )
+    assert service.requests == []
+
+
+def test_dry_run_returns_simulation_to_automatic():
+    service = FakeService()
+
+    control = ThermalControlCoordinator(
+        service,
+        policy_mode="automatic_control",
+        operator_armed=True,
+        dry_run=True,
+    )
+
+    control.evaluate(
+        Recommendation(
+            FanProfile.BALANCED
+        ),
+        telemetry=telemetry(),
+        runtime_status=runtime_status(),
+    )
+
+    result = control.evaluate(
+        Recommendation(
+            FanProfile.AUTOMATIC,
+            telemetry_valid=False,
+        ),
+        telemetry=telemetry(
+            fresh=False
+        ),
+        runtime_status=runtime_status(),
+    )
+
+    assert result.state == "simulated"
+    assert (
+        control.simulated_profile
+        is FanProfile.AUTOMATIC
+    )
+    assert service.requests == []
+
+
+def test_source_default_enables_dry_run_lock():
+    from pathlib import Path
+
+    source = Path(
+        "truepanel/config/loader.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert '"dry_run": True' in source

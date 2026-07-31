@@ -338,6 +338,14 @@ def test_fan_control_status_is_disabled_by_default(
         "recovery_healthy_cycles": 0,
         "recovery_required_cycles": 3,
         "thermal_policy_mode": "observe_only",
+        "thermal_operator_armed": False,
+        "thermal_dry_run": True,
+        "thermal_control_state": "blocked",
+        "thermal_control_reason": (
+            "Thermal control is unavailable."
+        ),
+        "thermal_simulated_profile": "automatic",
+        "thermal_control_cooldown_remaining": 0.0,
         "thermal_recommended_profile": "automatic",
         "thermal_profile_alignment": "telemetry_unavailable",
         "thermal_control_readiness": {
