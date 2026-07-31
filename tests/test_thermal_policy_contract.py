@@ -232,3 +232,133 @@ def test_dashboard_exposes_alignment():
     assert "Aligned with active profile" in source
     assert "Action recommended:" in source
     assert "Automatic control · Unarmed" in source
+
+
+def test_web_snapshot_publishes_thermal_alignment():
+    source = Path(
+        "truepanel/web/snapshot.py"
+    ).read_text()
+
+    assert '"thermal_profile_alignment"' in source
+    assert '"telemetry_unavailable"' in source
+
+
+def test_thermal_readiness_blocks_observe_only_mode():
+    from truepanel.hardware.fan_status_bridge import (
+        thermal_control_readiness,
+    )
+
+    readiness = thermal_control_readiness(
+        policy_mode="observe_only",
+        connected=True,
+        telemetry_valid=True,
+        safety_hold=False,
+        recovery_pending=False,
+        recommended_profile="balanced",
+    )
+
+    assert readiness["ready"] is False
+    assert readiness["armed"] is False
+    assert readiness["state"] == "blocked"
+    assert (
+        readiness["checks"][
+            "policy_allows_automatic"
+        ]
+        is False
+    )
+    assert readiness["checks"]["operator_armed"] is False
+
+
+def test_thermal_readiness_can_be_ready_but_unarmed():
+    from truepanel.hardware.fan_status_bridge import (
+        thermal_control_readiness,
+    )
+
+    readiness = thermal_control_readiness(
+        policy_mode="automatic_control",
+        connected=True,
+        telemetry_valid=True,
+        safety_hold=False,
+        recovery_pending=False,
+        recommended_profile="balanced",
+    )
+
+    assert readiness["ready"] is True
+    assert readiness["armed"] is False
+    assert readiness["state"] == "ready_not_armed"
+    assert readiness["checks"]["operator_armed"] is False
+    assert readiness["blocking_reasons"] == [
+        (
+            "Automatic thermal control has not "
+            "been armed by the operator."
+        )
+    ]
+
+
+def test_thermal_readiness_blocks_safety_conditions():
+    from truepanel.hardware.fan_status_bridge import (
+        thermal_control_readiness,
+    )
+
+    readiness = thermal_control_readiness(
+        policy_mode="automatic_control",
+        connected=True,
+        telemetry_valid=True,
+        safety_hold=True,
+        recovery_pending=True,
+        recommended_profile="cooling_boost",
+    )
+
+    assert readiness["ready"] is False
+    assert readiness["armed"] is False
+    assert readiness["checks"]["safety_clear"] is False
+    assert readiness["checks"]["recovery_clear"] is False
+
+
+def test_bridge_publishes_unarmed_readiness(
+    tmp_path,
+):
+    from truepanel.hardware.fan_status_bridge import (
+        FanControlStatusBridge,
+    )
+
+    bridge = FanControlStatusBridge(
+        tmp_path / "fan-status.json"
+    )
+
+    payload = bridge.publish(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "automatic",
+            "requested_profile": "automatic",
+            "thermal_policy_mode": (
+                "automatic_control"
+            ),
+            "thermal_recommended_profile": (
+                "balanced"
+            ),
+            "thermal_telemetry_valid": True,
+            "safety_hold": False,
+            "recovery_pending": False,
+        }
+    )
+
+    readiness = payload[
+        "thermal_control_readiness"
+    ]
+
+    assert readiness["ready"] is True
+    assert readiness["armed"] is False
+    assert readiness["state"] == "ready_not_armed"
+
+
+def test_dashboard_exposes_thermal_readiness():
+    source = Path(
+        "truepanel/web/static/index.html"
+    ).read_text()
+
+    assert 'id="fanThermalReadiness"' in source
+    assert 'id="fanThermalChecks"' in source
+    assert "Operator arming required" in source
+    assert "thermal_control_readiness" in source

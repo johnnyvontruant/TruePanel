@@ -74,6 +74,8 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Requested profile</span><span id="fanRequestedProfile" class="value">Automatic</span></div>
 <div class="row"><span class="label">Thermal recommendation</span><span id="fanThermalRecommendation" class="value">Awaiting telemetry</span></div>
 <div class="row"><span class="label">Recommendation alignment</span><span id="fanThermalAlignment" class="value">Awaiting telemetry</span></div>
+<div class="row"><span class="label">Automatic readiness</span><span id="fanThermalReadiness" class="value">Evaluating</span></div>
+<div class="row"><span class="label">Readiness checks</span><span id="fanThermalChecks" class="value">Awaiting status</span></div>
 <div class="row"><span class="label">Observer temperature</span><span id="fanThermalTemperature" class="value">--</span></div>
 <div class="row"><span class="label">Automatic restore</span><span id="fanControlCountdown" class="value">Not scheduled</span></div>
 </div>
@@ -288,6 +290,67 @@ function renderFanControl(control){
         q("fanThermalAlignment").className=
             "value warn";
     }
+
+    const readiness=
+        control&&control.thermal_control_readiness
+            ?control.thermal_control_readiness
+            :{
+                ready:false,
+                armed:false,
+                state:"blocked",
+                checks:{},
+                blocking_reasons:[
+                    "Thermal readiness status is unavailable."
+                ]
+            };
+
+    const readinessChecks=
+        readiness.checks||{};
+
+    const readinessPassed=Object.values(
+        readinessChecks
+    ).filter(Boolean).length;
+
+    const readinessTotal=Object.keys(
+        readinessChecks
+    ).length;
+
+    if(readiness.armed){
+        q("fanThermalReadiness").textContent=
+            "Armed";
+        q("fanThermalReadiness").className=
+            "value good";
+    }else if(readiness.ready){
+        q("fanThermalReadiness").textContent=
+            "Ready · Operator arming required";
+        q("fanThermalReadiness").className=
+            "value warn";
+    }else{
+        const reasons=Array.isArray(
+            readiness.blocking_reasons
+        )
+            ?readiness.blocking_reasons
+            :[];
+
+        q("fanThermalReadiness").textContent=
+            reasons.length
+                ?`Blocked · ${reasons[0]}`
+                :"Blocked";
+        q("fanThermalReadiness").className=
+            "value bad";
+    }
+
+    q("fanThermalChecks").textContent=
+        readinessTotal
+            ?`${readinessPassed}/${readinessTotal} passed`
+            :"No readiness data";
+
+    q("fanThermalChecks").className=
+        "value "+(
+            readiness.armed
+                ?"good"
+                :"warn"
+        );
 
     q("fanThermalTemperature").textContent=
         thermalValid

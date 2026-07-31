@@ -825,6 +825,29 @@ class SnapshotService:
                         False,
                     )
                 ),
+                "thermal_profile_alignment": (
+                    runtime_status.get(
+                        "thermal_profile_alignment",
+                        "telemetry_unavailable",
+                    )
+                ),
+                "thermal_control_readiness": (
+                    runtime_status.get(
+                        "thermal_control_readiness",
+                        {
+                            "ready": False,
+                            "armed": False,
+                            "state": "blocked",
+                            "checks": {},
+                            "blocking_reasons": [
+                                (
+                                    "Thermal readiness "
+                                    "status is unavailable."
+                                )
+                            ],
+                        },
+                    )
+                ),
             }
 
         if not enabled:
@@ -882,4 +905,42 @@ class SnapshotService:
             ),
             "thermal_recommendation_changed": False,
             "thermal_telemetry_valid": False,
+            "thermal_profile_alignment": (
+                "telemetry_unavailable"
+            ),
+            "thermal_control_readiness": {
+                "ready": False,
+                "armed": False,
+                "state": "blocked",
+                "checks": {
+                    "policy_allows_automatic": False,
+                    "controller_connected": False,
+                    "telemetry_valid": False,
+                    "safety_clear": True,
+                    "recovery_clear": True,
+                    "recommendation_available": False,
+                    "operator_armed": False,
+                },
+                "blocking_reasons": [
+                    (
+                        "Thermal policy is not configured "
+                        "for automatic control."
+                    ),
+                    (
+                        "Fan-control runtime is not "
+                        "connected."
+                    ),
+                    (
+                        "Thermal telemetry is unavailable."
+                    ),
+                    (
+                        "Thermal recommendation is "
+                        "unavailable."
+                    ),
+                    (
+                        "Automatic thermal control has not "
+                        "been armed by the operator."
+                    ),
+                ],
+            },
         }

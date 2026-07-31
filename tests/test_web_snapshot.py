@@ -339,6 +339,42 @@ def test_fan_control_status_is_disabled_by_default(
         "recovery_required_cycles": 3,
         "thermal_policy_mode": "observe_only",
         "thermal_recommended_profile": "automatic",
+        "thermal_profile_alignment": "telemetry_unavailable",
+        "thermal_control_readiness": {
+            "ready": False,
+            "armed": False,
+            "state": "blocked",
+            "checks": {
+                "policy_allows_automatic": False,
+                "controller_connected": False,
+                "telemetry_valid": False,
+                "safety_clear": True,
+                "recovery_clear": True,
+                "recommendation_available": False,
+                "operator_armed": False,
+            },
+            "blocking_reasons": [
+                (
+                    "Thermal policy is not configured "
+                    "for automatic control."
+                ),
+                (
+                    "Fan-control runtime is not "
+                    "connected."
+                ),
+                (
+                    "Thermal telemetry is unavailable."
+                ),
+                (
+                    "Thermal recommendation is "
+                    "unavailable."
+                ),
+                (
+                    "Automatic thermal control has not "
+                    "been armed by the operator."
+                ),
+            ],
+        },
         "thermal_hottest_temperature_c": None,
         "thermal_recommendation_reason": (
             "Thermal observer status is unavailable."

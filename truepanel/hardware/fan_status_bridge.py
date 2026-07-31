@@ -64,6 +64,118 @@ def thermal_profile_alignment(
     return "action_recommended"
 
 
+def thermal_control_readiness(
+    *,
+    policy_mode: Any,
+    connected: bool,
+    telemetry_valid: bool,
+    safety_hold: bool,
+    recovery_pending: bool,
+    recommended_profile: Any,
+    operator_armed: bool = False,
+) -> dict[str, Any]:
+    """Describe automatic-control readiness without granting authority."""
+
+    normalized_mode = normalize_thermal_policy_mode(
+        policy_mode
+    )
+
+    recommendation_available = (
+        bool(telemetry_valid)
+        and _safe_profile(recommended_profile)
+        in {
+            "automatic",
+            "quiet",
+            "balanced",
+            "cooling_boost",
+            "afterburners",
+        }
+    )
+
+    checks = {
+        "policy_allows_automatic": (
+            normalized_mode
+            == "automatic_control"
+        ),
+        "controller_connected": bool(
+            connected
+        ),
+        "telemetry_valid": bool(
+            telemetry_valid
+        ),
+        "safety_clear": not bool(
+            safety_hold
+        ),
+        "recovery_clear": not bool(
+            recovery_pending
+        ),
+        "recommendation_available": (
+            recommendation_available
+        ),
+        "operator_armed": bool(
+            operator_armed
+        ),
+    }
+
+    reason_labels = {
+        "policy_allows_automatic": (
+            "Thermal policy is not configured "
+            "for automatic control."
+        ),
+        "controller_connected": (
+            "Fan-control runtime is not connected."
+        ),
+        "telemetry_valid": (
+            "Thermal telemetry is unavailable."
+        ),
+        "safety_clear": (
+            "Fan safety hold is active."
+        ),
+        "recovery_clear": (
+            "Fan safety recovery is still pending."
+        ),
+        "recommendation_available": (
+            "Thermal recommendation is unavailable."
+        ),
+        "operator_armed": (
+            "Automatic thermal control has not "
+            "been armed by the operator."
+        ),
+    }
+
+    blocking_reasons = [
+        reason_labels[name]
+        for name, passed in checks.items()
+        if not passed
+    ]
+
+    technically_ready = all(
+        passed
+        for name, passed in checks.items()
+        if name != "operator_armed"
+    )
+
+    armed = bool(
+        technically_ready
+        and checks["operator_armed"]
+    )
+
+    if armed:
+        state = "armed"
+    elif technically_ready:
+        state = "ready_not_armed"
+    else:
+        state = "blocked"
+
+    return {
+        "ready": technically_ready,
+        "armed": armed,
+        "state": state,
+        "checks": checks,
+        "blocking_reasons": blocking_reasons,
+    }
+
+
 def _safe_profile(
     value: Any,
 ) -> str:
@@ -249,6 +361,43 @@ class FanControlStatusBridge:
                             False,
                         )
                     ),
+                )
+            ),
+            "thermal_control_readiness": (
+                thermal_control_readiness(
+                    policy_mode=payload.get(
+                        "thermal_policy_mode",
+                        "observe_only",
+                    ),
+                    connected=bool(
+                        payload.get(
+                            "connected",
+                            False,
+                        )
+                    ),
+                    telemetry_valid=bool(
+                        payload.get(
+                            "thermal_telemetry_valid",
+                            False,
+                        )
+                    ),
+                    safety_hold=bool(
+                        payload.get(
+                            "safety_hold",
+                            False,
+                        )
+                    ),
+                    recovery_pending=bool(
+                        payload.get(
+                            "recovery_pending",
+                            False,
+                        )
+                    ),
+                    recommended_profile=payload.get(
+                        "thermal_recommended_profile",
+                        "automatic",
+                    ),
+                    operator_armed=False,
                 )
             ),
         }
@@ -520,6 +669,43 @@ class FanControlStatusBridge:
                     ),
                 )
             ),
+            "thermal_control_readiness": (
+                thermal_control_readiness(
+                    policy_mode=payload.get(
+                        "thermal_policy_mode",
+                        "observe_only",
+                    ),
+                    connected=bool(
+                        payload.get(
+                            "connected",
+                            False,
+                        )
+                    ),
+                    telemetry_valid=bool(
+                        payload.get(
+                            "thermal_telemetry_valid",
+                            False,
+                        )
+                    ),
+                    safety_hold=bool(
+                        payload.get(
+                            "safety_hold",
+                            False,
+                        )
+                    ),
+                    recovery_pending=bool(
+                        payload.get(
+                            "recovery_pending",
+                            False,
+                        )
+                    ),
+                    recommended_profile=payload.get(
+                        "thermal_recommended_profile",
+                        "automatic",
+                    ),
+                    operator_armed=False,
+                )
+            ),
         }
 
 
@@ -528,5 +714,6 @@ __all__ = [
     "FanControlStatusBridge",
     "THERMAL_POLICY_MODES",
     "normalize_thermal_policy_mode",
+    "thermal_control_readiness",
     "thermal_profile_alignment",
 ]
