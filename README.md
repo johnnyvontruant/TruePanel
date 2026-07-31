@@ -19,6 +19,9 @@ TruePanel began by adapting earlier QNAP LCD utilities, but the current project 
 - Routes drive-specific faults to the matching physical bay identify LED
 - Keeps detailed storage information available on the LCD without redundant interrupt pages
 - Supports buttons, backlight, buzzer patterns, themes, plugins, simulation, and diagnostics
+- Provides live Mission Control telemetry and history
+- Provides guarded manual fan profiles and restoration
+- Evaluates thermal recommendations and readiness
 - Provides Project Stargate tools for guarded A125 and QNAP hardware research
 
 ## Verified platform
@@ -30,32 +33,49 @@ The production reference system is:
 - Python 3.11
 - A125 LCD controller on `/dev/ttyS1` at 1200 baud
 - Six drive-bay identify LEDs through `/dev/i2c-0`, SMBus address `0x33`
+- Fintek F71869A monitor using `f71882fg`
+- Two verified chassis fan-control channels
 
 Other QNAP systems may share parts of this hardware design, but they must be treated as unverified until their controller paths and command maps are reproduced safely.
 
+## Mission Control
+
+Mission Control is TruePanel's browser-based companion dashboard.
+It combines live telemetry, storage health, fan RPM and PWM state,
+guarded manual profiles, thermal recommendations, readiness checks,
+and operational history.
+
+### Dashboard overview
+
+<p align="center">
+  <img src="docs/images/mission-control-overview.png"
+       alt="TruePanel Mission Control dashboard overview"
+       width="1000">
+</p>
+
+### Cooling and thermal readiness
+
+<p align="center">
+  <img src="docs/images/cooling-readiness.png"
+       alt="TruePanel cooling and thermal readiness panel"
+       width="900">
+</p>
+
+Automatic thermal control remains deliberately unarmed.
+TruePanel observes, recommends, evaluates readiness, and explains
+blockers without autonomously changing fan profiles.
+
 ## Architecture at a glance
 
-```text
-Collectors and hardware providers
-              |
-              v
-       Shared system state
-              |
-              v
- Mission Control and watchers
-              |
-       +------+------+
-       |             |
-       v             v
- Alert policy   Hardware indicators
-       |             |
-       +------+------+
-              v
-       Display Manager
-              |
-              v
-     Flight Deck / A125 LCD
-```
+<p align="center">
+  <img src="docs/images/truepanel-architecture.svg"
+       alt="TruePanel operational architecture"
+       width="900">
+</p>
+
+TruePanel uses a collector-first architecture. Hardware and TrueNAS
+providers produce normalized state, safety services evaluate it,
+and the LCD Flight Deck and Mission Control render the result.
 
 The normal runtime is launched through:
 
@@ -63,7 +83,7 @@ The normal runtime is launched through:
 truepanel.py -> truepanel.cli -> lcd-menu.py
 ```
 
-Production installation lives under `/opt/truepanel`, with the service started through `/opt/truepanel/bin/truepanel run`.
+The TVS-671 reference deployment lives under `/mnt/SSDs/Applications/TruePanel` and starts through TrueNAS POSTINIT tasks. Other layouts may use `/opt/truepanel`.
 
 ## Installation
 
@@ -122,6 +142,7 @@ Mission Control runs as an independent web companion service. It is localhost-bo
 truepanel/                 Production package
 tests/                     Automated test suite
 docs/                      User and developer documentation
+docs/images/               Diagrams and screenshots
 development/tools/         Reproducible Stargate laboratory tools
 examples/plugins/          External plugin examples
 plugins/                   Locally installed plugins and runtime state
@@ -143,7 +164,7 @@ Do not perform generic I2C scans, random register writes, or destructive storage
 
 ## Project status
 
-TruePanel is active software. The consolidated platform passed 861 automated tests on July 19, 2026. Hardware support beyond the TVS-671 reference system remains experimental until independently verified.
+TruePanel is active software. The consolidated platform passed **1,161 automated tests** on July 30, 2026. Hardware support beyond the TVS-671 reference system remains experimental until independently verified.
 
 ## License and lineage
 

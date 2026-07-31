@@ -218,3 +218,71 @@ sudo systemctl status truepanel-mission-control
 ```
 
 Restarting Mission Control does not restart the LCD True service. Restarting the LCD True service does not require restarting Mission Control.
+
+## TVS-671 reference POSTINIT deployment
+
+The current reference installation is stored at:
+
+    /mnt/SSDs/Applications/TruePanel
+
+TrueNAS starts the deployment with POSTINIT tasks rather
+than persistent, hand-edited systemd unit files.
+
+### Fintek hardware-monitor driver
+
+The TVS-671 fan controller requires the `f71882fg`
+kernel module. Create an enabled POSTINIT command:
+
+    /sbin/modprobe f71882fg
+
+Load it before the TruePanel startup script:
+
+    /mnt/SSDs/Applications/TruePanel/start-truepanel.sh
+
+Verify the driver:
+
+    lsmod | grep '^f71882fg'
+    modinfo f71882fg
+
+Safe motherboard automatic-control values are:
+
+    pwm1_enable = 2
+    pwm2_enable = 2
+
+A value of `2` indicates motherboard automatic control.
+
+### Reference services
+
+The POSTINIT script creates transient services:
+
+    truepanel.service
+    truepanel-mission-control.service
+
+Confirm their active runtime paths:
+
+    systemctl show truepanel.service \
+      -p WorkingDirectory \
+      -p ExecStart
+
+    systemctl show truepanel-mission-control.service \
+      -p WorkingDirectory \
+      -p ExecStart
+
+### Production verification
+
+    systemctl is-active \
+      truepanel.service \
+      truepanel-mission-control.service
+
+    curl -fsS \
+      http://127.0.0.1:8787/api/v1/status \
+      | python3 -m json.tool
+
+A healthy reference contract includes:
+
+    fans.available = true
+    fans.control.connected = true
+    fans.control.active_profile = automatic
+    fans.control.control_authority = automatic
+    fans.control.safety_hold = false
+    thermal_control_readiness.armed = false
