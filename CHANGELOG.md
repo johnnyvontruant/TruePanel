@@ -4,6 +4,70 @@ All notable TruePanel changes are recorded here.
 
 TruePanel follows semantic versioning. Release tags use the form `vMAJOR.MINOR.PATCH`.
 
+## [1.1.0] - 2026-07-30
+
+TruePanel 1.1.0 expands the platform with guarded cooling control,
+thermal-policy observation, improved fan telemetry, startup effects,
+and a complete visual documentation refresh.
+
+### Cooling and fan control
+
+- Added guarded manual fan profiles with command-socket isolation.
+- Added automatic restoration, dead-man expiry, and safety recovery.
+- Added configurable quiet, balanced, cooling boost, and Afterburners profiles.
+- Added fan RPM, PWM, profile, authority, and safety-hold telemetry.
+- Added calibrated fan gauges and corrected live dashboard rendering.
+- Added fan-control history and recovery transition recording.
+- Added simulation drills and calibration laboratory tools.
+- Added persistent Fintek `f71882fg` driver loading for the TVS-671 reference deployment.
+
+### Thermal policy
+
+- Added observe-only thermal recommendations.
+- Added recommendation history and alignment reporting.
+- Added automatic-control readiness checks with explicit blockers.
+- Added a deliberately unarmed automatic-control contract.
+- Added dashboard visibility for thermal policy state and readiness.
+
+### Flight Deck and hardware
+
+- Added fan RPM, PWM, and safety status pages.
+- Added red-to-green drive-bay startup animation.
+- Improved LCD startup timing and graceful shutdown behavior.
+- Fixed the QNAP LCD reader shutdown race.
+- Improved fan inventory discovery and channel labeling.
+
+### Mission Control
+
+- Added guarded fan profile controls.
+- Added cooling readiness and thermal policy panels.
+- Added visible calibrated fan RPM gauges.
+- Added operational fan-control history and safety state.
+
+### Documentation and branding
+
+- Added a new TruePanel logo.
+- Added LCD Flight Deck renderings.
+- Added Mission Control screenshots.
+- Added an architecture diagram.
+- Updated installation guidance for the TrueNAS POSTINIT deployment.
+- Documented the Fintek driver, runtime paths, and production verification contract.
+
+### Compatibility
+
+The reference platform for 1.1.0 is:
+
+- TrueNAS SCALE 25.10.5
+- Python 3.11
+- QNAP TVS-671
+- A125 front-panel controller
+- Fintek F71869A hardware monitor
+- Six internal SATA drive bays
+- Two verified chassis fan-control channels
+
+Other QNAP systems remain unverified until their controller paths,
+telemetry, and command maps are reproduced safely.
+
 ## [1.0.0]
 
 - Added a hardened Mission Control web companion service with read-only defaults, guarded Night Mode persistence, LAN deployment controls, and operator CLI commands.
