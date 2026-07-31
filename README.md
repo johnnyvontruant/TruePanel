@@ -215,7 +215,9 @@ TruePanel is distributed under the repository license. Earlier QNAP LCD work pro
 
 ## Stable release
 
-TruePanel 1.0.0 is the first stable release of the independent TruePanel platform.
+TruePanel 1.1.0 expands the stable platform with guarded fan control,
+thermal-policy observation, Mission Control cooling telemetry,
+LCD startup effects, and refreshed project branding.
 
 Release resources:
 
