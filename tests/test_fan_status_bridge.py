@@ -254,3 +254,48 @@ def test_bridge_preserves_observe_only_thermal_status(
         == 47.0
     )
     assert payload["thermal_telemetry_valid"] is True
+
+
+def test_bridge_publishes_armed_thermal_readiness(
+    tmp_path,
+):
+    bridge = FanControlStatusBridge(
+        tmp_path / "fan-status.json",
+        clock=lambda: 100.0,
+    )
+
+    bridge.publish(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "automatic",
+            "thermal_policy_mode": (
+                "automatic_control"
+            ),
+            "thermal_operator_armed": True,
+            "thermal_recommended_profile": (
+                "balanced"
+            ),
+            "thermal_telemetry_valid": True,
+            "safety_hold": False,
+            "recovery_pending": False,
+        }
+    )
+
+    payload = bridge.read(
+        max_age=30.0
+    )
+
+    readiness = payload[
+        "thermal_control_readiness"
+    ]
+
+    assert readiness["ready"] is True
+    assert readiness["armed"] is True
+    assert readiness["state"] == "armed"
+    assert (
+        readiness["checks"][
+            "operator_armed"
+        ]
+        is True
+    )

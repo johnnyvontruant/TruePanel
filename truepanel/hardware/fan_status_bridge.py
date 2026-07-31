@@ -309,6 +309,12 @@ class FanControlStatusBridge:
                     )
                 )
             ),
+            "thermal_operator_armed": bool(
+                payload.get(
+                    "thermal_operator_armed",
+                    False,
+                )
+            ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(
                     "thermal_recommended_profile",
@@ -397,7 +403,12 @@ class FanControlStatusBridge:
                         "thermal_recommended_profile",
                         "automatic",
                     ),
-                    operator_armed=False,
+                    operator_armed=bool(
+                        payload.get(
+                            "thermal_operator_armed",
+                            False,
+                        )
+                    ),
                 )
             ),
         }
@@ -615,6 +626,12 @@ class FanControlStatusBridge:
                     )
                 )
             ),
+            "thermal_operator_armed": bool(
+                payload.get(
+                    "thermal_operator_armed",
+                    False,
+                )
+            ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(
                     "thermal_recommended_profile",
@@ -703,7 +720,12 @@ class FanControlStatusBridge:
                         "thermal_recommended_profile",
                         "automatic",
                     ),
-                    operator_armed=False,
+                    operator_armed=bool(
+                        payload.get(
+                            "thermal_operator_armed",
+                            False,
+                        )
+                    ),
                 )
             ),
         }

@@ -155,6 +155,10 @@ DEFAULT_CONFIG = {
             # automatic_control is a dormant contract. It cannot issue
             # fan commands until a separately reviewed actuator gate exists.
             "mode": "observe_only",
+            # Both mode and operator arming must permit actuation.
+            "operator_armed": False,
+            # Additional protection against rapid profile downshifts.
+            "command_cooldown_seconds": 30.0,
             "balanced_temperature_c": 42.0,
             "cooling_boost_temperature_c": 50.0,
             "afterburners_temperature_c": 60.0,

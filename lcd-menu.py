@@ -34,6 +34,9 @@ from truepanel.hardware.fan_status_bridge import (
 from truepanel.hardware.thermal_fan_policy import (
     ThermalFanPolicy,
 )
+from truepanel.hardware.thermal_control import (
+    ThermalControlCoordinator,
+)
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
 )
@@ -221,8 +224,34 @@ thermal_fan_policy = ThermalFanPolicy(
     ),
 )
 
+thermal_operator_armed = bool(
+    thermal_policy_config.get(
+        "operator_armed",
+        False,
+    )
+)
+
+thermal_command_cooldown_seconds = float(
+    thermal_policy_config.get(
+        "command_cooldown_seconds",
+        30,
+    )
+)
+
+thermal_control_coordinator = (
+    ThermalControlCoordinator(
+        fan_control_runtime.service,
+        policy_mode=thermal_policy_mode,
+        operator_armed=thermal_operator_armed,
+        command_cooldown_seconds=(
+            thermal_command_cooldown_seconds
+        ),
+    )
+)
+
 thermal_fan_recommendation = None
 thermal_observer_previous_profile = "automatic"
+thermal_control_last_result = None
 
 
 def publish_fan_control_status(
@@ -245,6 +274,10 @@ def publish_fan_control_status(
     payload[
         "thermal_policy_mode"
     ] = thermal_policy_mode
+
+    payload[
+        "thermal_operator_armed"
+    ] = thermal_operator_armed
 
     if recommendation is None:
         payload[
@@ -508,14 +541,20 @@ def fan_control_event_source(
 
 
 def reconcile_fan_control():
+    global thermal_control_last_result
+
     if not fan_control_runtime.connected:
         return None
 
     telemetry = fan_command_telemetry()
-    observe_thermal_fan_policy(
-        telemetry
+    recommendation = (
+        observe_thermal_fan_policy(
+            telemetry
+        )
     )
 
+    # Existing dead-man, emergency, and recovery logic owns the
+    # first safety decision of every cycle.
     decision = fan_control_runtime.service.tick(
         fan_status=telemetry["fan_status"],
         temperatures_c=(
@@ -541,8 +580,37 @@ def reconcile_fan_control():
             source=source,
         )
         publish_fan_control_status()
+        return decision
 
-    return decision
+    thermal_control_last_result = (
+        thermal_control_coordinator.evaluate(
+            recommendation,
+            telemetry=telemetry,
+            runtime_status=(
+                fan_control_runtime
+                .status_payload()
+            ),
+        )
+    )
+
+    thermal_decision = (
+        thermal_control_last_result
+        .decision
+    )
+
+    if thermal_decision is not None:
+        post_transition_telemetry = (
+            fan_command_telemetry()
+        )
+
+        record_fan_control_event(
+            thermal_decision,
+            post_transition_telemetry,
+            source="thermal_policy",
+        )
+        publish_fan_control_status()
+
+    return thermal_decision
 
 
 def build_fan_command_server():
