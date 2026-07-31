@@ -1,8 +1,11 @@
-# TruePanel
-
 <p align="center">
-  <img src="assets/logo/truepanel-logo.svg" alt="TruePanel logo" width="180">
+  <img
+    src="docs/images/brand/truepanel-logo.png"
+    alt="TruePanel"
+    width="760"
+  >
 </p>
+# TruePanel
 
 <h3 align="center">Hardware-aware mission control for TrueNAS SCALE</h3>
 
@@ -38,6 +41,46 @@ The production reference system is:
 
 Other QNAP systems may share parts of this hardware design, but they must be treated as unverified until their controller paths and command maps are reproduced safely.
 
+## LCD Flight Deck
+
+TruePanel turns the QNAP front-panel LCD into a rotating
+operational display for system health, storage, cooling,
+uptime, and platform status.
+
+<p align="center">
+  <img src="docs/images/lcd/cpu-ram-usage.png"
+       alt="CPU and RAM usage" width="420">
+  <img src="docs/images/lcd/drive-temperatures.png"
+       alt="Drive temperatures" width="420">
+</p>
+
+<p align="center">
+  <img src="docs/images/lcd/fan-rpm.png"
+       alt="Fan RPM telemetry" width="420">
+  <img src="docs/images/lcd/fan-pwm.png"
+       alt="Fan PWM state" width="420">
+</p>
+
+<p align="center">
+  <img src="docs/images/lcd/pool-health.png"
+       alt="Pool health" width="420">
+  <img src="docs/images/lcd/zfs-pool-usage.png"
+       alt="ZFS pool usage" width="420">
+</p>
+
+<p align="center">
+  <img src="docs/images/lcd/os-version.png"
+       alt="TrueNAS version" width="420">
+  <img src="docs/images/lcd/uptime.png"
+       alt="System uptime" width="420">
+</p>
+
+<p align="center">
+  <img src="docs/images/lcd/system-online.png"
+       alt="System online status" width="420">
+  <img src="docs/images/lcd/mission-ready.png"
+       alt="TruePanel mission ready screen" width="420">
+</p>
 ## Mission Control
 
 Mission Control is TruePanel's browser-based companion dashboard.
