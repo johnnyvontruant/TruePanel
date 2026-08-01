@@ -20,6 +20,7 @@ from truepanel.config.policy import (
 )
 from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
+    THERMAL_ARM_CONFIRMATION,
     FanCommandClient,
     FanCommandError,
 )
@@ -73,6 +74,10 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/v1/fans/profile":
             self._fan_profile(parsed)
+            return
+
+        if parsed.path == "/api/v1/fans/thermal-arm":
+            self._thermal_arm(parsed)
             return
 
         self._write_blocked()
@@ -387,6 +392,245 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             }
         )
         self._json(response)
+
+    def _thermal_arm(self, parsed):
+        del parsed
+
+        raw_length = self.headers.get(
+            "Content-Length",
+            "0",
+        )
+
+        try:
+            content_length = int(
+                raw_length
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            content_length = 0
+
+        if (
+            content_length < 1
+            or content_length > 4096
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Thermal arm body must be "
+                        "between 1 and 4096 bytes."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        try:
+            payload = json.loads(
+                self.rfile.read(
+                    content_length
+                ).decode("utf-8")
+            )
+        except (
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ):
+            self._json(
+                {
+                    "error": "invalid_json",
+                    "message": (
+                        "Thermal arm body must "
+                        "contain valid JSON."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if not isinstance(
+            payload,
+            dict,
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Thermal arm body must "
+                        "be a JSON object."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        unknown_fields = sorted(
+            set(payload)
+            - {
+                "action",
+                "confirmation",
+            }
+        )
+
+        if unknown_fields:
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Unknown thermal arm fields: "
+                        + ", ".join(unknown_fields)
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        action = payload.get(
+            "action"
+        )
+
+        if not isinstance(
+            action,
+            str,
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "action must be a string."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        action = action.strip().lower()
+
+        if action not in {
+            "arm",
+            "disarm",
+        }:
+            self._json(
+                {
+                    "error": "invalid_action",
+                    "message": (
+                        "action must be arm or disarm."
+                    ),
+                },
+                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+            return
+
+        confirmation = payload.get(
+            "confirmation"
+        )
+
+        if (
+            confirmation is not None
+            and not isinstance(
+                confirmation,
+                str,
+            )
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "confirmation must be "
+                        "a string."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if (
+            action == "arm"
+            and confirmation
+            != THERMAL_ARM_CONFIRMATION
+        ):
+            self._json(
+                {
+                    "error": (
+                        "confirmation_required"
+                    ),
+                    "message": (
+                        "Arming automatic thermal "
+                        "control requires explicit "
+                        "confirmation."
+                    ),
+                    "confirmation_required": (
+                        THERMAL_ARM_CONFIRMATION
+                    ),
+                },
+                status=HTTPStatus.CONFLICT,
+            )
+            return
+
+        try:
+            response = (
+                self.server
+                .fan_command_client
+                .request_thermal_control(
+                    action,
+                    confirmation=confirmation,
+                )
+            )
+        except FanCommandError as error:
+            self._json(
+                {
+                    "error": "runtime_unavailable",
+                    "message": str(error),
+                },
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+
+        if not response.get(
+            "ok",
+            False,
+        ):
+            status_name = response.get(
+                "status",
+                "rejected",
+            )
+
+            status_code = {
+                "confirmation_required": (
+                    HTTPStatus.CONFLICT
+                ),
+                "readiness_blocked": (
+                    HTTPStatus.CONFLICT
+                ),
+                "wrong_mode": (
+                    HTTPStatus.CONFLICT
+                ),
+                "live_control_locked": (
+                    HTTPStatus.CONFLICT
+                ),
+                "unsupported": (
+                    HTTPStatus.NOT_IMPLEMENTED
+                ),
+            }.get(
+                status_name,
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+
+            self._json(
+                {
+                    "error": status_name,
+                    **response,
+                },
+                status=status_code,
+            )
+            return
+
+        self._json(
+            response,
+            status=HTTPStatus.OK,
+        )
+
 
     def _fan_profile(self, parsed):
         del parsed

@@ -664,6 +664,180 @@ def reconcile_fan_control():
     return thermal_decision
 
 
+def set_thermal_operator_arm_state(
+    action,
+):
+    """Apply a guarded runtime arm-state change.
+
+    This first operator workflow intentionally supports dry-run only.
+    Live thermal actuation remains locked out until separately enabled
+    and reviewed.
+    """
+
+    global thermal_operator_armed
+    global thermal_control_last_result
+
+    normalized = str(
+        action
+    ).strip().lower()
+
+    if normalized not in {
+        "arm",
+        "disarm",
+    }:
+        return {
+            "ok": False,
+            "status": "invalid_action",
+            "message": (
+                "Thermal-control action must be "
+                "arm or disarm."
+            ),
+        }
+
+    if thermal_policy_mode != "automatic_control":
+        return {
+            "ok": False,
+            "status": "wrong_mode",
+            "message": (
+                "Thermal policy mode must be "
+                "automatic_control."
+            ),
+            "policy_mode": thermal_policy_mode,
+        }
+
+    if not thermal_dry_run:
+        return {
+            "ok": False,
+            "status": "live_control_locked",
+            "message": (
+                "Runtime arming is currently limited "
+                "to dry-run mode."
+            ),
+            "dry_run": False,
+        }
+
+    telemetry = fan_command_telemetry()
+    runtime_status = (
+        fan_control_runtime.status_payload()
+    )
+
+    if normalized == "arm":
+        blocking_reasons = []
+
+        if thermal_fan_recommendation is None:
+            blocking_reasons.append(
+                "Thermal recommendation is unavailable."
+            )
+        elif not bool(
+            thermal_fan_recommendation
+            .telemetry_valid
+        ):
+            blocking_reasons.append(
+                "Thermal recommendation telemetry "
+                "is invalid."
+            )
+
+        if not bool(
+            telemetry.get(
+                "telemetry_fresh",
+                False,
+            )
+        ):
+            blocking_reasons.append(
+                "Thermal telemetry is stale."
+            )
+
+        if not bool(
+            runtime_status.get(
+                "connected",
+                False,
+            )
+        ):
+            blocking_reasons.append(
+                "Fan-control runtime is disconnected."
+            )
+
+        if bool(
+            runtime_status.get(
+                "safety_hold",
+                False,
+            )
+        ):
+            blocking_reasons.append(
+                "Fan-control safety hold is active."
+            )
+
+        if blocking_reasons:
+            return {
+                "ok": False,
+                "status": "readiness_blocked",
+                "message": blocking_reasons[0],
+                "blocking_reasons": (
+                    blocking_reasons
+                ),
+                "operator_armed": (
+                    thermal_operator_armed
+                ),
+                "dry_run": thermal_dry_run,
+            }
+
+        thermal_operator_armed = True
+        thermal_control_coordinator.configure(
+            operator_armed=True
+        )
+
+    else:
+        thermal_operator_armed = False
+        thermal_control_coordinator.configure(
+            operator_armed=False
+        )
+
+    if thermal_fan_recommendation is not None:
+        thermal_control_last_result = (
+            thermal_control_coordinator
+            .evaluate(
+                thermal_fan_recommendation,
+                telemetry=telemetry,
+                runtime_status=runtime_status,
+            )
+        )
+    elif normalized == "disarm":
+        thermal_control_coordinator.simulated_profile = (
+            thermal_control_coordinator._profile(
+                "automatic"
+            )
+        )
+        thermal_control_coordinator.owns_control = False
+
+    return {
+        "ok": True,
+        "status": (
+            "armed"
+            if thermal_operator_armed
+            else "disarmed"
+        ),
+        "message": (
+            "Automatic thermal control armed "
+            "in dry-run mode."
+            if thermal_operator_armed
+            else (
+                "Automatic thermal control disarmed; "
+                "simulation returned to automatic."
+            )
+        ),
+        "operator_armed": (
+            thermal_operator_armed
+        ),
+        "dry_run": thermal_dry_run,
+        "policy_mode": thermal_policy_mode,
+        "simulated_profile": (
+            thermal_control_coordinator
+            .simulated_profile
+            .value
+        ),
+    }
+
+
 def build_fan_command_server():
     if not fan_control_runtime.enabled:
         return None
@@ -682,6 +856,9 @@ def build_fan_command_server():
                 fan_command_telemetry(),
                 source="manual",
             )
+        ),
+        thermal_control_handler=(
+            set_thermal_operator_arm_state
         ),
     )
 

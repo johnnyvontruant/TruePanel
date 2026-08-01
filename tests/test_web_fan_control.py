@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 
 from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
+    THERMAL_ARM_CONFIRMATION,
     FanCommandError,
 )
 from truepanel.web.server import (
@@ -80,6 +81,26 @@ class FakeFanCommandClient:
                     "automatic"
                 ),
             }
+        )
+
+    def request_thermal_control(
+        self,
+        action,
+        *,
+        confirmation=None,
+    ):
+        self.calls.append(
+            {
+                "action": action,
+                "confirmation": confirmation,
+            }
+        )
+
+        if self.error is not None:
+            raise self.error
+
+        return copy.deepcopy(
+            self.response
         )
 
     def request(
@@ -415,3 +436,92 @@ def test_fan_history_endpoint_is_read_only():
         ]
         == "afterburners"
     )
+
+
+
+def test_thermal_arm_route_requires_confirmation():
+    client = FakeFanCommandClient()
+
+    with running_server(
+        client
+    ) as base_url:
+        status, payload = post_json(
+            base_url
+            + "/api/v1/fans/thermal-arm",
+            {
+                "action": "arm",
+            },
+        )
+
+    assert status == 409
+    assert payload["error"] == (
+        "confirmation_required"
+    )
+    assert client.calls == []
+
+
+def test_thermal_arm_route_forwards_confirmation():
+    client = FakeFanCommandClient(
+        response={
+            "ok": True,
+            "status": "armed",
+            "operator_armed": True,
+            "dry_run": True,
+        }
+    )
+
+    with running_server(
+        client
+    ) as base_url:
+        status, payload = post_json(
+            base_url
+            + "/api/v1/fans/thermal-arm",
+            {
+                "action": "arm",
+                "confirmation": (
+                    THERMAL_ARM_CONFIRMATION
+                ),
+            },
+        )
+
+    assert status == 200
+    assert payload["operator_armed"] is True
+    assert client.calls == [
+        {
+            "action": "arm",
+            "confirmation": (
+                THERMAL_ARM_CONFIRMATION
+            ),
+        }
+    ]
+
+
+def test_thermal_disarm_route_needs_no_confirmation():
+    client = FakeFanCommandClient(
+        response={
+            "ok": True,
+            "status": "disarmed",
+            "operator_armed": False,
+            "dry_run": True,
+        }
+    )
+
+    with running_server(
+        client
+    ) as base_url:
+        status, payload = post_json(
+            base_url
+            + "/api/v1/fans/thermal-arm",
+            {
+                "action": "disarm",
+            },
+        )
+
+    assert status == 200
+    assert payload["operator_armed"] is False
+    assert client.calls == [
+        {
+            "action": "disarm",
+            "confirmation": None,
+        }
+    ]

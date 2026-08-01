@@ -26,6 +26,14 @@ AFTERBURNERS_CONFIRMATION = (
     "ENGAGE_AFTERBURNERS"
 )
 
+THERMAL_ARM_CONFIRMATION = (
+    "ARM_THERMAL_CONTROL"
+)
+
+THERMAL_CONTROL_COMMAND = "thermal_control"
+THERMAL_ARM_ACTION = "arm"
+THERMAL_DISARM_ACTION = "disarm"
+
 MAX_REQUEST_BYTES = 4096
 
 AUTOMATIC_PROFILE = "automatic"
@@ -83,6 +91,10 @@ class FanCommandProcessor:
             ],
             None,
         ] | None = None,
+        thermal_control_handler: Callable[
+            [str],
+            Mapping[str, Any],
+        ] | None = None,
     ):
         self.runtime = runtime
         self.telemetry_provider = (
@@ -94,6 +106,134 @@ class FanCommandProcessor:
         self.event_recorder = (
             event_recorder
         )
+        self.thermal_control_handler = (
+            thermal_control_handler
+        )
+
+    def _process_control_command(
+        self,
+        request: Mapping[str, Any],
+        command: str,
+    ) -> dict[str, Any]:
+        if command != THERMAL_CONTROL_COMMAND:
+            return _response(
+                ok=False,
+                status="unknown_command",
+                message="Unknown fan-control command.",
+            )
+
+        action = str(
+            request.get(
+                "action",
+                "",
+            )
+        ).strip().lower()
+
+        if action not in {
+            THERMAL_ARM_ACTION,
+            THERMAL_DISARM_ACTION,
+        }:
+            return _response(
+                ok=False,
+                status="invalid_action",
+                message=(
+                    "Thermal-control action must be "
+                    "arm or disarm."
+                ),
+                allowed_actions=[
+                    THERMAL_ARM_ACTION,
+                    THERMAL_DISARM_ACTION,
+                ],
+            )
+
+        if (
+            action == THERMAL_ARM_ACTION
+            and request.get("confirmation")
+            != THERMAL_ARM_CONFIRMATION
+        ):
+            return _response(
+                ok=False,
+                status="confirmation_required",
+                message=(
+                    "Arming automatic thermal control "
+                    "requires explicit confirmation."
+                ),
+                confirmation_required=(
+                    THERMAL_ARM_CONFIRMATION
+                ),
+            )
+
+        if self.thermal_control_handler is None:
+            return _response(
+                ok=False,
+                status="unsupported",
+                message=(
+                    "Runtime thermal-control arming "
+                    "is unavailable."
+                ),
+            )
+
+        try:
+            result = dict(
+                self.thermal_control_handler(
+                    action
+                )
+                or {}
+            )
+        except Exception as error:
+            LOGGER.exception(
+                "Thermal-control command failed"
+            )
+            return _response(
+                ok=False,
+                status="execution_failed",
+                message=(
+                    "Thermal-control command failed."
+                ),
+                error=(
+                    f"{type(error).__name__}: "
+                    f"{error}"
+                ),
+            )
+
+        if self.status_publisher is not None:
+            try:
+                self.status_publisher()
+            except Exception:
+                LOGGER.exception(
+                    "Could not publish fan status "
+                    "after thermal-control command"
+                )
+
+        result.setdefault(
+            "ok",
+            True,
+        )
+        result.setdefault(
+            "status",
+            (
+                "armed"
+                if action == THERMAL_ARM_ACTION
+                else "disarmed"
+            ),
+        )
+        result.setdefault(
+            "message",
+            (
+                "Automatic thermal control armed."
+                if action == THERMAL_ARM_ACTION
+                else (
+                    "Automatic thermal control "
+                    "disarmed."
+                )
+            ),
+        )
+        result.setdefault(
+            "action",
+            action,
+        )
+
+        return result
 
     def process(
         self,
@@ -110,6 +250,19 @@ class FanCommandProcessor:
                     "Command body must be "
                     "a JSON object."
                 ),
+            )
+
+        command = str(
+            request.get(
+                "command",
+                "",
+            )
+        ).strip().lower()
+
+        if command:
+            return self._process_control_command(
+                request,
+                command,
             )
 
         profile = str(
@@ -513,37 +666,20 @@ class FanCommandClient:
         *,
         timeout: float = 3.0,
     ):
-        self.path = Path(
-            path
-        )
+        self.path = Path(path)
         self.timeout = max(
             0.1,
             float(timeout),
         )
 
-    def request(
+    def _exchange(
         self,
-        profile: str,
-        *,
-        confirmation: str | None = None,
+        payload: Mapping[str, Any],
     ) -> dict[str, Any]:
-        payload = {
-            "profile": str(
-                profile
-            ),
-        }
-
-        if confirmation is not None:
-            payload[
-                "confirmation"
-            ] = confirmation
-
         encoded = (
             json.dumps(
-                payload
-            ).encode(
-                "utf-8"
-            )
+                dict(payload)
+            ).encode("utf-8")
             + b"\n"
         )
 
@@ -599,9 +735,7 @@ class FanCommandClient:
 
         try:
             response = json.loads(
-                raw.decode(
-                    "utf-8"
-                )
+                raw.decode("utf-8")
             )
         except (
             UnicodeDecodeError,
@@ -621,15 +755,41 @@ class FanCommandClient:
 
         return response
 
+    def request(
+        self,
+        profile: str,
+        *,
+        confirmation: str | None = None,
+    ) -> dict[str, Any]:
+        payload = {
+            "profile": str(profile),
+        }
 
-__all__ = [
-    "AFTERBURNERS_CONFIRMATION",
-    "AFTERBURNERS_PROFILE",
-    "ALLOWED_COMMAND_PROFILES",
-    "AUTOMATIC_PROFILE",
-    "DEFAULT_FAN_CONTROL_SOCKET_PATH",
-    "FanCommandClient",
-    "FanCommandError",
-    "FanCommandProcessor",
-    "FanCommandServer",
-]
+        if confirmation is not None:
+            payload[
+                "confirmation"
+            ] = confirmation
+
+        return self._exchange(
+            payload
+        )
+
+    def request_thermal_control(
+        self,
+        action: str,
+        *,
+        confirmation: str | None = None,
+    ) -> dict[str, Any]:
+        payload = {
+            "command": THERMAL_CONTROL_COMMAND,
+            "action": str(action),
+        }
+
+        if confirmation is not None:
+            payload[
+                "confirmation"
+            ] = confirmation
+
+        return self._exchange(
+            payload
+        )

@@ -171,3 +171,87 @@ def test_dashboard_shows_thermal_observer_history():
     assert "Telemetry unavailable" in source
     assert "Observe only" in source
 
+
+
+
+def test_dashboard_has_guarded_thermal_arm_controls():
+    source = (
+        Path(
+            "truepanel/web/static/index.html"
+        ).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert 'id="thermalArm"' in source
+    assert 'id="thermalDisarm"' in source
+    assert 'id="thermalArmState"' in source
+    assert 'id="thermalActuationMode"' in source
+    assert 'id="thermalArmMessage"' in source
+    assert (
+        "/api/v1/fans/thermal-arm"
+        in source
+    )
+
+
+def test_dashboard_requires_thermal_arm_confirmation():
+    source = (
+        Path(
+            "truepanel/web/static/index.html"
+        ).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert "ARM_THERMAL_CONTROL" in source
+    assert 'requestThermalArm("arm")' not in source
+    assert (
+        'requestThermalArm('
+        in source
+    )
+
+
+def test_dashboard_disarm_does_not_embed_arm_confirmation():
+    source = (
+        Path(
+            "truepanel/web/static/index.html"
+        ).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert (
+        'action==="arm"'
+        in source
+    )
+    assert (
+        '"Disarm automatic thermal control'
+        in source
+    )
+
+
+def test_dashboard_renders_runtime_thermal_arm_state():
+    source = (
+        Path(
+            "truepanel/web/static/index.html"
+        ).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert (
+        "thermal_operator_armed"
+        in source
+    )
+    assert (
+        "thermal_dry_run"
+        in source
+    )
+    assert (
+        "thermal_policy_mode"
+        in source
+    )
+    assert (
+        "renderThermalArmControls(data)"
+        in source
+    )

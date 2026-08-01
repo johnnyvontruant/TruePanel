@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
+    THERMAL_ARM_CONFIRMATION,
     FanCommandClient,
     FanCommandProcessor,
     FanCommandServer,
@@ -493,3 +494,99 @@ def test_event_recorder_failure_does_not_block_command():
         response["effective_profile"]
         == "automatic"
     )
+
+
+
+def test_thermal_arm_requires_confirmation():
+    runtime = FakeRuntime()
+    calls = []
+
+    processor = FanCommandProcessor(
+        runtime,
+        telemetry_provider=telemetry,
+        thermal_control_handler=(
+            lambda action: calls.append(action)
+        ),
+    )
+
+    response = processor.process(
+        {
+            "command": "thermal_control",
+            "action": "arm",
+        }
+    )
+
+    assert response["ok"] is False
+    assert (
+        response["status"]
+        == "confirmation_required"
+    )
+    assert calls == []
+    assert runtime.service.requests == []
+
+
+def test_thermal_arm_is_forwarded_without_fan_request():
+    runtime = FakeRuntime()
+    calls = []
+
+    def handler(action):
+        calls.append(action)
+        return {
+            "ok": True,
+            "status": "armed",
+            "operator_armed": True,
+            "dry_run": True,
+        }
+
+    processor = FanCommandProcessor(
+        runtime,
+        telemetry_provider=telemetry,
+        thermal_control_handler=handler,
+    )
+
+    response = processor.process(
+        {
+            "command": "thermal_control",
+            "action": "arm",
+            "confirmation": (
+                THERMAL_ARM_CONFIRMATION
+            ),
+        }
+    )
+
+    assert response["ok"] is True
+    assert response["status"] == "armed"
+    assert response["operator_armed"] is True
+    assert calls == ["arm"]
+    assert runtime.service.requests == []
+
+
+def test_thermal_disarm_needs_no_confirmation():
+    runtime = FakeRuntime()
+    calls = []
+
+    processor = FanCommandProcessor(
+        runtime,
+        telemetry_provider=telemetry,
+        thermal_control_handler=(
+            lambda action: {
+                "ok": True,
+                "status": "disarmed",
+                "operator_armed": False,
+                "action": calls.append(action),
+            }
+        ),
+    )
+
+    response = processor.process(
+        {
+            "command": "thermal_control",
+            "action": "disarm",
+        }
+    )
+
+    assert response["ok"] is True
+    assert response["status"] == "disarmed"
+    assert response["operator_armed"] is False
+    assert calls == ["disarm"]
+    assert runtime.service.requests == []
