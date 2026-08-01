@@ -832,6 +832,18 @@ class SnapshotService:
                         0.0,
                     )
                 ),
+                "thermal_supervised_session_active": bool(
+                    runtime_status.get(
+                        "thermal_supervised_session_active",
+                        False,
+                    )
+                ),
+                "thermal_supervised_session_remaining": (
+                    runtime_status.get(
+                        "thermal_supervised_session_remaining",
+                        0.0,
+                    )
+                ),
                 "thermal_recommended_profile": (
                     runtime_status.get(
                         "thermal_recommended_profile",
@@ -945,6 +957,8 @@ class SnapshotService:
             ),
             "thermal_simulated_profile": "automatic",
             "thermal_control_cooldown_remaining": 0.0,
+            "thermal_supervised_session_active": False,
+            "thermal_supervised_session_remaining": 0.0,
             "thermal_recommended_profile": "automatic",
             "thermal_hottest_temperature_c": None,
             "thermal_recommendation_reason": (

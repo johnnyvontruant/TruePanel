@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import json
 
 from truepanel.web.snapshot import (
@@ -346,6 +348,8 @@ def test_fan_control_status_is_disabled_by_default(
         ),
         "thermal_simulated_profile": "automatic",
         "thermal_control_cooldown_remaining": 0.0,
+        "thermal_supervised_session_active": False,
+        "thermal_supervised_session_remaining": 0.0,
         "thermal_recommended_profile": "automatic",
         "thermal_profile_alignment": "telemetry_unavailable",
         "thermal_control_readiness": {
@@ -754,3 +758,48 @@ def test_fan_control_history_limit_is_bounded(
 
     assert payload["count"] == 0
     assert payload["read_only"] is True
+
+
+
+def test_snapshot_preserves_supervised_thermal_lease():
+    source = Path(
+        "truepanel/web/snapshot.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        '"thermal_supervised_session_active": bool('
+        in source
+    )
+    assert (
+        '"thermal_supervised_session_remaining": ('
+        in source
+    )
+    assert (
+        'runtime_status.get(\n'
+        '                        "thermal_supervised_session_active"'
+        in source
+    )
+    assert (
+        'runtime_status.get(\n'
+        '                        "thermal_supervised_session_remaining"'
+        in source
+    )
+
+
+def test_snapshot_has_safe_supervised_lease_defaults():
+    source = Path(
+        "truepanel/web/snapshot.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        '"thermal_supervised_session_active": False'
+        in source
+    )
+    assert (
+        '"thermal_supervised_session_remaining": 0.0'
+        in source
+    )

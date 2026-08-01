@@ -842,6 +842,7 @@ def set_thermal_operator_arm_state(
 
     global thermal_operator_armed
     global thermal_control_last_result
+    global supervised_thermal_session_deadline
 
     normalized = str(
         action

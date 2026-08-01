@@ -1027,3 +1027,56 @@ def test_supervised_live_response_is_not_labeled_dry_run():
         "balanced profile only."
         in source
     )
+
+
+
+def test_supervised_handler_declares_deadline_global():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "def set_thermal_operator_arm_state"
+    )
+    end = source.index(
+        "def build_fan_command_server",
+        start,
+    )
+    handler = source[start:end]
+
+    global_position = handler.index(
+        "global supervised_thermal_session_deadline"
+    )
+    assignment_position = handler.index(
+        "supervised_thermal_session_deadline = ("
+    )
+
+    assert global_position < assignment_position
+
+
+def test_supervised_handler_sets_bounded_deadline():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "def set_thermal_operator_arm_state"
+    )
+    end = source.index(
+        "def build_fan_command_server",
+        start,
+    )
+    handler = source[start:end]
+
+    assert (
+        "time.monotonic()"
+        in handler
+    )
+    assert (
+        "+ SUPERVISED_THERMAL_SESSION_SECONDS"
+        in handler
+    )
