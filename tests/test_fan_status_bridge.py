@@ -299,3 +299,86 @@ def test_bridge_publishes_armed_thermal_readiness(
         ]
         is True
     )
+
+
+
+def test_bridge_preserves_supervised_thermal_session(
+    tmp_path,
+):
+    bridge = FanControlStatusBridge(
+        tmp_path / "fan-status.json",
+        clock=lambda: 1000.0,
+    )
+
+    published = bridge.publish(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "balanced",
+            "requested_profile": "balanced",
+            "thermal_supervised_session_active": True,
+            "thermal_supervised_session_remaining": 87.5,
+        }
+    )
+
+    assert (
+        published[
+            "thermal_supervised_session_active"
+        ]
+        is True
+    )
+    assert (
+        published[
+            "thermal_supervised_session_remaining"
+        ]
+        == 87.5
+    )
+
+    read_back = bridge.read(
+        max_age=30.0
+    )
+
+    assert read_back is not None
+    assert (
+        read_back[
+            "thermal_supervised_session_active"
+        ]
+        is True
+    )
+    assert (
+        read_back[
+            "thermal_supervised_session_remaining"
+        ]
+        == 87.5
+    )
+
+
+def test_bridge_defaults_supervised_session_inactive(
+    tmp_path,
+):
+    bridge = FanControlStatusBridge(
+        tmp_path / "fan-status.json",
+        clock=lambda: 1000.0,
+    )
+
+    published = bridge.publish(
+        {
+            "enabled": True,
+            "connected": True,
+            "active_profile": "automatic",
+            "requested_profile": "automatic",
+        }
+    )
+
+    assert (
+        published[
+            "thermal_supervised_session_active"
+        ]
+        is False
+    )
+    assert (
+        published[
+            "thermal_supervised_session_remaining"
+        ]
+        == 0.0
+    )

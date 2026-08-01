@@ -352,6 +352,22 @@ class FanControlStatusBridge:
                     or 0.0
                 ),
             ),
+            "thermal_supervised_session_active": bool(
+                payload.get(
+                    "thermal_supervised_session_active",
+                    False,
+                )
+            ),
+            "thermal_supervised_session_remaining": max(
+                0.0,
+                float(
+                    payload.get(
+                        "thermal_supervised_session_remaining",
+                        0.0,
+                    )
+                    or 0.0
+                ),
+            ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(
                     "thermal_recommended_profile",
@@ -701,6 +717,22 @@ class FanControlStatusBridge:
                 float(
                     payload.get(
                         "thermal_control_cooldown_remaining",
+                        0.0,
+                    )
+                    or 0.0
+                ),
+            ),
+            "thermal_supervised_session_active": bool(
+                payload.get(
+                    "thermal_supervised_session_active",
+                    False,
+                )
+            ),
+            "thermal_supervised_session_remaining": max(
+                0.0,
+                float(
+                    payload.get(
+                        "thermal_supervised_session_remaining",
                         0.0,
                     )
                     or 0.0
