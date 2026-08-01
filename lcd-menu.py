@@ -619,6 +619,65 @@ def fan_control_event_source(
     return "safety"
 
 
+def restore_motherboard_fan_control(
+    reason,
+    *,
+    telemetry=None,
+):
+    """Synchronously restore controlled channels to motherboard Automatic."""
+
+    current_telemetry = (
+        telemetry
+        if telemetry is not None
+        else fan_command_telemetry()
+    )
+
+    runtime_status = (
+        fan_control_runtime.status_payload()
+    )
+
+    if (
+        runtime_status.get("active_profile")
+        == "automatic"
+        and runtime_status.get("control_authority")
+        == "automatic"
+    ):
+        return None
+
+    decision = (
+        fan_control_runtime.service
+        .request_profile(
+            "automatic",
+            fan_status=current_telemetry.get(
+                "fan_status",
+                {},
+            ),
+            temperatures_c=current_telemetry.get(
+                "temperatures_c",
+                (),
+            ),
+            telemetry_fresh=bool(
+                current_telemetry.get(
+                    "telemetry_fresh",
+                    False,
+                )
+            ),
+        )
+    )
+
+    record_fan_control_event(
+        decision,
+        fan_command_telemetry(),
+        source="thermal_policy",
+    )
+
+    publish_fan_control_status(
+        reason=reason
+    )
+
+    return decision
+
+
 def end_supervised_thermal_session(
     reason,
     *,
@@ -633,61 +692,30 @@ def end_supervised_thermal_session(
     supervised_thermal_session_deadline = None
     thermal_operator_armed = False
 
-    thermal_control_coordinator.configure(
-        operator_armed=False,
-        dry_run=True,
-    )
-
     current_telemetry = (
         telemetry
         if telemetry is not None
         else fan_command_telemetry()
     )
 
-    runtime_status = (
-        fan_control_runtime.status_payload()
+    restore_motherboard_fan_control(
+        reason,
+        telemetry=current_telemetry,
     )
 
-    recommendation = thermal_fan_recommendation
+    thermal_control_coordinator.configure(
+        operator_armed=False,
+        dry_run=True,
+    )
 
-    if recommendation is not None:
-        thermal_control_last_result = (
-            thermal_control_coordinator.evaluate(
-                recommendation,
-                telemetry=current_telemetry,
-                runtime_status=runtime_status,
-            )
+    thermal_control_coordinator.simulated_profile = (
+        thermal_control_coordinator._profile(
+            "automatic"
         )
-    elif (
-        runtime_status.get("active_profile")
-        != "automatic"
-    ):
-        decision = (
-            fan_control_runtime.service
-            .request_profile(
-                "automatic",
-                fan_status=current_telemetry.get(
-                    "fan_status",
-                    {},
-                ),
-                temperatures_c=current_telemetry.get(
-                    "temperatures_c",
-                    (),
-                ),
-                telemetry_fresh=bool(
-                    current_telemetry.get(
-                        "telemetry_fresh",
-                        False,
-                    )
-                ),
-            )
-        )
+    )
+    thermal_control_coordinator.owns_control = False
 
-        record_fan_control_event(
-            decision,
-            fan_command_telemetry(),
-            source="thermal_policy",
-        )
+    thermal_control_last_result = None
 
     publish_fan_control_status(
         reason=reason
@@ -1114,12 +1142,31 @@ def set_thermal_operator_arm_state(
     else:
         supervised_thermal_session_deadline = None
         thermal_operator_armed = False
+
+        restore_motherboard_fan_control(
+            (
+                "Automatic thermal control disarmed; "
+                "motherboard control restored."
+            ),
+            telemetry=telemetry,
+        )
+
         thermal_control_coordinator.configure(
             operator_armed=False,
             dry_run=True,
         )
+        thermal_control_coordinator.simulated_profile = (
+            thermal_control_coordinator._profile(
+                "automatic"
+            )
+        )
+        thermal_control_coordinator.owns_control = False
+        thermal_control_last_result = None
 
-    if thermal_fan_recommendation is not None:
+    if (
+        normalized != "disarm"
+        and thermal_fan_recommendation is not None
+    ):
         thermal_control_last_result = (
             thermal_control_coordinator
             .evaluate(
@@ -1128,13 +1175,6 @@ def set_thermal_operator_arm_state(
                 runtime_status=runtime_status,
             )
         )
-    elif normalized == "disarm":
-        thermal_control_coordinator.simulated_profile = (
-            thermal_control_coordinator._profile(
-                "automatic"
-            )
-        )
-        thermal_control_coordinator.owns_control = False
 
     return {
         "ok": True,
@@ -1166,7 +1206,7 @@ def set_thermal_operator_arm_state(
                 if thermal_operator_armed
                 else (
                     "Automatic thermal control disarmed; "
-                    "simulation returned to automatic."
+                    "motherboard control restored."
                 )
             )
         ),

@@ -1080,3 +1080,119 @@ def test_supervised_handler_sets_bounded_deadline():
         "+ SUPERVISED_THERMAL_SESSION_SECONDS"
         in handler
     )
+
+
+
+def test_disarm_synchronously_restores_motherboard_control():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    helper_start = source.index(
+        "def restore_motherboard_fan_control"
+    )
+    helper_end = source.index(
+        "def end_supervised_thermal_session",
+        helper_start,
+    )
+    helper = source[
+        helper_start:helper_end
+    ]
+
+    assert '.request_profile(' in helper
+    assert '"automatic"' in helper
+    assert "publish_fan_control_status" in helper
+
+    handler_start = source.index(
+        "def set_thermal_operator_arm_state"
+    )
+    handler_end = source.index(
+        "def build_fan_command_server",
+        handler_start,
+    )
+    handler = source[
+        handler_start:handler_end
+    ]
+
+    disarm_start = handler.index(
+        "else:\n"
+        "        supervised_thermal_session_deadline = None"
+    )
+    disarm_block = handler[
+        disarm_start:
+    ]
+
+    restore_position = disarm_block.index(
+        "restore_motherboard_fan_control("
+    )
+    dry_run_position = disarm_block.index(
+        "thermal_control_coordinator.configure("
+    )
+
+    assert restore_position < dry_run_position
+    assert (
+        'normalized != "disarm"'
+        in handler
+    )
+
+
+def test_lease_expiry_uses_synchronous_restoration():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "def end_supervised_thermal_session"
+    )
+    end = source.index(
+        "def supervised_thermal_session_active",
+        start,
+    )
+    helper = source[start:end]
+
+    assert (
+        "restore_motherboard_fan_control("
+        in helper
+    )
+    assert (
+        "thermal_control_last_result = None"
+        in helper
+    )
+    assert (
+        "thermal_control_coordinator.evaluate("
+        not in helper
+    )
+
+    restore_position = helper.index(
+        "restore_motherboard_fan_control("
+    )
+    dry_run_position = helper.index(
+        "thermal_control_coordinator.configure("
+    )
+
+    assert restore_position < dry_run_position
+
+
+def test_disarm_message_reports_motherboard_restoration():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "Automatic thermal control disarmed; "
+        in source
+    )
+    assert (
+        "motherboard control restored."
+        in source
+    )
+    assert (
+        "simulation returned to automatic."
+        not in source
+    )
