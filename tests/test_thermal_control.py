@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from truepanel.hardware.fan_control import (
@@ -861,3 +863,167 @@ def test_source_default_enables_dry_run_lock():
     )
 
     assert '"dry_run": True' in source
+
+
+
+def test_supervised_live_session_is_time_limited_and_balanced_only():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "SUPERVISED_THERMAL_SESSION_SECONDS = 120.0"
+        in source
+    )
+    assert (
+        '!= "balanced"'
+        in source
+    )
+    assert (
+        "end_supervised_thermal_session"
+        in source
+    )
+    assert (
+        "thermal_control_coordinator.configure("
+        in source
+    )
+    assert (
+        "dry_run=False"
+        in source
+    )
+
+
+def test_supervised_live_session_requires_automatic_start():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        '!= "automatic"'
+        in source
+    )
+    assert (
+        "Supervised live control must begin "
+        in source
+    )
+    assert (
+        "from motherboard automatic mode."
+        in source
+    )
+
+
+def test_supervised_session_expiry_restores_dry_run():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "def end_supervised_thermal_session"
+    )
+    end = source.index(
+        "def supervised_thermal_session_active",
+        start,
+    )
+    helper = source[start:end]
+
+    assert "operator_armed=False" in helper
+    assert "dry_run=True" in helper
+    assert "automatic" in helper
+
+
+
+def test_fan_safety_tick_precedes_supervised_lease_checks():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "def reconcile_fan_control():"
+    )
+    end = source.index(
+        "def set_thermal_operator_arm_state",
+        start,
+    )
+    reconcile = source[start:end]
+
+    safety_tick = reconcile.index(
+        "fan_control_runtime.service.tick"
+    )
+    lease_check = reconcile.index(
+        "if not supervised_thermal_session_active()"
+    )
+    thermal_evaluation = reconcile.index(
+        "thermal_control_coordinator.evaluate"
+    )
+
+    assert safety_tick < lease_check
+    assert lease_check < thermal_evaluation
+
+
+def test_safety_decision_disarms_lease_without_requesting_automatic():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "if decision is not None:"
+    )
+    end = source.index(
+        "if supervised_thermal_session_deadline "
+        "is not None:",
+        start + 1,
+    )
+    decision_block = source[start:end]
+
+    assert (
+        "supervised_thermal_session_deadline = None"
+        in decision_block
+    )
+    assert (
+        "thermal_operator_armed = False"
+        in decision_block
+    )
+    assert (
+        "operator_armed=False"
+        in decision_block
+    )
+    assert (
+        "dry_run=True"
+        in decision_block
+    )
+    assert (
+        ".request_profile("
+        not in decision_block
+    )
+
+
+def test_supervised_live_response_is_not_labeled_dry_run():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        '"status": (\n'
+        '            "supervised_live"'
+        in source
+    )
+    assert (
+        "Supervised live thermal control "
+        in source
+    )
+    assert (
+        "balanced profile only."
+        in source
+    )

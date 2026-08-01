@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
     THERMAL_ARM_CONFIRMATION,
+    SUPERVISED_THERMAL_CONFIRMATION,
     FanCommandClient,
     FanCommandProcessor,
     FanCommandServer,
@@ -589,4 +590,71 @@ def test_thermal_disarm_needs_no_confirmation():
     assert response["status"] == "disarmed"
     assert response["operator_armed"] is False
     assert calls == ["disarm"]
+    assert runtime.service.requests == []
+
+
+
+def test_supervised_live_requires_stronger_confirmation():
+    runtime = FakeRuntime()
+    calls = []
+
+    processor = FanCommandProcessor(
+        runtime,
+        telemetry_provider=telemetry,
+        thermal_control_handler=(
+            lambda action: calls.append(action)
+        ),
+    )
+
+    response = processor.process(
+        {
+            "command": "thermal_control",
+            "action": "supervised_live",
+            "confirmation": (
+                THERMAL_ARM_CONFIRMATION
+            ),
+        }
+    )
+
+    assert response["ok"] is False
+    assert (
+        response["status"]
+        == "confirmation_required"
+    )
+    assert (
+        response["confirmation_required"]
+        == SUPERVISED_THERMAL_CONFIRMATION
+    )
+    assert calls == []
+    assert runtime.service.requests == []
+
+
+def test_supervised_live_is_forwarded_without_manual_profile_request():
+    runtime = FakeRuntime()
+    calls = []
+
+    processor = FanCommandProcessor(
+        runtime,
+        telemetry_provider=telemetry,
+        thermal_control_handler=(
+            lambda action: {
+                "ok": True,
+                "status": "supervised_live",
+                "action": calls.append(action),
+            }
+        ),
+    )
+
+    response = processor.process(
+        {
+            "command": "thermal_control",
+            "action": "supervised_live",
+            "confirmation": (
+                SUPERVISED_THERMAL_CONFIRMATION
+            ),
+        }
+    )
+
+    assert response["ok"] is True
+    assert calls == ["supervised_live"]
     assert runtime.service.requests == []

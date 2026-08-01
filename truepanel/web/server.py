@@ -21,6 +21,7 @@ from truepanel.config.policy import (
 from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
     THERMAL_ARM_CONFIRMATION,
+    SUPERVISED_THERMAL_CONFIRMATION,
     FanCommandClient,
     FanCommandError,
 )
@@ -510,12 +511,14 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         if action not in {
             "arm",
             "disarm",
+            "supervised_live",
         }:
             self._json(
                 {
                     "error": "invalid_action",
                     "message": (
-                        "action must be arm or disarm."
+                        "action must be arm, disarm, "
+                        "or supervised_live."
                     ),
                 },
                 status=HTTPStatus.UNPROCESSABLE_ENTITY,
@@ -545,10 +548,21 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
+        required_confirmation = None
+
+        if action == "arm":
+            required_confirmation = (
+                THERMAL_ARM_CONFIRMATION
+            )
+        elif action == "supervised_live":
+            required_confirmation = (
+                SUPERVISED_THERMAL_CONFIRMATION
+            )
+
         if (
-            action == "arm"
+            required_confirmation is not None
             and confirmation
-            != THERMAL_ARM_CONFIRMATION
+            != required_confirmation
         ):
             self._json(
                 {
@@ -556,12 +570,11 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
                         "confirmation_required"
                     ),
                     "message": (
-                        "Arming automatic thermal "
-                        "control requires explicit "
-                        "confirmation."
+                        "This thermal-control action "
+                        "requires explicit confirmation."
                     ),
                     "confirmation_required": (
-                        THERMAL_ARM_CONFIRMATION
+                        required_confirmation
                     ),
                 },
                 status=HTTPStatus.CONFLICT,

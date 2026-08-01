@@ -225,7 +225,11 @@ def test_dashboard_disarm_does_not_embed_arm_confirmation():
         in source
     )
     assert (
-        '"Disarm automatic thermal control'
+        '"Disarm thermal control and return the "'
+        in source
+    )
+    assert (
+        '"physical fans to motherboard Automatic?"'
         in source
     )
 
@@ -253,5 +257,94 @@ def test_dashboard_renders_runtime_thermal_arm_state():
     )
     assert (
         "renderThermalArmControls(data)"
+        in source
+    )
+
+
+
+def test_dashboard_has_supervised_live_control():
+    source = Path(
+        "truepanel/web/static/index.html"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        'id="thermalSupervisedLive"'
+        in source
+    )
+    assert (
+        'id="thermalLeaseState"'
+        in source
+    )
+    assert (
+        "Balanced only · 120 seconds"
+        in source
+    )
+
+
+def test_dashboard_requires_stronger_live_confirmation():
+    source = Path(
+        "truepanel/web/static/index.html"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "ENGAGE_SUPERVISED_THERMAL_CONTROL"
+        in source
+    )
+    assert (
+        'action==="supervised_live"'
+        in source
+    )
+    assert (
+        '"supervised_live"'
+        in source
+    )
+
+
+def test_dashboard_live_button_requires_balanced_automatic_start():
+    source = Path(
+        "truepanel/web/static/index.html"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        'recommendation==="balanced"'
+        in source
+    )
+    assert (
+        'activeProfile==="automatic"'
+        in source
+    )
+    assert (
+        "!safetyHold"
+        in source
+    )
+    assert (
+        "!recoveryPending"
+        in source
+    )
+
+
+def test_dashboard_renders_supervised_lease_countdown():
+    source = Path(
+        "truepanel/web/static/index.html"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "thermal_supervised_session_active"
+        in source
+    )
+    assert (
+        "thermal_supervised_session_remaining"
+        in source
+    )
+    assert (
+        "seconds remaining"
         in source
     )

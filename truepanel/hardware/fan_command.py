@@ -30,9 +30,14 @@ THERMAL_ARM_CONFIRMATION = (
     "ARM_THERMAL_CONTROL"
 )
 
+SUPERVISED_THERMAL_CONFIRMATION = (
+    "ENGAGE_SUPERVISED_THERMAL_CONTROL"
+)
+
 THERMAL_CONTROL_COMMAND = "thermal_control"
 THERMAL_ARM_ACTION = "arm"
 THERMAL_DISARM_ACTION = "disarm"
+THERMAL_SUPERVISED_ACTION = "supervised_live"
 
 MAX_REQUEST_BYTES = 4096
 
@@ -132,34 +137,47 @@ class FanCommandProcessor:
         if action not in {
             THERMAL_ARM_ACTION,
             THERMAL_DISARM_ACTION,
+            THERMAL_SUPERVISED_ACTION,
         }:
             return _response(
                 ok=False,
                 status="invalid_action",
                 message=(
                     "Thermal-control action must be "
-                    "arm or disarm."
+                    "arm, disarm, or supervised_live."
                 ),
                 allowed_actions=[
                     THERMAL_ARM_ACTION,
                     THERMAL_DISARM_ACTION,
+                    THERMAL_SUPERVISED_ACTION,
                 ],
             )
 
+        required_confirmation = None
+
+        if action == THERMAL_ARM_ACTION:
+            required_confirmation = (
+                THERMAL_ARM_CONFIRMATION
+            )
+        elif action == THERMAL_SUPERVISED_ACTION:
+            required_confirmation = (
+                SUPERVISED_THERMAL_CONFIRMATION
+            )
+
         if (
-            action == THERMAL_ARM_ACTION
+            required_confirmation is not None
             and request.get("confirmation")
-            != THERMAL_ARM_CONFIRMATION
+            != required_confirmation
         ):
             return _response(
                 ok=False,
                 status="confirmation_required",
                 message=(
-                    "Arming automatic thermal control "
+                    "This thermal-control action "
                     "requires explicit confirmation."
                 ),
                 confirmation_required=(
-                    THERMAL_ARM_CONFIRMATION
+                    required_confirmation
                 ),
             )
 

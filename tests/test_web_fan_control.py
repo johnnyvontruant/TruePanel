@@ -8,6 +8,7 @@ from urllib.request import Request, urlopen
 from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
     THERMAL_ARM_CONFIRMATION,
+    SUPERVISED_THERMAL_CONFIRMATION,
     FanCommandError,
 )
 from truepanel.web.server import (
@@ -523,5 +524,70 @@ def test_thermal_disarm_route_needs_no_confirmation():
         {
             "action": "disarm",
             "confirmation": None,
+        }
+    ]
+
+
+
+def test_supervised_live_route_requires_stronger_confirmation():
+    client = FakeFanCommandClient()
+
+    with running_server(
+        client
+    ) as base_url:
+        status, payload = post_json(
+            base_url
+            + "/api/v1/fans/thermal-arm",
+            {
+                "action": "supervised_live",
+                "confirmation": (
+                    THERMAL_ARM_CONFIRMATION
+                ),
+            },
+        )
+
+    assert status == 409
+    assert payload["error"] == (
+        "confirmation_required"
+    )
+    assert payload[
+        "confirmation_required"
+    ] == SUPERVISED_THERMAL_CONFIRMATION
+    assert client.calls == []
+
+
+def test_supervised_live_route_forwards_confirmation():
+    client = FakeFanCommandClient(
+        response={
+            "ok": True,
+            "status": "supervised_live",
+            "supervised_session_active": True,
+        }
+    )
+
+    with running_server(
+        client
+    ) as base_url:
+        status, payload = post_json(
+            base_url
+            + "/api/v1/fans/thermal-arm",
+            {
+                "action": "supervised_live",
+                "confirmation": (
+                    SUPERVISED_THERMAL_CONFIRMATION
+                ),
+            },
+        )
+
+    assert status == 200
+    assert payload[
+        "supervised_session_active"
+    ] is True
+    assert client.calls == [
+        {
+            "action": "supervised_live",
+            "confirmation": (
+                SUPERVISED_THERMAL_CONFIRMATION
+            ),
         }
     ]

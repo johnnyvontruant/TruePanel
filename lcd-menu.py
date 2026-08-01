@@ -261,6 +261,9 @@ thermal_fan_recommendation = None
 thermal_observer_previous_profile = "automatic"
 thermal_control_last_result = None
 
+SUPERVISED_THERMAL_SESSION_SECONDS = 120.0
+supervised_thermal_session_deadline = None
+
 
 def publish_fan_control_status(
     reason=None,
@@ -289,7 +292,9 @@ def publish_fan_control_status(
 
     payload[
         "thermal_dry_run"
-    ] = thermal_dry_run
+    ] = (
+        thermal_control_coordinator.dry_run
+    )
 
     control_result = (
         thermal_control_last_result
@@ -329,6 +334,29 @@ def publish_fan_control_status(
         if control_result is not None
         else 0.0
     )
+
+    session_remaining = 0.0
+
+    if supervised_thermal_session_deadline is not None:
+        session_remaining = max(
+            0.0,
+            (
+                supervised_thermal_session_deadline
+                - time.monotonic()
+            ),
+        )
+
+    payload[
+        "thermal_supervised_session_active"
+    ] = bool(
+        supervised_thermal_session_deadline
+        is not None
+        and session_remaining > 0
+    )
+
+    payload[
+        "thermal_supervised_session_remaining"
+    ] = session_remaining
 
     if recommendation is None:
         payload[
@@ -591,8 +619,95 @@ def fan_control_event_source(
     return "safety"
 
 
+def end_supervised_thermal_session(
+    reason,
+    *,
+    telemetry=None,
+):
+    """End the live lease and return control to the motherboard."""
+
+    global supervised_thermal_session_deadline
+    global thermal_operator_armed
+    global thermal_control_last_result
+
+    supervised_thermal_session_deadline = None
+    thermal_operator_armed = False
+
+    thermal_control_coordinator.configure(
+        operator_armed=False,
+        dry_run=True,
+    )
+
+    current_telemetry = (
+        telemetry
+        if telemetry is not None
+        else fan_command_telemetry()
+    )
+
+    runtime_status = (
+        fan_control_runtime.status_payload()
+    )
+
+    recommendation = thermal_fan_recommendation
+
+    if recommendation is not None:
+        thermal_control_last_result = (
+            thermal_control_coordinator.evaluate(
+                recommendation,
+                telemetry=current_telemetry,
+                runtime_status=runtime_status,
+            )
+        )
+    elif (
+        runtime_status.get("active_profile")
+        != "automatic"
+    ):
+        decision = (
+            fan_control_runtime.service
+            .request_profile(
+                "automatic",
+                fan_status=current_telemetry.get(
+                    "fan_status",
+                    {},
+                ),
+                temperatures_c=current_telemetry.get(
+                    "temperatures_c",
+                    (),
+                ),
+                telemetry_fresh=bool(
+                    current_telemetry.get(
+                        "telemetry_fresh",
+                        False,
+                    )
+                ),
+            )
+        )
+
+        record_fan_control_event(
+            decision,
+            fan_command_telemetry(),
+            source="thermal_policy",
+        )
+
+    publish_fan_control_status(
+        reason=reason
+    )
+
+
+def supervised_thermal_session_active():
+    if supervised_thermal_session_deadline is None:
+        return False
+
+    return (
+        time.monotonic()
+        < supervised_thermal_session_deadline
+    )
+
+
 def reconcile_fan_control():
     global thermal_control_last_result
+    global thermal_operator_armed
+    global supervised_thermal_session_deadline
 
     if not fan_control_runtime.connected:
         return None
@@ -630,8 +745,59 @@ def reconcile_fan_control():
             post_transition_telemetry,
             source=source,
         )
-        publish_fan_control_status()
+
+        if (
+            supervised_thermal_session_deadline
+            is not None
+        ):
+            supervised_thermal_session_deadline = None
+            thermal_operator_armed = False
+
+            thermal_control_coordinator.configure(
+                operator_armed=False,
+                dry_run=True,
+            )
+
+            publish_fan_control_status(
+                reason=(
+                    "Supervised thermal session ended "
+                    "because the fan safety service "
+                    "changed control state."
+                )
+            )
+        else:
+            publish_fan_control_status()
+
         return decision
+
+    if supervised_thermal_session_deadline is not None:
+        if not supervised_thermal_session_active():
+            end_supervised_thermal_session(
+                "Supervised thermal session expired; "
+                "returned control to the motherboard.",
+                telemetry=telemetry,
+            )
+            return None
+
+        if not telemetry["telemetry_fresh"]:
+            end_supervised_thermal_session(
+                "Supervised thermal session ended "
+                "because telemetry became stale.",
+                telemetry=telemetry,
+            )
+            return None
+
+        if (
+            recommendation.recommended_profile.value
+            != "balanced"
+        ):
+            end_supervised_thermal_session(
+                "Supervised thermal session ended "
+                "because the recommendation left "
+                "the balanced profile.",
+                telemetry=telemetry,
+            )
+            return None
 
     thermal_control_last_result = (
         thermal_control_coordinator.evaluate(
@@ -684,13 +850,14 @@ def set_thermal_operator_arm_state(
     if normalized not in {
         "arm",
         "disarm",
+        "supervised_live",
     }:
         return {
             "ok": False,
             "status": "invalid_action",
             "message": (
                 "Thermal-control action must be "
-                "arm or disarm."
+                "arm, disarm, or supervised_live."
             ),
         }
 
@@ -705,12 +872,15 @@ def set_thermal_operator_arm_state(
             "policy_mode": thermal_policy_mode,
         }
 
-    if not thermal_dry_run:
+    if (
+        normalized == "arm"
+        and not thermal_dry_run
+    ):
         return {
             "ok": False,
             "status": "live_control_locked",
             "message": (
-                "Runtime arming is currently limited "
+                "Standard runtime arming is limited "
                 "to dry-run mode."
             ),
             "dry_run": False,
@@ -721,7 +891,161 @@ def set_thermal_operator_arm_state(
         fan_control_runtime.status_payload()
     )
 
-    if normalized == "arm":
+    if normalized == "supervised_live":
+        blocking_reasons = []
+
+        if not thermal_dry_run:
+            blocking_reasons.append(
+                "The supervised session must begin "
+                "from dry-run mode."
+            )
+
+        if thermal_fan_recommendation is None:
+            blocking_reasons.append(
+                "Thermal recommendation is unavailable."
+            )
+        elif not bool(
+            thermal_fan_recommendation
+            .telemetry_valid
+        ):
+            blocking_reasons.append(
+                "Thermal recommendation telemetry "
+                "is invalid."
+            )
+        elif (
+            thermal_fan_recommendation
+            .recommended_profile
+            .value
+            != "balanced"
+        ):
+            blocking_reasons.append(
+                "Supervised live control permits "
+                "only the balanced recommendation."
+            )
+
+        if not bool(
+            telemetry.get(
+                "telemetry_fresh",
+                False,
+            )
+        ):
+            blocking_reasons.append(
+                "Thermal telemetry is stale."
+            )
+
+        if not bool(
+            runtime_status.get(
+                "connected",
+                False,
+            )
+        ):
+            blocking_reasons.append(
+                "Fan-control runtime is disconnected."
+            )
+
+        if (
+            runtime_status.get(
+                "active_profile"
+            )
+            != "automatic"
+        ):
+            blocking_reasons.append(
+                "Supervised live control must begin "
+                "from motherboard automatic mode."
+            )
+
+        if bool(
+            runtime_status.get(
+                "safety_hold",
+                False,
+            )
+        ):
+            blocking_reasons.append(
+                "Fan-control safety hold is active."
+            )
+
+        if bool(
+            runtime_status.get(
+                "recovery_pending",
+                False,
+            )
+        ):
+            blocking_reasons.append(
+                "Fan-control safety recovery is pending."
+            )
+
+        fan_channels = (
+            telemetry
+            .get("fan_status", {})
+            .get("fan_channels", [])
+        )
+
+        controlled = {
+            int(item.get("number")): item
+            for item in fan_channels
+            if isinstance(item, dict)
+            and item.get("number") in (1, 2)
+        }
+
+        for channel in (1, 2):
+            item = controlled.get(channel)
+
+            if item is None:
+                blocking_reasons.append(
+                    f"Controlled fan {channel} "
+                    "telemetry is unavailable."
+                )
+                continue
+
+            try:
+                rpm = float(
+                    item.get("rpm", 0)
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                rpm = 0.0
+
+            if rpm < 300:
+                blocking_reasons.append(
+                    f"Controlled fan {channel} "
+                    "is below the safe RPM floor."
+                )
+
+            if bool(
+                item.get("alarm", False)
+            ):
+                blocking_reasons.append(
+                    f"Controlled fan {channel} "
+                    "reports an alarm."
+                )
+
+        if blocking_reasons:
+            return {
+                "ok": False,
+                "status": "readiness_blocked",
+                "message": blocking_reasons[0],
+                "blocking_reasons": blocking_reasons,
+                "operator_armed": (
+                    thermal_operator_armed
+                ),
+                "dry_run": thermal_dry_run,
+            }
+
+        thermal_operator_armed = True
+
+        thermal_control_coordinator.configure(
+            operator_armed=True,
+            dry_run=False,
+        )
+
+        supervised_thermal_session_deadline = (
+            time.monotonic()
+            + SUPERVISED_THERMAL_SESSION_SECONDS
+        )
+
+    elif normalized == "arm":
         blocking_reasons = []
 
         if thermal_fan_recommendation is None:
@@ -787,9 +1111,11 @@ def set_thermal_operator_arm_state(
         )
 
     else:
+        supervised_thermal_session_deadline = None
         thermal_operator_armed = False
         thermal_control_coordinator.configure(
-            operator_armed=False
+            operator_armed=False,
+            dry_run=True,
         )
 
     if thermal_fan_recommendation is not None:
@@ -812,24 +1138,52 @@ def set_thermal_operator_arm_state(
     return {
         "ok": True,
         "status": (
-            "armed"
-            if thermal_operator_armed
-            else "disarmed"
+            "supervised_live"
+            if (
+                normalized == "supervised_live"
+                and thermal_operator_armed
+            )
+            else (
+                "armed"
+                if thermal_operator_armed
+                else "disarmed"
+            )
         ),
         "message": (
-            "Automatic thermal control armed "
-            "in dry-run mode."
-            if thermal_operator_armed
+            (
+                "Supervised live thermal control "
+                "engaged for 120 seconds with the "
+                "balanced profile only."
+            )
+            if (
+                normalized == "supervised_live"
+                and thermal_operator_armed
+            )
             else (
-                "Automatic thermal control disarmed; "
-                "simulation returned to automatic."
+                "Automatic thermal control armed "
+                "in dry-run mode."
+                if thermal_operator_armed
+                else (
+                    "Automatic thermal control disarmed; "
+                    "simulation returned to automatic."
+                )
             )
         ),
         "operator_armed": (
             thermal_operator_armed
         ),
-        "dry_run": thermal_dry_run,
+        "dry_run": (
+            thermal_control_coordinator.dry_run
+        ),
         "policy_mode": thermal_policy_mode,
+        "supervised_session_active": (
+            supervised_thermal_session_active()
+        ),
+        "supervised_session_seconds": (
+            SUPERVISED_THERMAL_SESSION_SECONDS
+            if supervised_thermal_session_active()
+            else 0.0
+        ),
         "simulated_profile": (
             thermal_control_coordinator
             .simulated_profile
