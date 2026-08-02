@@ -18,6 +18,7 @@ THERMAL_COMMISSIONING_ACTIONS = (
     "supervised_expired",
     "supervised_safety_cancelled",
     "automatic_lease_started",
+    "automatic_lease_renewed",
     "automatic_lease_cancelled",
     "automatic_lease_expired",
     "automatic_lease_safety_cancelled",

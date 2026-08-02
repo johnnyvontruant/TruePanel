@@ -435,7 +435,7 @@ def test_dashboard_has_bounded_automatic_controls():
     )
 
     assert (
-        "ENGAGE_STAGE_2_AUTOMATIC_CONTROL"
+        "ENGAGE_STAGE_3_AUTOMATIC_CONTROL"
         in source
     )
     assert (
@@ -443,3 +443,33 @@ def test_dashboard_has_bounded_automatic_controls():
         '        "automatic_lease"'
         in source
     )
+
+
+def test_dashboard_has_stage_three_renewal_controls():
+    source = Path(
+        "truepanel/web/static/index.html"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert 'id="thermalRenewAutomatic"' in source
+    assert (
+        'id="thermalAutomaticLeaseExpires"'
+        in source
+    )
+    assert "24 hours" in source
+    assert (
+        "ENGAGE_STAGE_3_AUTOMATIC_CONTROL"
+        in source
+    )
+    assert (
+        "RENEW_STAGE_3_AUTOMATIC_CONTROL"
+        in source
+    )
+    assert (
+        'requestThermalArm(\n'
+        '        "automatic_lease_renew"'
+        in source
+    )
+    assert "automaticRenewAllowed" in source
+    assert "toLocaleString()" in source

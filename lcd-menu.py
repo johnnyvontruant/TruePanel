@@ -1144,13 +1144,15 @@ def set_thermal_operator_arm_state(
         "disarm",
         "supervised_live",
         "automatic_lease",
+        "automatic_lease_renew",
     }:
         return {
             "ok": False,
             "status": "invalid_action",
             "message": (
                 "Thermal-control action must be arm, disarm, "
-                "supervised_live, or automatic_lease."
+                "supervised_live, automatic_lease, or "
+                "automatic_lease_renew."
             ),
         }
 
@@ -1248,6 +1250,85 @@ def set_thermal_operator_arm_state(
                 ),
                 "dry_run": thermal_dry_run,
                 "automatic_lease_active": False,
+            }
+
+        thermal_operator_armed = True
+
+        thermal_control_coordinator.configure(
+            operator_armed=True,
+            dry_run=False,
+        )
+
+    elif normalized == "automatic_lease_renew":
+        recommendation_profile = (
+            thermal_fan_recommendation
+            .recommended_profile
+            .value
+            if thermal_fan_recommendation is not None
+            else "automatic"
+        )
+
+        lease_decision = bounded_automatic_lease.renew(
+            current_fingerprint=(
+                thermal_safety_current_fingerprint
+            ),
+            active_profile=runtime_status.get(
+                "active_profile",
+                "automatic",
+            ),
+            recommended_profile=(
+                recommendation_profile
+            ),
+            telemetry_valid=bool(
+                thermal_fan_recommendation is not None
+                and thermal_fan_recommendation
+                .telemetry_valid
+            ),
+            telemetry_fresh=bool(
+                telemetry.get(
+                    "telemetry_fresh",
+                    False,
+                )
+            ),
+            connected=bool(
+                runtime_status.get(
+                    "connected",
+                    False,
+                )
+            ),
+            safety_hold=bool(
+                runtime_status.get(
+                    "safety_hold",
+                    False,
+                )
+            ),
+            recovery_pending=bool(
+                runtime_status.get(
+                    "recovery_pending",
+                    False,
+                )
+            ),
+        )
+
+        if not lease_decision.accepted:
+            return {
+                "ok": False,
+                "status": lease_decision.status,
+                "message": lease_decision.message,
+                "blocking_reasons": list(
+                    lease_decision.blocking_reasons
+                ),
+                "operator_armed": (
+                    thermal_operator_armed
+                ),
+                "dry_run": thermal_dry_run,
+                "automatic_lease_active": (
+                    bounded_automatic_lease.active()
+                ),
+                "automatic_lease_remaining": (
+                    bounded_automatic_lease
+                    .remaining_seconds()
+                ),
             }
 
         thermal_operator_armed = True
@@ -1553,8 +1634,21 @@ def set_thermal_operator_arm_state(
             "automatic_lease_started",
             (
                 "Bounded automatic thermal control "
-                "engaged for 3600 seconds with balanced "
+                "engaged for 86400 seconds with balanced "
                 "and cooling boost profiles only."
+            ),
+            lease_remaining=AUTOMATIC_LEASE_SECONDS,
+        )
+
+    if (
+        normalized == "automatic_lease_renew"
+        and bounded_automatic_lease.active()
+    ):
+        record_thermal_commissioning_event(
+            "automatic_lease_renewed",
+            (
+                "Stage 3 automatic thermal control "
+                "renewed for 86400 seconds."
             ),
             lease_remaining=AUTOMATIC_LEASE_SECONDS,
         )
@@ -1578,11 +1672,17 @@ def set_thermal_operator_arm_state(
     return {
         "ok": True,
         "status": (
-            "automatic_lease"
+            "automatic_lease_renewed"
             if (
-                normalized == "automatic_lease"
+                normalized == "automatic_lease_renew"
                 and thermal_operator_armed
             )
+            else (
+                "automatic_lease"
+                if (
+                    normalized == "automatic_lease"
+                    and thermal_operator_armed
+                )
             else (
                 "supervised_live"
                 if (
@@ -1595,11 +1695,21 @@ def set_thermal_operator_arm_state(
                     else "disarmed"
                 )
             )
+        )
         ),
         "message": (
             (
+                "Stage 3 automatic thermal control "
+                "renewed for 86400 seconds."
+            )
+            if (
+                normalized == "automatic_lease_renew"
+                and thermal_operator_armed
+            )
+            else (
+            (
                 "Bounded automatic thermal control "
-                "engaged for 3600 seconds with balanced "
+                "engaged for 86400 seconds with balanced "
                 "and cooling boost profiles only."
             )
             if (
@@ -1626,6 +1736,7 @@ def set_thermal_operator_arm_state(
                     )
                 )
             )
+        )
         ),
         "operator_armed": (
             thermal_operator_armed

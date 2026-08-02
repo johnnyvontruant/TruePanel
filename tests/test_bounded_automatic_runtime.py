@@ -95,7 +95,7 @@ def test_command_protocol_requires_explicit_confirmation():
 
     assert "automatic_lease" in source
     assert (
-        "ENGAGE_STAGE_2_AUTOMATIC_CONTROL"
+        "ENGAGE_STAGE_3_AUTOMATIC_CONTROL"
         in source
     )
 
@@ -152,3 +152,36 @@ def test_runtime_authority_remains_ephemeral():
         "BoundedAutomaticLease("
         in source
     )
+
+
+def test_stage_three_runtime_supports_renewal():
+    runtime = Path("lcd-menu.py").read_text(
+        encoding="utf-8"
+    )
+    command = Path(
+        "truepanel/hardware/fan_command.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+    server = Path(
+        "truepanel/web/server.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+    history = Path(
+        "truepanel/history/thermal_commissioning.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert "automatic_lease_renew" in runtime
+    assert "bounded_automatic_lease.renew(" in runtime
+    assert "automatic_lease_renewed" in runtime
+    assert "automatic_lease_renew" in command
+    assert "RENEW_STAGE_3_AUTOMATIC_CONTROL" in command
+    assert "automatic_lease_renew" in server
+    assert (
+        "BOUNDED_AUTOMATIC_RENEW_CONFIRMATION"
+        in server
+    )
+    assert "automatic_lease_renewed" in history

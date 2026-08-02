@@ -35,7 +35,11 @@ SUPERVISED_THERMAL_CONFIRMATION = (
 )
 
 BOUNDED_AUTOMATIC_CONFIRMATION = (
-    "ENGAGE_STAGE_2_AUTOMATIC_CONTROL"
+    "ENGAGE_STAGE_3_AUTOMATIC_CONTROL"
+)
+
+BOUNDED_AUTOMATIC_RENEW_CONFIRMATION = (
+    "RENEW_STAGE_3_AUTOMATIC_CONTROL"
 )
 
 THERMAL_CONTROL_COMMAND = "thermal_control"
@@ -43,6 +47,7 @@ THERMAL_ARM_ACTION = "arm"
 THERMAL_DISARM_ACTION = "disarm"
 THERMAL_SUPERVISED_ACTION = "supervised_live"
 THERMAL_AUTOMATIC_LEASE_ACTION = "automatic_lease"
+THERMAL_AUTOMATIC_RENEW_ACTION = "automatic_lease_renew"
 
 MAX_REQUEST_BYTES = 4096
 
@@ -146,19 +151,22 @@ class FanCommandProcessor:
             THERMAL_DISARM_ACTION,
             THERMAL_SUPERVISED_ACTION,
             THERMAL_AUTOMATIC_LEASE_ACTION,
+            THERMAL_AUTOMATIC_RENEW_ACTION,
         }:
             return _response(
                 ok=False,
                 status="invalid_action",
                 message=(
                     "Thermal-control action must be arm, disarm, "
-                    "supervised_live, or automatic_lease."
+                    "supervised_live, automatic_lease, or "
+                    "automatic_lease_renew."
                 ),
                 allowed_actions=[
                     THERMAL_ARM_ACTION,
                     THERMAL_DISARM_ACTION,
                     THERMAL_SUPERVISED_ACTION,
                     THERMAL_AUTOMATIC_LEASE_ACTION,
+                    THERMAL_AUTOMATIC_RENEW_ACTION,
                 ],
             )
 
@@ -175,6 +183,10 @@ class FanCommandProcessor:
         elif action == THERMAL_AUTOMATIC_LEASE_ACTION:
             required_confirmation = (
                 BOUNDED_AUTOMATIC_CONFIRMATION
+            )
+        elif action == THERMAL_AUTOMATIC_RENEW_ACTION:
+            required_confirmation = (
+                BOUNDED_AUTOMATIC_RENEW_CONFIRMATION
             )
 
         if (

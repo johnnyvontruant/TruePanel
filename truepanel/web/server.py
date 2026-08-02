@@ -20,6 +20,8 @@ from truepanel.config.policy import (
 )
 from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
+    BOUNDED_AUTOMATIC_CONFIRMATION,
+    BOUNDED_AUTOMATIC_RENEW_CONFIRMATION,
     THERMAL_ARM_CONFIRMATION,
     SUPERVISED_THERMAL_CONFIRMATION,
     FanCommandClient,
@@ -545,13 +547,15 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             "disarm",
             "supervised_live",
             "automatic_lease",
+            "automatic_lease_renew",
         }:
             self._json(
                 {
                     "error": "invalid_action",
                     "message": (
                         "action must be arm, disarm, "
-                        "supervised_live, or automatic_lease."
+                        "supervised_live, automatic_lease, or "
+                        "automatic_lease_renew."
                     ),
                 },
                 status=HTTPStatus.UNPROCESSABLE_ENTITY,
@@ -590,6 +594,14 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         elif action == "supervised_live":
             required_confirmation = (
                 SUPERVISED_THERMAL_CONFIRMATION
+            )
+        elif action == "automatic_lease":
+            required_confirmation = (
+                BOUNDED_AUTOMATIC_CONFIRMATION
+            )
+        elif action == "automatic_lease_renew":
+            required_confirmation = (
+                BOUNDED_AUTOMATIC_RENEW_CONFIRMATION
             )
 
         if (

@@ -14,8 +14,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping
 
-AUTOMATIC_CONTROL_STAGE = 2
-AUTOMATIC_LEASE_SECONDS = 3600.0
+AUTOMATIC_CONTROL_STAGE = 3
+AUTOMATIC_LEASE_SECONDS = 86400.0
 AUTOMATIC_LEASE_ALLOWED_PROFILES = frozenset(
     {
         "balanced",
@@ -165,18 +165,17 @@ class BoundedAutomaticLease:
             in AUTOMATIC_LEASE_ALLOWED_PROFILES
         )
 
-    def start(
+    def _readiness_reasons(
         self,
         *,
         current_fingerprint: str,
-        active_profile: Any,
         recommended_profile: Any,
         telemetry_valid: bool,
         telemetry_fresh: bool,
         connected: bool,
         safety_hold: bool,
         recovery_pending: bool,
-    ) -> AutomaticLeaseDecision:
+    ) -> list[str]:
         blocking: list[str] = []
 
         if (
@@ -186,12 +185,6 @@ class BoundedAutomaticLease:
             blocking.append(
                 "The active fan and thermal configuration does not "
                 "match the commissioned safety fingerprint."
-            )
-
-        if str(active_profile).strip().lower() != "automatic":
-            blocking.append(
-                "Bounded automatic control must begin from "
-                "motherboard automatic mode."
             )
 
         if not self.profile_allowed(recommended_profile):
@@ -225,6 +218,37 @@ class BoundedAutomaticLease:
                 "Fan-control safety recovery is pending."
             )
 
+        return blocking
+
+    def start(
+        self,
+        *,
+        current_fingerprint: str,
+        active_profile: Any,
+        recommended_profile: Any,
+        telemetry_valid: bool,
+        telemetry_fresh: bool,
+        connected: bool,
+        safety_hold: bool,
+        recovery_pending: bool,
+    ) -> AutomaticLeaseDecision:
+        blocking = self._readiness_reasons(
+            current_fingerprint=current_fingerprint,
+            recommended_profile=recommended_profile,
+            telemetry_valid=telemetry_valid,
+            telemetry_fresh=telemetry_fresh,
+            connected=connected,
+            safety_hold=safety_hold,
+            recovery_pending=recovery_pending,
+        )
+
+        if str(active_profile).strip().lower() != "automatic":
+            blocking.insert(
+                1,
+                "Bounded automatic control must begin from "
+                "motherboard automatic mode.",
+            )
+
         if blocking:
             return AutomaticLeaseDecision(
                 accepted=False,
@@ -246,6 +270,63 @@ class BoundedAutomaticLease:
                 f"{self.duration_seconds:.0f} seconds."
             ),
         )
+
+    def renew(
+        self,
+        *,
+        current_fingerprint: str,
+        active_profile: Any,
+        recommended_profile: Any,
+        telemetry_valid: bool,
+        telemetry_fresh: bool,
+        connected: bool,
+        safety_hold: bool,
+        recovery_pending: bool,
+    ) -> AutomaticLeaseDecision:
+        blocking = self._readiness_reasons(
+            current_fingerprint=current_fingerprint,
+            recommended_profile=recommended_profile,
+            telemetry_valid=telemetry_valid,
+            telemetry_fresh=telemetry_fresh,
+            connected=connected,
+            safety_hold=safety_hold,
+            recovery_pending=recovery_pending,
+        )
+
+        if not self.active():
+            blocking.insert(
+                0,
+                "Stage 3 renewal requires an active automatic lease.",
+            )
+
+        if not self.profile_allowed(active_profile):
+            blocking.append(
+                "Stage 3 renewal requires an active profile inside "
+                "the approved automatic-control envelope."
+            )
+
+        if blocking:
+            return AutomaticLeaseDecision(
+                accepted=False,
+                status="renewal_blocked",
+                message=blocking[0],
+                blocking_reasons=tuple(blocking),
+            )
+
+        self.deadline = (
+            float(self.clock())
+            + self.duration_seconds
+        )
+
+        return AutomaticLeaseDecision(
+            accepted=True,
+            status="automatic_lease_renewed",
+            message=(
+                "Stage 3 automatic thermal control renewed for "
+                f"{self.duration_seconds:.0f} seconds."
+            ),
+        )
+
 
 
 __all__ = [

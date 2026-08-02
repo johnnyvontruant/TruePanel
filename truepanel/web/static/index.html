@@ -94,13 +94,15 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Runtime arm state</span><span id="thermalArmState" class="value">Checking</span></div>
 <div class="row"><span class="label">Actuation mode</span><span id="thermalActuationMode" class="value">Checking</span></div>
 <div class="row"><span class="label">Supervised lease</span><span id="thermalLeaseState" class="value">Inactive</span></div>
-<div class="row"><span class="label">Bounded automatic lease</span><span id="thermalAutomaticLeaseState" class="value">Inactive</span></div>
+<div class="row"><span class="label">Stage 3 automatic lease</span><span id="thermalAutomaticLeaseState" class="value">Inactive</span></div>
+<div class="row"><span class="label">Estimated expiration</span><span id="thermalAutomaticLeaseExpires" class="value">Not scheduled</span></div>
 <div class="row"><span class="label">Commissioned safety gate</span><span id="thermalFingerprintState" class="value">Checking</span></div>
 <div class="row"><span class="label">Automatic profile envelope</span><span id="thermalAutomaticEnvelope" class="value">Balanced · Cooling Boost</span></div>
 <div class="control-actions">
 <button id="thermalArm" class="primary" disabled>Arm Dry Run<span class="profile-target">Requires confirmation</span></button>
 <button id="thermalSupervisedLive" class="danger" disabled>Engage Supervised Live<span class="profile-target">Balanced only · 120 seconds</span></button>
-<button id="thermalAutomaticLease" class="danger" disabled>Start Stage 2 Automatic<span class="profile-target">Balanced + Cooling Boost · 60 minutes</span></button>
+<button id="thermalAutomaticLease" class="danger" disabled>Start Stage 3 Automatic<span class="profile-target">Balanced + Cooling Boost · 24 hours</span></button>
+<button id="thermalRenewAutomatic" class="primary" disabled>Renew Stage 3 Lease<span class="profile-target">Explicit 24-hour renewal</span></button>
 <button id="thermalCancelAutomatic" class="danger" disabled>Cancel Automatic Lease<span class="profile-target">Restore motherboard Automatic</span></button>
 <button id="thermalDisarm" class="danger" disabled>Disarm<span class="profile-target">Return control to Automatic</span></button>
 </div>
@@ -1041,12 +1043,32 @@ function renderThermalArmControls(data){
         && readinessState!=="blocked"
     );
 
+    const automaticRenewAllowed=(
+        connected
+        && mode==="automatic_control"
+        && !dryRun
+        && armed
+        && automaticLeaseActive
+        && fingerprintMatch
+        && automaticProfiles.includes(
+            recommendation
+        )
+        && automaticProfiles.includes(
+            activeProfile
+        )
+        && !safetyHold
+        && !recoveryPending
+    );
+
     q("thermalArm").disabled=!armAllowed;
     q("thermalSupervisedLive").disabled=(
         !supervisedAllowed
     );
     q("thermalAutomaticLease").disabled=(
         !automaticLeaseAllowed
+    );
+    q("thermalRenewAutomatic").disabled=(
+        !automaticRenewAllowed
     );
     q("thermalCancelAutomatic").disabled=(
         !connected
@@ -1081,6 +1103,21 @@ function renderThermalArmControls(data){
             :"Inactive";
 
     q("thermalAutomaticLeaseState").className=
+        "value "+(
+            automaticLeaseActive
+                ?"warn"
+                :"good"
+        );
+
+    q("thermalAutomaticLeaseExpires").textContent=
+        automaticLeaseActive
+            ?new Date(
+                Date.now()
+                + automaticLeaseRemaining*1000
+            ).toLocaleString()
+            :"Not scheduled";
+
+    q("thermalAutomaticLeaseExpires").className=
         "value "+(
             automaticLeaseActive
                 ?"warn"
@@ -1179,10 +1216,20 @@ async function requestThermalArm(action){
         }
     }else if(action==="automatic_lease"){
         confirmation=prompt(
-            "Start bounded automatic thermal control for "+
-            "10 minutes. Only Balanced and Cooling Boost "+
+            "Start Stage 3 automatic thermal control for "+
+            "24 hours. Only Balanced and Cooling Boost "+
             "are permitted. Type "+
-            "ENGAGE_STAGE_2_AUTOMATIC_CONTROL to continue."
+            "ENGAGE_STAGE_3_AUTOMATIC_CONTROL to continue."
+        );
+
+        if(confirmation===null){
+            return;
+        }
+    }else if(action==="automatic_lease_renew"){
+        confirmation=prompt(
+            "Renew the active Stage 3 automatic lease "+
+            "for another 24 hours. Type "+
+            "RENEW_STAGE_3_AUTOMATIC_CONTROL to continue."
         );
 
         if(confirmation===null){
@@ -1202,6 +1249,7 @@ async function requestThermalArm(action){
     q("thermalArm").disabled=true;
     q("thermalSupervisedLive").disabled=true;
     q("thermalAutomaticLease").disabled=true;
+    q("thermalRenewAutomatic").disabled=true;
     q("thermalCancelAutomatic").disabled=true;
     q("thermalDisarm").disabled=true;
     q("thermalArmMessage").textContent=
@@ -1212,8 +1260,12 @@ async function requestThermalArm(action){
                     ?"Engaging supervised live session..."
                     :(
                         action==="automatic_lease"
-                            ?"Starting Stage 2 automatic lease..."
-                            :"Disarming thermal control..."
+                            ?"Starting Stage 3 automatic lease..."
+                            :(
+                                action==="automatic_lease_renew"
+                                    ?"Renewing Stage 3 automatic lease..."
+                                    :"Disarming thermal control..."
+                            )
                     )
             );
     q("thermalArmMessage").className=
@@ -1297,6 +1349,7 @@ async function refresh(){
         q("thermalArm").disabled=true;
         q("thermalSupervisedLive").disabled=true;
         q("thermalAutomaticLease").disabled=true;
+        q("thermalRenewAutomatic").disabled=true;
         q("thermalCancelAutomatic").disabled=true;
         q("thermalDisarm").disabled=true;
         q("thermalCommissioningState").textContent=
@@ -1308,6 +1361,8 @@ async function refresh(){
         q("thermalLeaseState").textContent=
             "Unavailable";
         q("thermalAutomaticLeaseState").textContent=
+            "Unavailable";
+        q("thermalAutomaticLeaseExpires").textContent=
             "Unavailable";
         q("thermalFingerprintState").textContent=
             "Unavailable";
@@ -1353,6 +1408,21 @@ q("thermalAutomaticLease").addEventListener(
     "click",
     ()=>requestThermalArm(
         "automatic_lease"
+    ).catch(
+        error=>{
+            q("thermalArmMessage").textContent=
+                error.message;
+            q("thermalArmMessage").className=
+                "control-message bad";
+            refresh();
+        }
+    )
+);
+
+q("thermalRenewAutomatic").addEventListener(
+    "click",
+    ()=>requestThermalArm(
+        "automatic_lease_renew"
     ).catch(
         error=>{
             q("thermalArmMessage").textContent=

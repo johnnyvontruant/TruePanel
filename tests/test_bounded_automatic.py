@@ -79,8 +79,8 @@ def start_kwargs(fingerprint):
     }
 
 
-def test_default_lease_is_sixty_minutes():
-    assert AUTOMATIC_LEASE_SECONDS == 3600.0
+def test_default_lease_is_twenty_four_hours():
+    assert AUTOMATIC_LEASE_SECONDS == 86400.0
 
 
 def test_profile_envelope_excludes_quiet_and_afterburners():
@@ -188,7 +188,7 @@ def test_lease_starts_from_safe_commissioned_state():
     assert decision.accepted is True
     assert decision.status == "automatic_lease"
     assert lease.active() is True
-    assert lease.remaining_seconds() == 3600.0
+    assert lease.remaining_seconds() == 86400.0
 
 
 def test_lease_expires_without_persistent_authority():
@@ -200,7 +200,7 @@ def test_lease_expires_without_persistent_authority():
     )
     lease.start(**start_kwargs(fingerprint))
 
-    clock.advance(3600)
+    clock.advance(86400)
 
     assert lease.active() is False
     assert lease.remaining_seconds() == 0.0
@@ -332,7 +332,7 @@ def test_module_contains_no_hardware_write_path():
         assert forbidden not in source
 
 
-def test_contract_fingerprints_stage_two_authorization():
+def test_contract_fingerprints_stage_three_authorization():
     contract = thermal_safety_contract(
         config()
     )
@@ -342,8 +342,8 @@ def test_contract_fingerprints_stage_two_authorization():
     ]
 
     assert authorization == {
-        "stage": 2,
-        "lease_seconds": 3600.0,
+        "stage": 3,
+        "lease_seconds": 86400.0,
         "allowed_profiles": [
             "balanced",
             "cooling_boost",
@@ -390,3 +390,110 @@ def test_stage_two_authorization_changes_old_fingerprint():
     ).hexdigest()
 
     assert current_digest != legacy_digest
+
+
+def test_stage_three_lease_is_twenty_four_hours():
+    assert AUTOMATIC_LEASE_SECONDS == 86400.0
+
+    contract = thermal_safety_contract(
+        config()
+    )
+
+    assert contract[
+        "bounded_automatic_authorization"
+    ]["stage"] == 3
+
+    assert contract[
+        "bounded_automatic_authorization"
+    ]["lease_seconds"] == 86400.0
+
+
+def test_active_lease_can_be_renewed():
+    fingerprint = thermal_safety_fingerprint(
+        config()
+    )
+    clock = FakeClock()
+    lease = BoundedAutomaticLease(
+        commissioned_fingerprint=fingerprint,
+        clock=clock,
+    )
+
+    started = lease.start(
+        **start_kwargs(fingerprint)
+    )
+
+    assert started.accepted is True
+
+    clock.advance(120)
+
+    decision = lease.renew(
+        current_fingerprint=fingerprint,
+        active_profile="balanced",
+        recommended_profile="balanced",
+        telemetry_valid=True,
+        telemetry_fresh=True,
+        connected=True,
+        safety_hold=False,
+        recovery_pending=False,
+    )
+
+    assert decision.accepted is True
+    assert decision.status == (
+        "automatic_lease_renewed"
+    )
+    assert lease.remaining_seconds() == 86400.0
+
+
+def test_inactive_lease_cannot_be_renewed():
+    fingerprint = thermal_safety_fingerprint(
+        config()
+    )
+    lease = BoundedAutomaticLease(
+        commissioned_fingerprint=fingerprint,
+    )
+
+    decision = lease.renew(
+        current_fingerprint=fingerprint,
+        active_profile="balanced",
+        recommended_profile="balanced",
+        telemetry_valid=True,
+        telemetry_fresh=True,
+        connected=True,
+        safety_hold=False,
+        recovery_pending=False,
+    )
+
+    assert decision.accepted is False
+    assert decision.status == "renewal_blocked"
+    assert "active automatic lease" in decision.message
+
+
+def test_renewal_rejects_profile_outside_envelope():
+    fingerprint = thermal_safety_fingerprint(
+        config()
+    )
+    lease = BoundedAutomaticLease(
+        commissioned_fingerprint=fingerprint,
+    )
+
+    lease.start(
+        **start_kwargs(fingerprint)
+    )
+
+    decision = lease.renew(
+        current_fingerprint=fingerprint,
+        active_profile="afterburners",
+        recommended_profile="balanced",
+        telemetry_valid=True,
+        telemetry_fresh=True,
+        connected=True,
+        safety_hold=False,
+        recovery_pending=False,
+    )
+
+    assert decision.accepted is False
+    assert "approved automatic-control envelope" in (
+        decision.message
+        + " "
+        + " ".join(decision.blocking_reasons)
+    )
