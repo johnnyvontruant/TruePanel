@@ -22,6 +22,10 @@ from truepanel.history.thermal_observer import (
     DEFAULT_THERMAL_OBSERVER_HISTORY_PATH,
     ThermalObserverHistory,
 )
+from truepanel.history.thermal_commissioning import (
+    DEFAULT_THERMAL_COMMISSIONING_HISTORY_PATH,
+    ThermalCommissioningHistory,
+)
 from truepanel.hardware.fan_status_bridge import (
     DEFAULT_FAN_CONTROL_STATUS_PATH,
     FanControlStatusBridge,
@@ -67,6 +71,7 @@ class SnapshotService:
         fan_control_status_path=None,
         fan_control_history_path=None,
         thermal_observer_history_path=None,
+        thermal_commissioning_history_path=None,
         clock=None,
     ):
         self.collector = (
@@ -124,6 +129,20 @@ class SnapshotService:
                     "thermal_observer_path",
                     (
                         DEFAULT_THERMAL_OBSERVER_HISTORY_PATH
+                    ),
+                ),
+                enabled=True,
+                clock=self.clock,
+            )
+        )
+
+        self.thermal_commissioning_history = (
+            ThermalCommissioningHistory(
+                thermal_commissioning_history_path
+                or history_config.get(
+                    "thermal_commissioning_path",
+                    (
+                        DEFAULT_THERMAL_COMMISSIONING_HISTORY_PATH
                     ),
                 ),
                 enabled=True,
@@ -207,6 +226,35 @@ class SnapshotService:
             "policy_mode": "observe_only",
             "path": str(
                 self.thermal_observer_history.path
+            ),
+            "count": len(events),
+            "events": events,
+        }
+
+    def thermal_commissioning_history_payload(
+        self,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        limit = max(
+            1,
+            min(
+                int(limit),
+                200,
+            ),
+        )
+
+        events = (
+            self.thermal_commissioning_history
+            .read(
+                limit=limit
+            )
+        )
+
+        return {
+            "schema_version": 1,
+            "read_only": True,
+            "path": str(
+                self.thermal_commissioning_history.path
             ),
             "count": len(events),
             "events": events,

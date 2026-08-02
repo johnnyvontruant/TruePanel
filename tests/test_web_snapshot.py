@@ -830,3 +830,93 @@ def test_snapshot_publishes_commissioning_state():
         "supervised_session_active=("
         in source
     )
+
+
+
+def test_thermal_commissioning_history_payload(
+    tmp_path,
+):
+    history_path = (
+        tmp_path
+        / "thermal-commissioning.jsonl"
+    )
+
+    history_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "timestamp": 1,
+                        "lifecycle_action": (
+                            "supervised_started"
+                        ),
+                    }
+                ),
+                json.dumps(
+                    {
+                        "timestamp": 2,
+                        "lifecycle_action": (
+                            "supervised_expired"
+                        ),
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "telemetry.jsonl"
+        ),
+        thermal_commissioning_history_path=(
+            history_path
+        ),
+    )
+
+    payload = (
+        service
+        .thermal_commissioning_history_payload(
+            limit=1
+        )
+    )
+
+    assert payload["read_only"] is True
+    assert payload["count"] == 1
+    assert (
+        payload["events"][0][
+            "lifecycle_action"
+        ]
+        == "supervised_expired"
+    )
+
+
+def test_commissioning_history_limit_is_bounded(
+    tmp_path,
+):
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "telemetry.jsonl"
+        ),
+        thermal_commissioning_history_path=(
+            tmp_path
+            / "thermal-commissioning.jsonl"
+        ),
+    )
+
+    payload = (
+        service
+        .thermal_commissioning_history_payload(
+            limit=10000
+        )
+    )
+
+    assert payload["count"] == 0
+    assert payload["read_only"] is True

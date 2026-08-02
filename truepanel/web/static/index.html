@@ -103,6 +103,10 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 </div>
 </div>
 <div class="history-panel">
+<h3>Recent Commissioning Activity</h3>
+<div id="commissioningHistory" class="detail">No commissioning events recorded</div>
+</div>
+<div class="history-panel">
 <h3>Recent Fan Activity</h3>
 <div id="fanHistory" class="detail">No fan-control events recorded</div>
 </div>
@@ -470,6 +474,117 @@ function fanHistoryDetails(event){
 
     return details.join(" · ");
 }
+function commissioningActionState(action){
+    const states={
+        supervised_started:{
+            label:"Supervised session started",
+            className:"warn"
+        },
+        supervised_disarmed:{
+            label:"Manually disarmed",
+            className:"good"
+        },
+        supervised_expired:{
+            label:"Lease expired",
+            className:"good"
+        },
+        supervised_safety_cancelled:{
+            label:"Safety cancellation",
+            className:"bad"
+        }
+    };
+
+    return states[action]||{
+        label:"Commissioning event",
+        className:"warn"
+    };
+}
+
+function renderCommissioningHistory(payload){
+    const events=Array.isArray(
+        payload&&payload.events
+    )
+        ?[...payload.events].reverse()
+        :[];
+
+    if(!events.length){
+        q("commissioningHistory").innerHTML=
+            `<div class="detail">No commissioning events recorded</div>`;
+        return;
+    }
+
+    q("commissioningHistory").innerHTML=events.map(
+        event=>{
+            const timestamp=Number(
+                event.timestamp||0
+            );
+
+            const when=timestamp>0
+                ?new Date(
+                    timestamp*1000
+                ).toLocaleString()
+                :"Unknown time";
+
+            const action=commissioningActionState(
+                event.lifecycle_action
+            );
+
+            const profile=profileLabel(
+                event.active_profile
+            );
+
+            const authority=profileLabel(
+                event.control_authority
+            );
+
+            const state=thermalCommissioningLabel(
+                val(
+                    event.commissioning_state,
+                    "configured"
+                )
+            );
+
+            const remaining=Math.max(
+                0,
+                Number(
+                    event.lease_remaining||0
+                )
+            );
+
+            const leaseText=remaining>0
+                ?` · ${Math.ceil(remaining)} seconds remaining`
+                :"";
+
+            const reason=val(
+                event.reason,
+                "No lifecycle reason recorded"
+            );
+
+            return`
+                <div class="row">
+                    <span class="label">
+                        ${when}
+                        <br>
+                        <span class="detail">
+                            ${state}
+                            · Active ${profile}
+                            · Authority ${authority}
+                            ${leaseText}
+                        </span>
+                    </span>
+                    <span class="value ${action.className}">
+                        ${action.label}
+                        <br>
+                        <span class="detail">
+                            ${reason}
+                        </span>
+                    </span>
+                </div>
+            `;
+        }
+    ).join("");
+}
+
 function renderFanHistory(payload){
     const events=Array.isArray(
         payload&&payload.events
@@ -637,6 +752,22 @@ function renderThermalHistory(payload){
             `;
         }
     ).join("");
+}
+
+async function loadCommissioningHistory(){
+    const response=await fetch(
+        "/api/v1/fans/commissioning-history?limit=8"
+    );
+
+    if(!response.ok){
+        throw Error(
+            "Could not load commissioning history"
+        );
+    }
+
+    renderCommissioningHistory(
+        await response.json()
+    );
 }
 
 async function loadThermalHistory(){
@@ -1033,6 +1164,7 @@ async function refresh(){
         render(data);
         renderThermalArmControls(data);
 
+        await loadCommissioningHistory();
         await loadFanHistory();
         await loadThermalHistory();
 
@@ -1056,6 +1188,8 @@ async function refresh(){
         q("thermalArm").disabled=true;
         q("thermalSupervisedLive").disabled=true;
         q("thermalDisarm").disabled=true;
+        q("thermalCommissioningState").textContent=
+            "Unavailable";
         q("thermalArmState").textContent=
             "Unavailable";
         q("thermalActuationMode").textContent=

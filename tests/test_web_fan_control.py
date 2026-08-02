@@ -57,6 +57,27 @@ class FakeSnapshotService:
             ][-limit:],
         }
 
+    def thermal_commissioning_history_payload(
+        self,
+        limit=20,
+    ):
+        return {
+            "schema_version": 1,
+            "read_only": True,
+            "count": 1,
+            "events": [
+                {
+                    "timestamp": 100.0,
+                    "lifecycle_action": (
+                        "supervised_started"
+                    ),
+                    "commissioning_state": (
+                        "supervised_live"
+                    ),
+                }
+            ][-limit:],
+        }
+
     def capabilities(self):
         return {}
 
@@ -438,6 +459,34 @@ def test_fan_history_endpoint_is_read_only():
         == "afterburners"
     )
 
+
+
+def test_commissioning_history_endpoint_is_read_only():
+    client = FakeFanCommandClient()
+
+    with running_server(client) as base_url:
+        with urlopen(
+            base_url
+            + (
+                "/api/v1/fans/"
+                "commissioning-history?limit=1"
+            ),
+            timeout=5,
+        ) as response:
+            status = response.status
+            payload = json.load(
+                response
+            )
+
+    assert status == 200
+    assert payload["read_only"] is True
+    assert payload["count"] == 1
+    assert (
+        payload["events"][0][
+            "lifecycle_action"
+        ]
+        == "supervised_started"
+    )
 
 
 def test_thermal_arm_route_requires_confirmation():

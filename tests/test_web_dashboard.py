@@ -374,3 +374,37 @@ def test_dashboard_renders_commissioning_state():
     assert "Dry-run armed" in source
     assert "Supervised live" in source
     assert "Commissioned · Disarmed" in source
+
+
+
+def test_dashboard_shows_commissioning_history():
+    source = dashboard_source()
+
+    assert (
+        "Recent Commissioning Activity"
+        in source
+    )
+    assert (
+        'id="commissioningHistory"'
+        in source
+    )
+    assert (
+        "/api/v1/fans/"
+        "commissioning-history?limit=8"
+        in source
+    )
+    assert (
+        "renderCommissioningHistory"
+        in source
+    )
+    assert (
+        "loadCommissioningHistory"
+        in source
+    )
+    assert (
+        "Supervised session started"
+        in source
+    )
+    assert "Manually disarmed" in source
+    assert "Lease expired" in source
+    assert "Safety cancellation" in source

@@ -52,6 +52,9 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             "/api/v1/fans/thermal-history": (
                 self._thermal_history
             ),
+            "/api/v1/fans/commissioning-history": (
+                self._commissioning_history
+            ),
             "/api/v1/capabilities": self._capabilities,
             "/api/v1/config/night-mode": self._night_mode,
             "/healthz": self._health,
@@ -166,6 +169,35 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         self._json(
             self.snapshot_service
             .thermal_observer_history_payload(
+                limit=limit
+            )
+        )
+
+    def _commissioning_history(
+        self,
+        parsed,
+    ):
+        query = parse_qs(
+            parsed.query
+        )
+        raw_limit = query.get(
+            "limit",
+            ["20"],
+        )[0]
+
+        try:
+            limit = int(
+                raw_limit
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            limit = 20
+
+        self._json(
+            self.snapshot_service
+            .thermal_commissioning_history_payload(
                 limit=limit
             )
         )
