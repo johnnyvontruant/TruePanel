@@ -41,6 +41,8 @@ THERMAL_SUPERVISED_ACTION = "supervised_live"
 
 MAX_REQUEST_BYTES = 4096
 
+DEFAULT_FAN_COMMAND_RESPONSE_TIMEOUT = 10.0
+
 AUTOMATIC_PROFILE = "automatic"
 AFTERBURNERS_PROFILE = "afterburners"
 
@@ -572,6 +574,15 @@ class FanCommandServer:
                     connection.sendall(
                         encoded
                     )
+                except (
+                    BrokenPipeError,
+                    ConnectionResetError,
+                ):
+                    LOGGER.warning(
+                        "Fan command completed, but the "
+                        "client disconnected before the "
+                        "response was delivered."
+                    )
                 except OSError:
                     LOGGER.exception(
                         "Could not send fan command response"
@@ -682,7 +693,9 @@ class FanCommandClient:
             DEFAULT_FAN_CONTROL_SOCKET_PATH
         ),
         *,
-        timeout: float = 3.0,
+        timeout: float = (
+            DEFAULT_FAN_COMMAND_RESPONSE_TIMEOUT
+        ),
     ):
         self.path = Path(path)
         self.timeout = max(

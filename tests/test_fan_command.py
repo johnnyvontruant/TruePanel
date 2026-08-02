@@ -4,6 +4,7 @@ from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
     THERMAL_ARM_CONFIRMATION,
     SUPERVISED_THERMAL_CONFIRMATION,
+    DEFAULT_FAN_COMMAND_RESPONSE_TIMEOUT,
     FanCommandClient,
     FanCommandProcessor,
     FanCommandServer,
@@ -658,3 +659,62 @@ def test_supervised_live_is_forwarded_without_manual_profile_request():
     assert response["ok"] is True
     assert calls == ["supervised_live"]
     assert runtime.service.requests == []
+
+
+
+def test_client_default_timeout_allows_synchronous_restoration():
+    client = FanCommandClient(
+        "/tmp/nonexistent-truepanel.sock"
+    )
+
+    assert (
+        client.timeout
+        == DEFAULT_FAN_COMMAND_RESPONSE_TIMEOUT
+    )
+    assert client.timeout >= 10.0
+
+
+def test_command_server_keeps_short_accept_poll():
+    from pathlib import Path
+
+    source = Path(
+        "truepanel/hardware/fan_command.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "class FanCommandServer"
+    )
+    end = source.index(
+        "class FanCommandClient",
+        start,
+    )
+    server = source[start:end]
+
+    assert (
+        "server_socket.settimeout(\n"
+        "            0.5"
+        in server
+    )
+
+
+def test_disconnected_response_client_is_not_logged_as_exception():
+    from pathlib import Path
+
+    source = Path(
+        "truepanel/hardware/fan_command.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert "BrokenPipeError" in source
+    assert "ConnectionResetError" in source
+    assert (
+        "client disconnected before the "
+        in source
+    )
+    assert (
+        "response was delivered."
+        in source
+    )
