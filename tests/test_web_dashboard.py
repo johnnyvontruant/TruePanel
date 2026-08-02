@@ -408,3 +408,38 @@ def test_dashboard_shows_commissioning_history():
     assert "Manually disarmed" in source
     assert "Lease expired" in source
     assert "Safety cancellation" in source
+
+
+def test_dashboard_has_bounded_automatic_controls():
+    source = Path(
+        "truepanel/web/static/index.html"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert 'id="thermalAutomaticLease"' in source
+    assert 'id="thermalCancelAutomatic"' in source
+    assert 'id="thermalAutomaticLeaseState"' in source
+    assert 'id="thermalFingerprintState"' in source
+    assert 'id="thermalAutomaticEnvelope"' in source
+
+    assert "thermal_automatic_lease_active" in source
+    assert "thermal_automatic_lease_remaining" in source
+    assert (
+        "thermal_commissioned_fingerprint_match"
+        in source
+    )
+    assert (
+        "thermal_automatic_allowed_profiles"
+        in source
+    )
+
+    assert (
+        "ENGAGE_BOUNDED_AUTOMATIC_CONTROL"
+        in source
+    )
+    assert (
+        'requestThermalArm(\n'
+        '        "automatic_lease"'
+        in source
+    )
