@@ -348,3 +348,29 @@ def test_dashboard_renders_supervised_lease_countdown():
         "seconds remaining"
         in source
     )
+
+
+
+def test_dashboard_renders_commissioning_state():
+    source = Path(
+        "truepanel/web/static/index.html"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        'id="thermalCommissioningState"'
+        in source
+    )
+    assert (
+        "thermal_commissioning_state"
+        in source
+    )
+    assert (
+        "function thermalCommissioningLabel"
+        in source
+    )
+    assert "Configured" in source
+    assert "Dry-run armed" in source
+    assert "Supervised live" in source
+    assert "Commissioned · Disarmed" in source

@@ -350,6 +350,7 @@ def test_fan_control_status_is_disabled_by_default(
         "thermal_control_cooldown_remaining": 0.0,
         "thermal_supervised_session_active": False,
         "thermal_supervised_session_remaining": 0.0,
+        "thermal_commissioning_state": "configured",
         "thermal_recommended_profile": "automatic",
         "thermal_profile_alignment": "telemetry_unavailable",
         "thermal_control_readiness": {
@@ -801,5 +802,31 @@ def test_snapshot_has_safe_supervised_lease_defaults():
     )
     assert (
         '"thermal_supervised_session_remaining": 0.0'
+        in source
+    )
+
+
+
+def test_snapshot_publishes_commissioning_state():
+    source = Path(
+        "truepanel/web/snapshot.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "thermal_commissioning_state("
+        in source
+    )
+    assert (
+        '"thermal_commissioning_state":'
+        in source
+    )
+    assert (
+        '"thermal_supervised_session_active"'
+        in source
+    )
+    assert (
+        "supervised_session_active=("
         in source
     )

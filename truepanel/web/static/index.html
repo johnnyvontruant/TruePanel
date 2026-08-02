@@ -90,6 +90,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 
 <div class="history-panel">
 <h3>Automatic Thermal Control</h3>
+<div class="row"><span class="label">Commissioning state</span><span id="thermalCommissioningState" class="value">Checking</span></div>
 <div class="row"><span class="label">Runtime arm state</span><span id="thermalArmState" class="value">Checking</span></div>
 <div class="row"><span class="label">Actuation mode</span><span id="thermalActuationMode" class="value">Checking</span></div>
 <div class="row"><span class="label">Supervised lease</span><span id="thermalLeaseState" class="value">Inactive</span></div>
@@ -744,6 +745,17 @@ async function engageAfterburners(){
         "ENGAGE_AFTERBURNERS"
     );
 }
+function thermalCommissioningLabel(state){
+    const labels={
+        configured:"Configured",
+        dry_run_armed:"Dry-run armed",
+        supervised_live:"Supervised live",
+        commissioned_disarmed:"Commissioned · Disarmed"
+    };
+
+    return labels[state]||"Unknown";
+}
+
 function renderThermalArmControls(data){
     const control=(
         (
@@ -754,6 +766,10 @@ function renderThermalArmControls(data){
     );
 
     const connected=!!control.connected;
+    const commissioningState=val(
+        control.thermal_commissioning_state,
+        "configured"
+    );
     const armed=!!control.thermal_operator_armed;
     const dryRun=!!control.thermal_dry_run;
     const mode=val(
@@ -787,6 +803,22 @@ function renderThermalArmControls(data){
     );
     const safetyHold=!!control.safety_hold;
     const recoveryPending=!!control.recovery_pending;
+
+    q("thermalCommissioningState").textContent=
+        thermalCommissioningLabel(
+            commissioningState
+        );
+
+    q("thermalCommissioningState").className=
+        "value "+(
+            commissioningState==="supervised_live"
+                ?"warn"
+                :(
+                    commissioningState==="configured"
+                        ?""
+                        :"good"
+                )
+        );
 
     q("thermalArmState").textContent=
         armed

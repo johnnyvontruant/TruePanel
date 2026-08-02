@@ -26,6 +26,9 @@ from truepanel.hardware.fan_status_bridge import (
     DEFAULT_FAN_CONTROL_STATUS_PATH,
     FanControlStatusBridge,
 )
+from truepanel.hardware.thermal_commissioning import (
+    thermal_commissioning_state,
+)
 
 
 DEFAULT_HISTORY_PATH = Path(
@@ -844,6 +847,28 @@ class SnapshotService:
                         0.0,
                     )
                 ),
+                "thermal_commissioning_state": (
+                    thermal_commissioning_state(
+                        policy_mode=runtime_status.get(
+                            "thermal_policy_mode",
+                            "observe_only",
+                        ),
+                        operator_armed=runtime_status.get(
+                            "thermal_operator_armed",
+                            False,
+                        ),
+                        dry_run=runtime_status.get(
+                            "thermal_dry_run",
+                            True,
+                        ),
+                        supervised_session_active=(
+                            runtime_status.get(
+                                "thermal_supervised_session_active",
+                                False,
+                            )
+                        ),
+                    )
+                ),
                 "thermal_recommended_profile": (
                     runtime_status.get(
                         "thermal_recommended_profile",
@@ -959,6 +984,14 @@ class SnapshotService:
             "thermal_control_cooldown_remaining": 0.0,
             "thermal_supervised_session_active": False,
             "thermal_supervised_session_remaining": 0.0,
+            "thermal_commissioning_state": (
+                thermal_commissioning_state(
+                    policy_mode="observe_only",
+                    operator_armed=False,
+                    dry_run=True,
+                    supervised_session_active=False,
+                )
+            ),
             "thermal_recommended_profile": "automatic",
             "thermal_hottest_temperature_c": None,
             "thermal_recommendation_reason": (
