@@ -895,6 +895,51 @@ class SnapshotService:
                         0.0,
                     )
                 ),
+                "thermal_automatic_lease_active": bool(
+                    runtime_status.get(
+                        "thermal_automatic_lease_active",
+                        False,
+                    )
+                ),
+                "thermal_automatic_lease_remaining": (
+                    runtime_status.get(
+                        "thermal_automatic_lease_remaining",
+                        0.0,
+                    )
+                ),
+                "thermal_automatic_lease_seconds": (
+                    runtime_status.get(
+                        "thermal_automatic_lease_seconds",
+                        600.0,
+                    )
+                ),
+                "thermal_automatic_allowed_profiles": (
+                    runtime_status.get(
+                        "thermal_automatic_allowed_profiles",
+                        [
+                            "balanced",
+                            "cooling_boost",
+                        ],
+                    )
+                ),
+                "thermal_safety_fingerprint": (
+                    runtime_status.get(
+                        "thermal_safety_fingerprint",
+                        "",
+                    )
+                ),
+                "thermal_commissioned_fingerprint": (
+                    runtime_status.get(
+                        "thermal_commissioned_fingerprint",
+                        "",
+                    )
+                ),
+                "thermal_commissioned_fingerprint_match": bool(
+                    runtime_status.get(
+                        "thermal_commissioned_fingerprint_match",
+                        False,
+                    )
+                ),
                 "thermal_commissioning_state": (
                     thermal_commissioning_state(
                         policy_mode=runtime_status.get(

@@ -544,13 +544,14 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             "arm",
             "disarm",
             "supervised_live",
+            "automatic_lease",
         }:
             self._json(
                 {
                     "error": "invalid_action",
                     "message": (
                         "action must be arm, disarm, "
-                        "or supervised_live."
+                        "supervised_live, or automatic_lease."
                     ),
                 },
                 status=HTTPStatus.UNPROCESSABLE_ENTITY,

@@ -368,6 +368,62 @@ class FanControlStatusBridge:
                     or 0.0
                 ),
             ),
+            "thermal_automatic_lease_active": bool(
+                payload.get(
+                    "thermal_automatic_lease_active",
+                    False,
+                )
+            ),
+            "thermal_automatic_lease_remaining": max(
+                0.0,
+                float(
+                    payload.get(
+                        "thermal_automatic_lease_remaining",
+                        0.0,
+                    )
+                    or 0.0
+                ),
+            ),
+            "thermal_automatic_lease_seconds": max(
+                0.0,
+                float(
+                    payload.get(
+                        "thermal_automatic_lease_seconds",
+                        600.0,
+                    )
+                    or 600.0
+                ),
+            ),
+            "thermal_automatic_allowed_profiles": list(
+                payload.get(
+                    "thermal_automatic_allowed_profiles",
+                    [
+                        "balanced",
+                        "cooling_boost",
+                    ],
+                )
+                or []
+            ),
+            "thermal_safety_fingerprint": str(
+                payload.get(
+                    "thermal_safety_fingerprint",
+                    "",
+                )
+                or ""
+            ),
+            "thermal_commissioned_fingerprint": str(
+                payload.get(
+                    "thermal_commissioned_fingerprint",
+                    "",
+                )
+                or ""
+            ),
+            "thermal_commissioned_fingerprint_match": bool(
+                payload.get(
+                    "thermal_commissioned_fingerprint_match",
+                    False,
+                )
+            ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(
                     "thermal_recommended_profile",
@@ -737,6 +793,62 @@ class FanControlStatusBridge:
                     )
                     or 0.0
                 ),
+            ),
+            "thermal_automatic_lease_active": bool(
+                payload.get(
+                    "thermal_automatic_lease_active",
+                    False,
+                )
+            ),
+            "thermal_automatic_lease_remaining": max(
+                0.0,
+                float(
+                    payload.get(
+                        "thermal_automatic_lease_remaining",
+                        0.0,
+                    )
+                    or 0.0
+                ),
+            ),
+            "thermal_automatic_lease_seconds": max(
+                0.0,
+                float(
+                    payload.get(
+                        "thermal_automatic_lease_seconds",
+                        600.0,
+                    )
+                    or 600.0
+                ),
+            ),
+            "thermal_automatic_allowed_profiles": list(
+                payload.get(
+                    "thermal_automatic_allowed_profiles",
+                    [
+                        "balanced",
+                        "cooling_boost",
+                    ],
+                )
+                or []
+            ),
+            "thermal_safety_fingerprint": str(
+                payload.get(
+                    "thermal_safety_fingerprint",
+                    "",
+                )
+                or ""
+            ),
+            "thermal_commissioned_fingerprint": str(
+                payload.get(
+                    "thermal_commissioned_fingerprint",
+                    "",
+                )
+                or ""
+            ),
+            "thermal_commissioned_fingerprint_match": bool(
+                payload.get(
+                    "thermal_commissioned_fingerprint_match",
+                    False,
+                )
             ),
             "thermal_recommended_profile": _safe_profile(
                 payload.get(

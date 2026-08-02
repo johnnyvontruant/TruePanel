@@ -44,6 +44,12 @@ from truepanel.hardware.thermal_fan_policy import (
 from truepanel.hardware.thermal_control import (
     ThermalControlCoordinator,
 )
+from truepanel.hardware.bounded_automatic import (
+    AUTOMATIC_LEASE_ALLOWED_PROFILES,
+    AUTOMATIC_LEASE_SECONDS,
+    BoundedAutomaticLease,
+    thermal_safety_fingerprint,
+)
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
 )
@@ -286,6 +292,24 @@ thermal_fan_recommendation = None
 thermal_observer_previous_profile = "automatic"
 thermal_control_last_result = None
 
+thermal_safety_current_fingerprint = (
+    thermal_safety_fingerprint(config)
+)
+thermal_safety_commissioned_fingerprint = str(
+    thermal_policy_config.get(
+        "commissioned_fingerprint",
+        "",
+    )
+    or ""
+).strip().lower()
+
+bounded_automatic_lease = BoundedAutomaticLease(
+    commissioned_fingerprint=(
+        thermal_safety_commissioned_fingerprint
+    ),
+    duration_seconds=AUTOMATIC_LEASE_SECONDS,
+)
+
 SUPERVISED_THERMAL_SESSION_SECONDS = 120.0
 supervised_thermal_session_deadline = None
 
@@ -382,6 +406,40 @@ def publish_fan_control_status(
     payload[
         "thermal_supervised_session_remaining"
     ] = session_remaining
+
+    payload[
+        "thermal_automatic_lease_active"
+    ] = bounded_automatic_lease.active()
+
+    payload[
+        "thermal_automatic_lease_remaining"
+    ] = bounded_automatic_lease.remaining_seconds()
+
+    payload[
+        "thermal_automatic_lease_seconds"
+    ] = AUTOMATIC_LEASE_SECONDS
+
+    payload[
+        "thermal_automatic_allowed_profiles"
+    ] = sorted(
+        AUTOMATIC_LEASE_ALLOWED_PROFILES
+    )
+
+    payload[
+        "thermal_safety_fingerprint"
+    ] = thermal_safety_current_fingerprint
+
+    payload[
+        "thermal_commissioned_fingerprint"
+    ] = thermal_safety_commissioned_fingerprint
+
+    payload[
+        "thermal_commissioned_fingerprint_match"
+    ] = bool(
+        thermal_safety_commissioned_fingerprint
+        and thermal_safety_current_fingerprint
+        == thermal_safety_commissioned_fingerprint
+    )
 
     if recommendation is None:
         payload[
@@ -821,6 +879,57 @@ def supervised_thermal_session_active():
     )
 
 
+def end_bounded_automatic_lease(
+    reason,
+    *,
+    lifecycle_action,
+    telemetry=None,
+    restore=True,
+):
+    """End Stage 1 automatic authority and return to motherboard control."""
+
+    global thermal_operator_armed
+    global thermal_control_last_result
+
+    was_active = bounded_automatic_lease.cancel()
+    thermal_operator_armed = False
+
+    current_telemetry = (
+        telemetry
+        if telemetry is not None
+        else fan_command_telemetry()
+    )
+
+    if restore:
+        restore_motherboard_fan_control(
+            reason,
+            telemetry=current_telemetry,
+        )
+
+    thermal_control_coordinator.configure(
+        operator_armed=False,
+        dry_run=True,
+    )
+    thermal_control_coordinator.simulated_profile = (
+        thermal_control_coordinator._profile(
+            "automatic"
+        )
+    )
+    thermal_control_coordinator.owns_control = False
+    thermal_control_last_result = None
+
+    publish_fan_control_status(
+        reason=reason
+    )
+
+    if was_active:
+        record_thermal_commissioning_event(
+            lifecycle_action,
+            reason,
+            lease_remaining=0.0,
+        )
+
+
 def reconcile_fan_control():
     global thermal_control_last_result
     global thermal_operator_armed
@@ -863,7 +972,22 @@ def reconcile_fan_control():
             source=source,
         )
 
-        if (
+        if bounded_automatic_lease.active():
+            cancellation_reason = (
+                "Bounded automatic thermal lease ended because "
+                "the fan safety service changed control state."
+            )
+
+            end_bounded_automatic_lease(
+                cancellation_reason,
+                lifecycle_action=(
+                    "automatic_lease_safety_cancelled"
+                ),
+                telemetry=post_transition_telemetry,
+                restore=False,
+            )
+
+        elif (
             supervised_thermal_session_deadline
             is not None
         ):
@@ -894,6 +1018,41 @@ def reconcile_fan_control():
             publish_fan_control_status()
 
         return decision
+
+    if bounded_automatic_lease.deadline is not None:
+        if not bounded_automatic_lease.active():
+            end_bounded_automatic_lease(
+                "Bounded automatic thermal lease expired; "
+                "returned control to the motherboard.",
+                lifecycle_action="automatic_lease_expired",
+                telemetry=telemetry,
+            )
+            return None
+
+        if not telemetry["telemetry_fresh"]:
+            end_bounded_automatic_lease(
+                "Bounded automatic thermal lease ended because "
+                "telemetry became stale.",
+                lifecycle_action=(
+                    "automatic_lease_safety_cancelled"
+                ),
+                telemetry=telemetry,
+            )
+            return None
+
+        if (
+            recommendation.recommended_profile.value
+            not in AUTOMATIC_LEASE_ALLOWED_PROFILES
+        ):
+            end_bounded_automatic_lease(
+                "Bounded automatic thermal lease ended because "
+                "the recommendation left the approved profile envelope.",
+                lifecycle_action=(
+                    "automatic_lease_safety_cancelled"
+                ),
+                telemetry=telemetry,
+            )
+            return None
 
     if supervised_thermal_session_deadline is not None:
         if not supervised_thermal_session_active():
@@ -984,13 +1143,14 @@ def set_thermal_operator_arm_state(
         "arm",
         "disarm",
         "supervised_live",
+        "automatic_lease",
     }:
         return {
             "ok": False,
             "status": "invalid_action",
             "message": (
-                "Thermal-control action must be "
-                "arm, disarm, or supervised_live."
+                "Thermal-control action must be arm, disarm, "
+                "supervised_live, or automatic_lease."
             ),
         }
 
@@ -1024,7 +1184,80 @@ def set_thermal_operator_arm_state(
         fan_control_runtime.status_payload()
     )
 
-    if normalized == "supervised_live":
+    if normalized == "automatic_lease":
+        recommendation_profile = (
+            thermal_fan_recommendation
+            .recommended_profile
+            .value
+            if thermal_fan_recommendation is not None
+            else "automatic"
+        )
+
+        lease_decision = bounded_automatic_lease.start(
+            current_fingerprint=(
+                thermal_safety_current_fingerprint
+            ),
+            active_profile=runtime_status.get(
+                "active_profile",
+                "automatic",
+            ),
+            recommended_profile=(
+                recommendation_profile
+            ),
+            telemetry_valid=bool(
+                thermal_fan_recommendation is not None
+                and thermal_fan_recommendation
+                .telemetry_valid
+            ),
+            telemetry_fresh=bool(
+                telemetry.get(
+                    "telemetry_fresh",
+                    False,
+                )
+            ),
+            connected=bool(
+                runtime_status.get(
+                    "connected",
+                    False,
+                )
+            ),
+            safety_hold=bool(
+                runtime_status.get(
+                    "safety_hold",
+                    False,
+                )
+            ),
+            recovery_pending=bool(
+                runtime_status.get(
+                    "recovery_pending",
+                    False,
+                )
+            ),
+        )
+
+        if not lease_decision.accepted:
+            return {
+                "ok": False,
+                "status": lease_decision.status,
+                "message": lease_decision.message,
+                "blocking_reasons": list(
+                    lease_decision.blocking_reasons
+                ),
+                "operator_armed": (
+                    thermal_operator_armed
+                ),
+                "dry_run": thermal_dry_run,
+                "automatic_lease_active": False,
+            }
+
+        thermal_operator_armed = True
+
+        thermal_control_coordinator.configure(
+            operator_armed=True,
+            dry_run=False,
+        )
+
+    elif normalized == "supervised_live":
         blocking_reasons = []
 
         if not thermal_dry_run:
@@ -1248,7 +1481,12 @@ def set_thermal_operator_arm_state(
             supervised_thermal_session_deadline
             is not None
         )
+        was_automatic_lease = (
+            bounded_automatic_lease.deadline
+            is not None
+        )
 
+        bounded_automatic_lease.cancel()
         supervised_thermal_session_deadline = None
         thermal_operator_armed = False
 
@@ -1271,6 +1509,17 @@ def set_thermal_operator_arm_state(
         )
         thermal_control_coordinator.owns_control = False
         thermal_control_last_result = None
+
+        if was_automatic_lease:
+            record_thermal_commissioning_event(
+                "automatic_lease_cancelled",
+                (
+                    "Bounded automatic thermal control "
+                    "manually cancelled; motherboard "
+                    "control restored."
+                ),
+                lease_remaining=0.0,
+            )
 
         if was_supervised:
             record_thermal_commissioning_event(
@@ -1297,6 +1546,20 @@ def set_thermal_operator_arm_state(
         )
 
     if (
+        normalized == "automatic_lease"
+        and bounded_automatic_lease.active()
+    ):
+        record_thermal_commissioning_event(
+            "automatic_lease_started",
+            (
+                "Bounded automatic thermal control "
+                "engaged for 600 seconds with balanced "
+                "and cooling boost profiles only."
+            ),
+            lease_remaining=AUTOMATIC_LEASE_SECONDS,
+        )
+
+    if (
         normalized == "supervised_live"
         and supervised_thermal_session_active()
     ):
@@ -1315,34 +1578,52 @@ def set_thermal_operator_arm_state(
     return {
         "ok": True,
         "status": (
-            "supervised_live"
+            "automatic_lease"
             if (
-                normalized == "supervised_live"
+                normalized == "automatic_lease"
                 and thermal_operator_armed
             )
             else (
-                "armed"
-                if thermal_operator_armed
-                else "disarmed"
+                "supervised_live"
+                if (
+                    normalized == "supervised_live"
+                    and thermal_operator_armed
+                )
+                else (
+                    "armed"
+                    if thermal_operator_armed
+                    else "disarmed"
+                )
             )
         ),
         "message": (
             (
-                "Supervised live thermal control "
-                "engaged for 120 seconds with the "
-                "balanced profile only."
+                "Bounded automatic thermal control "
+                "engaged for 600 seconds with balanced "
+                "and cooling boost profiles only."
             )
             if (
-                normalized == "supervised_live"
+                normalized == "automatic_lease"
                 and thermal_operator_armed
             )
             else (
-                "Automatic thermal control armed "
-                "in dry-run mode."
-                if thermal_operator_armed
+                (
+                    "Supervised live thermal control "
+                    "engaged for 120 seconds with the "
+                    "balanced profile only."
+                )
+                if (
+                    normalized == "supervised_live"
+                    and thermal_operator_armed
+                )
                 else (
-                    "Automatic thermal control disarmed; "
-                    "motherboard control restored."
+                    "Automatic thermal control armed "
+                    "in dry-run mode."
+                    if thermal_operator_armed
+                    else (
+                        "Automatic thermal control disarmed; "
+                        "motherboard control restored."
+                    )
                 )
             )
         ),
@@ -1360,6 +1641,18 @@ def set_thermal_operator_arm_state(
             SUPERVISED_THERMAL_SESSION_SECONDS
             if supervised_thermal_session_active()
             else 0.0
+        ),
+        "automatic_lease_active": (
+            bounded_automatic_lease.active()
+        ),
+        "automatic_lease_seconds": (
+            AUTOMATIC_LEASE_SECONDS
+            if bounded_automatic_lease.active()
+            else 0.0
+        ),
+        "automatic_lease_remaining": (
+            bounded_automatic_lease
+            .remaining_seconds()
         ),
         "simulated_profile": (
             thermal_control_coordinator

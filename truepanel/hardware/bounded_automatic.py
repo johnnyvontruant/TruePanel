@@ -119,7 +119,7 @@ class BoundedAutomaticLease:
             or ""
         ).strip().lower()
 
-        if len(fingerprint) != 64:
+        if fingerprint and len(fingerprint) != 64:
             raise ValueError(
                 "Commissioned fingerprint must be a SHA-256 digest."
             )

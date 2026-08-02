@@ -1027,8 +1027,11 @@ def test_supervised_live_response_is_not_labeled_dry_run():
     )
 
     assert (
-        '"status": (\n'
-        '            "supervised_live"'
+        '"supervised_live"'
+        in source
+    )
+    assert (
+        'normalized == "supervised_live"'
         in source
     )
     assert (

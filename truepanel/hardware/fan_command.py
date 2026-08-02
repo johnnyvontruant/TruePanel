@@ -34,10 +34,15 @@ SUPERVISED_THERMAL_CONFIRMATION = (
     "ENGAGE_SUPERVISED_THERMAL_CONTROL"
 )
 
+BOUNDED_AUTOMATIC_CONFIRMATION = (
+    "ENGAGE_BOUNDED_AUTOMATIC_CONTROL"
+)
+
 THERMAL_CONTROL_COMMAND = "thermal_control"
 THERMAL_ARM_ACTION = "arm"
 THERMAL_DISARM_ACTION = "disarm"
 THERMAL_SUPERVISED_ACTION = "supervised_live"
+THERMAL_AUTOMATIC_LEASE_ACTION = "automatic_lease"
 
 MAX_REQUEST_BYTES = 4096
 
@@ -140,18 +145,20 @@ class FanCommandProcessor:
             THERMAL_ARM_ACTION,
             THERMAL_DISARM_ACTION,
             THERMAL_SUPERVISED_ACTION,
+            THERMAL_AUTOMATIC_LEASE_ACTION,
         }:
             return _response(
                 ok=False,
                 status="invalid_action",
                 message=(
-                    "Thermal-control action must be "
-                    "arm, disarm, or supervised_live."
+                    "Thermal-control action must be arm, disarm, "
+                    "supervised_live, or automatic_lease."
                 ),
                 allowed_actions=[
                     THERMAL_ARM_ACTION,
                     THERMAL_DISARM_ACTION,
                     THERMAL_SUPERVISED_ACTION,
+                    THERMAL_AUTOMATIC_LEASE_ACTION,
                 ],
             )
 
@@ -164,6 +171,10 @@ class FanCommandProcessor:
         elif action == THERMAL_SUPERVISED_ACTION:
             required_confirmation = (
                 SUPERVISED_THERMAL_CONFIRMATION
+            )
+        elif action == THERMAL_AUTOMATIC_LEASE_ACTION:
+            required_confirmation = (
+                BOUNDED_AUTOMATIC_CONFIRMATION
             )
 
         if (
