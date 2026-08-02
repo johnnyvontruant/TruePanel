@@ -435,7 +435,7 @@ def test_dashboard_has_bounded_automatic_controls():
     )
 
     assert (
-        "ENGAGE_BOUNDED_AUTOMATIC_CONTROL"
+        "ENGAGE_STAGE_2_AUTOMATIC_CONTROL"
         in source
     )
     assert (

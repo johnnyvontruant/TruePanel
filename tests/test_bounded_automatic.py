@@ -79,8 +79,8 @@ def start_kwargs(fingerprint):
     }
 
 
-def test_default_lease_is_ten_minutes():
-    assert AUTOMATIC_LEASE_SECONDS == 600.0
+def test_default_lease_is_sixty_minutes():
+    assert AUTOMATIC_LEASE_SECONDS == 3600.0
 
 
 def test_profile_envelope_excludes_quiet_and_afterburners():
@@ -188,7 +188,7 @@ def test_lease_starts_from_safe_commissioned_state():
     assert decision.accepted is True
     assert decision.status == "automatic_lease"
     assert lease.active() is True
-    assert lease.remaining_seconds() == 600.0
+    assert lease.remaining_seconds() == 3600.0
 
 
 def test_lease_expires_without_persistent_authority():
@@ -200,7 +200,7 @@ def test_lease_expires_without_persistent_authority():
     )
     lease.start(**start_kwargs(fingerprint))
 
-    clock.advance(600)
+    clock.advance(3600)
 
     assert lease.active() is False
     assert lease.remaining_seconds() == 0.0
@@ -330,3 +330,63 @@ def test_module_contains_no_hardware_write_path():
         "/sys/",
     ):
         assert forbidden not in source
+
+
+def test_contract_fingerprints_stage_two_authorization():
+    contract = thermal_safety_contract(
+        config()
+    )
+
+    authorization = contract[
+        "bounded_automatic_authorization"
+    ]
+
+    assert authorization == {
+        "stage": 2,
+        "lease_seconds": 3600.0,
+        "allowed_profiles": [
+            "balanced",
+            "cooling_boost",
+        ],
+    }
+
+
+def test_stage_two_authorization_changes_old_fingerprint():
+    current = thermal_safety_contract(
+        config()
+    )
+
+    legacy = copy.deepcopy(current)
+    legacy[
+        "bounded_automatic_authorization"
+    ] = {
+        "stage": 1,
+        "lease_seconds": 600.0,
+        "allowed_profiles": [
+            "balanced",
+            "cooling_boost",
+        ],
+    }
+
+    import hashlib
+    import json
+
+    current_digest = hashlib.sha256(
+        json.dumps(
+            current,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    legacy_digest = hashlib.sha256(
+        json.dumps(
+            legacy,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    assert current_digest != legacy_digest

@@ -100,7 +100,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="control-actions">
 <button id="thermalArm" class="primary" disabled>Arm Dry Run<span class="profile-target">Requires confirmation</span></button>
 <button id="thermalSupervisedLive" class="danger" disabled>Engage Supervised Live<span class="profile-target">Balanced only · 120 seconds</span></button>
-<button id="thermalAutomaticLease" class="danger" disabled>Start Bounded Automatic<span class="profile-target">Balanced + Cooling Boost · 10 minutes</span></button>
+<button id="thermalAutomaticLease" class="danger" disabled>Start Stage 2 Automatic<span class="profile-target">Balanced + Cooling Boost · 60 minutes</span></button>
 <button id="thermalCancelAutomatic" class="danger" disabled>Cancel Automatic Lease<span class="profile-target">Restore motherboard Automatic</span></button>
 <button id="thermalDisarm" class="danger" disabled>Disarm<span class="profile-target">Return control to Automatic</span></button>
 </div>
@@ -1182,7 +1182,7 @@ async function requestThermalArm(action){
             "Start bounded automatic thermal control for "+
             "10 minutes. Only Balanced and Cooling Boost "+
             "are permitted. Type "+
-            "ENGAGE_BOUNDED_AUTOMATIC_CONTROL to continue."
+            "ENGAGE_STAGE_2_AUTOMATIC_CONTROL to continue."
         );
 
         if(confirmation===null){
@@ -1212,7 +1212,7 @@ async function requestThermalArm(action){
                     ?"Engaging supervised live session..."
                     :(
                         action==="automatic_lease"
-                            ?"Starting bounded automatic lease..."
+                            ?"Starting Stage 2 automatic lease..."
                             :"Disarming thermal control..."
                     )
             );

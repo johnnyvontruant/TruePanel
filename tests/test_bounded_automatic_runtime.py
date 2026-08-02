@@ -95,7 +95,7 @@ def test_command_protocol_requires_explicit_confirmation():
 
     assert "automatic_lease" in source
     assert (
-        "ENGAGE_BOUNDED_AUTOMATIC_CONTROL"
+        "ENGAGE_STAGE_2_AUTOMATIC_CONTROL"
         in source
     )
 

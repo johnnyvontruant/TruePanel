@@ -14,7 +14,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping
 
-AUTOMATIC_LEASE_SECONDS = 600.0
+AUTOMATIC_CONTROL_STAGE = 2
+AUTOMATIC_LEASE_SECONDS = 3600.0
 AUTOMATIC_LEASE_ALLOWED_PROFILES = frozenset(
     {
         "balanced",
@@ -70,6 +71,14 @@ def thermal_safety_contract(
             config,
             path,
         )
+
+    contract["bounded_automatic_authorization"] = {
+        "stage": AUTOMATIC_CONTROL_STAGE,
+        "lease_seconds": AUTOMATIC_LEASE_SECONDS,
+        "allowed_profiles": sorted(
+            AUTOMATIC_LEASE_ALLOWED_PROFILES
+        ),
+    }
 
     return contract
 

@@ -1553,7 +1553,7 @@ def set_thermal_operator_arm_state(
             "automatic_lease_started",
             (
                 "Bounded automatic thermal control "
-                "engaged for 600 seconds with balanced "
+                "engaged for 3600 seconds with balanced "
                 "and cooling boost profiles only."
             ),
             lease_remaining=AUTOMATIC_LEASE_SECONDS,
@@ -1599,7 +1599,7 @@ def set_thermal_operator_arm_state(
         "message": (
             (
                 "Bounded automatic thermal control "
-                "engaged for 600 seconds with balanced "
+                "engaged for 3600 seconds with balanced "
                 "and cooling boost profiles only."
             )
             if (
