@@ -23,12 +23,19 @@ from truepanel.history import (
     event_from_decision,
     event_from_recommendation,
 )
+from truepanel.history.thermal_commissioning import (
+    ThermalCommissioningHistory,
+    commissioning_event,
+)
 from truepanel.mission_control import MissionControl
 from truepanel.hardware.bay_led_animation import (
     build_bay_led_startup_animation,
 )
 from truepanel.hardware.fan_status_bridge import (
     FanControlStatusBridge,
+)
+from truepanel.hardware.thermal_commissioning import (
+    thermal_commissioning_state,
 )
 
 from truepanel.hardware.thermal_fan_policy import (
@@ -116,6 +123,30 @@ fan_control_history = FanControlHistory(
         )
     ),
 )
+thermal_commissioning_history = (
+    ThermalCommissioningHistory(
+        config.get(
+            "history",
+            {},
+        ).get(
+            "thermal_commissioning_path",
+            (
+                "/var/lib/truepanel/history/"
+                "thermal-commissioning.jsonl"
+            ),
+        ),
+        enabled=bool(
+            config.get(
+                "history",
+                {},
+            ).get(
+                "enabled",
+                True,
+            )
+        ),
+    )
+)
+
 thermal_observer_history = ThermalObserverHistory(
     config.get(
         "history",
@@ -572,6 +603,63 @@ def observe_thermal_fan_policy(
     return recommendation
 
 
+def record_thermal_commissioning_event(
+    lifecycle_action,
+    reason,
+    *,
+    lease_remaining=None,
+):
+    """Append one normalized commissioning lifecycle event."""
+
+    runtime_status = (
+        fan_control_runtime.status_payload()
+    )
+
+    if lease_remaining is None:
+        if supervised_thermal_session_deadline is None:
+            lease_remaining = 0.0
+        else:
+            lease_remaining = max(
+                0.0,
+                supervised_thermal_session_deadline
+                - time.monotonic(),
+            )
+
+    state = thermal_commissioning_state(
+        policy_mode=thermal_policy_mode,
+        operator_armed=thermal_operator_armed,
+        dry_run=(
+            thermal_control_coordinator.dry_run
+        ),
+        supervised_session_active=(
+            supervised_thermal_session_active()
+        ),
+    )
+
+    try:
+        thermal_commissioning_history.append(
+            commissioning_event(
+                lifecycle_action=lifecycle_action,
+                reason=reason,
+                commissioning_state=state,
+                active_profile=runtime_status.get(
+                    "active_profile",
+                    "automatic",
+                ),
+                control_authority=runtime_status.get(
+                    "control_authority",
+                    "automatic",
+                ),
+                lease_remaining=lease_remaining,
+            )
+        )
+    except Exception:
+        LOGGER.exception(
+            "Could not append thermal "
+            "commissioning history"
+        )
+
+
 def record_fan_control_event(
     decision,
     telemetry,
@@ -675,6 +763,7 @@ def restore_motherboard_fan_control(
 def end_supervised_thermal_session(
     reason,
     *,
+    lifecycle_action,
     telemetry=None,
 ):
     """End the live lease and return control to the motherboard."""
@@ -713,6 +802,12 @@ def end_supervised_thermal_session(
 
     publish_fan_control_status(
         reason=reason
+    )
+
+    record_thermal_commissioning_event(
+        lifecycle_action,
+        reason,
+        lease_remaining=0.0,
     )
 
 
@@ -780,12 +875,20 @@ def reconcile_fan_control():
                 dry_run=True,
             )
 
+            cancellation_reason = (
+                "Supervised thermal session ended "
+                "because the fan safety service "
+                "changed control state."
+            )
+
             publish_fan_control_status(
-                reason=(
-                    "Supervised thermal session ended "
-                    "because the fan safety service "
-                    "changed control state."
-                )
+                reason=cancellation_reason
+            )
+
+            record_thermal_commissioning_event(
+                "supervised_safety_cancelled",
+                cancellation_reason,
+                lease_remaining=0.0,
             )
         else:
             publish_fan_control_status()
@@ -797,6 +900,7 @@ def reconcile_fan_control():
             end_supervised_thermal_session(
                 "Supervised thermal session expired; "
                 "returned control to the motherboard.",
+                lifecycle_action="supervised_expired",
                 telemetry=telemetry,
             )
             return None
@@ -805,6 +909,9 @@ def reconcile_fan_control():
             end_supervised_thermal_session(
                 "Supervised thermal session ended "
                 "because telemetry became stale.",
+                lifecycle_action=(
+                    "supervised_safety_cancelled"
+                ),
                 telemetry=telemetry,
             )
             return None
@@ -817,6 +924,9 @@ def reconcile_fan_control():
                 "Supervised thermal session ended "
                 "because the recommendation left "
                 "the balanced profile.",
+                lifecycle_action=(
+                    "supervised_safety_cancelled"
+                ),
                 telemetry=telemetry,
             )
             return None
@@ -1134,6 +1244,11 @@ def set_thermal_operator_arm_state(
         )
 
     else:
+        was_supervised = (
+            supervised_thermal_session_deadline
+            is not None
+        )
+
         supervised_thermal_session_deadline = None
         thermal_operator_armed = False
 
@@ -1157,6 +1272,17 @@ def set_thermal_operator_arm_state(
         thermal_control_coordinator.owns_control = False
         thermal_control_last_result = None
 
+        if was_supervised:
+            record_thermal_commissioning_event(
+                "supervised_disarmed",
+                (
+                    "Automatic thermal control "
+                    "manually disarmed; motherboard "
+                    "control restored."
+                ),
+                lease_remaining=0.0,
+            )
+
     if (
         normalized != "disarm"
         and thermal_fan_recommendation is not None
@@ -1168,6 +1294,22 @@ def set_thermal_operator_arm_state(
                 telemetry=telemetry,
                 runtime_status=runtime_status,
             )
+        )
+
+    if (
+        normalized == "supervised_live"
+        and supervised_thermal_session_active()
+    ):
+        record_thermal_commissioning_event(
+            "supervised_started",
+            (
+                "Supervised live thermal control "
+                "engaged for 120 seconds with the "
+                "balanced profile only."
+            ),
+            lease_remaining=(
+                SUPERVISED_THERMAL_SESSION_SECONDS
+            ),
         )
 
     return {

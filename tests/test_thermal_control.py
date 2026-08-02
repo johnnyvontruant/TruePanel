@@ -1130,7 +1130,7 @@ def test_disarm_synchronously_restores_motherboard_control():
 
     disarm_start = handler.index(
         "else:\n"
-        "        supervised_thermal_session_deadline = None"
+        "        was_supervised = ("
     )
     disarm_block = handler[
         disarm_start:
@@ -1316,3 +1316,71 @@ def test_guarded_runtime_commands_can_still_arm():
     assert "thermal_operator_armed = True" in handler
     assert "operator_armed=True" in handler
     assert "dry_run=False" in handler
+
+
+
+def test_lcd_records_supervised_commissioning_lifecycle():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "ThermalCommissioningHistory"
+        in source
+    )
+    assert (
+        "def record_thermal_commissioning_event("
+        in source
+    )
+
+    for action in (
+        "supervised_started",
+        "supervised_disarmed",
+        "supervised_expired",
+        "supervised_safety_cancelled",
+    ):
+        assert action in source
+
+
+def test_session_end_requires_lifecycle_action():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "def end_supervised_thermal_session("
+    )
+    end = source.index(
+        "def supervised_thermal_session_active",
+        start,
+    )
+    helper = source[start:end]
+
+    assert "lifecycle_action" in helper
+    assert (
+        "record_thermal_commissioning_event("
+        in helper
+    )
+
+
+def test_commissioning_history_has_no_hardware_path():
+    source = Path(
+        "truepanel/history/"
+        "thermal_commissioning.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    for forbidden in (
+        "request_profile",
+        "service.tick",
+        "FanHardwareExecutor",
+        "set_manual_pwm",
+        "write_int",
+        "/sys/",
+    ):
+        assert forbidden not in source
