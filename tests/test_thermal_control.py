@@ -609,7 +609,19 @@ def test_lcd_constructs_thermal_coordinator():
         in source
     )
     assert (
-        '"operator_armed",'
+        "thermal_operator_armed = False"
+        in source
+    )
+    assert (
+        "thermal_dry_run = True"
+        in source
+    )
+    assert (
+        "operator_armed=thermal_operator_armed"
+        in source
+    )
+    assert (
+        "dry_run=thermal_dry_run"
         in source
     )
     assert (
@@ -1196,3 +1208,111 @@ def test_disarm_message_reports_motherboard_restoration():
         "simulation returned to automatic."
         not in source
     )
+
+
+
+def test_thermal_runtime_always_starts_disarmed():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "thermal_operator_armed = False"
+        in source
+    )
+
+    startup = source[
+        source.index(
+            "thermal_operator_armed = False"
+        ) - 250:
+        source.index(
+            "thermal_operator_armed = False"
+        ) + 100
+    ]
+
+    assert "operator_armed" not in startup.split(
+        "thermal_operator_armed = False"
+    )[0]
+
+
+def test_thermal_runtime_always_starts_in_dry_run():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert "thermal_dry_run = True" in source
+
+    startup = source[
+        source.index(
+            "thermal_dry_run = True"
+        ) - 250:
+        source.index(
+            "thermal_dry_run = True"
+        ) + 100
+    ]
+
+    assert 'get("dry_run"' not in startup
+    assert "get('dry_run'" not in startup
+
+
+def test_configuration_cannot_grant_startup_authority():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    coordinator_start = source.index(
+        "ThermalControlCoordinator("
+    )
+
+    initialization = source[
+        :coordinator_start
+    ]
+
+    coordinator = source[
+        coordinator_start:
+        coordinator_start + 700
+    ]
+
+    assert (
+        "thermal_operator_armed = False"
+        in initialization
+    )
+    assert (
+        "thermal_dry_run = True"
+        in initialization
+    )
+    assert (
+        "operator_armed=thermal_operator_armed"
+        in coordinator
+    )
+    assert (
+        "dry_run=thermal_dry_run"
+        in coordinator
+    )
+
+
+def test_guarded_runtime_commands_can_still_arm():
+    source = Path(
+        "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = source.index(
+        "def set_thermal_operator_arm_state"
+    )
+    end = source.index(
+        "def build_fan_command_server",
+        start,
+    )
+    handler = source[start:end]
+
+    assert "thermal_operator_armed = True" in handler
+    assert "operator_armed=True" in handler
+    assert "dry_run=False" in handler

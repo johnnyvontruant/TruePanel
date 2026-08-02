@@ -224,19 +224,13 @@ thermal_fan_policy = ThermalFanPolicy(
     ),
 )
 
-thermal_operator_armed = bool(
-    thermal_policy_config.get(
-        "operator_armed",
-        False,
-    )
-)
+# Operator authorization is deliberately ephemeral.
+# Every TruePanel process starts disarmed regardless of configuration.
+thermal_operator_armed = False
 
-thermal_dry_run = bool(
-    thermal_policy_config.get(
-        "dry_run",
-        True,
-    )
-)
+# Live authority is granted only by a guarded runtime command.
+# Configuration may enable the capability, but cannot arm it at boot.
+thermal_dry_run = True
 
 thermal_command_cooldown_seconds = float(
     thermal_policy_config.get(
