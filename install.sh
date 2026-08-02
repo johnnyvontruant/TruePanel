@@ -30,6 +30,7 @@ rsync -a --delete \
   --exclude ".git" \
   --exclude "__pycache__" \
   --exclude "*.pyc" \
+  --exclude "truepanel.backup-*" \
   ./ "$INSTALL_DIR/"
 
 echo "Creating default configuration if needed..."
