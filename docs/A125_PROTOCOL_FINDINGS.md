@@ -116,3 +116,62 @@ string analysis, command-table inspection, and disassembly.
 
 No recovered executable was run, and no undocumented command was
 sent to the live controller.
+
+## Final constructor audit
+
+A structural audit was performed against all recovered A125 packet
+buffers and their `write()` call sites in:
+
+- `lcd_tool`
+- `lcd_hwtest`
+- `lcdmond`
+
+The audit distinguished deliberate packet construction from arbitrary
+`0x4D <byte>` sequences occurring inside x86-64 machine instructions,
+strings, and unrelated data.
+
+### Immediate packet constructors
+
+The recovered programs explicitly construct the following variable
+commands:
+
+| Opcode | Constructor | Length |
+|---|---|---|
+| `0x02` | Set LED value | 4 bytes |
+| `0x09` | Set RTC time | 8 bytes |
+| `0x0C` | Display text | text length + 4 bytes |
+| `0x35` | Manual adjustment toggle | 3 bytes |
+
+The programs initialize packet byte zero to the `0x4D` preamble and
+write these values directly to packet byte one before calling
+`write()`.
+
+No other immediate opcode assignment to the active A125 packet buffer
+was found.
+
+### Raw opcode scan disposition
+
+A first-pass byte scanner found many apparent `0x4D <opcode>` pairs,
+including repeated values such as `0x21`, `0x85`, `0x89`, and `0x8D`.
+
+ELF section mapping and disassembly showed that these pairs were
+ordinary x86-64 instruction encodings, strings, or unrelated binary
+data. They were not packet constants and were not passed to the serial
+write path.
+
+### Offline conclusion
+
+The recovered QNAP firmware contains no packet constructor for:
+
+- CGRAM programming
+- custom-character definition
+- glyph-slot selection
+- bitmap upload
+- per-row character data
+
+The official vendor stack therefore provides no evidence of custom
+glyph support on the A125 controller.
+
+This closes the offline firmware-analysis path. Any further attempt to
+discover custom glyphs would require a separate, explicitly authorized,
+safety-gated live protocol investigation.
