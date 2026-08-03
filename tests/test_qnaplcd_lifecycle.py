@@ -620,3 +620,105 @@ def test_disconnected_write_remains_safe_with_lock(
         False,
         False,
     ]
+
+
+def test_button_reply_updates_reader_owned_cache_without_handler(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x53\x05\x00\x02",
+    )
+
+    assert lcd.read_buttons() == 0
+
+    reply = lcd._read_reply()
+    lcd._dispatch_reply(reply)
+
+    assert lcd.read_buttons() == 0x0002
+
+    lcd.close()
+
+
+def test_button_cache_and_legacy_callback_receive_same_state(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x53\x05\x00\x01",
+    )
+    callbacks = []
+
+    lcd.handler = lambda command, data: (
+        callbacks.append((command, data))
+    )
+
+    reply = lcd._read_reply()
+    lcd._dispatch_reply(reply)
+
+    assert lcd.read_buttons() == 0x0001
+    assert callbacks == [
+        ("Switch_Status", 0x0001),
+    ]
+
+    lcd.close()
+
+
+def test_non_button_reply_does_not_change_button_cache(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"",
+    )
+
+    lcd.connection.buffer.extend(
+        b"\x53\x05\x00\x02"
+    )
+    lcd._dispatch_reply(
+        lcd._read_reply()
+    )
+
+    lcd.connection.buffer.extend(
+        b"\x53\x08\x00\x03"
+    )
+    lcd._dispatch_reply(
+        lcd._read_reply()
+    )
+
+    assert lcd.read_buttons() == 0x0002
+
+    lcd.close()
+
+
+def test_button_cache_is_safe_for_concurrent_polling(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"",
+    )
+
+    observed = []
+
+    def poll():
+        for _ in range(100):
+            observed.append(
+                lcd.read_buttons()
+            )
+
+    threads = [
+        threading.Thread(target=poll)
+        for _ in range(4)
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join(timeout=1.0)
+
+    assert len(observed) == 400
+    assert set(observed) == {0}
+
+    lcd.close()

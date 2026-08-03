@@ -41,6 +41,8 @@ class QnapLCD:
         self.reader = None
         self.stop_event = Event()
         self.write_lock = Lock()
+        self.state_lock = Lock()
+        self.button_state = 0
 
         try:
             self.connection = serial.Serial(
@@ -124,10 +126,17 @@ class QnapLCD:
         )
 
     def _dispatch_reply(self, reply):
+        response = reply.response
+
+        if response == A125Response.BUTTON_STATUS:
+            value = reply.value_u16
+
+            if value is not None:
+                with self.state_lock:
+                    self.button_state = value
+
         if not self.handler:
             return
-
-        response = reply.response
 
         if response == A125Response.BOARD_ID:
             self.handler(
@@ -162,6 +171,18 @@ class QnapLCD:
 
             if reply is not None:
                 self._dispatch_reply(reply)
+
+    def read_buttons(self):
+        """
+        Return the latest button mask received by the background reader.
+
+        This method performs no serial I/O. The reader thread remains the sole
+        owner of incoming A125 frames, allowing polling services to consume
+        button state without racing synchronous protocol transactions.
+        """
+
+        with self.state_lock:
+            return self.button_state
 
     def close(self):
         """Stop the reader thread before closing the serial connection."""
