@@ -21,7 +21,6 @@ venv/
 *.tmp
 *.temp
 # Timestamped development backups
-development/backups/*.before-*.py
 # Ignore Python cache anywhere
 **/__pycache__/
 .quality-venv/
@@ -47,3 +46,6 @@ development/logs/
 
 # Python packaging artifacts
 *.egg-info/
+
+# Local development snapshots
+development/backups/
