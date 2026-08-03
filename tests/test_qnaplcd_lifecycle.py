@@ -447,3 +447,49 @@ def test_incomplete_reply_is_not_dispatched(
     assert lcd._read_reply() is None
 
     lcd.close()
+
+
+def test_write_helper_reports_connection_state(
+    monkeypatch,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    assert lcd.clear() is True
+    assert connection.writes == [
+        b"\x4d\x0d",
+    ]
+
+    lcd.close()
+
+    assert lcd.clear() is False
+    assert lcd.backlight(True) is False
+    assert lcd.reset() is False
+    assert lcd.get_board() is False
+    assert lcd.get_protocol() is False
+    assert lcd.get_buttons() is False
+    assert lcd.write_bytes(1, b"ABC") is False
+
+
+def test_write_helper_preserves_fragment_order_and_flush(
+    monkeypatch,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    result = lcd._write_parts(
+        b"\x01\x02",
+        bytearray(b"\x03\x04"),
+        flush=True,
+    )
+
+    assert result is True
+    assert connection.writes == [
+        b"\x01\x02",
+        b"\x03\x04",
+    ]
+    assert connection.flush_count == 1
+
+    lcd.close()

@@ -198,49 +198,65 @@ class QnapLCD:
         self.connection = None
         self.reader = None
 
+    def _write_parts(self, *parts, flush=False):
+        """
+        Write one or more packet fragments to the active transport.
+
+        The legacy driver deliberately keeps display headers and payloads as
+        separate writes. Centralizing transport access preserves that behavior
+        while giving future lifecycle and diagnostic work one guarded path.
+        """
+
+        connection = self.connection
+
+        if not connection:
+            return False
+
+        for part in parts:
+            connection.write(bytes(part))
+
+        if flush:
+            connection.flush()
+
+        return True
+
     def backlight(self, on=True):
-        if self.connection:
-            self.connection.write(
-                encode_backlight(on)
-            )
+        return self._write_parts(
+            encode_backlight(on)
+        )
 
     def clear(self):
-        if self.connection:
-            self.connection.write(
-                encode_query(
-                    A125Command.DISPLAY_CLEAR
-                )
+        return self._write_parts(
+            encode_query(
+                A125Command.DISPLAY_CLEAR
             )
+        )
 
     def reset(self):
-        if self.connection:
-            self.connection.write(
-                encode_query(A125Command.RESET)
-            )
+        return self._write_parts(
+            encode_query(A125Command.RESET)
+        )
 
     def get_board(self):
-        if self.connection:
-            self.connection.write(
-                encode_query(
-                    A125Command.GET_BOARD_ID
-                )
+        return self._write_parts(
+            encode_query(
+                A125Command.GET_BOARD_ID
             )
+        )
 
     def get_protocol(self):
-        if self.connection:
-            self.connection.write(
-                encode_query(
-                    A125Command.GET_PROTOCOL_VERSION
-                )
+        return self._write_parts(
+            encode_query(
+                A125Command.GET_PROTOCOL_VERSION
             )
+        )
 
     def get_buttons(self):
-        if self.connection:
-            self.connection.write(
-                encode_query(
-                    A125Command.GET_BUTTONS
-                )
+        return self._write_parts(
+            encode_query(
+                A125Command.GET_BUTTONS
             )
+        )
 
     def _row_address(self, line):
         # Preserve the existing driver convention:
@@ -266,19 +282,20 @@ class QnapLCD:
         payload = payload[:self.columns]
         row = self._row_address(line)
 
-        if self.connection:
-            packet = encode_display_write(
-                row,
-                payload,
-                width=self.columns,
-            )
+        packet = encode_display_write(
+            row,
+            payload,
+            width=self.columns,
+        )
 
-            header = packet[:4]
-            encoded_payload = packet[4:]
+        header = packet[:4]
+        encoded_payload = packet[4:]
 
-            self.connection.write(header)
-            self.connection.write(encoded_payload)
-            self.connection.flush()
+        return self._write_parts(
+            header,
+            encoded_payload,
+            flush=True,
+        )
 
     def write_text(self, line, message):
         """
