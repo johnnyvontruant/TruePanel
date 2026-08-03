@@ -397,7 +397,14 @@ def main():
         return
 
     logger.info("Starting LCD menu")
-    runpy.run_path("lcd-menu.py", run_name="__main__")
+    lcd_menu_path = (
+        Path(__file__).resolve().parents[1]
+        / "lcd-menu.py"
+    )
+    runpy.run_path(
+        str(lcd_menu_path),
+        run_name="__main__",
+    )
 
 
 if __name__ == "__main__":
