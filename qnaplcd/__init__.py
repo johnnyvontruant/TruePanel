@@ -8,9 +8,13 @@ import serial
 
 from truepanel.diagnostics.protocol import (
     A125Command,
+    A125Reply,
+    A125Response,
+    DEVICE_PREAMBLES,
     encode_backlight,
     encode_display_write,
     encode_query,
+    expected_reply_payload_length,
 )
 
 # Get ID       send=0x4d, 0x00  recv=0x53, 0x01, 0xXX, 0xYY 
@@ -77,43 +81,86 @@ class QnapLCD:
 
         return data
 
+    def _read_reply(self):
+        preamble = self._read_bytes()
+
+        if preamble is None:
+            return None
+
+        if preamble not in DEVICE_PREAMBLES:
+            return None
+
+        response = self._read_bytes()
+
+        if response is None:
+            return None
+
+        payload_length = (
+            expected_reply_payload_length(
+                response
+            )
+        )
+
+        if payload_length is None:
+            payload = b""
+        elif payload_length == 0:
+            payload = b""
+        else:
+            payload = self._read_bytes(
+                payload_length
+            )
+
+            if payload is None:
+                return None
+
+            if isinstance(payload, int):
+                payload = bytes([payload])
+
+        return A125Reply(
+            preamble=preamble,
+            response=response,
+            payload=payload,
+        )
+
+    def _dispatch_reply(self, reply):
+        if not self.handler:
+            return
+
+        response = reply.response
+
+        if response == A125Response.BOARD_ID:
+            self.handler(
+                "Report_ID",
+                reply.value_u16,
+            )
+        elif response == A125Response.BUTTON_STATUS:
+            self.handler(
+                "Switch_Status",
+                reply.value_u16,
+            )
+        elif response == A125Response.PROTOCOL_VERSION:
+            self.handler(
+                "Protocol_Version",
+                reply.value_u16,
+            )
+        elif response == A125Response.RESET_OK:
+            self.handler("Reset_OK", True)
+        elif response == A125Response.ACK:
+            self.handler("Ack", None)
+        elif response == A125Response.NACK:
+            reason = (
+                reply.payload[0]
+                if reply.payload
+                else None
+            )
+            self.handler("Nack", reason)
+
     def serial_reader(self):
         while not self.stop_event.is_set():
-            preamble = self._read_bytes()
+            reply = self._read_reply()
 
-            if preamble is None:
-                continue
-
-            if preamble == 0x53 or preamble == 0x83:
-                cmd = self._read_bytes()
-
-                if cmd is None:
-                    continue
-                if cmd == 0x01:
-                    report = self._read_bytes(2)
-                    report = report[0] * 256 + report[1]
-                    self.handler('Report_ID', report)
-
-                if cmd == 0x05:
-                    buttons = self._read_bytes(2)
-                    buttons = buttons[0]*256 + buttons[1]
-                    self.handler('Switch_Status', buttons)
-
-                if cmd == 0x08:
-                    version = self._read_bytes(2)
-                    version = version[0]*256 + version[1]
-                    self.handler('Protocol_Version', version)
-
-                if cmd == 0xAA:
-                    self.handler('Reset_OK', True)
-
-                if cmd == 0xFA:
-                    #self.buffer = sport.read()
-                    self.handler('Ack', None)
-
-                if cmd == 0xFB:
-                    nack_cmd = self._read_bytes()
-                    self.handler('Nack', nack_cmd)
+            if reply is not None:
+                self._dispatch_reply(reply)
 
     def close(self):
         """Stop the reader thread before closing the serial connection."""

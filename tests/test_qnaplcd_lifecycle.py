@@ -312,3 +312,138 @@ def test_display_payload_is_truncated_to_lcd_width(
     ]
 
     lcd.close()
+
+
+class BufferedSerial(FakeSerial):
+    def __init__(
+        self,
+        port,
+        speed,
+        timeout=None,
+        payload=b"",
+    ):
+        super().__init__(
+            port,
+            speed,
+            timeout=timeout,
+        )
+        self.buffer = bytearray(payload)
+
+    def read(self, size=1):
+        if not self.buffer:
+            return b""
+
+        output = bytes(self.buffer[:size])
+        del self.buffer[:size]
+        return output
+
+
+def build_buffered_lcd(
+    monkeypatch,
+    payload,
+):
+    created = []
+
+    def factory(*args, **kwargs):
+        connection = BufferedSerial(
+            *args,
+            **kwargs,
+            payload=payload,
+        )
+        created.append(connection)
+        return connection
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        factory,
+    )
+
+    lcd = qnaplcd.QnapLCD(handler=None)
+    return lcd, created[0]
+
+
+def test_reply_decoder_uses_authoritative_payload_lengths(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x53\x05\x00\x02",
+    )
+
+    reply = lcd._read_reply()
+
+    assert reply.preamble == 0x53
+    assert reply.response == 0x05
+    assert reply.payload == b"\x00\x02"
+    assert reply.value_u16 == 2
+
+    lcd.close()
+
+
+def test_reply_decoder_accepts_alternate_device_preamble(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x83\x08\x00\x03",
+    )
+
+    reply = lcd._read_reply()
+
+    assert reply.preamble == 0x83
+    assert reply.response == 0x08
+    assert reply.value_u16 == 3
+
+    lcd.close()
+
+
+def test_reply_dispatch_preserves_legacy_callbacks(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"",
+    )
+    callbacks = []
+    lcd.handler = lambda command, data: (
+        callbacks.append((command, data))
+    )
+
+    frames = [
+        b"\x53\x01\x00\x7d",
+        b"\x53\x05\x00\x02",
+        b"\x53\x08\x00\x03",
+        b"\x53\xaa",
+        b"\x53\xfa",
+        b"\x53\xfb\x28",
+    ]
+
+    for frame in frames:
+        lcd.connection.buffer.extend(frame)
+        reply = lcd._read_reply()
+        lcd._dispatch_reply(reply)
+
+    assert callbacks == [
+        ("Report_ID", 0x007D),
+        ("Switch_Status", 0x0002),
+        ("Protocol_Version", 0x0003),
+        ("Reset_OK", True),
+        ("Ack", None),
+        ("Nack", 0x28),
+    ]
+
+    lcd.close()
+
+
+def test_incomplete_reply_is_not_dispatched(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x53\x05\x00",
+    )
+
+    assert lcd._read_reply() is None
+
+    lcd.close()
