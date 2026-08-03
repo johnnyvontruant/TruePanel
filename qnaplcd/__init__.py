@@ -1,8 +1,10 @@
 #
 # QNAP LCD Display and Button Class
 #
+import logging
+from threading import Event, Thread, current_thread
+
 import serial
-from threading import *
 
 # Get ID       send=0x4d, 0x00  recv=0x53, 0x01, 0xXX, 0xYY 
 # Get Button   send=0x4d, 0x06  recv=0x53, 0x05, 0xXX, 0xYY
@@ -12,6 +14,9 @@ from threading import *
 # Backlight    send=x04d, 0x5e, 0xXX  : on,x=0x01 off,x=0x00
 # Negative ACK                  recv=0x53, 0xFB, 0xXX
 # Reset        send=0x4d, 0xFF
+
+logger = logging.getLogger(__name__)
+
 
 class QnapLCD:
     def __init__(self, port='/dev/ttyS1', speed=1200, handler=None):
@@ -33,7 +38,7 @@ class QnapLCD:
             )
         except serial.SerialException as se:
             self.connection = None
-            print('error', se)
+            logger.exception("Unable to open LCD serial connection")
 
         if handler and self.connection:
             self.reader = Thread(
@@ -189,8 +194,6 @@ class QnapLCD:
 
         payload = payload[:self.columns]
         row = self._row_address(line)
-
-        print(f'RAW LINE {line}: {payload!r}')
 
         if self.connection:
             self.connection.write(
