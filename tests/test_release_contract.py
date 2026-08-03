@@ -28,11 +28,9 @@ def test_project_metadata_uses_authoritative_version():
     metadata = load_pyproject()
 
     assert metadata["project"]["name"] == "truepanel"
-    assert metadata["project"]["dynamic"] == ["version"]
-    assert (
-        metadata["tool"]["setuptools"]["dynamic"]["version"]["attr"]
-        == "truepanel.__version__"
-    )
+    assert metadata["project"]["version"] == truepanel.__version__
+    assert "dynamic" not in metadata["project"]
+    assert "dynamic" not in metadata["tool"]["setuptools"]
     assert metadata["project"]["requires-python"] == ">=3.11"
 
 

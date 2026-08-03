@@ -44,3 +44,6 @@ development/beacon/
 
 # Generated calibration and laboratory reports
 development/logs/
+
+# Python packaging artifacts
+*.egg-info/
