@@ -29,6 +29,7 @@ from truepanel.history.thermal_commissioning import (
 )
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.button_service import (
+    ButtonAction,
     ButtonEvent,
     ButtonService,
 )
@@ -2191,7 +2192,16 @@ def observe_button_event(event: ButtonEvent):
     the reader-owned button-state cache.
     """
 
-    LOGGER.debug(
+    log = (
+        LOGGER.info
+        if event.action in {
+            ButtonAction.PRESSED,
+            ButtonAction.RELEASED,
+        }
+        else LOGGER.debug
+    )
+
+    log(
         (
             "Button shadow event: "
             "sequence=%s button=%s mask=0x%02X "

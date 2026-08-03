@@ -57,7 +57,10 @@ def test_shadow_event_sink_cannot_navigate():
     for value in forbidden:
         assert value not in block
 
-    assert "LOGGER.debug(" in block
+    assert "LOGGER.info" in block
+    assert "LOGGER.debug" in block
+    assert "ButtonAction.PRESSED" in block
+    assert "ButtonAction.RELEASED" in block
 
 
 def test_legacy_callback_remains_navigation_authority():
