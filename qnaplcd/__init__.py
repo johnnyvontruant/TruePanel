@@ -6,6 +6,13 @@ from threading import Event, Thread, current_thread
 
 import serial
 
+from truepanel.diagnostics.protocol import (
+    A125Command,
+    encode_backlight,
+    encode_display_write,
+    encode_query,
+)
+
 # Get ID       send=0x4d, 0x00  recv=0x53, 0x01, 0xXX, 0xYY 
 # Get Button   send=0x4d, 0x06  recv=0x53, 0x05, 0xXX, 0xYY
 # Get Protocol send=0x4d, 0x07  recv=0x53, 0x08, 0xXX, 0xYY
@@ -146,30 +153,47 @@ class QnapLCD:
 
     def backlight(self, on=True):
         if self.connection:
-            if on:
-                self.connection.write(bytes([0x4d, 0x5e, 0x01]))
-            else:
-                self.connection.write(bytes([0x4d, 0x5e, 0x00]))
+            self.connection.write(
+                encode_backlight(on)
+            )
 
     def clear(self):
         if self.connection:
-            self.connection.write(bytes([0x4d, 0x0d]))
+            self.connection.write(
+                encode_query(
+                    A125Command.DISPLAY_CLEAR
+                )
+            )
 
     def reset(self):
         if self.connection:
-            self.connection.write(bytes([0x4d, 0xff]))
+            self.connection.write(
+                encode_query(A125Command.RESET)
+            )
 
     def get_board(self):
         if self.connection:
-            self.connection.write(bytes([0x4d, 0x00]))
+            self.connection.write(
+                encode_query(
+                    A125Command.GET_BOARD_ID
+                )
+            )
 
     def get_protocol(self):
         if self.connection:
-            self.connection.write(bytes([0x4d, 0x07]))
+            self.connection.write(
+                encode_query(
+                    A125Command.GET_PROTOCOL_VERSION
+                )
+            )
 
     def get_buttons(self):
         if self.connection:
-            self.connection.write(bytes([0x4d, 0x06]))
+            self.connection.write(
+                encode_query(
+                    A125Command.GET_BUTTONS
+                )
+            )
 
     def _row_address(self, line):
         # Preserve the existing driver convention:
@@ -196,10 +220,17 @@ class QnapLCD:
         row = self._row_address(line)
 
         if self.connection:
-            self.connection.write(
-                bytes([0x4d, 0x0c, row, len(payload)])
+            packet = encode_display_write(
+                row,
+                payload,
+                width=self.columns,
             )
-            self.connection.write(payload)
+
+            header = packet[:4]
+            encoded_payload = packet[4:]
+
+            self.connection.write(header)
+            self.connection.write(encoded_payload)
             self.connection.flush()
 
     def write_text(self, line, message):

@@ -192,3 +192,123 @@ def test_close_is_idempotent(
 
     assert lcd.connection is None
     assert lcd.reader is None
+
+
+class RecordingSerial(FakeSerial):
+    def __init__(
+        self,
+        port,
+        speed,
+        timeout=None,
+    ):
+        super().__init__(
+            port,
+            speed,
+            timeout=timeout,
+        )
+        self.writes = []
+        self.flush_count = 0
+
+    def write(self, payload):
+        payload = bytes(payload)
+        self.writes.append(payload)
+        return len(payload)
+
+    def flush(self):
+        self.flush_count += 1
+
+
+def build_recording_lcd(monkeypatch):
+    created = []
+
+    def factory(*args, **kwargs):
+        connection = RecordingSerial(
+            *args,
+            **kwargs,
+        )
+        created.append(connection)
+        return connection
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        factory,
+    )
+
+    lcd = qnaplcd.QnapLCD(handler=None)
+    return lcd, created[0]
+
+
+def test_command_packets_use_a125_protocol_encoders(
+    monkeypatch,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    lcd.backlight(True)
+    lcd.backlight(False)
+    lcd.clear()
+    lcd.reset()
+    lcd.get_board()
+    lcd.get_protocol()
+    lcd.get_buttons()
+
+    assert connection.writes == [
+        b"\x4d\x5e\x01",
+        b"\x4d\x5e\x00",
+        b"\x4d\x0d",
+        b"\x4d\xff",
+        b"\x4d\x00",
+        b"\x4d\x07",
+        b"\x4d\x06",
+    ]
+
+    lcd.close()
+
+
+def test_display_packet_preserves_legacy_write_sequence(
+    monkeypatch,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    lcd.write_bytes(
+        1,
+        b"ABC",
+    )
+    lcd.write_bytes(
+        2,
+        b"\x00\x01",
+    )
+
+    assert connection.writes == [
+        b"\x4d\x0c\x00\x03",
+        b"ABC",
+        b"\x4d\x0c\x01\x02",
+        b"\x00\x01",
+    ]
+    assert connection.flush_count == 2
+
+    lcd.close()
+
+
+def test_display_payload_is_truncated_to_lcd_width(
+    monkeypatch,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    lcd.write_bytes(
+        1,
+        b"1234567890ABCDEFGH",
+    )
+
+    assert connection.writes == [
+        b"\x4d\x0c\x00\x10",
+        b"1234567890ABCDEF",
+    ]
+
+    lcd.close()
