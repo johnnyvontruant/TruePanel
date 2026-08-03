@@ -2,7 +2,7 @@
 # QNAP LCD Display and Button Class
 #
 import logging
-from threading import Event, Thread, current_thread
+from threading import Event, Lock, Thread, current_thread
 
 import serial
 
@@ -40,6 +40,7 @@ class QnapLCD:
         self.handler = handler
         self.reader = None
         self.stop_event = Event()
+        self.write_lock = Lock()
 
         try:
             self.connection = serial.Serial(
@@ -207,16 +208,17 @@ class QnapLCD:
         while giving future lifecycle and diagnostic work one guarded path.
         """
 
-        connection = self.connection
+        with self.write_lock:
+            connection = self.connection
 
-        if not connection:
-            return False
+            if not connection:
+                return False
 
-        for part in parts:
-            connection.write(bytes(part))
+            for part in parts:
+                connection.write(bytes(part))
 
-        if flush:
-            connection.flush()
+            if flush:
+                connection.flush()
 
         return True
 

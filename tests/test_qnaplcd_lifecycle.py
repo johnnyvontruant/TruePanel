@@ -493,3 +493,130 @@ def test_write_helper_preserves_fragment_order_and_flush(
     assert connection.flush_count == 1
 
     lcd.close()
+
+
+class CoordinatedSerial(RecordingSerial):
+    def __init__(
+        self,
+        port,
+        speed,
+        timeout=None,
+    ):
+        super().__init__(
+            port,
+            speed,
+            timeout=timeout,
+        )
+        self.first_write_started = (
+            threading.Event()
+        )
+        self.release_first_write = (
+            threading.Event()
+        )
+        self.write_calls = 0
+
+    def write(self, payload):
+        self.write_calls += 1
+
+        if self.write_calls == 1:
+            self.first_write_started.set()
+            self.release_first_write.wait(
+                timeout=1.0
+            )
+
+        return super().write(payload)
+
+
+def test_fragmented_display_write_is_atomic(
+    monkeypatch,
+):
+    created = []
+
+    def factory(*args, **kwargs):
+        connection = CoordinatedSerial(
+            *args,
+            **kwargs,
+        )
+        created.append(connection)
+        return connection
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        factory,
+    )
+
+    lcd = qnaplcd.QnapLCD(handler=None)
+    connection = created[0]
+
+    display_thread = threading.Thread(
+        target=lcd.write_bytes,
+        args=(1, b"ABC"),
+    )
+    command_thread = threading.Thread(
+        target=lcd.clear,
+    )
+
+    display_thread.start()
+
+    assert connection.first_write_started.wait(
+        timeout=1.0
+    )
+
+    command_thread.start()
+
+    time.sleep(0.02)
+
+    assert command_thread.is_alive()
+    assert connection.writes == []
+
+    connection.release_first_write.set()
+
+    display_thread.join(timeout=1.0)
+    command_thread.join(timeout=1.0)
+
+    assert display_thread.is_alive() is False
+    assert command_thread.is_alive() is False
+
+    assert connection.writes == [
+        b"\x4d\x0c\x00\x03",
+        b"ABC",
+        b"\x4d\x0d",
+    ]
+    assert connection.flush_count == 1
+
+    lcd.close()
+
+
+def test_disconnected_write_remains_safe_with_lock(
+    monkeypatch,
+):
+    lcd, _ = build_recording_lcd(
+        monkeypatch
+    )
+
+    lcd.close()
+
+    results = []
+
+    threads = [
+        threading.Thread(
+            target=lambda: results.append(
+                lcd.clear()
+            )
+        )
+        for _ in range(4)
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join(timeout=1.0)
+
+    assert results == [
+        False,
+        False,
+        False,
+        False,
+    ]
