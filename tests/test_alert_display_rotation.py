@@ -412,10 +412,11 @@ def test_button_release_does_not_wake_or_render_lcd():
     assert "if not data:\n            return" in handler
 
 
-def test_mission_dashboard_timing_separates_frame_and_transport():
+def test_abnormal_button_latency_warning_is_retained():
     source = Path("lcd-menu.py").read_text(
         encoding="utf-8",
     )
 
-    assert 'timing["frame_ms"] = frame_ms' in source
-    assert '"frame_ms=%.3f "' in source
+    assert "total_ms >= 750.0" in source
+    assert "Abnormal LCD button latency:" in source
+    assert "duration_ms=%.3f" in source
