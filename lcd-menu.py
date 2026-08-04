@@ -2172,14 +2172,9 @@ def render_lcd_frame(
     page=None,
     source="runtime",
 ):
+    del page, source
     lcd.clear()
     lcd.write(0, lines)
-
-    publish_lcd_display(
-        lines,
-        page=page,
-        source=source,
-    )
 
 
 def render_mission_frame(frame):
@@ -2371,6 +2366,18 @@ def main():
         PORT,
         PORT_SPEED,
         response_handler,
+    )
+
+    lcd.set_frame_handler(
+        lambda lines: publish_lcd_display(
+            lines,
+            page=(
+                menu[menu_item].__name__
+                if menu
+                else None
+            ),
+            source="runtime",
+        )
     )
 
     publish_lcd_reader_status()

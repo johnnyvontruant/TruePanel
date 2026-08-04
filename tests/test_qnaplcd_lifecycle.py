@@ -1515,3 +1515,143 @@ def test_transport_flush_stops_cleanly_after_interrupt(
         ) is False
     finally:
         lcd.close()
+
+
+def test_frame_observer_receives_successful_normalized_frame(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    observed = []
+    lcd = qnaplcd.QnapLCD()
+    lcd.set_frame_handler(
+        observed.append
+    )
+
+    try:
+        assert lcd.write_frame(
+            [
+                "CPU 14%",
+                "RAM 31%",
+            ]
+        ) is True
+
+        assert observed == [
+            (
+                "CPU 14%         ",
+                "RAM 31%         ",
+            )
+        ]
+    finally:
+        lcd.close()
+
+
+def test_frame_observer_is_not_called_when_write_fails(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    observed = []
+    lcd = qnaplcd.QnapLCD()
+    lcd.set_frame_handler(
+        observed.append
+    )
+
+    lcd.connection = None
+
+    try:
+        assert lcd.write_frame(
+            [
+                "Unavailable",
+                "No transport",
+            ]
+        ) is False
+
+        assert observed == []
+    finally:
+        lcd.close()
+
+
+def test_frame_observer_failure_does_not_break_lcd_write(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    def broken_observer(lines):
+        del lines
+        raise RuntimeError(
+            "observer failed"
+        )
+
+    lcd = qnaplcd.QnapLCD()
+    lcd.set_frame_handler(
+        broken_observer
+    )
+
+    try:
+        assert lcd.write_frame(
+            [
+                "TruePanel",
+                "Mission Ready",
+            ]
+        ) is True
+    finally:
+        lcd.close()
+
+
+def test_frame_handler_rejects_non_callable(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD()
+
+    try:
+        try:
+            lcd.set_frame_handler(
+                "not callable"
+            )
+        except TypeError:
+            pass
+        else:
+            raise AssertionError(
+                "Expected TypeError"
+            )
+    finally:
+        lcd.close()
