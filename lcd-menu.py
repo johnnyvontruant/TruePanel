@@ -13,6 +13,9 @@ import qnaplcd
 from truepanel.hardware.lcd_reader_status_bridge import (
     LCDReaderStatusBridge,
 )
+from truepanel.hardware.lcd_display_status_bridge import (
+    LCDDisplayStatusBridge,
+)
 from truepanel.hardware.lcd_command import (
     LCDCommandProcessor,
     LCDCommandServer,
@@ -96,6 +99,9 @@ PORT_SPEED = 1200
 lcd = None
 lcd_reader_status_bridge = (
     LCDReaderStatusBridge()
+)
+lcd_display_status_bridge = (
+    LCDDisplayStatusBridge()
 )
 lcd_timer = None
 menu_item = 0
@@ -2142,11 +2148,47 @@ def cached_display_state():
     return get_state()
 
 
+def publish_lcd_display(
+    lines,
+    *,
+    page=None,
+    source="runtime",
+):
+    try:
+        lcd_display_status_bridge.publish(
+            lines,
+            page=page,
+            source=source,
+        )
+    except Exception:
+        LOGGER.exception(
+            "Could not publish LCD display status"
+        )
+
+
+def render_lcd_frame(
+    lines,
+    *,
+    page=None,
+    source="runtime",
+):
+    lcd.clear()
+    lcd.write(0, lines)
+
+    publish_lcd_display(
+        lines,
+        page=page,
+        source=source,
+    )
+
+
 def render_mission_frame(frame):
     """Render one complete Mission Home frame."""
 
-    lcd.clear()
-    lcd.write(0, frame.lines)
+    render_lcd_frame(
+        frame.lines,
+        page="show_mission_home",
+    )
 
 
 def show_mission_home():
