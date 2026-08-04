@@ -34,6 +34,10 @@ from truepanel.hardware.lcd_reader_status_bridge import (
     DEFAULT_LCD_READER_STATUS_PATH,
     LCDReaderStatusBridge,
 )
+from truepanel.hardware.lcd_display_status_bridge import (
+    DEFAULT_LCD_DISPLAY_STATUS_PATH,
+    LCDDisplayStatusBridge,
+)
 from truepanel.hardware.thermal_commissioning import (
     thermal_commissioning_state,
 )
@@ -74,6 +78,7 @@ class SnapshotService:
         history_path=None,
         fan_control_status_path=None,
         lcd_reader_status_path=None,
+        lcd_display_status_path=None,
         fan_control_history_path=None,
         thermal_observer_history_path=None,
         thermal_commissioning_history_path=None,
@@ -106,6 +111,14 @@ class SnapshotService:
             LCDReaderStatusBridge(
                 lcd_reader_status_path
                 or DEFAULT_LCD_READER_STATUS_PATH,
+                clock=self.clock,
+            )
+        )
+
+        self.lcd_display_bridge = (
+            LCDDisplayStatusBridge(
+                lcd_display_status_path
+                or DEFAULT_LCD_DISPLAY_STATUS_PATH,
                 clock=self.clock,
             )
         )
@@ -190,47 +203,129 @@ class SnapshotService:
         }
 
     def _lcd_payload(self) -> dict[str, Any]:
-        status = self.lcd_reader_bridge.read(
-            max_age=30.0
+        reader_status = (
+            self.lcd_reader_bridge.read(
+                max_age=30.0
+            )
+        )
+        display_status = (
+            self.lcd_display_bridge.read(
+                max_age=15.0
+            )
         )
 
-        if status is None:
-            return {
-                "available": False,
-                "stale": True,
-                "timestamp": None,
-                "age_seconds": None,
-                "reader": {
-                    "thread_alive": False,
-                    "dispatcher_alive": False,
-                    "stop_requested": False,
-                    "dispatcher_started_at": None,
-                    "dispatcher_stopped_at": None,
-                    "dispatcher_events": 0,
-                    "dispatch_queue_depth": 0,
-                    "replies": 0,
-                    "reader_errors": 0,
-                    "last_reader_error": None,
-                    "button_reports": 0,
-                    "last_button_mask": 0,
-                    "last_pressed_button_mask": 0,
-                    "last_button_time": None,
-                    "callback_count": 0,
-                    "callback_errors": 0,
-                    "last_callback_error": None,
-                    "last_callback_duration_ms": None,
-                    "max_callback_duration_ms": None,
-                    "queued_button_events": 0,
-                },
+        default_reader = {
+            "thread_alive": False,
+            "dispatcher_alive": False,
+            "stop_requested": False,
+            "dispatcher_started_at": None,
+            "dispatcher_stopped_at": None,
+            "dispatcher_events": 0,
+            "dispatch_queue_depth": 0,
+            "replies": 0,
+            "reader_errors": 0,
+            "last_reader_error": None,
+            "button_reports": 0,
+            "last_button_mask": 0,
+            "last_pressed_button_mask": 0,
+            "last_button_time": None,
+            "callback_count": 0,
+            "callback_errors": 0,
+            "last_callback_error": None,
+            "last_callback_duration_ms": None,
+            "max_callback_duration_ms": None,
+            "queued_button_events": 0,
+        }
+
+        display_payload = None
+
+        if display_status is not None:
+            display = display_status[
+                "display"
+            ]
+
+            display_payload = {
+                "line1": display[
+                    "line1"
+                ],
+                "line2": display[
+                    "line2"
+                ],
+                "page": display.get(
+                    "page"
+                ),
+                "source": display.get(
+                    "source",
+                    "runtime",
+                ),
+                "timestamp": display_status[
+                    "timestamp"
+                ],
+                "age_seconds": display_status[
+                    "age_seconds"
+                ],
+                "stale": display_status[
+                    "stale"
+                ],
             }
 
+        if reader_status is None:
+            reader = default_reader
+            reader_timestamp = None
+            reader_age = None
+            reader_stale = True
+        else:
+            reader = reader_status[
+                "reader"
+            ]
+            reader_timestamp = reader_status[
+                "timestamp"
+            ]
+            reader_age = reader_status[
+                "age_seconds"
+            ]
+            reader_stale = (
+                float(
+                    reader_status.get(
+                        "age_seconds",
+                        0.0,
+                    )
+                )
+                > 30.0
+            )
+
+        component_staleness = []
+
+        if reader_status is not None:
+            component_staleness.append(
+                bool(reader_stale)
+            )
+
+        if display_status is not None:
+            component_staleness.append(
+                bool(
+                    display_status[
+                        "stale"
+                    ]
+                )
+            )
+
         return {
-            "available": True,
-            "stale": False,
-            "timestamp": status["timestamp"],
-            "age_seconds": status["age_seconds"],
-            "reader": status["reader"],
+            "available": bool(
+                reader_status is not None
+                or display_status is not None
+            ),
+            "stale": (
+                all(component_staleness)
+                if component_staleness
+                else True
+            ),
+            "timestamp": reader_timestamp,
+            "age_seconds": reader_age,
+            "reader": reader,
+            "display": display_payload,
         }
+
 
     def fan_control_history_payload(
         self,
