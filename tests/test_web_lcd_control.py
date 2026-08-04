@@ -29,6 +29,14 @@ class FakeSnapshotService:
             }
         }
 
+    def lcd_status(self):
+        return {
+            "schema_version": 1,
+            "read_only": True,
+            "timestamp": 100.0,
+            "lcd": self.status()["lcd"],
+        }
+
     def capabilities(self):
         return {}
 
@@ -286,3 +294,33 @@ def test_dispatcher_rejection_returns_503():
     assert payload["status"] == (
         "dispatcher_unavailable"
     )
+
+
+def get_json(address):
+    with urlopen(
+        address,
+        timeout=10,
+    ) as response:
+        return (
+            response.status,
+            json.load(response),
+        )
+
+
+def test_lcd_status_endpoint_is_lightweight():
+    client = FakeLCDCommandClient()
+
+    with running_server(
+        client
+    ) as base_url:
+        status, payload = get_json(
+            base_url
+            + "/api/v1/lcd"
+        )
+
+    assert status == 200
+    assert payload["read_only"] is True
+    assert payload["lcd"]["available"] is True
+    assert payload["lcd"]["display"][
+        "line1"
+    ] == "TruePanel       "

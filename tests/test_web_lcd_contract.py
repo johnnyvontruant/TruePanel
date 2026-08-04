@@ -12,6 +12,10 @@ def test_web_lcd_route_uses_guarded_client():
         '"/api/v1/lcd/button"'
         in source
     )
+    assert (
+        '"/api/v1/lcd"'
+        in source
+    )
     assert "LCDCommandClient" in source
     assert (
         ".lcd_command_client"

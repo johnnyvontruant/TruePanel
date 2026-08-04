@@ -202,6 +202,19 @@ class SnapshotService:
             ),
         }
 
+    def lcd_status(self) -> dict[str, Any]:
+        """
+        Return lightweight LCD state without refreshing system telemetry.
+        """
+
+        return {
+            "schema_version": 1,
+            "read_only": True,
+            "timestamp": self.clock(),
+            "lcd": self._lcd_payload(),
+        }
+
+
     def _lcd_payload(self) -> dict[str, Any]:
         reader_status = (
             self.lcd_reader_bridge.read(

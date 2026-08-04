@@ -1286,3 +1286,50 @@ def test_status_snapshot_uses_none_for_missing_display(
     assert lcd_payload[
         "display"
     ] is None
+
+
+def test_lcd_status_does_not_refresh_collector(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    class CountingCollector:
+        def __init__(self):
+            self.calls = 0
+
+        def update(self):
+            self.calls += 1
+            return {}
+
+    collector = CountingCollector()
+
+    service = SnapshotService(
+        collector=collector,
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            tmp_path
+            / "missing-reader.json"
+        ),
+        lcd_display_status_path=(
+            tmp_path
+            / "missing-display.json"
+        ),
+        clock=lambda: 100.0,
+    )
+
+    payload = service.lcd_status()
+
+    assert collector.calls == 0
+    assert payload["read_only"] is True
+    assert payload["lcd"]["available"] is False

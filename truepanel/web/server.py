@@ -51,6 +51,7 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             "/": self._dashboard,
             "/index.html": self._dashboard,
             "/api/v1/status": self._status,
+            "/api/v1/lcd": self._lcd_status,
             "/api/v1/history": self._history,
             "/api/v1/fans/history": (
                 self._fan_history
@@ -125,6 +126,12 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
     def _status(self, parsed):
         del parsed
         self._json(self.snapshot_service.status())
+
+    def _lcd_status(self, parsed):
+        del parsed
+        self._json(
+            self.snapshot_service.lcd_status()
+        )
 
     def _history(self, parsed):
         query = parse_qs(parsed.query)
