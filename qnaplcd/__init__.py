@@ -1,6 +1,7 @@
 #
 # QNAP LCD Display and Button Class
 #
+import errno
 import logging
 import time
 from collections import deque
@@ -608,7 +609,18 @@ class QnapLCD:
                 connection.write(bytes(part))
 
             if flush:
-                connection.flush()
+                while True:
+                    try:
+                        connection.flush()
+                        break
+                    except OSError as error:
+                        if error.errno == errno.EINTR:
+                            if self.stop_event.is_set():
+                                return False
+
+                            continue
+
+                        raise
 
         return True
 

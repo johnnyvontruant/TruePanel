@@ -1439,3 +1439,79 @@ def test_virtual_button_rejects_after_shutdown(
         0x01,
         source="web",
     ) is False
+
+
+def test_transport_flush_retries_interrupted_system_call(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+    flush_calls = []
+
+    def interrupted_then_success():
+        flush_calls.append(True)
+
+        if len(flush_calls) == 1:
+            raise InterruptedError(
+                4,
+                "Interrupted system call",
+            )
+
+    connection.flush = interrupted_then_success
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD()
+
+    try:
+        assert lcd.write_frame(
+            [
+                "First",
+                "Second",
+            ]
+        ) is True
+        assert len(flush_calls) == 2
+    finally:
+        lcd.close()
+
+
+def test_transport_flush_stops_cleanly_after_interrupt(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    def interrupted_flush():
+        raise InterruptedError(
+            4,
+            "Interrupted system call",
+        )
+
+    connection.flush = interrupted_flush
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD()
+    lcd.stop_event.set()
+
+    try:
+        assert lcd.write_frame(
+            [
+                "Stopping",
+                "TruePanel",
+            ]
+        ) is False
+    finally:
+        lcd.close()
