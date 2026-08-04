@@ -2203,18 +2203,103 @@ menu = [
 def response_handler(command, data):
     global menu_item
 
+    callback_started = time.perf_counter()
+    backlight_ms = 0.0
+    navigation_ms = 0.0
+    render_ms = 0.0
+    page_name = (
+        menu[menu_item].__name__
+        if menu
+        else "unknown"
+    )
+
     prev_menu = menu_item
 
     if command == "Switch_Status":
+        phase_started = time.perf_counter()
         lcd_on()
+        backlight_ms = (
+            time.perf_counter()
+            - phase_started
+        ) * 1000.0
+
+        phase_started = time.perf_counter()
 
         if menu[menu_item] == show_mission_home:
             if data == 0x01:
+                navigation_ms = (
+                    time.perf_counter()
+                    - phase_started
+                ) * 1000.0
+
+                render_started = time.perf_counter()
                 previous_mission_dashboard()
+                render_ms = (
+                    time.perf_counter()
+                    - render_started
+                ) * 1000.0
+
+                total_ms = (
+                    time.perf_counter()
+                    - callback_started
+                ) * 1000.0
+
+                if total_ms >= 100.0:
+                    LOGGER.warning(
+                        (
+                            "LCD button timing: "
+                            "button=0x%04X "
+                            "page=%s "
+                            "total_ms=%.3f "
+                            "backlight_ms=%.3f "
+                            "navigation_ms=%.3f "
+                            "render_ms=%.3f"
+                        ),
+                        data or 0,
+                        page_name,
+                        total_ms,
+                        backlight_ms,
+                        navigation_ms,
+                        render_ms,
+                    )
                 return
 
             if data == 0x02:
+                navigation_ms = (
+                    time.perf_counter()
+                    - phase_started
+                ) * 1000.0
+
+                render_started = time.perf_counter()
                 next_mission_dashboard()
+                render_ms = (
+                    time.perf_counter()
+                    - render_started
+                ) * 1000.0
+
+                total_ms = (
+                    time.perf_counter()
+                    - callback_started
+                ) * 1000.0
+
+                if total_ms >= 100.0:
+                    LOGGER.warning(
+                        (
+                            "LCD button timing: "
+                            "button=0x%04X "
+                            "page=%s "
+                            "total_ms=%.3f "
+                            "backlight_ms=%.3f "
+                            "navigation_ms=%.3f "
+                            "render_ms=%.3f"
+                        ),
+                        data or 0,
+                        page_name,
+                        total_ms,
+                        backlight_ms,
+                        navigation_ms,
+                        render_ms,
+                    )
                 return
 
         if data == 0x01:
@@ -2223,8 +2308,49 @@ def response_handler(command, data):
         if data == 0x02:
             menu_item = (menu_item + 1) % len(menu)
 
+        navigation_ms = (
+            time.perf_counter()
+            - phase_started
+        ) * 1000.0
+
     if prev_menu != menu_item:
+        page_name = menu[
+            menu_item
+        ].__name__
+
+        render_started = time.perf_counter()
         menu[menu_item]()
+        render_ms = (
+            time.perf_counter()
+            - render_started
+        ) * 1000.0
+
+    total_ms = (
+        time.perf_counter()
+        - callback_started
+    ) * 1000.0
+
+    if (
+        command == "Switch_Status"
+        and total_ms >= 100.0
+    ):
+        LOGGER.warning(
+            (
+                "LCD button timing: "
+                "button=0x%04X "
+                "page=%s "
+                "total_ms=%.3f "
+                "backlight_ms=%.3f "
+                "navigation_ms=%.3f "
+                "render_ms=%.3f"
+            ),
+            data or 0,
+            page_name,
+            total_ms,
+            backlight_ms,
+            navigation_ms,
+            render_ms,
+        )
 
 
 def main():
