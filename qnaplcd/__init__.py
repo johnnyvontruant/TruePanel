@@ -644,7 +644,11 @@ class QnapLCD:
 
     def write_frame(self, frame):
         """
-        Write a two-row frame containing strings or raw byte payloads.
+        Write a two-row frame as one guarded transport transaction.
+
+        Both display packets share one write lock and one final flush. This
+        keeps frames atomic, avoids per-row flush overhead, and prevents other
+        LCD operations from being interleaved between the two rows.
         """
 
         lines = getattr(frame, "lines", frame)
@@ -655,11 +659,43 @@ class QnapLCD:
         first = lines[0] if len(lines) >= 1 else b""
         second = lines[1] if len(lines) >= 2 else b""
 
+        packets = []
+
         for line_number, value in ((1, first), (2, second)):
-            if isinstance(value, (bytes, bytearray)):
-                self.write_bytes(line_number, value)
+            if isinstance(value, bytearray):
+                value = bytes(value)
+
+            if isinstance(value, bytes):
+                payload = value[:self.columns]
             else:
-                self.write_text(line_number, value)
+                payload = (
+                    str(value)[:self.columns]
+                    .encode(
+                        "latin-1",
+                        errors="replace",
+                    )
+                )
+
+            row = self._row_address(
+                line_number
+            )
+            packet = encode_display_write(
+                row,
+                payload,
+                width=self.columns,
+            )
+
+            packets.extend(
+                [
+                    packet[:4],
+                    packet[4:],
+                ]
+            )
+
+        return self._write_parts(
+            *packets,
+            flush=True,
+        )
 
     def write(self, line, msg):
         """

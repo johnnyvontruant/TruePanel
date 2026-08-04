@@ -2099,28 +2099,84 @@ def show_fan_pwm():
     lcd.write(0, fan_pwm_page())
 
 
+def cached_display_state():
+    """
+    Return the latest collector snapshot without refreshing hardware.
+
+    Physical button navigation must remain responsive even when the normal
+    telemetry refresh interval has elapsed. The main loop owns fresh
+    collection; button callbacks only render the most recent safe snapshot.
+    """
+
+    state = dict(
+        collector.state
+        or {}
+    )
+
+    if state:
+        return state
+
+    return get_state()
+
+
+def render_mission_frame(frame):
+    """Render one Mission Home frame and report LCD transport timing."""
+
+    clear_started = time.perf_counter()
+    lcd.clear()
+    clear_ms = (
+        time.perf_counter()
+        - clear_started
+    ) * 1000.0
+
+    write_started = time.perf_counter()
+    lcd.write(0, frame.lines)
+    write_ms = (
+        time.perf_counter()
+        - write_started
+    ) * 1000.0
+
+    return {
+        "clear_ms": clear_ms,
+        "write_ms": write_ms,
+    }
+
+
 def show_mission_home():
     state = get_state()
     frame = autopilot.tick(state)
 
-    lcd.clear()
-    lcd.write(0, frame.lines)
+    render_mission_frame(frame)
 
 
 def next_mission_dashboard():
-    state = get_state()
-    frame = autopilot.next(state)
+    state = cached_display_state()
 
-    lcd.clear()
-    lcd.write(0, frame.lines)
+    frame_started = time.perf_counter()
+    frame = autopilot.next(state)
+    frame_ms = (
+        time.perf_counter()
+        - frame_started
+    ) * 1000.0
+
+    timing = render_mission_frame(frame)
+    timing["frame_ms"] = frame_ms
+    return timing
 
 
 def previous_mission_dashboard():
-    state = get_state()
-    frame = autopilot.previous(state)
+    state = cached_display_state()
 
-    lcd.clear()
-    lcd.write(0, frame.lines)
+    frame_started = time.perf_counter()
+    frame = autopilot.previous(state)
+    frame_ms = (
+        time.perf_counter()
+        - frame_started
+    ) * 1000.0
+
+    timing = render_mission_frame(frame)
+    timing["frame_ms"] = frame_ms
+    return timing
 
 
 def show_mission_control():
@@ -2203,18 +2259,124 @@ menu = [
 def response_handler(command, data):
     global menu_item
 
+    callback_started = time.perf_counter()
+    backlight_ms = 0.0
+    navigation_ms = 0.0
+    render_ms = 0.0
+    page_name = (
+        menu[menu_item].__name__
+        if menu
+        else "unknown"
+    )
+
     prev_menu = menu_item
 
     if command == "Switch_Status":
+        if not data:
+            return
+
+        phase_started = time.perf_counter()
         lcd_on()
+        backlight_ms = (
+            time.perf_counter()
+            - phase_started
+        ) * 1000.0
+
+        phase_started = time.perf_counter()
 
         if menu[menu_item] == show_mission_home:
             if data == 0x01:
-                previous_mission_dashboard()
+                navigation_ms = (
+                    time.perf_counter()
+                    - phase_started
+                ) * 1000.0
+
+                render_started = time.perf_counter()
+                render_timing = previous_mission_dashboard()
+                render_ms = (
+                    time.perf_counter()
+                    - render_started
+                ) * 1000.0
+                frame_ms = render_timing["frame_ms"]
+                clear_ms = render_timing["clear_ms"]
+                write_ms = render_timing["write_ms"]
+
+                total_ms = (
+                    time.perf_counter()
+                    - callback_started
+                ) * 1000.0
+
+                if total_ms >= 750.0:
+                    LOGGER.warning(
+                        (
+                            "LCD button timing: "
+                            "button=0x%04X "
+                            "page=%s "
+                            "total_ms=%.3f "
+                            "backlight_ms=%.3f "
+                            "navigation_ms=%.3f "
+                            "render_ms=%.3f "
+                            "frame_ms=%.3f "
+                            "clear_ms=%.3f "
+                            "write_ms=%.3f"
+                        ),
+                        data or 0,
+                        page_name,
+                        total_ms,
+                        backlight_ms,
+                        navigation_ms,
+                        render_ms,
+                        frame_ms,
+                        clear_ms,
+                        write_ms,
+                    )
                 return
 
             if data == 0x02:
-                next_mission_dashboard()
+                navigation_ms = (
+                    time.perf_counter()
+                    - phase_started
+                ) * 1000.0
+
+                render_started = time.perf_counter()
+                render_timing = next_mission_dashboard()
+                render_ms = (
+                    time.perf_counter()
+                    - render_started
+                ) * 1000.0
+                frame_ms = render_timing["frame_ms"]
+                clear_ms = render_timing["clear_ms"]
+                write_ms = render_timing["write_ms"]
+
+                total_ms = (
+                    time.perf_counter()
+                    - callback_started
+                ) * 1000.0
+
+                if total_ms >= 750.0:
+                    LOGGER.warning(
+                        (
+                            "LCD button timing: "
+                            "button=0x%04X "
+                            "page=%s "
+                            "total_ms=%.3f "
+                            "backlight_ms=%.3f "
+                            "navigation_ms=%.3f "
+                            "render_ms=%.3f "
+                            "frame_ms=%.3f "
+                            "clear_ms=%.3f "
+                            "write_ms=%.3f"
+                        ),
+                        data or 0,
+                        page_name,
+                        total_ms,
+                        backlight_ms,
+                        navigation_ms,
+                        render_ms,
+                        frame_ms,
+                        clear_ms,
+                        write_ms,
+                    )
                 return
 
         if data == 0x01:
@@ -2223,8 +2385,49 @@ def response_handler(command, data):
         if data == 0x02:
             menu_item = (menu_item + 1) % len(menu)
 
+        navigation_ms = (
+            time.perf_counter()
+            - phase_started
+        ) * 1000.0
+
     if prev_menu != menu_item:
+        page_name = menu[
+            menu_item
+        ].__name__
+
+        render_started = time.perf_counter()
         menu[menu_item]()
+        render_ms = (
+            time.perf_counter()
+            - render_started
+        ) * 1000.0
+
+    total_ms = (
+        time.perf_counter()
+        - callback_started
+    ) * 1000.0
+
+    if (
+        command == "Switch_Status"
+        and total_ms >= 750.0
+    ):
+        LOGGER.warning(
+            (
+                "LCD button timing: "
+                "button=0x%04X "
+                "page=%s "
+                "total_ms=%.3f "
+                "backlight_ms=%.3f "
+                "navigation_ms=%.3f "
+                "render_ms=%.3f"
+            ),
+            data or 0,
+            page_name,
+            total_ms,
+            backlight_ms,
+            navigation_ms,
+            render_ms,
+        )
 
 
 def main():
