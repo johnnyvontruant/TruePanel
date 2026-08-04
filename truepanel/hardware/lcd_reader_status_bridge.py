@@ -64,6 +64,12 @@ class LCDReaderStatusBridge:
                     False,
                 )
             ),
+            "dispatcher_alive": bool(
+                reader.get(
+                    "dispatcher_alive",
+                    False,
+                )
+            ),
             "stop_requested": bool(
                 reader.get(
                     "stop_requested",
@@ -79,6 +85,32 @@ class LCDReaderStatusBridge:
                 reader.get(
                     "stopped_at"
                 )
+            ),
+            "dispatcher_started_at": _safe_float(
+                reader.get(
+                    "dispatcher_started_at"
+                )
+            ),
+            "dispatcher_stopped_at": _safe_float(
+                reader.get(
+                    "dispatcher_stopped_at"
+                )
+            ),
+            "dispatcher_events": max(
+                0,
+                _safe_int(
+                    reader.get(
+                        "dispatcher_events"
+                    )
+                ),
+            ),
+            "dispatch_queue_depth": max(
+                0,
+                _safe_int(
+                    reader.get(
+                        "dispatch_queue_depth"
+                    )
+                ),
             ),
             "replies": max(
                 0,

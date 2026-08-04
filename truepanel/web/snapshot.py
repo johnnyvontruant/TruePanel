@@ -202,7 +202,12 @@ class SnapshotService:
                 "age_seconds": None,
                 "reader": {
                     "thread_alive": False,
+                    "dispatcher_alive": False,
                     "stop_requested": False,
+                    "dispatcher_started_at": None,
+                    "dispatcher_stopped_at": None,
+                    "dispatcher_events": 0,
+                    "dispatch_queue_depth": 0,
                     "replies": 0,
                     "reader_errors": 0,
                     "last_reader_error": None,

@@ -952,6 +952,9 @@ def test_status_snapshot_publishes_lcd_reader_health(
     bridge.publish(
         {
             "thread_alive": True,
+            "dispatcher_alive": True,
+            "dispatcher_events": 4,
+            "dispatch_queue_depth": 0,
             "replies": 21,
             "button_reports": 4,
             "last_button_mask": 0,
@@ -983,6 +986,24 @@ def test_status_snapshot_publishes_lcd_reader_health(
             "thread_alive"
         ]
         is True
+    )
+    assert (
+        lcd_payload["reader"][
+            "dispatcher_alive"
+        ]
+        is True
+    )
+    assert (
+        lcd_payload["reader"][
+            "dispatcher_events"
+        ]
+        == 4
+    )
+    assert (
+        lcd_payload["reader"][
+            "dispatch_queue_depth"
+        ]
+        == 0
     )
     assert (
         lcd_payload["reader"][

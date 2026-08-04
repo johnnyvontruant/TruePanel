@@ -27,6 +27,9 @@ def test_bridge_publishes_and_reads_reader_health(
     published = bridge.publish(
         {
             "thread_alive": True,
+            "dispatcher_alive": True,
+            "dispatcher_events": 5,
+            "dispatch_queue_depth": 1,
             "replies": 12,
             "button_reports": 3,
             "last_button_mask": 0,
@@ -44,6 +47,9 @@ def test_bridge_publishes_and_reads_reader_health(
     assert payload is not None
     assert payload["age_seconds"] == 0.0
     assert payload["reader"]["thread_alive"] is True
+    assert payload["reader"]["dispatcher_alive"] is True
+    assert payload["reader"]["dispatcher_events"] == 5
+    assert payload["reader"]["dispatch_queue_depth"] == 1
     assert payload["reader"]["replies"] == 12
     assert payload["reader"]["button_reports"] == 3
     assert payload["reader"]["last_button_mask"] == 0
