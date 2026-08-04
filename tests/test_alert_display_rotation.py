@@ -361,3 +361,25 @@ def test_backlight_timeout_covers_complete_rotation():
     )
 
     assert "DISPLAY_TIMEOUT = 120" in source
+
+
+def test_mission_dashboard_button_navigation_uses_cached_state():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    assert "def cached_display_state():" in source
+    assert "state = cached_display_state()" in source
+
+    next_start = source.index(
+        "def next_mission_dashboard():"
+    )
+    previous_start = source.index(
+        "def previous_mission_dashboard():"
+    )
+    next_block = source[
+        next_start:previous_start
+    ]
+
+    assert "get_state()" not in next_block
+    assert "refresh_state()" not in next_block

@@ -2099,28 +2099,68 @@ def show_fan_pwm():
     lcd.write(0, fan_pwm_page())
 
 
+def cached_display_state():
+    """
+    Return the latest collector snapshot without refreshing hardware.
+
+    Physical button navigation must remain responsive even when the normal
+    telemetry refresh interval has elapsed. The main loop owns fresh
+    collection; button callbacks only render the most recent safe snapshot.
+    """
+
+    state = dict(
+        collector.state
+        or {}
+    )
+
+    if state:
+        return state
+
+    return get_state()
+
+
+def render_mission_frame(frame):
+    """Render one Mission Home frame and report LCD transport timing."""
+
+    clear_started = time.perf_counter()
+    lcd.clear()
+    clear_ms = (
+        time.perf_counter()
+        - clear_started
+    ) * 1000.0
+
+    write_started = time.perf_counter()
+    lcd.write(0, frame.lines)
+    write_ms = (
+        time.perf_counter()
+        - write_started
+    ) * 1000.0
+
+    return {
+        "clear_ms": clear_ms,
+        "write_ms": write_ms,
+    }
+
+
 def show_mission_home():
     state = get_state()
     frame = autopilot.tick(state)
 
-    lcd.clear()
-    lcd.write(0, frame.lines)
+    render_mission_frame(frame)
 
 
 def next_mission_dashboard():
-    state = get_state()
+    state = cached_display_state()
     frame = autopilot.next(state)
 
-    lcd.clear()
-    lcd.write(0, frame.lines)
+    return render_mission_frame(frame)
 
 
 def previous_mission_dashboard():
-    state = get_state()
+    state = cached_display_state()
     frame = autopilot.previous(state)
 
-    lcd.clear()
-    lcd.write(0, frame.lines)
+    return render_mission_frame(frame)
 
 
 def show_mission_control():
@@ -2233,11 +2273,13 @@ def response_handler(command, data):
                 ) * 1000.0
 
                 render_started = time.perf_counter()
-                previous_mission_dashboard()
+                render_timing = previous_mission_dashboard()
                 render_ms = (
                     time.perf_counter()
                     - render_started
                 ) * 1000.0
+                clear_ms = render_timing["clear_ms"]
+                write_ms = render_timing["write_ms"]
 
                 total_ms = (
                     time.perf_counter()
@@ -2253,7 +2295,9 @@ def response_handler(command, data):
                             "total_ms=%.3f "
                             "backlight_ms=%.3f "
                             "navigation_ms=%.3f "
-                            "render_ms=%.3f"
+                            "render_ms=%.3f "
+                            "clear_ms=%.3f "
+                            "write_ms=%.3f"
                         ),
                         data or 0,
                         page_name,
@@ -2261,6 +2305,8 @@ def response_handler(command, data):
                         backlight_ms,
                         navigation_ms,
                         render_ms,
+                        clear_ms,
+                        write_ms,
                     )
                 return
 
@@ -2271,11 +2317,13 @@ def response_handler(command, data):
                 ) * 1000.0
 
                 render_started = time.perf_counter()
-                next_mission_dashboard()
+                render_timing = next_mission_dashboard()
                 render_ms = (
                     time.perf_counter()
                     - render_started
                 ) * 1000.0
+                clear_ms = render_timing["clear_ms"]
+                write_ms = render_timing["write_ms"]
 
                 total_ms = (
                     time.perf_counter()
@@ -2291,7 +2339,9 @@ def response_handler(command, data):
                             "total_ms=%.3f "
                             "backlight_ms=%.3f "
                             "navigation_ms=%.3f "
-                            "render_ms=%.3f"
+                            "render_ms=%.3f "
+                            "clear_ms=%.3f "
+                            "write_ms=%.3f"
                         ),
                         data or 0,
                         page_name,
@@ -2299,6 +2349,8 @@ def response_handler(command, data):
                         backlight_ms,
                         navigation_ms,
                         render_ms,
+                        clear_ms,
+                        write_ms,
                     )
                 return
 
