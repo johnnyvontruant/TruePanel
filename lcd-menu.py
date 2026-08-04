@@ -2120,26 +2120,10 @@ def cached_display_state():
 
 
 def render_mission_frame(frame):
-    """Render one Mission Home frame and report LCD transport timing."""
+    """Render one complete Mission Home frame."""
 
-    clear_started = time.perf_counter()
     lcd.clear()
-    clear_ms = (
-        time.perf_counter()
-        - clear_started
-    ) * 1000.0
-
-    write_started = time.perf_counter()
     lcd.write(0, frame.lines)
-    write_ms = (
-        time.perf_counter()
-        - write_started
-    ) * 1000.0
-
-    return {
-        "clear_ms": clear_ms,
-        "write_ms": write_ms,
-    }
 
 
 def show_mission_home():
@@ -2151,32 +2135,18 @@ def show_mission_home():
 
 def next_mission_dashboard():
     state = cached_display_state()
-
-    frame_started = time.perf_counter()
     frame = autopilot.next(state)
-    frame_ms = (
-        time.perf_counter()
-        - frame_started
-    ) * 1000.0
 
-    timing = render_mission_frame(frame)
-    timing["frame_ms"] = frame_ms
-    return timing
+    render_mission_frame(frame)
+
 
 
 def previous_mission_dashboard():
     state = cached_display_state()
-
-    frame_started = time.perf_counter()
     frame = autopilot.previous(state)
-    frame_ms = (
-        time.perf_counter()
-        - frame_started
-    ) * 1000.0
 
-    timing = render_mission_frame(frame)
-    timing["frame_ms"] = frame_ms
-    return timing
+    render_mission_frame(frame)
+
 
 
 def show_mission_control():
@@ -2260,123 +2230,31 @@ def response_handler(command, data):
     global menu_item
 
     callback_started = time.perf_counter()
-    backlight_ms = 0.0
-    navigation_ms = 0.0
-    render_ms = 0.0
     page_name = (
         menu[menu_item].__name__
         if menu
         else "unknown"
     )
 
-    prev_menu = menu_item
+    try:
+        if command != "Switch_Status":
+            return
 
-    if command == "Switch_Status":
+        # The controller reports zero when a button is released. Release
+        # frames must not wake the backlight or trigger another render.
         if not data:
             return
 
-        phase_started = time.perf_counter()
         lcd_on()
-        backlight_ms = (
-            time.perf_counter()
-            - phase_started
-        ) * 1000.0
-
-        phase_started = time.perf_counter()
+        prev_menu = menu_item
 
         if menu[menu_item] == show_mission_home:
             if data == 0x01:
-                navigation_ms = (
-                    time.perf_counter()
-                    - phase_started
-                ) * 1000.0
-
-                render_started = time.perf_counter()
-                render_timing = previous_mission_dashboard()
-                render_ms = (
-                    time.perf_counter()
-                    - render_started
-                ) * 1000.0
-                frame_ms = render_timing["frame_ms"]
-                clear_ms = render_timing["clear_ms"]
-                write_ms = render_timing["write_ms"]
-
-                total_ms = (
-                    time.perf_counter()
-                    - callback_started
-                ) * 1000.0
-
-                if total_ms >= 750.0:
-                    LOGGER.warning(
-                        (
-                            "LCD button timing: "
-                            "button=0x%04X "
-                            "page=%s "
-                            "total_ms=%.3f "
-                            "backlight_ms=%.3f "
-                            "navigation_ms=%.3f "
-                            "render_ms=%.3f "
-                            "frame_ms=%.3f "
-                            "clear_ms=%.3f "
-                            "write_ms=%.3f"
-                        ),
-                        data or 0,
-                        page_name,
-                        total_ms,
-                        backlight_ms,
-                        navigation_ms,
-                        render_ms,
-                        frame_ms,
-                        clear_ms,
-                        write_ms,
-                    )
+                previous_mission_dashboard()
                 return
 
             if data == 0x02:
-                navigation_ms = (
-                    time.perf_counter()
-                    - phase_started
-                ) * 1000.0
-
-                render_started = time.perf_counter()
-                render_timing = next_mission_dashboard()
-                render_ms = (
-                    time.perf_counter()
-                    - render_started
-                ) * 1000.0
-                frame_ms = render_timing["frame_ms"]
-                clear_ms = render_timing["clear_ms"]
-                write_ms = render_timing["write_ms"]
-
-                total_ms = (
-                    time.perf_counter()
-                    - callback_started
-                ) * 1000.0
-
-                if total_ms >= 750.0:
-                    LOGGER.warning(
-                        (
-                            "LCD button timing: "
-                            "button=0x%04X "
-                            "page=%s "
-                            "total_ms=%.3f "
-                            "backlight_ms=%.3f "
-                            "navigation_ms=%.3f "
-                            "render_ms=%.3f "
-                            "frame_ms=%.3f "
-                            "clear_ms=%.3f "
-                            "write_ms=%.3f"
-                        ),
-                        data or 0,
-                        page_name,
-                        total_ms,
-                        backlight_ms,
-                        navigation_ms,
-                        render_ms,
-                        frame_ms,
-                        clear_ms,
-                        write_ms,
-                    )
+                next_mission_dashboard()
                 return
 
         if data == 0x01:
@@ -2385,49 +2263,35 @@ def response_handler(command, data):
         if data == 0x02:
             menu_item = (menu_item + 1) % len(menu)
 
-        navigation_ms = (
+        if prev_menu != menu_item:
+            page_name = menu[
+                menu_item
+            ].__name__
+            menu[menu_item]()
+
+    finally:
+        total_ms = (
             time.perf_counter()
-            - phase_started
+            - callback_started
         ) * 1000.0
 
-    if prev_menu != menu_item:
-        page_name = menu[
-            menu_item
-        ].__name__
+        if (
+            command == "Switch_Status"
+            and data
+            and total_ms >= 750.0
+        ):
+            LOGGER.warning(
+                (
+                    "Abnormal LCD button latency: "
+                    "button=0x%04X "
+                    "page=%s "
+                    "duration_ms=%.3f"
+                ),
+                data,
+                page_name,
+                total_ms,
+            )
 
-        render_started = time.perf_counter()
-        menu[menu_item]()
-        render_ms = (
-            time.perf_counter()
-            - render_started
-        ) * 1000.0
-
-    total_ms = (
-        time.perf_counter()
-        - callback_started
-    ) * 1000.0
-
-    if (
-        command == "Switch_Status"
-        and total_ms >= 750.0
-    ):
-        LOGGER.warning(
-            (
-                "LCD button timing: "
-                "button=0x%04X "
-                "page=%s "
-                "total_ms=%.3f "
-                "backlight_ms=%.3f "
-                "navigation_ms=%.3f "
-                "render_ms=%.3f"
-            ),
-            data or 0,
-            page_name,
-            total_ms,
-            backlight_ms,
-            navigation_ms,
-            render_ms,
-        )
 
 
 def main():
