@@ -722,3 +722,73 @@ def test_button_cache_is_safe_for_concurrent_polling(
     assert set(observed) == {0}
 
     lcd.close()
+
+
+def test_button_reports_are_queued_without_serial_polling(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x53\x05\x00\x01",
+    )
+
+    reply = lcd._read_reply()
+    lcd._dispatch_reply(reply)
+
+    assert lcd.read_button_event() == 0x01
+    assert lcd.read_button_event() == 0
+    assert lcd.read_button_event() == 0
+
+    lcd.close()
+
+
+def test_button_event_queue_preserves_report_order(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"",
+    )
+
+    for frame in (
+        b"\x53\x05\x00\x01",
+        b"\x53\x05\x00\x02",
+    ):
+        lcd.connection.buffer.extend(frame)
+        lcd._dispatch_reply(
+            lcd._read_reply()
+        )
+
+    assert [
+        lcd.read_button_event(),
+        lcd.read_button_event(),
+        lcd.read_button_event(),
+        lcd.read_button_event(),
+        lcd.read_button_event(),
+    ] == [
+        0x01,
+        0,
+        0x02,
+        0,
+        0,
+    ]
+
+    lcd.close()
+
+
+def test_zero_button_report_is_not_queued_as_press(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x53\x05\x00\x00",
+    )
+
+    reply = lcd._read_reply()
+    lcd._dispatch_reply(reply)
+
+    assert lcd.read_buttons() == 0
+    assert lcd.read_button_event() == 0
+    assert lcd.read_button_event() == 0
+
+    lcd.close()

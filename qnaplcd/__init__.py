@@ -2,6 +2,7 @@
 # QNAP LCD Display and Button Class
 #
 import logging
+from collections import deque
 from threading import Event, Lock, Thread, current_thread
 
 import serial
@@ -43,6 +44,8 @@ class QnapLCD:
         self.write_lock = Lock()
         self.state_lock = Lock()
         self.button_state = 0
+        self.button_events = deque()
+        self.button_release_pending = False
 
         try:
             self.connection = serial.Serial(
@@ -135,6 +138,11 @@ class QnapLCD:
                 with self.state_lock:
                     self.button_state = value
 
+                    if value:
+                        self.button_events.append(
+                            value
+                        )
+
         if not self.handler:
             return
 
@@ -176,13 +184,33 @@ class QnapLCD:
         """
         Return the latest button mask received by the background reader.
 
-        This method performs no serial I/O. The reader thread remains the sole
-        owner of incoming A125 frames, allowing polling services to consume
-        button state without racing synchronous protocol transactions.
+        This compatibility method performs no serial I/O. Event-oriented
+        consumers should use read_button_event() so each controller report is
+        consumed exactly once.
         """
 
         with self.state_lock:
             return self.button_state
+
+    def read_button_event(self):
+        """
+        Convert queued A125 button reports into pollable press/release pulses.
+
+        Each nonzero controller report is returned exactly once. The following
+        read returns zero to provide a synthetic release sample. Incoming A125
+        frames remain owned exclusively by the background reader.
+        """
+
+        with self.state_lock:
+            if self.button_release_pending:
+                self.button_release_pending = False
+                return 0
+
+            if not self.button_events:
+                return 0
+
+            self.button_release_pending = True
+            return self.button_events.popleft()
 
     def close(self):
         """Stop the reader thread before closing the serial connection."""
