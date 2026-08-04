@@ -920,3 +920,128 @@ def test_commissioning_history_limit_is_bounded(
 
     assert payload["count"] == 0
     assert payload["read_only"] is True
+
+
+
+def test_status_snapshot_publishes_lcd_reader_health(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    lcd_status_path = (
+        tmp_path
+        / "lcd-reader-status.json"
+    )
+
+    from truepanel.hardware.lcd_reader_status_bridge import (
+        LCDReaderStatusBridge,
+    )
+
+    bridge = LCDReaderStatusBridge(
+        lcd_status_path,
+        clock=lambda: 100.0,
+    )
+
+    bridge.publish(
+        {
+            "thread_alive": True,
+            "replies": 21,
+            "button_reports": 4,
+            "last_button_mask": 2,
+            "callback_count": 4,
+            "callback_errors": 0,
+        }
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            lcd_status_path
+        ),
+        clock=lambda: 100.0,
+    )
+
+    lcd_payload = service.status()["lcd"]
+
+    assert lcd_payload["available"] is True
+    assert lcd_payload["stale"] is False
+    assert (
+        lcd_payload["reader"][
+            "thread_alive"
+        ]
+        is True
+    )
+    assert (
+        lcd_payload["reader"][
+            "replies"
+        ]
+        == 21
+    )
+    assert (
+        lcd_payload["reader"][
+            "button_reports"
+        ]
+        == 4
+    )
+    assert (
+        lcd_payload["reader"][
+            "last_button_mask"
+        ]
+        == 2
+    )
+
+
+def test_status_snapshot_uses_safe_lcd_defaults(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            tmp_path
+            / "missing-lcd-status.json"
+        ),
+        clock=lambda: 100.0,
+    )
+
+    lcd_payload = service.status()["lcd"]
+
+    assert lcd_payload["available"] is False
+    assert lcd_payload["stale"] is True
+    assert (
+        lcd_payload["reader"][
+            "thread_alive"
+        ]
+        is False
+    )
+    assert (
+        lcd_payload["reader"][
+            "button_reports"
+        ]
+        == 0
+    )

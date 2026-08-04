@@ -10,6 +10,9 @@ import threading
 import time
 
 import qnaplcd
+from truepanel.hardware.lcd_reader_status_bridge import (
+    LCDReaderStatusBridge,
+)
 
 from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
@@ -87,6 +90,9 @@ PORT = "/dev/ttyS1"
 PORT_SPEED = 1200
 
 lcd = None
+lcd_reader_status_bridge = (
+    LCDReaderStatusBridge()
+)
 lcd_timer = None
 menu_item = 0
 
@@ -312,6 +318,23 @@ bounded_automatic_lease = BoundedAutomaticLease(
 
 SUPERVISED_THERMAL_SESSION_SECONDS = 120.0
 supervised_thermal_session_deadline = None
+
+
+def publish_lcd_reader_status():
+    """Publish a read-only snapshot of the LCD reader thread."""
+
+    if lcd is None:
+        return None
+
+    try:
+        return lcd_reader_status_bridge.publish(
+            lcd.reader_snapshot()
+        )
+    except Exception:
+        LOGGER.exception(
+            "Unable to publish LCD reader status"
+        )
+        return None
 
 
 def publish_fan_control_status(
@@ -2217,6 +2240,8 @@ def main():
         response_handler,
     )
 
+    publish_lcd_reader_status()
+
     lcd_on()
     lcd.reset()
     lcd.clear()
@@ -2248,6 +2273,7 @@ def main():
 
             observe_thermal_fan_policy()
             publish_fan_control_status()
+            publish_lcd_reader_status()
             add_ips_to_menu()
 
             maybe_show_alert()
@@ -2289,6 +2315,8 @@ def main():
 
         if lcd_timer is not None:
             lcd_timer.cancel()
+
+        publish_lcd_reader_status()
 
         try:
             buzzer.shutdown()
