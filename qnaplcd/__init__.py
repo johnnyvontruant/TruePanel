@@ -4,6 +4,7 @@
 import logging
 import time
 from collections import deque
+from queue import Queue
 from threading import Event, Lock, Thread, current_thread
 
 import serial
@@ -41,7 +42,10 @@ class QnapLCD:
 
         self.handler = handler
         self.reader = None
+        self.dispatcher = None
         self.stop_event = Event()
+        self.dispatch_queue = Queue()
+        self.dispatch_stop_sentinel = object()
         self.write_lock = Lock()
         self.state_lock = Lock()
         self.button_state = 0
@@ -53,6 +57,10 @@ class QnapLCD:
         self.reader_replies = 0
         self.reader_errors = 0
         self.last_reader_error = None
+
+        self.dispatcher_started_at = None
+        self.dispatcher_stopped_at = None
+        self.dispatcher_events = 0
 
         self.button_reports = 0
         self.last_button_mask = 0
@@ -76,6 +84,13 @@ class QnapLCD:
             logger.exception("Unable to open LCD serial connection")
 
         if handler and self.connection:
+            self.dispatcher = Thread(
+                target=self.event_dispatcher,
+                name="qnaplcd-dispatcher",
+                daemon=True,
+            )
+            self.dispatcher.start()
+
             self.reader = Thread(
                 target=self.serial_reader,
                 name="qnaplcd-reader",
@@ -205,6 +220,70 @@ class QnapLCD:
                 duration_ms,
             )
 
+    def _queue_handler_event(self, command, data):
+        """
+        Queue one decoded callback event for ordered delivery.
+
+        Tests and compatibility callers that attach a handler after
+        construction retain synchronous delivery when no dispatcher thread
+        exists. Production construction starts the dedicated dispatcher.
+        """
+
+        dispatcher = self.dispatcher
+
+        if (
+            dispatcher is None
+            or not dispatcher.is_alive()
+        ):
+            self._invoke_handler(
+                command,
+                data,
+            )
+            return
+
+        self.dispatch_queue.put(
+            (
+                command,
+                data,
+            )
+        )
+
+    def event_dispatcher(self):
+        with self.state_lock:
+            self.dispatcher_started_at = time.time()
+            self.dispatcher_stopped_at = None
+
+        logger.info(
+            "QNAP LCD event dispatcher started"
+        )
+
+        try:
+            while True:
+                event = self.dispatch_queue.get()
+
+                try:
+                    if event is self.dispatch_stop_sentinel:
+                        return
+
+                    command, data = event
+
+                    with self.state_lock:
+                        self.dispatcher_events += 1
+
+                    self._invoke_handler(
+                        command,
+                        data,
+                    )
+                finally:
+                    self.dispatch_queue.task_done()
+        finally:
+            with self.state_lock:
+                self.dispatcher_stopped_at = time.time()
+
+            logger.info(
+                "QNAP LCD event dispatcher stopped"
+            )
+
     def _dispatch_reply(self, reply):
         response = reply.response
         command = None
@@ -256,7 +335,7 @@ class QnapLCD:
             )
 
         if command is not None:
-            self._invoke_handler(
+            self._queue_handler_event(
                 command,
                 data,
             )
@@ -308,17 +387,34 @@ class QnapLCD:
 
         with self.state_lock:
             reader = self.reader
+            dispatcher = self.dispatcher
 
             return {
                 "thread_alive": bool(
                     reader is not None
                     and reader.is_alive()
                 ),
+                "dispatcher_alive": bool(
+                    dispatcher is not None
+                    and dispatcher.is_alive()
+                ),
                 "stop_requested": (
                     self.stop_event.is_set()
                 ),
                 "started_at": self.reader_started_at,
                 "stopped_at": self.reader_stopped_at,
+                "dispatcher_started_at": (
+                    self.dispatcher_started_at
+                ),
+                "dispatcher_stopped_at": (
+                    self.dispatcher_stopped_at
+                ),
+                "dispatcher_events": (
+                    self.dispatcher_events
+                ),
+                "dispatch_queue_depth": (
+                    self.dispatch_queue.qsize()
+                ),
                 "replies": self.reader_replies,
                 "reader_errors": self.reader_errors,
                 "last_reader_error": self.last_reader_error,
@@ -377,12 +473,19 @@ class QnapLCD:
             return self.button_events.popleft()
 
     def close(self):
-        """Stop the reader thread before closing the serial connection."""
+        """
+        Stop the reader and dispatcher before closing the serial connection.
+
+        The reader stops first so no new callback events can be queued. The
+        sentinel is then placed behind any already-decoded events, allowing
+        the dispatcher to drain them in order before exiting.
+        """
 
         self.stop_event.set()
 
         connection = self.connection
         reader = self.reader
+        dispatcher = self.dispatcher
 
         if connection:
             try:
@@ -400,6 +503,20 @@ class QnapLCD:
         ):
             reader.join(timeout=1.0)
 
+        if (
+            dispatcher is not None
+            and dispatcher.is_alive()
+        ):
+            self.dispatch_queue.put(
+                self.dispatch_stop_sentinel
+            )
+
+        if (
+            dispatcher is not None
+            and dispatcher is not current_thread()
+        ):
+            dispatcher.join(timeout=2.0)
+
         if connection:
             try:
                 connection.close()
@@ -411,6 +528,7 @@ class QnapLCD:
 
         self.connection = None
         self.reader = None
+        self.dispatcher = None
 
     def _write_parts(self, *parts, flush=False):
         """
