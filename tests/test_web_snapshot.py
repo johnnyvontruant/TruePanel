@@ -1054,6 +1054,10 @@ def test_status_snapshot_uses_safe_lcd_defaults(
             tmp_path
             / "missing-lcd-status.json"
         ),
+        lcd_display_status_path=(
+            tmp_path
+            / "missing-lcd-display-status.json"
+        ),
         clock=lambda: 100.0,
     )
 
