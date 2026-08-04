@@ -2306,7 +2306,7 @@ def response_handler(command, data):
                     - callback_started
                 ) * 1000.0
 
-                if total_ms >= 100.0:
+                if total_ms >= 750.0:
                     LOGGER.warning(
                         (
                             "LCD button timing: "
@@ -2353,7 +2353,7 @@ def response_handler(command, data):
                     - callback_started
                 ) * 1000.0
 
-                if total_ms >= 100.0:
+                if total_ms >= 750.0:
                     LOGGER.warning(
                         (
                             "LCD button timing: "
@@ -2409,7 +2409,7 @@ def response_handler(command, data):
 
     if (
         command == "Switch_Status"
-        and total_ms >= 100.0
+        and total_ms >= 750.0
     ):
         LOGGER.warning(
             (
