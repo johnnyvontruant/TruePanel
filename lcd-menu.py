@@ -2151,16 +2151,32 @@ def show_mission_home():
 
 def next_mission_dashboard():
     state = cached_display_state()
-    frame = autopilot.next(state)
 
-    return render_mission_frame(frame)
+    frame_started = time.perf_counter()
+    frame = autopilot.next(state)
+    frame_ms = (
+        time.perf_counter()
+        - frame_started
+    ) * 1000.0
+
+    timing = render_mission_frame(frame)
+    timing["frame_ms"] = frame_ms
+    return timing
 
 
 def previous_mission_dashboard():
     state = cached_display_state()
-    frame = autopilot.previous(state)
 
-    return render_mission_frame(frame)
+    frame_started = time.perf_counter()
+    frame = autopilot.previous(state)
+    frame_ms = (
+        time.perf_counter()
+        - frame_started
+    ) * 1000.0
+
+    timing = render_mission_frame(frame)
+    timing["frame_ms"] = frame_ms
+    return timing
 
 
 def show_mission_control():
@@ -2256,6 +2272,9 @@ def response_handler(command, data):
     prev_menu = menu_item
 
     if command == "Switch_Status":
+        if not data:
+            return
+
         phase_started = time.perf_counter()
         lcd_on()
         backlight_ms = (
@@ -2278,6 +2297,7 @@ def response_handler(command, data):
                     time.perf_counter()
                     - render_started
                 ) * 1000.0
+                frame_ms = render_timing["frame_ms"]
                 clear_ms = render_timing["clear_ms"]
                 write_ms = render_timing["write_ms"]
 
@@ -2296,6 +2316,7 @@ def response_handler(command, data):
                             "backlight_ms=%.3f "
                             "navigation_ms=%.3f "
                             "render_ms=%.3f "
+                            "frame_ms=%.3f "
                             "clear_ms=%.3f "
                             "write_ms=%.3f"
                         ),
@@ -2305,6 +2326,7 @@ def response_handler(command, data):
                         backlight_ms,
                         navigation_ms,
                         render_ms,
+                        frame_ms,
                         clear_ms,
                         write_ms,
                     )
@@ -2322,6 +2344,7 @@ def response_handler(command, data):
                     time.perf_counter()
                     - render_started
                 ) * 1000.0
+                frame_ms = render_timing["frame_ms"]
                 clear_ms = render_timing["clear_ms"]
                 write_ms = render_timing["write_ms"]
 
@@ -2340,6 +2363,7 @@ def response_handler(command, data):
                             "backlight_ms=%.3f "
                             "navigation_ms=%.3f "
                             "render_ms=%.3f "
+                            "frame_ms=%.3f "
                             "clear_ms=%.3f "
                             "write_ms=%.3f"
                         ),
@@ -2349,6 +2373,7 @@ def response_handler(command, data):
                         backlight_ms,
                         navigation_ms,
                         render_ms,
+                        frame_ms,
                         clear_ms,
                         write_ms,
                     )

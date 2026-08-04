@@ -383,3 +383,39 @@ def test_mission_dashboard_button_navigation_uses_cached_state():
 
     assert "get_state()" not in next_block
     assert "refresh_state()" not in next_block
+
+
+def test_button_release_does_not_wake_or_render_lcd():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    handler_start = source.index(
+        "def response_handler(command, data):"
+    )
+    main_start = source.index(
+        "\ndef main():",
+        handler_start,
+    )
+    handler = source[
+        handler_start:main_start
+    ]
+
+    release_guard = handler.index(
+        "if not data:"
+    )
+    lcd_on_call = handler.index(
+        "lcd_on()"
+    )
+
+    assert release_guard < lcd_on_call
+    assert "if not data:\n            return" in handler
+
+
+def test_mission_dashboard_timing_separates_frame_and_transport():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    assert 'timing["frame_ms"] = frame_ms' in source
+    assert '"frame_ms=%.3f "' in source
