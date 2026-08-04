@@ -220,6 +220,65 @@ class QnapLCD:
                 duration_ms,
             )
 
+    def submit_button_event(
+        self,
+        button_mask,
+        *,
+        source="web",
+    ):
+        """
+        Submit one validated virtual button press to the event dispatcher.
+
+        This does not write serial data or imitate an A125 reply. It places
+        the same logical Switch_Status event used by physical button reports
+        onto the existing ordered callback queue.
+        """
+
+        try:
+            button_mask = int(
+                button_mask
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return False
+
+        if button_mask not in {
+            0x01,
+            0x02,
+        }:
+            return False
+
+        if source != "web":
+            return False
+
+        dispatcher = self.dispatcher
+
+        if (
+            dispatcher is None
+            or not dispatcher.is_alive()
+            or self.stop_event.is_set()
+        ):
+            return False
+
+        self._queue_handler_event(
+            "Switch_Status",
+            button_mask,
+        )
+
+        logger.info(
+            (
+                "Virtual LCD button queued: "
+                "source=%s mask=0x%04X"
+            ),
+            source,
+            button_mask,
+        )
+
+        return True
+
+
     def _queue_handler_event(self, command, data):
         """
         Queue one decoded callback event for ordered delivery.

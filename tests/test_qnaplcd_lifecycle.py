@@ -1,5 +1,6 @@
 import threading
 import time
+from threading import current_thread
 
 import qnaplcd
 
@@ -1325,3 +1326,116 @@ def test_dispatcher_survives_callback_failure(
     assert snapshot["callback_errors"] == 1
 
     lcd.close()
+
+
+def test_virtual_button_uses_existing_dispatcher(
+    monkeypatch,
+):
+    callbacks = []
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: (
+            callbacks.append(
+                (
+                    command,
+                    data,
+                    current_thread().name,
+                )
+            )
+        ),
+    )
+
+    try:
+        assert lcd.submit_button_event(
+            0x01,
+            source="web",
+        ) is True
+
+        deadline = time.time() + 1.0
+
+        while (
+            not callbacks
+            and time.time() < deadline
+        ):
+            time.sleep(0.01)
+
+        assert callbacks == [
+            (
+                "Switch_Status",
+                0x01,
+                "qnaplcd-dispatcher",
+            )
+        ]
+    finally:
+        lcd.close()
+
+
+def test_virtual_button_rejects_invalid_masks(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: None,
+    )
+
+    try:
+        assert lcd.submit_button_event(
+            0x00,
+            source="web",
+        ) is False
+        assert lcd.submit_button_event(
+            0x03,
+            source="web",
+        ) is False
+        assert lcd.submit_button_event(
+            0x01,
+            source="hardware",
+        ) is False
+    finally:
+        lcd.close()
+
+
+def test_virtual_button_rejects_after_shutdown(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: None,
+    )
+
+    lcd.close()
+
+    assert lcd.submit_button_event(
+        0x01,
+        source="web",
+    ) is False
