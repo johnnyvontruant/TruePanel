@@ -2,6 +2,7 @@
 # QNAP LCD Display and Button Class
 #
 import logging
+import time
 from collections import deque
 from threading import Event, Lock, Thread, current_thread
 
@@ -46,6 +47,22 @@ class QnapLCD:
         self.button_state = 0
         self.button_events = deque()
         self.button_release_pending = False
+
+        self.reader_started_at = None
+        self.reader_stopped_at = None
+        self.reader_replies = 0
+        self.reader_errors = 0
+        self.last_reader_error = None
+
+        self.button_reports = 0
+        self.last_button_mask = 0
+        self.last_button_time = None
+
+        self.callback_count = 0
+        self.callback_errors = 0
+        self.last_callback_error = None
+        self.last_callback_duration_ms = None
+        self.max_callback_duration_ms = 0.0
 
         try:
             self.connection = serial.Serial(
@@ -128,8 +145,72 @@ class QnapLCD:
             payload=payload,
         )
 
+    def _invoke_handler(self, command, data):
+        if not self.handler:
+            return
+
+        started_at = time.perf_counter()
+
+        try:
+            self.handler(command, data)
+        except Exception as exc:
+            duration_ms = (
+                time.perf_counter() - started_at
+            ) * 1000.0
+
+            with self.state_lock:
+                self.callback_count += 1
+                self.callback_errors += 1
+                self.last_callback_error = (
+                    f"{type(exc).__name__}: {exc}"
+                )
+                self.last_callback_duration_ms = (
+                    duration_ms
+                )
+                self.max_callback_duration_ms = max(
+                    self.max_callback_duration_ms,
+                    duration_ms,
+                )
+
+            logger.exception(
+                "LCD callback failed: command=%s data=%r",
+                command,
+                data,
+            )
+            return
+
+        duration_ms = (
+            time.perf_counter() - started_at
+        ) * 1000.0
+
+        with self.state_lock:
+            self.callback_count += 1
+            self.last_callback_error = None
+            self.last_callback_duration_ms = (
+                duration_ms
+            )
+            self.max_callback_duration_ms = max(
+                self.max_callback_duration_ms,
+                duration_ms,
+            )
+
+        if duration_ms >= 100.0:
+            logger.warning(
+                (
+                    "Slow LCD callback: "
+                    "command=%s duration_ms=%.3f"
+                ),
+                command,
+                duration_ms,
+            )
+
     def _dispatch_reply(self, reply):
         response = reply.response
+        command = None
+        data = None
+
+        with self.state_lock:
+            self.reader_replies += 1
 
         if response == A125Response.BUTTON_STATUS:
             value = reply.value_u16
@@ -137,48 +218,126 @@ class QnapLCD:
             if value is not None:
                 with self.state_lock:
                     self.button_state = value
+                    self.button_reports += 1
+                    self.last_button_mask = value
+                    self.last_button_time = time.time()
 
                     if value:
                         self.button_events.append(
                             value
                         )
 
-        if not self.handler:
-            return
+            command = "Switch_Status"
+            data = value
 
-        if response == A125Response.BOARD_ID:
-            self.handler(
-                "Report_ID",
-                reply.value_u16,
+            logger.debug(
+                "A125 button report: mask=0x%04X",
+                value or 0,
             )
-        elif response == A125Response.BUTTON_STATUS:
-            self.handler(
-                "Switch_Status",
-                reply.value_u16,
-            )
+        elif response == A125Response.BOARD_ID:
+            command = "Report_ID"
+            data = reply.value_u16
         elif response == A125Response.PROTOCOL_VERSION:
-            self.handler(
-                "Protocol_Version",
-                reply.value_u16,
-            )
+            command = "Protocol_Version"
+            data = reply.value_u16
         elif response == A125Response.RESET_OK:
-            self.handler("Reset_OK", True)
+            command = "Reset_OK"
+            data = True
         elif response == A125Response.ACK:
-            self.handler("Ack", None)
+            command = "Ack"
         elif response == A125Response.NACK:
-            reason = (
+            command = "Nack"
+            data = (
                 reply.payload[0]
                 if reply.payload
                 else None
             )
-            self.handler("Nack", reason)
+
+        if command is not None:
+            self._invoke_handler(
+                command,
+                data,
+            )
 
     def serial_reader(self):
-        while not self.stop_event.is_set():
-            reply = self._read_reply()
+        with self.state_lock:
+            self.reader_started_at = time.time()
+            self.reader_stopped_at = None
+            self.last_reader_error = None
 
-            if reply is not None:
-                self._dispatch_reply(reply)
+        logger.info(
+            "QNAP LCD reader started on %s at %s baud",
+            self.port,
+            self.speed,
+        )
+
+        try:
+            while not self.stop_event.is_set():
+                try:
+                    reply = self._read_reply()
+
+                    if reply is not None:
+                        self._dispatch_reply(reply)
+                except Exception as exc:
+                    with self.state_lock:
+                        self.reader_errors += 1
+                        self.last_reader_error = (
+                            f"{type(exc).__name__}: {exc}"
+                        )
+
+                    logger.exception(
+                        "Unexpected QNAP LCD reader failure"
+                    )
+
+                    if not self.stop_event.is_set():
+                        time.sleep(0.05)
+        finally:
+            with self.state_lock:
+                self.reader_stopped_at = time.time()
+
+            logger.info(
+                "QNAP LCD reader stopped"
+            )
+
+    def reader_snapshot(self):
+        """
+        Return a thread-safe diagnostic snapshot without serial I/O.
+        """
+
+        with self.state_lock:
+            reader = self.reader
+
+            return {
+                "thread_alive": bool(
+                    reader is not None
+                    and reader.is_alive()
+                ),
+                "stop_requested": (
+                    self.stop_event.is_set()
+                ),
+                "started_at": self.reader_started_at,
+                "stopped_at": self.reader_stopped_at,
+                "replies": self.reader_replies,
+                "reader_errors": self.reader_errors,
+                "last_reader_error": self.last_reader_error,
+                "button_reports": self.button_reports,
+                "last_button_mask": self.last_button_mask,
+                "last_button_time": self.last_button_time,
+                "callback_count": self.callback_count,
+                "callback_errors": self.callback_errors,
+                "last_callback_error": (
+                    self.last_callback_error
+                ),
+                "last_callback_duration_ms": (
+                    self.last_callback_duration_ms
+                ),
+                "max_callback_duration_ms": (
+                    self.max_callback_duration_ms
+                ),
+                "queued_button_events": len(
+                    self.button_events
+                ),
+            }
 
     def read_buttons(self):
         """

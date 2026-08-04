@@ -792,3 +792,161 @@ def test_zero_button_report_is_not_queued_as_press(
     assert lcd.read_button_event() == 0
 
     lcd.close()
+
+
+def test_reader_snapshot_tracks_button_callback(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x53\x05\x00\x02",
+    )
+    callbacks = []
+
+    lcd.handler = lambda command, data: (
+        callbacks.append((command, data))
+    )
+
+    reply = lcd._read_reply()
+    lcd._dispatch_reply(reply)
+
+    snapshot = lcd.reader_snapshot()
+
+    assert callbacks == [
+        ("Switch_Status", 0x0002),
+    ]
+    assert snapshot["replies"] == 1
+    assert snapshot["button_reports"] == 1
+    assert snapshot["last_button_mask"] == 0x0002
+    assert snapshot["last_button_time"] is not None
+    assert snapshot["callback_count"] == 1
+    assert snapshot["callback_errors"] == 0
+    assert snapshot["last_callback_error"] is None
+    assert (
+        snapshot["last_callback_duration_ms"]
+        is not None
+    )
+    assert snapshot["queued_button_events"] == 1
+
+    lcd.close()
+
+
+def test_callback_failure_isolated_from_reader(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"\x53\x05\x00\x01",
+    )
+
+    def failing_handler(command, data):
+        del command
+        del data
+        raise RuntimeError("navigation failed")
+
+    lcd.handler = failing_handler
+
+    reply = lcd._read_reply()
+
+    # The callback exception must not escape and kill the reader.
+    lcd._dispatch_reply(reply)
+
+    snapshot = lcd.reader_snapshot()
+
+    assert snapshot["replies"] == 1
+    assert snapshot["button_reports"] == 1
+    assert snapshot["callback_count"] == 1
+    assert snapshot["callback_errors"] == 1
+    assert (
+        snapshot["last_callback_error"]
+        == "RuntimeError: navigation failed"
+    )
+
+    lcd.close()
+
+
+def test_callback_timing_tracks_maximum(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"",
+    )
+    lcd.handler = lambda command, data: None
+
+    timings = iter(
+        [
+            10.000,
+            10.025,
+            20.000,
+            20.075,
+        ]
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.time,
+        "perf_counter",
+        lambda: next(timings),
+    )
+
+    lcd._invoke_handler(
+        "Switch_Status",
+        0x01,
+    )
+    lcd._invoke_handler(
+        "Switch_Status",
+        0x02,
+    )
+
+    snapshot = lcd.reader_snapshot()
+
+    assert snapshot["callback_count"] == 2
+    assert snapshot["callback_errors"] == 0
+    assert round(
+        snapshot["last_callback_duration_ms"],
+        3,
+    ) == 75.0
+    assert round(
+        snapshot["max_callback_duration_ms"],
+        3,
+    ) == 75.0
+
+    lcd.close()
+
+
+def test_reader_snapshot_reports_thread_lifecycle(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        FakeSerial,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: None
+    )
+
+    deadline = time.monotonic() + 1.0
+
+    while (
+        lcd.reader_snapshot()["started_at"]
+        is None
+        and time.monotonic() < deadline
+    ):
+        time.sleep(0.005)
+
+    running = lcd.reader_snapshot()
+
+    assert running["thread_alive"] is True
+    assert running["stop_requested"] is False
+    assert running["started_at"] is not None
+    assert running["stopped_at"] is None
+
+    lcd.close()
+
+    stopped = lcd.reader_snapshot()
+
+    assert stopped["thread_alive"] is False
+    assert stopped["stop_requested"] is True
+    assert stopped["stopped_at"] is not None
