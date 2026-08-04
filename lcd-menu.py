@@ -28,11 +28,6 @@ from truepanel.history.thermal_commissioning import (
     commissioning_event,
 )
 from truepanel.mission_control import MissionControl
-from truepanel.mission_control.button_service import (
-    ButtonAction,
-    ButtonEvent,
-    ButtonService,
-)
 from truepanel.hardware.bay_led_animation import (
     build_bay_led_startup_animation,
 )
@@ -108,7 +103,6 @@ fan_control_runtime = build_fan_control_runtime(
 )
 
 fan_command_server = None
-button_service = None
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -2183,52 +2177,6 @@ menu = [
 ]
 
 
-def observe_button_event(event: ButtonEvent):
-    """
-    Log queue-backed semantic button events without navigating menus.
-    """
-
-    log = (
-        LOGGER.info
-        if event.action in {
-            ButtonAction.PRESSED,
-            ButtonAction.RELEASED,
-        }
-        else LOGGER.debug
-    )
-
-    log(
-        (
-            "Button queue shadow event: "
-            "sequence=%s button=%s mask=0x%02X "
-            "action=%s raw_state=0x%02X "
-            "held_seconds=%.3f"
-        ),
-        event.sequence,
-        event.button,
-        event.mask,
-        event.action.value,
-        event.raw_state,
-        event.held_seconds,
-    )
-
-
-def build_button_shadow_service(active_lcd):
-    """
-    Build a non-authoritative observer over queued A125 button reports.
-    """
-
-    return ButtonService(
-        active_lcd.read_button_event,
-        observe_button_event,
-        poll_interval=0.025,
-        debounce_samples=1,
-        long_press_seconds=1.0,
-        repeat_delay=None,
-        repeat_interval=None,
-    )
-
-
 def response_handler(command, data):
     global menu_item
 
@@ -2259,7 +2207,6 @@ def response_handler(command, data):
 def main():
     global lcd, menu_item
     global fan_command_server
-    global button_service
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
@@ -2273,11 +2220,6 @@ def main():
     lcd_on()
     lcd.reset()
     lcd.clear()
-
-    button_service = build_button_shadow_service(
-        lcd
-    )
-    button_service.start()
 
     try:
         observe_thermal_fan_policy()
@@ -2324,16 +2266,6 @@ def main():
                     menu_item + 1
                 ) % len(menu)
     finally:
-        if button_service is not None:
-            try:
-                button_service.stop(timeout=2.0)
-            except Exception:
-                LOGGER.exception(
-                    "Button queue shadow shutdown failed"
-                )
-            finally:
-                button_service = None
-
         if fan_command_server is not None:
             try:
                 fan_command_server.stop()
