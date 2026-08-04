@@ -954,7 +954,8 @@ def test_status_snapshot_publishes_lcd_reader_health(
             "thread_alive": True,
             "replies": 21,
             "button_reports": 4,
-            "last_button_mask": 2,
+            "last_button_mask": 0,
+            "last_pressed_button_mask": 2,
             "callback_count": 4,
             "callback_errors": 0,
         }
@@ -998,6 +999,12 @@ def test_status_snapshot_publishes_lcd_reader_health(
     assert (
         lcd_payload["reader"][
             "last_button_mask"
+        ]
+        == 0
+    )
+    assert (
+        lcd_payload["reader"][
+            "last_pressed_button_mask"
         ]
         == 2
     )

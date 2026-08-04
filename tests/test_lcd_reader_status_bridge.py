@@ -29,7 +29,8 @@ def test_bridge_publishes_and_reads_reader_health(
             "thread_alive": True,
             "replies": 12,
             "button_reports": 3,
-            "last_button_mask": 2,
+            "last_button_mask": 0,
+            "last_pressed_button_mask": 2,
             "callback_count": 3,
             "callback_errors": 0,
             "max_callback_duration_ms": 4.25,
@@ -45,7 +46,13 @@ def test_bridge_publishes_and_reads_reader_health(
     assert payload["reader"]["thread_alive"] is True
     assert payload["reader"]["replies"] == 12
     assert payload["reader"]["button_reports"] == 3
-    assert payload["reader"]["last_button_mask"] == 2
+    assert payload["reader"]["last_button_mask"] == 0
+    assert (
+        payload["reader"][
+            "last_pressed_button_mask"
+        ]
+        == 2
+    )
     assert payload["reader"]["callback_errors"] == 0
 
 

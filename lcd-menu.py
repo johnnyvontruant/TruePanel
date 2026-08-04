@@ -2262,6 +2262,7 @@ def main():
 
         show_startup_splash()
         buzzer.startup()
+        publish_lcd_reader_status()
 
         while not shutdown_requested:
             try:

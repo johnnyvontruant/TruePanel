@@ -818,6 +818,10 @@ def test_reader_snapshot_tracks_button_callback(
     assert snapshot["replies"] == 1
     assert snapshot["button_reports"] == 1
     assert snapshot["last_button_mask"] == 0x0002
+    assert (
+        snapshot["last_pressed_button_mask"]
+        == 0x0002
+    )
     assert snapshot["last_button_time"] is not None
     assert snapshot["callback_count"] == 1
     assert snapshot["callback_errors"] == 0
@@ -950,3 +954,38 @@ def test_reader_snapshot_reports_thread_lifecycle(
     assert stopped["thread_alive"] is False
     assert stopped["stop_requested"] is True
     assert stopped["stopped_at"] is not None
+
+
+
+def test_reader_snapshot_preserves_last_nonzero_button_mask(
+    monkeypatch,
+):
+    lcd, _ = build_buffered_lcd(
+        monkeypatch,
+        b"",
+    )
+
+    lcd.connection.buffer.extend(
+        b"\x53\x05\x00\x02"
+    )
+    lcd._dispatch_reply(
+        lcd._read_reply()
+    )
+
+    lcd.connection.buffer.extend(
+        b"\x53\x05\x00\x00"
+    )
+    lcd._dispatch_reply(
+        lcd._read_reply()
+    )
+
+    snapshot = lcd.reader_snapshot()
+
+    assert snapshot["last_button_mask"] == 0
+    assert (
+        snapshot["last_pressed_button_mask"]
+        == 0x0002
+    )
+    assert snapshot["button_reports"] == 2
+
+    lcd.close()

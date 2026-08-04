@@ -56,6 +56,7 @@ class QnapLCD:
 
         self.button_reports = 0
         self.last_button_mask = 0
+        self.last_pressed_button_mask = 0
         self.last_button_time = None
 
         self.callback_count = 0
@@ -223,6 +224,7 @@ class QnapLCD:
                     self.last_button_time = time.time()
 
                     if value:
+                        self.last_pressed_button_mask = value
                         self.button_events.append(
                             value
                         )
@@ -322,6 +324,9 @@ class QnapLCD:
                 "last_reader_error": self.last_reader_error,
                 "button_reports": self.button_reports,
                 "last_button_mask": self.last_button_mask,
+                "last_pressed_button_mask": (
+                    self.last_pressed_button_mask
+                ),
                 "last_button_time": self.last_button_time,
                 "callback_count": self.callback_count,
                 "callback_errors": self.callback_errors,

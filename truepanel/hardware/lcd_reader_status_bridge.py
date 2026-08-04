@@ -124,6 +124,14 @@ class LCDReaderStatusBridge:
                     )
                 ),
             ),
+            "last_pressed_button_mask": max(
+                0,
+                _safe_int(
+                    reader.get(
+                        "last_pressed_button_mask"
+                    )
+                ),
+            ),
             "last_button_time": _safe_float(
                 reader.get(
                     "last_button_time"

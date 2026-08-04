@@ -191,7 +191,7 @@ class SnapshotService:
 
     def _lcd_payload(self) -> dict[str, Any]:
         status = self.lcd_reader_bridge.read(
-            max_age=15.0
+            max_age=30.0
         )
 
         if status is None:
@@ -208,6 +208,7 @@ class SnapshotService:
                     "last_reader_error": None,
                     "button_reports": 0,
                     "last_button_mask": 0,
+                    "last_pressed_button_mask": 0,
                     "last_button_time": None,
                     "callback_count": 0,
                     "callback_errors": 0,
