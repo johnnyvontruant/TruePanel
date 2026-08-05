@@ -88,11 +88,17 @@ It combines live telemetry, storage health, fan RPM and PWM state,
 guarded manual profiles, thermal recommendations, readiness checks,
 and operational history.
 
-### Dashboard overview
+The dashboard also includes a live virtual front panel that mirrors
+the physical 16x2 LCD. Its guarded ENTER and SELECT controls travel
+through a local Unix socket and the same ordered dispatcher used by
+the hardware buttons, so Mission Control never takes direct serial
+ownership.
+
+### Dashboard overview and virtual front panel
 
 <p align="center">
   <img src="docs/images/mission-control-overview.png"
-       alt="TruePanel Mission Control dashboard overview"
+       alt="TruePanel Mission Control dashboard with live virtual LCD and guarded front-panel controls"
        width="1000">
 </p>
 
