@@ -34,7 +34,21 @@ logger = logging.getLogger(__name__)
 
 
 class QnapLCD:
-    def __init__(self, port='/dev/ttyS1', speed=1200, handler=None):
+    def __init__(self, port="/dev/ttyS1", speed=1200, handler=None):
+        if not isinstance(port, str) or not port.strip():
+            raise ValueError(
+                "port must be a non-empty string"
+            )
+
+        if (
+            isinstance(speed, bool)
+            or not isinstance(speed, int)
+            or speed <= 0
+        ):
+            raise ValueError(
+                "speed must be a positive integer"
+            )
+
         self.port = port
         self.speed = speed
 
@@ -110,24 +124,24 @@ class QnapLCD:
             )
             self.reader.start()
 
-    def _read_bytes(self, bytes=1):
+    def _read_bytes(self, size=1):
         connection = self.connection
 
         if not connection:
             return None
 
         try:
-            data = connection.read(bytes)
+            data = connection.read(size)
         except (
             serial.SerialException,
             OSError,
         ):
             return None
 
-        if not data or len(data) < bytes:
+        if not data or len(data) < size:
             return None
 
-        if bytes == 1:
+        if size == 1:
             return data[0]
 
         return data

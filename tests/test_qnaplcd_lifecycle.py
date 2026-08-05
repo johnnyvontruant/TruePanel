@@ -1801,3 +1801,147 @@ def test_reader_snapshot_reports_connection_failure(
         assert snapshot["dispatcher_alive"] is False
     finally:
         lcd.close()
+
+
+def test_constructor_rejects_invalid_port_before_serial_open(
+    monkeypatch,
+):
+    serial_opened = False
+
+    def factory(*args, **kwargs):
+        nonlocal serial_opened
+        del args
+        del kwargs
+
+        serial_opened = True
+        return None
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        factory,
+    )
+
+    for port in (
+        None,
+        "",
+        "   ",
+        123,
+    ):
+        try:
+            qnaplcd.QnapLCD(
+                port=port,
+            )
+        except ValueError as exc:
+            assert str(exc) == (
+                "port must be a non-empty string"
+            )
+        else:
+            raise AssertionError(
+                f"Invalid port was accepted: {port!r}"
+            )
+
+    assert serial_opened is False
+
+
+def test_constructor_rejects_invalid_speed_before_serial_open(
+    monkeypatch,
+):
+    serial_opened = False
+
+    def factory(*args, **kwargs):
+        nonlocal serial_opened
+        del args
+        del kwargs
+
+        serial_opened = True
+        return None
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        factory,
+    )
+
+    for speed in (
+        None,
+        True,
+        False,
+        0,
+        -1,
+        1200.0,
+        "1200",
+    ):
+        try:
+            qnaplcd.QnapLCD(
+                speed=speed,
+            )
+        except ValueError as exc:
+            assert str(exc) == (
+                "speed must be a positive integer"
+            )
+        else:
+            raise AssertionError(
+                f"Invalid speed was accepted: {speed!r}"
+            )
+
+    assert serial_opened is False
+
+
+def test_constructor_accepts_valid_port_and_speed(
+    monkeypatch,
+):
+    created = []
+
+    def factory(*args, **kwargs):
+        connection = FakeSerial(
+            *args,
+            **kwargs,
+        )
+        created.append(connection)
+        return connection
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        factory,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        port="/dev/ttyUSB0",
+        speed=9600,
+        handler=None,
+    )
+
+    try:
+        assert lcd.port == "/dev/ttyUSB0"
+        assert lcd.speed == 9600
+        assert created[0].port == "/dev/ttyUSB0"
+        assert created[0].speed == 9600
+        assert created[0].timeout == 0.25
+    finally:
+        lcd.close()
+
+
+def test_read_bytes_uses_requested_size(
+    monkeypatch,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    reads = []
+
+    def read(size):
+        reads.append(size)
+        return b"ABC"[:size]
+
+    connection.read = read
+
+    try:
+        assert lcd._read_bytes() == ord("A")
+        assert lcd._read_bytes(2) == b"AB"
+        assert lcd._read_bytes(3) == b"ABC"
+        assert reads == [1, 2, 3]
+    finally:
+        lcd.close()
