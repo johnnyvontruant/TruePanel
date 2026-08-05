@@ -1655,3 +1655,149 @@ def test_frame_handler_rejects_non_callable(
             )
     finally:
         lcd.close()
+
+
+def test_serial_exception_during_initialization_is_safe(
+    monkeypatch,
+    caplog,
+):
+    def fail_open(*args, **kwargs):
+        del args
+        del kwargs
+
+        raise qnaplcd.serial.SerialException(
+            "controller unavailable"
+        )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        fail_open,
+    )
+
+    with caplog.at_level(
+        "ERROR",
+        logger="qnaplcd",
+    ):
+        lcd = qnaplcd.QnapLCD(
+            handler=lambda command, data: None
+        )
+
+    assert lcd.connection is None
+    assert lcd.reader is None
+    assert lcd.dispatcher is None
+    assert lcd.connection_error == (
+        "SerialException: controller unavailable"
+    )
+    assert (
+        "Unable to open LCD serial connection"
+        in caplog.text
+    )
+
+    lcd.close()
+
+
+def test_os_error_during_initialization_is_safe(
+    monkeypatch,
+    caplog,
+):
+    def fail_open(*args, **kwargs):
+        del args
+        del kwargs
+
+        raise PermissionError(
+            "permission denied"
+        )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        fail_open,
+    )
+
+    with caplog.at_level(
+        "ERROR",
+        logger="qnaplcd",
+    ):
+        lcd = qnaplcd.QnapLCD(
+            port="/dev/ttyS1",
+            speed=1200,
+            handler=lambda command, data: None,
+        )
+
+    assert lcd.connection is None
+    assert lcd.reader is None
+    assert lcd.dispatcher is None
+    assert lcd.connection_error == (
+        "PermissionError: permission denied"
+    )
+    assert (
+        "Unable to open LCD serial connection"
+        in caplog.text
+    )
+
+    lcd.close()
+
+
+def test_reader_snapshot_reports_connection_state(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        FakeSerial,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        port="/dev/ttyS1",
+        speed=1200,
+        handler=None,
+    )
+
+    try:
+        snapshot = lcd.reader_snapshot()
+
+        assert snapshot["connected"] is True
+        assert snapshot["connection_error"] is None
+        assert snapshot["port"] == "/dev/ttyS1"
+        assert snapshot["speed"] == 1200
+    finally:
+        lcd.close()
+
+
+def test_reader_snapshot_reports_connection_failure(
+    monkeypatch,
+):
+    def fail_open(*args, **kwargs):
+        del args
+        del kwargs
+
+        raise PermissionError(
+            "permission denied"
+        )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        fail_open,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        port="/dev/ttyS1",
+        speed=1200,
+        handler=None,
+    )
+
+    try:
+        snapshot = lcd.reader_snapshot()
+
+        assert snapshot["connected"] is False
+        assert snapshot["connection_error"] == (
+            "PermissionError: permission denied"
+        )
+        assert snapshot["port"] == "/dev/ttyS1"
+        assert snapshot["speed"] == 1200
+        assert snapshot["thread_alive"] is False
+        assert snapshot["dispatcher_alive"] is False
+    finally:
+        lcd.close()

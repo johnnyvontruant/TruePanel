@@ -75,15 +75,25 @@ class QnapLCD:
         self.last_callback_duration_ms = None
         self.max_callback_duration_ms = 0.0
 
+        self.connection_error = None
+
         try:
             self.connection = serial.Serial(
                 self.port,
                 self.speed,
                 timeout=0.25,
             )
-        except serial.SerialException as se:
+        except (
+            serial.SerialException,
+            OSError,
+        ) as exc:
             self.connection = None
-            logger.exception("Unable to open LCD serial connection")
+            self.connection_error = (
+                f"{type(exc).__name__}: {exc}"
+            )
+            logger.exception(
+                "Unable to open LCD serial connection"
+            )
 
         if handler and self.connection:
             self.dispatcher = Thread(
@@ -451,6 +461,10 @@ class QnapLCD:
             dispatcher = self.dispatcher
 
             return {
+                "connected": self.connection is not None,
+                "connection_error": self.connection_error,
+                "port": self.port,
+                "speed": self.speed,
                 "thread_alive": bool(
                     reader is not None
                     and reader.is_alive()
