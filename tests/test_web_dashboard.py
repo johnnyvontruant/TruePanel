@@ -537,3 +537,59 @@ def test_virtual_lcd_preserves_fixed_width_text():
     )
     assert "white-space:pre" in source
     assert "width:16ch" in source
+
+
+def test_dashboard_contains_lcd_transport_diagnostics():
+    source = dashboard_source()
+
+    for element_id in (
+        "lcdTransportConnection",
+        "lcdTransportPort",
+        "lcdTransportSpeed",
+        "lcdTransportReader",
+        "lcdTransportDispatcher",
+        "lcdTransportErrors",
+        "lcdTransportLastError",
+        "lcdTransportAge",
+    ):
+        assert (
+            f'id="{element_id}"'
+            in source
+        )
+
+    assert "LCD Transport" in source
+
+
+def test_lcd_transport_diagnostics_use_reader_payload():
+    source = dashboard_source()
+
+    for field in (
+        "reader.connected",
+        "reader.port",
+        "reader.speed",
+        "reader.thread_alive",
+        "reader.dispatcher_alive",
+        "reader.reader_errors",
+        "reader.connection_error",
+        "reader.last_reader_error",
+        "lcd.age_seconds",
+    ):
+        assert field in source
+
+
+def test_lcd_transport_diagnostics_have_explicit_states():
+    source = dashboard_source()
+
+    for label in (
+        "Connected",
+        "Disconnected",
+        "Running",
+        "Stopped",
+        "Unavailable",
+        "None",
+    ):
+        assert label in source
+
+    assert '?"warn"' in source
+    assert '?"bad"' in source
+    assert '?"good"' in source

@@ -77,6 +77,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .lcd-message{min-height:1.1rem;margin-top:.55rem;text-align:center;color:var(--muted);font-size:.76rem}
 .lcd-message.good{color:var(--good)}
 .lcd-message.bad{color:var(--bad)}
+.lcd-transport{max-width:920px;margin:.9rem auto 0;padding:.8rem 1rem;border:1px solid rgba(143,164,184,.18);border-radius:10px;background:rgba(4,9,14,.55)}
+.lcd-transport h3{margin:0 0 .45rem;color:var(--muted);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase}
+.lcd-transport-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0 1.25rem}
+.lcd-transport .row{padding:.4rem 0;font-size:.78rem}
+.lcd-transport .value{overflow-wrap:anywhere}
 @media(max-width:720px){.lcd-faceplate{grid-template-columns:1fr;padding:.85rem}.lcd-controls{display:grid;grid-template-columns:1fr 1fr}.lcd-rocker{min-height:58px}.lcd-screen{padding:.85rem .55rem}.lcd-row{font-size:clamp(1rem,5.4vw,1.6rem)}}
 footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 @media(max-width:640px){header,main{padding:1rem}}
@@ -103,6 +108,19 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <span>Age: <strong id="virtualLcdAge">--</strong></span>
 </div>
 <div id="virtualLcdMessage" class="lcd-message">Contacting the LCD runtime</div>
+<div class="lcd-transport" aria-label="LCD transport diagnostics">
+<h3>LCD Transport</h3>
+<div class="lcd-transport-grid">
+<div class="row"><span class="label">Connection</span><span id="lcdTransportConnection" class="value">Checking</span></div>
+<div class="row"><span class="label">Serial port</span><span id="lcdTransportPort" class="value">--</span></div>
+<div class="row"><span class="label">Baud rate</span><span id="lcdTransportSpeed" class="value">--</span></div>
+<div class="row"><span class="label">Reader</span><span id="lcdTransportReader" class="value">Checking</span></div>
+<div class="row"><span class="label">Dispatcher</span><span id="lcdTransportDispatcher" class="value">Checking</span></div>
+<div class="row"><span class="label">Reader errors</span><span id="lcdTransportErrors" class="value">0</span></div>
+<div class="row"><span class="label">Last error</span><span id="lcdTransportLastError" class="value">None</span></div>
+<div class="row"><span class="label">Status age</span><span id="lcdTransportAge" class="value">--</span></div>
+</div>
+</div>
 </div>
 <div class="lcd-controls" aria-label="Virtual LCD controls">
 <button id="virtualLcdEnter" class="lcd-rocker" type="button" aria-label="Press ENTER on the TruePanel front panel" disabled>Enter</button>
@@ -1397,6 +1415,93 @@ function renderVirtualLcd(payload){
     const dot=q("virtualLcdStateDot");
     const state=q("virtualLcdState");
     const message=q("virtualLcdMessage");
+
+    const connected=reader.connected===true;
+    const readerReady=reader.thread_alive===true;
+    const readerErrors=Number(
+        reader.reader_errors||0
+    );
+    const transportAge=Number(
+        lcd.age_seconds
+    );
+    const connectionError=
+        reader.connection_error
+        ||reader.last_reader_error
+        ||null;
+
+    q("lcdTransportConnection").textContent=
+        connected
+            ?"Connected"
+            :"Disconnected";
+    q("lcdTransportConnection").className=
+        "value "+(
+            connected
+                ?"good"
+                :"bad"
+        );
+
+    q("lcdTransportPort").textContent=
+        val(
+            reader.port,
+            "Unavailable"
+        );
+    q("lcdTransportSpeed").textContent=
+        Number(reader.speed)>0
+            ?String(reader.speed)
+            :"Unavailable";
+
+    q("lcdTransportReader").textContent=
+        readerReady
+            ?"Running"
+            :"Stopped";
+    q("lcdTransportReader").className=
+        "value "+(
+            readerReady
+                ?"good"
+                :"bad"
+        );
+
+    q("lcdTransportDispatcher").textContent=
+        dispatcherReady
+            ?"Running"
+            :"Stopped";
+    q("lcdTransportDispatcher").className=
+        "value "+(
+            dispatcherReady
+                ?"good"
+                :"bad"
+        );
+
+    q("lcdTransportErrors").textContent=
+        String(readerErrors);
+    q("lcdTransportErrors").className=
+        "value "+(
+            readerErrors>0
+                ?"warn"
+                :"good"
+        );
+
+    q("lcdTransportLastError").textContent=
+        connectionError
+            ?String(connectionError)
+            :"None";
+    q("lcdTransportLastError").className=
+        "value "+(
+            connectionError
+                ?"bad"
+                :"good"
+        );
+
+    q("lcdTransportAge").textContent=
+        Number.isFinite(transportAge)
+            ?`${transportAge.toFixed(1)}s`
+            :"--";
+    q("lcdTransportAge").className=
+        "value "+(
+            lcd.stale===true
+                ?"warn"
+                :"good"
+        );
 
     if(!available||!dispatcherReady){
         dot.className="lcd-state-dot offline";
