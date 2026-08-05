@@ -536,7 +536,7 @@ def test_virtual_lcd_preserves_fixed_width_text():
         in source
     )
     assert "white-space:pre" in source
-    assert "width:16ch" in source
+    assert "width:calc(16ch + 1em)" in source
 
 
 def test_dashboard_contains_lcd_transport_diagnostics():
@@ -621,3 +621,11 @@ def test_dashboard_contains_lcd_recovery_diagnostics():
     assert ".toLocaleString()" in source
     assert '"Healthy"' in source
     assert '"Degraded"' in source
+
+
+def test_virtual_lcd_allows_room_for_character_spacing():
+    source = dashboard_source()
+
+    assert "width:calc(16ch + 1em)" in source
+    assert "letter-spacing:.06em" in source
+    assert "white-space:pre" in source
