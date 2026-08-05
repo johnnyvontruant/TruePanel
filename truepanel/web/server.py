@@ -27,6 +27,10 @@ from truepanel.hardware.fan_command import (
     FanCommandClient,
     FanCommandError,
 )
+from truepanel.hardware.lcd_command import (
+    LCDCommandClient,
+    LCDCommandError,
+)
 
 from .snapshot import SnapshotService
 
@@ -47,6 +51,7 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             "/": self._dashboard,
             "/index.html": self._dashboard,
             "/api/v1/status": self._status,
+            "/api/v1/lcd": self._lcd_status,
             "/api/v1/history": self._history,
             "/api/v1/fans/history": (
                 self._fan_history
@@ -86,6 +91,10 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             self._thermal_arm(parsed)
             return
 
+        if parsed.path == "/api/v1/lcd/button":
+            self._lcd_button(parsed)
+            return
+
         self._write_blocked()
 
     def do_PUT(self):
@@ -117,6 +126,12 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
     def _status(self, parsed):
         del parsed
         self._json(self.snapshot_service.status())
+
+    def _lcd_status(self, parsed):
+        del parsed
+        self._json(
+            self.snapshot_service.lcd_status()
+        )
 
     def _history(self, parsed):
         query = parse_qs(parsed.query)
@@ -690,6 +705,216 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         )
 
 
+    def _lcd_button(self, parsed):
+        del parsed
+
+        raw_length = self.headers.get(
+            "Content-Length",
+            "0",
+        )
+
+        try:
+            content_length = int(
+                raw_length
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            content_length = 0
+
+        if (
+            content_length < 1
+            or content_length > 1024
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "LCD button body must be "
+                        "between 1 and 1024 bytes."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        try:
+            payload = json.loads(
+                self.rfile.read(
+                    content_length
+                ).decode(
+                    "utf-8"
+                )
+            )
+        except (
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ):
+            self._json(
+                {
+                    "error": "invalid_json",
+                    "message": (
+                        "LCD button body must "
+                        "contain valid JSON."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if not isinstance(
+            payload,
+            dict,
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "LCD button body must "
+                        "be a JSON object."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        unknown_fields = sorted(
+            set(payload)
+            - {
+                "button",
+            }
+        )
+
+        if unknown_fields:
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Unknown LCD button fields: "
+                        + ", ".join(
+                            unknown_fields
+                        )
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        button = payload.get(
+            "button"
+        )
+
+        if not isinstance(
+            button,
+            str,
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "button must be a string."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        button = button.strip().lower()
+
+        if button not in {
+            "enter",
+            "select",
+        }:
+            self._json(
+                {
+                    "error": "unknown_button",
+                    "message": (
+                        "button must be enter "
+                        "or select."
+                    ),
+                    "allowed_buttons": [
+                        "enter",
+                        "select",
+                    ],
+                },
+                status=(
+                    HTTPStatus
+                    .UNPROCESSABLE_ENTITY
+                ),
+            )
+            return
+
+        try:
+            response = (
+                self.server
+                .lcd_command_client
+                .request(
+                    button
+                )
+            )
+        except LCDCommandError as error:
+            self._json(
+                {
+                    "error": (
+                        "lcd_command_unavailable"
+                    ),
+                    "message": str(error),
+                },
+                status=(
+                    HTTPStatus
+                    .SERVICE_UNAVAILABLE
+                ),
+            )
+            return
+
+        if response.get(
+            "ok"
+        ) is True:
+            self._json(
+                response,
+                status=HTTPStatus.OK,
+            )
+            return
+
+        status_name = response.get(
+            "status",
+            "command_rejected",
+        )
+
+        status_code = {
+            "dispatcher_unavailable": (
+                HTTPStatus
+                .SERVICE_UNAVAILABLE
+            ),
+            "execution_failed": (
+                HTTPStatus
+                .INTERNAL_SERVER_ERROR
+            ),
+            "unknown_button": (
+                HTTPStatus
+                .UNPROCESSABLE_ENTITY
+            ),
+            "invalid_request": (
+                HTTPStatus.BAD_REQUEST
+            ),
+            "invalid_source": (
+                HTTPStatus.BAD_REQUEST
+            ),
+        }.get(
+            status_name,
+            HTTPStatus.BAD_REQUEST,
+        )
+
+        self._json(
+            {
+                "error": status_name,
+                **response,
+            },
+            status=status_code,
+        )
+
+
     def _fan_profile(self, parsed):
         del parsed
 
@@ -985,6 +1210,7 @@ class MissionControlServer(ThreadingHTTPServer):
         allow_config_writes=False,
         config_path="truepanel.yaml",
         fan_command_client=None,
+        lcd_command_client=None,
     ):
         self.snapshot_service = snapshot_service or SnapshotService()
         self.allow_config_writes = bool(allow_config_writes)
@@ -992,6 +1218,10 @@ class MissionControlServer(ThreadingHTTPServer):
         self.fan_command_client = (
             fan_command_client
             or FanCommandClient()
+        )
+        self.lcd_command_client = (
+            lcd_command_client
+            or LCDCommandClient()
         )
         super().__init__(address, MissionControlRequestHandler)
 
@@ -1004,6 +1234,7 @@ def serve(
     allow_config_writes=False,
     config_path="truepanel.yaml",
     fan_command_client=None,
+    lcd_command_client=None,
 ):
     server = MissionControlServer(
         (host, int(port)),
@@ -1011,6 +1242,7 @@ def serve(
         allow_config_writes=allow_config_writes,
         config_path=config_path,
         fan_command_client=fan_command_client,
+        lcd_command_client=lcd_command_client,
     )
     LOGGER.info("Mission Control listening on http://%s:%s", host, port)
     try:

@@ -473,3 +473,67 @@ def test_dashboard_has_stage_three_renewal_controls():
     )
     assert "automaticRenewAllowed" in source
     assert "toLocaleString()" in source
+
+
+def test_dashboard_contains_virtual_lcd_faceplate():
+    source = dashboard_source()
+
+    for element_id in (
+        "virtualLcdScreen",
+        "virtualLcdLine1",
+        "virtualLcdLine2",
+        "virtualLcdState",
+        "virtualLcdPage",
+        "virtualLcdAge",
+        "virtualLcdEnter",
+        "virtualLcdSelect",
+        "virtualLcdMessage",
+    ):
+        assert (
+            f'id="{element_id}"'
+            in source
+        )
+
+
+def test_virtual_lcd_uses_lightweight_status_route():
+    source = dashboard_source()
+
+    assert '"/api/v1/lcd"' in source
+    assert (
+        '"/api/v1/lcd/button"'
+        in source
+    )
+    assert "refreshVirtualLcd" in source
+    assert "setInterval(refreshVirtualLcd,1000)" in source
+
+
+def test_virtual_lcd_buttons_are_guarded():
+    source = dashboard_source()
+
+    assert (
+        'button:buttonName'
+        in source
+    )
+    assert (
+        'virtualLcdRequestInFlight'
+        in source
+    )
+    assert (
+        'q("virtualLcdEnter").disabled'
+        in source
+    )
+    assert (
+        'q("virtualLcdSelect").disabled'
+        in source
+    )
+
+
+def test_virtual_lcd_preserves_fixed_width_text():
+    source = dashboard_source()
+
+    assert (
+        'padEnd(16," ")'
+        in source
+    )
+    assert "white-space:pre" in source
+    assert "width:16ch" in source

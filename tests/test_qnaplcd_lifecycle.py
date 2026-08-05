@@ -1,5 +1,6 @@
 import threading
 import time
+from threading import current_thread
 
 import qnaplcd
 
@@ -1325,3 +1326,332 @@ def test_dispatcher_survives_callback_failure(
     assert snapshot["callback_errors"] == 1
 
     lcd.close()
+
+
+def test_virtual_button_uses_existing_dispatcher(
+    monkeypatch,
+):
+    callbacks = []
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: (
+            callbacks.append(
+                (
+                    command,
+                    data,
+                    current_thread().name,
+                )
+            )
+        ),
+    )
+
+    try:
+        assert lcd.submit_button_event(
+            0x01,
+            source="web",
+        ) is True
+
+        deadline = time.time() + 1.0
+
+        while (
+            not callbacks
+            and time.time() < deadline
+        ):
+            time.sleep(0.01)
+
+        assert callbacks == [
+            (
+                "Switch_Status",
+                0x01,
+                "qnaplcd-dispatcher",
+            )
+        ]
+    finally:
+        lcd.close()
+
+
+def test_virtual_button_rejects_invalid_masks(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: None,
+    )
+
+    try:
+        assert lcd.submit_button_event(
+            0x00,
+            source="web",
+        ) is False
+        assert lcd.submit_button_event(
+            0x03,
+            source="web",
+        ) is False
+        assert lcd.submit_button_event(
+            0x01,
+            source="hardware",
+        ) is False
+    finally:
+        lcd.close()
+
+
+def test_virtual_button_rejects_after_shutdown(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD(
+        handler=lambda command, data: None,
+    )
+
+    lcd.close()
+
+    assert lcd.submit_button_event(
+        0x01,
+        source="web",
+    ) is False
+
+
+def test_transport_flush_retries_interrupted_system_call(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+    flush_calls = []
+
+    def interrupted_then_success():
+        flush_calls.append(True)
+
+        if len(flush_calls) == 1:
+            raise InterruptedError(
+                4,
+                "Interrupted system call",
+            )
+
+    connection.flush = interrupted_then_success
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD()
+
+    try:
+        assert lcd.write_frame(
+            [
+                "First",
+                "Second",
+            ]
+        ) is True
+        assert len(flush_calls) == 2
+    finally:
+        lcd.close()
+
+
+def test_transport_flush_stops_cleanly_after_interrupt(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    def interrupted_flush():
+        raise InterruptedError(
+            4,
+            "Interrupted system call",
+        )
+
+    connection.flush = interrupted_flush
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD()
+    lcd.stop_event.set()
+
+    try:
+        assert lcd.write_frame(
+            [
+                "Stopping",
+                "TruePanel",
+            ]
+        ) is False
+    finally:
+        lcd.close()
+
+
+def test_frame_observer_receives_successful_normalized_frame(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    observed = []
+    lcd = qnaplcd.QnapLCD()
+    lcd.set_frame_handler(
+        observed.append
+    )
+
+    try:
+        assert lcd.write_frame(
+            [
+                "CPU 14%",
+                "RAM 31%",
+            ]
+        ) is True
+
+        assert observed == [
+            (
+                "CPU 14%         ",
+                "RAM 31%         ",
+            )
+        ]
+    finally:
+        lcd.close()
+
+
+def test_frame_observer_is_not_called_when_write_fails(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    observed = []
+    lcd = qnaplcd.QnapLCD()
+    lcd.set_frame_handler(
+        observed.append
+    )
+
+    lcd.connection = None
+
+    try:
+        assert lcd.write_frame(
+            [
+                "Unavailable",
+                "No transport",
+            ]
+        ) is False
+
+        assert observed == []
+    finally:
+        lcd.close()
+
+
+def test_frame_observer_failure_does_not_break_lcd_write(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    def broken_observer(lines):
+        del lines
+        raise RuntimeError(
+            "observer failed"
+        )
+
+    lcd = qnaplcd.QnapLCD()
+    lcd.set_frame_handler(
+        broken_observer
+    )
+
+    try:
+        assert lcd.write_frame(
+            [
+                "TruePanel",
+                "Mission Ready",
+            ]
+        ) is True
+    finally:
+        lcd.close()
+
+
+def test_frame_handler_rejects_non_callable(
+    monkeypatch,
+):
+    connection = FakeSerial(
+        "/dev/ttyS1",
+        1200,
+    )
+
+    monkeypatch.setattr(
+        qnaplcd.serial,
+        "Serial",
+        lambda *args, **kwargs: connection,
+    )
+
+    lcd = qnaplcd.QnapLCD()
+
+    try:
+        try:
+            lcd.set_frame_handler(
+                "not callable"
+            )
+        except TypeError:
+            pass
+        else:
+            raise AssertionError(
+                "Expected TypeError"
+            )
+    finally:
+        lcd.close()

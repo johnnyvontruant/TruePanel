@@ -1054,6 +1054,10 @@ def test_status_snapshot_uses_safe_lcd_defaults(
             tmp_path
             / "missing-lcd-status.json"
         ),
+        lcd_display_status_path=(
+            tmp_path
+            / "missing-lcd-display-status.json"
+        ),
         clock=lambda: 100.0,
     )
 
@@ -1073,3 +1077,259 @@ def test_status_snapshot_uses_safe_lcd_defaults(
         ]
         == 0
     )
+
+
+def test_status_snapshot_publishes_live_lcd_display(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    reader_path = (
+        tmp_path
+        / "lcd-reader-status.json"
+    )
+    display_path = (
+        tmp_path
+        / "lcd-display-status.json"
+    )
+
+    from truepanel.hardware.lcd_reader_status_bridge import (
+        LCDReaderStatusBridge,
+    )
+    from truepanel.hardware.lcd_display_status_bridge import (
+        LCDDisplayStatusBridge,
+    )
+
+    LCDReaderStatusBridge(
+        reader_path,
+        clock=lambda: 100.0,
+    ).publish(
+        {
+            "thread_alive": True,
+            "dispatcher_alive": True,
+        }
+    )
+
+    LCDDisplayStatusBridge(
+        display_path,
+        clock=lambda: 100.0,
+    ).publish(
+        [
+            "TruePanel",
+            "Mission Ready",
+        ],
+        page="show_mission_home",
+        source="runtime",
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            reader_path
+        ),
+        lcd_display_status_path=(
+            display_path
+        ),
+        clock=lambda: 104.0,
+    )
+
+    lcd_payload = service.status()[
+        "lcd"
+    ]
+    display = lcd_payload[
+        "display"
+    ]
+
+    assert lcd_payload[
+        "available"
+    ] is True
+    assert lcd_payload[
+        "stale"
+    ] is False
+    assert display[
+        "line1"
+    ] == "TruePanel       "
+    assert display[
+        "line2"
+    ] == "Mission Ready   "
+    assert display[
+        "page"
+    ] == "show_mission_home"
+    assert display[
+        "source"
+    ] == "runtime"
+    assert display[
+        "age_seconds"
+    ] == 4.0
+    assert display[
+        "stale"
+    ] is False
+
+
+def test_status_snapshot_marks_old_lcd_display_stale(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    display_path = (
+        tmp_path
+        / "lcd-display-status.json"
+    )
+
+    from truepanel.hardware.lcd_display_status_bridge import (
+        LCDDisplayStatusBridge,
+    )
+
+    LCDDisplayStatusBridge(
+        display_path,
+        clock=lambda: 100.0,
+    ).publish(
+        [
+            "Old frame",
+            "Waiting",
+        ]
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            tmp_path
+            / "missing-reader.json"
+        ),
+        lcd_display_status_path=(
+            display_path
+        ),
+        clock=lambda: 120.0,
+    )
+
+    lcd_payload = service.status()[
+        "lcd"
+    ]
+
+    assert lcd_payload[
+        "available"
+    ] is True
+    assert lcd_payload[
+        "stale"
+    ] is True
+    assert lcd_payload[
+        "display"
+    ][
+        "stale"
+    ] is True
+
+
+def test_status_snapshot_uses_none_for_missing_display(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            tmp_path
+            / "missing-reader.json"
+        ),
+        lcd_display_status_path=(
+            tmp_path
+            / "missing-display.json"
+        ),
+        clock=lambda: 100.0,
+    )
+
+    lcd_payload = service.status()[
+        "lcd"
+    ]
+
+    assert lcd_payload[
+        "available"
+    ] is False
+    assert lcd_payload[
+        "stale"
+    ] is True
+    assert lcd_payload[
+        "display"
+    ] is None
+
+
+def test_lcd_status_does_not_refresh_collector(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    class CountingCollector:
+        def __init__(self):
+            self.calls = 0
+
+        def update(self):
+            self.calls += 1
+            return {}
+
+    collector = CountingCollector()
+
+    service = SnapshotService(
+        collector=collector,
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            tmp_path
+            / "missing-reader.json"
+        ),
+        lcd_display_status_path=(
+            tmp_path
+            / "missing-display.json"
+        ),
+        clock=lambda: 100.0,
+    )
+
+    payload = service.lcd_status()
+
+    assert collector.calls == 0
+    assert payload["read_only"] is True
+    assert payload["lcd"]["available"] is False

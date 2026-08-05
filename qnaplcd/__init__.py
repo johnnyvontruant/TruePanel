@@ -1,6 +1,7 @@
 #
 # QNAP LCD Display and Button Class
 #
+import errno
 import logging
 import time
 from collections import deque
@@ -41,6 +42,7 @@ class QnapLCD:
         self.columns = 16
 
         self.handler = handler
+        self.frame_handler = None
         self.reader = None
         self.dispatcher = None
         self.stop_event = Event()
@@ -219,6 +221,65 @@ class QnapLCD:
                 command,
                 duration_ms,
             )
+
+    def submit_button_event(
+        self,
+        button_mask,
+        *,
+        source="web",
+    ):
+        """
+        Submit one validated virtual button press to the event dispatcher.
+
+        This does not write serial data or imitate an A125 reply. It places
+        the same logical Switch_Status event used by physical button reports
+        onto the existing ordered callback queue.
+        """
+
+        try:
+            button_mask = int(
+                button_mask
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return False
+
+        if button_mask not in {
+            0x01,
+            0x02,
+        }:
+            return False
+
+        if source != "web":
+            return False
+
+        dispatcher = self.dispatcher
+
+        if (
+            dispatcher is None
+            or not dispatcher.is_alive()
+            or self.stop_event.is_set()
+        ):
+            return False
+
+        self._queue_handler_event(
+            "Switch_Status",
+            button_mask,
+        )
+
+        logger.info(
+            (
+                "Virtual LCD button queued: "
+                "source=%s mask=0x%04X"
+            ),
+            source,
+            button_mask,
+        )
+
+        return True
+
 
     def _queue_handler_event(self, command, data):
         """
@@ -549,7 +610,18 @@ class QnapLCD:
                 connection.write(bytes(part))
 
             if flush:
-                connection.flush()
+                while True:
+                    try:
+                        connection.flush()
+                        break
+                    except OSError as error:
+                        if error.errno == errno.EINTR:
+                            if self.stop_event.is_set():
+                                return False
+
+                            continue
+
+                        raise
 
         return True
 
@@ -642,6 +714,47 @@ class QnapLCD:
         payload = message.encode("latin-1", errors="replace")
         self.write_bytes(line, payload)
 
+    def set_frame_handler(
+        self,
+        handler,
+    ):
+        """
+        Register an optional observer for successfully transmitted frames.
+
+        The observer receives a two-item tuple containing the exact normalized
+        16-character rows sent to the LCD. It does not participate in serial
+        transport and cannot take ownership of the device.
+        """
+
+        if (
+            handler is not None
+            and not callable(handler)
+        ):
+            raise TypeError(
+                "frame handler must be callable or None"
+            )
+
+        self.frame_handler = handler
+
+    def _notify_frame_handler(
+        self,
+        lines,
+    ):
+        handler = self.frame_handler
+
+        if handler is None:
+            return
+
+        try:
+            handler(
+                tuple(lines)
+            )
+        except Exception:
+            logger.exception(
+                "LCD frame observer failed"
+            )
+
+
     def write_frame(self, frame):
         """
         Write a two-row frame as one guarded transport transaction.
@@ -660,6 +773,7 @@ class QnapLCD:
         second = lines[1] if len(lines) >= 2 else b""
 
         packets = []
+        normalized_lines = []
 
         for line_number, value in ((1, first), (2, second)):
             if isinstance(value, bytearray):
@@ -675,6 +789,21 @@ class QnapLCD:
                         errors="replace",
                     )
                 )
+
+            normalized_payload = (
+                payload[:self.columns]
+                .ljust(
+                    self.columns,
+                    b" ",
+                )
+            )
+
+            normalized_lines.append(
+                normalized_payload.decode(
+                    "latin-1",
+                    errors="replace",
+                )
+            )
 
             row = self._row_address(
                 line_number
@@ -692,10 +821,17 @@ class QnapLCD:
                 ]
             )
 
-        return self._write_parts(
+        written = self._write_parts(
             *packets,
             flush=True,
         )
+
+        if written:
+            self._notify_frame_handler(
+                normalized_lines
+            )
+
+        return written
 
     def write(self, line, msg):
         """

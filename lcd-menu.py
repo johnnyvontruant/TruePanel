@@ -13,6 +13,13 @@ import qnaplcd
 from truepanel.hardware.lcd_reader_status_bridge import (
     LCDReaderStatusBridge,
 )
+from truepanel.hardware.lcd_display_status_bridge import (
+    LCDDisplayStatusBridge,
+)
+from truepanel.hardware.lcd_command import (
+    LCDCommandProcessor,
+    LCDCommandServer,
+)
 
 from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
@@ -93,6 +100,9 @@ lcd = None
 lcd_reader_status_bridge = (
     LCDReaderStatusBridge()
 )
+lcd_display_status_bridge = (
+    LCDDisplayStatusBridge()
+)
 lcd_timer = None
 menu_item = 0
 
@@ -109,6 +119,7 @@ fan_control_runtime = build_fan_control_runtime(
 )
 
 fan_command_server = None
+lcd_command_server = None
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -1825,6 +1836,24 @@ def build_fan_command_server():
     )
 
 
+def build_lcd_command_server():
+    if lcd is None:
+        return None
+
+    processor = LCDCommandProcessor(
+        lambda button_mask, source: (
+            lcd.submit_button_event(
+                button_mask,
+                source=source,
+            )
+        )
+    )
+
+    return LCDCommandServer(
+        processor
+    )
+
+
 def lcd_on():
     global lcd_timer
 
@@ -2119,11 +2148,42 @@ def cached_display_state():
     return get_state()
 
 
+def publish_lcd_display(
+    lines,
+    *,
+    page=None,
+    source="runtime",
+):
+    try:
+        lcd_display_status_bridge.publish(
+            lines,
+            page=page,
+            source=source,
+        )
+    except Exception:
+        LOGGER.exception(
+            "Could not publish LCD display status"
+        )
+
+
+def render_lcd_frame(
+    lines,
+    *,
+    page=None,
+    source="runtime",
+):
+    del page, source
+    lcd.clear()
+    lcd.write(0, lines)
+
+
 def render_mission_frame(frame):
     """Render one complete Mission Home frame."""
 
-    lcd.clear()
-    lcd.write(0, frame.lines)
+    render_lcd_frame(
+        frame.lines,
+        page="show_mission_home",
+    )
 
 
 def show_mission_home():
@@ -2297,6 +2357,7 @@ def response_handler(command, data):
 def main():
     global lcd, menu_item
     global fan_command_server
+    global lcd_command_server
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
@@ -2305,6 +2366,18 @@ def main():
         PORT,
         PORT_SPEED,
         response_handler,
+    )
+
+    lcd.set_frame_handler(
+        lambda lines: publish_lcd_display(
+            lines,
+            page=(
+                menu[menu_item].__name__
+                if menu
+                else None
+            ),
+            source="runtime",
+        )
     )
 
     publish_lcd_reader_status()
@@ -2323,6 +2396,13 @@ def main():
 
         if fan_command_server is not None:
             fan_command_server.start()
+
+        lcd_command_server = (
+            build_lcd_command_server()
+        )
+
+        if lcd_command_server is not None:
+            lcd_command_server.start()
 
         if bay_led_startup_animation is not None:
             bay_led_startup_animation.run()
@@ -2360,6 +2440,14 @@ def main():
                     menu_item + 1
                 ) % len(menu)
     finally:
+        if lcd_command_server is not None:
+            try:
+                lcd_command_server.stop()
+            except Exception:
+                pass
+            finally:
+                lcd_command_server = None
+
         if fan_command_server is not None:
             try:
                 fan_command_server.stop()
