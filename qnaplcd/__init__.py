@@ -135,7 +135,17 @@ class QnapLCD:
         except (
             serial.SerialException,
             OSError,
-        ):
+        ) as exc:
+            with self.state_lock:
+                self.reader_errors += 1
+                self.last_reader_error = (
+                    f"{type(exc).__name__}: {exc}"
+                )
+
+            logger.warning(
+                "LCD serial read failed: %s",
+                self.last_reader_error,
+            )
             return None
 
         if not data or len(data) < size:

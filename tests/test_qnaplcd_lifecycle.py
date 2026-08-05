@@ -1945,3 +1945,106 @@ def test_read_bytes_uses_requested_size(
         assert reads == [1, 2, 3]
     finally:
         lcd.close()
+
+
+def test_read_bytes_records_serial_exception(
+    monkeypatch,
+    caplog,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    def fail_read(size):
+        del size
+
+        raise qnaplcd.serial.SerialException(
+            "device disconnected"
+        )
+
+    connection.read = fail_read
+
+    try:
+        with caplog.at_level(
+            "WARNING",
+            logger="qnaplcd",
+        ):
+            assert lcd._read_bytes() is None
+
+        snapshot = lcd.reader_snapshot()
+
+        assert snapshot["reader_errors"] == 1
+        assert snapshot["last_reader_error"] == (
+            "SerialException: device disconnected"
+        )
+        assert (
+            "LCD serial read failed"
+            in caplog.text
+        )
+    finally:
+        lcd.close()
+
+
+def test_read_bytes_records_os_error(
+    monkeypatch,
+    caplog,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    def fail_read(size):
+        del size
+
+        raise OSError(
+            "input/output error"
+        )
+
+    connection.read = fail_read
+
+    try:
+        with caplog.at_level(
+            "WARNING",
+            logger="qnaplcd",
+        ):
+            assert lcd._read_bytes(2) is None
+
+        snapshot = lcd.reader_snapshot()
+
+        assert snapshot["reader_errors"] == 1
+        assert snapshot["last_reader_error"] == (
+            "OSError: input/output error"
+        )
+        assert (
+            "LCD serial read failed"
+            in caplog.text
+        )
+    finally:
+        lcd.close()
+
+
+def test_successful_read_preserves_last_reader_error(
+    monkeypatch,
+):
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+
+    lcd.reader_errors = 1
+    lcd.last_reader_error = (
+        "SerialException: previous failure"
+    )
+
+    connection.read = lambda size: b"A"[:size]
+
+    try:
+        assert lcd._read_bytes() == ord("A")
+
+        snapshot = lcd.reader_snapshot()
+
+        assert snapshot["reader_errors"] == 1
+        assert snapshot["last_reader_error"] == (
+            "SerialException: previous failure"
+        )
+    finally:
+        lcd.close()
