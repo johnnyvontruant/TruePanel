@@ -97,7 +97,7 @@ ownership.
 ### Dashboard overview and virtual front panel
 
 <p align="center">
-  <img src="docs/images/mission-control-overview.png"
+  <img src="docs/images/mission-control-overview-virtual-lcd.png"
        alt="TruePanel Mission Control dashboard with live virtual LCD and guarded front-panel controls"
        width="1000">
 </p>
@@ -105,7 +105,7 @@ ownership.
 ### Cooling and thermal readiness
 
 <p align="center">
-  <img src="docs/images/cooling-readiness.png"
+  <img src="docs/images/cooling-readiness-responsive.png"
        alt="TruePanel cooling and thermal readiness panel"
        width="900">
 </p>
