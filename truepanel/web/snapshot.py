@@ -227,6 +227,12 @@ class SnapshotService:
         )
 
         default_reader = {
+            "healthy": False,
+            "last_healthy_at": None,
+            "recovery_count": 0,
+            "last_recovery_at": None,
+            "episode_state": "degraded",
+            "episode_started_at": None,
             "connected": False,
             "connection_error": None,
             "port": None,

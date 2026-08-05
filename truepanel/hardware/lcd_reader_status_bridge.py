@@ -58,13 +58,133 @@ class LCDReaderStatusBridge:
             self.clock()
         )
 
-        normalized_reader = {
-            "connected": bool(
-                reader.get(
-                    "connected",
+        previous_reader = None
+
+        try:
+            previous_payload = json.loads(
+                self.path.read_text(
+                    encoding="utf-8"
+                )
+            )
+        except (
+            FileNotFoundError,
+            OSError,
+            json.JSONDecodeError,
+        ):
+            previous_payload = None
+
+        if isinstance(
+            previous_payload,
+            dict,
+        ):
+            candidate = previous_payload.get(
+                "reader"
+            )
+
+            if isinstance(
+                candidate,
+                dict,
+            ):
+                previous_reader = candidate
+
+        connected = bool(
+            reader.get(
+                "connected",
+                False,
+            )
+        )
+        thread_alive = bool(
+            reader.get(
+                "thread_alive",
+                False,
+            )
+        )
+        dispatcher_alive = bool(
+            reader.get(
+                "dispatcher_alive",
+                False,
+            )
+        )
+        healthy = bool(
+            connected
+            and thread_alive
+            and dispatcher_alive
+        )
+
+        previous_healthy = None
+
+        if previous_reader is not None:
+            previous_healthy = bool(
+                previous_reader.get(
+                    "healthy",
                     False,
                 )
+            )
+
+        recovery_count = max(
+            0,
+            _safe_int(
+                (
+                    previous_reader
+                    or {}
+                ).get(
+                    "recovery_count"
+                )
             ),
+        )
+        last_recovery_at = _safe_float(
+            (
+                previous_reader
+                or {}
+            ).get(
+                "last_recovery_at"
+            )
+        )
+        last_healthy_at = _safe_float(
+            (
+                previous_reader
+                or {}
+            ).get(
+                "last_healthy_at"
+            )
+        )
+        episode_started_at = _safe_float(
+            (
+                previous_reader
+                or {}
+            ).get(
+                "episode_started_at"
+            )
+        )
+
+        if healthy:
+            last_healthy_at = timestamp
+
+        if (
+            previous_healthy is False
+            and healthy
+        ):
+            recovery_count += 1
+            last_recovery_at = timestamp
+            episode_started_at = timestamp
+        elif (
+            previous_healthy is not None
+            and previous_healthy != healthy
+        ) or episode_started_at is None:
+            episode_started_at = timestamp
+
+        normalized_reader = {
+            "healthy": healthy,
+            "last_healthy_at": last_healthy_at,
+            "recovery_count": recovery_count,
+            "last_recovery_at": last_recovery_at,
+            "episode_state": (
+                "healthy"
+                if healthy
+                else "degraded"
+            ),
+            "episode_started_at": episode_started_at,
+            "connected": connected,
             "connection_error": (
                 str(
                     reader.get(
@@ -97,18 +217,8 @@ class LCDReaderStatusBridge:
                     )
                 ),
             ),
-            "thread_alive": bool(
-                reader.get(
-                    "thread_alive",
-                    False,
-                )
-            ),
-            "dispatcher_alive": bool(
-                reader.get(
-                    "dispatcher_alive",
-                    False,
-                )
-            ),
+            "thread_alive": thread_alive,
+            "dispatcher_alive": dispatcher_alive,
             "stop_requested": bool(
                 reader.get(
                     "stop_requested",

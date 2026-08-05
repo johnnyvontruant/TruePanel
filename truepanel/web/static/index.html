@@ -119,6 +119,10 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Reader errors</span><span id="lcdTransportErrors" class="value">0</span></div>
 <div class="row"><span class="label">Last error</span><span id="lcdTransportLastError" class="value">None</span></div>
 <div class="row"><span class="label">Status age</span><span id="lcdTransportAge" class="value">--</span></div>
+<div class="row"><span class="label">Last healthy</span><span id="lcdTransportLastHealthy" class="value">Never</span></div>
+<div class="row"><span class="label">Recovery count</span><span id="lcdTransportRecoveryCount" class="value">0</span></div>
+<div class="row"><span class="label">Last recovery</span><span id="lcdTransportLastRecovery" class="value">Never</span></div>
+<div class="row"><span class="label">Current episode</span><span id="lcdTransportEpisode" class="value">Checking</span></div>
 </div>
 </div>
 </div>
@@ -1381,6 +1385,18 @@ function lcdText(value){
     return text.slice(0,16).padEnd(16," ");
 }
 
+function lcdTimestamp(value){
+    const timestamp=Number(value);
+
+    if(!Number.isFinite(timestamp)||timestamp<=0){
+        return "Never";
+    }
+
+    return new Date(
+        timestamp*1000
+    ).toLocaleString();
+}
+
 function renderVirtualLcd(payload){
     const lcd=payload&&payload.lcd
         ?payload.lcd
@@ -1501,6 +1517,37 @@ function renderVirtualLcd(payload){
             lcd.stale===true
                 ?"warn"
                 :"good"
+        );
+
+    q("lcdTransportLastHealthy").textContent=
+        lcdTimestamp(
+            reader.last_healthy_at
+        );
+
+    q("lcdTransportRecoveryCount").textContent=
+        String(
+            Number(
+                reader.recovery_count||0
+            )
+        );
+
+    q("lcdTransportLastRecovery").textContent=
+        lcdTimestamp(
+            reader.last_recovery_at
+        );
+
+    const episodeHealthy=
+        reader.episode_state==="healthy";
+
+    q("lcdTransportEpisode").textContent=
+        episodeHealthy
+            ?"Healthy"
+            :"Degraded";
+    q("lcdTransportEpisode").className=
+        "value "+(
+            episodeHealthy
+                ?"good"
+                :"bad"
         );
 
     if(!available||!dispatcherReady){

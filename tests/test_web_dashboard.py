@@ -593,3 +593,31 @@ def test_lcd_transport_diagnostics_have_explicit_states():
     assert '?"warn"' in source
     assert '?"bad"' in source
     assert '?"good"' in source
+
+
+def test_dashboard_contains_lcd_recovery_diagnostics():
+    source = dashboard_source()
+
+    for element_id in (
+        "lcdTransportLastHealthy",
+        "lcdTransportRecoveryCount",
+        "lcdTransportLastRecovery",
+        "lcdTransportEpisode",
+    ):
+        assert (
+            f'id="{element_id}"'
+            in source
+        )
+
+    for field in (
+        "reader.last_healthy_at",
+        "reader.recovery_count",
+        "reader.last_recovery_at",
+        "reader.episode_state",
+    ):
+        assert field in source
+
+    assert "function lcdTimestamp" in source
+    assert ".toLocaleString()" in source
+    assert '"Healthy"' in source
+    assert '"Degraded"' in source

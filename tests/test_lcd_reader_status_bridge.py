@@ -225,3 +225,125 @@ def test_bridge_normalizes_transport_diagnostics(
     )
     assert reader["port"] == "123"
     assert reader["speed"] == 0
+
+
+def test_bridge_tracks_initial_healthy_episode(
+    tmp_path,
+):
+    clock = FakeClock()
+    bridge = LCDReaderStatusBridge(
+        tmp_path / "lcd-reader-status.json",
+        clock=clock,
+    )
+
+    payload = bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+        }
+    )
+
+    reader = payload["reader"]
+
+    assert reader["healthy"] is True
+    assert reader["last_healthy_at"] == 100.0
+    assert reader["recovery_count"] == 0
+    assert reader["last_recovery_at"] is None
+    assert reader["episode_state"] == "healthy"
+    assert reader["episode_started_at"] == 100.0
+
+
+def test_bridge_tracks_disconnect_and_recovery(
+    tmp_path,
+):
+    clock = FakeClock()
+    bridge = LCDReaderStatusBridge(
+        tmp_path / "lcd-reader-status.json",
+        clock=clock,
+    )
+
+    bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+        }
+    )
+
+    clock.value = 110.0
+
+    disconnected = bridge.publish(
+        {
+            "connected": False,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+        }
+    )["reader"]
+
+    assert disconnected["healthy"] is False
+    assert disconnected["last_healthy_at"] == 100.0
+    assert disconnected["recovery_count"] == 0
+    assert disconnected["last_recovery_at"] is None
+    assert disconnected["episode_state"] == "degraded"
+    assert disconnected["episode_started_at"] == 110.0
+
+    clock.value = 120.0
+
+    recovered = bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+        }
+    )["reader"]
+
+    assert recovered["healthy"] is True
+    assert recovered["last_healthy_at"] == 120.0
+    assert recovered["recovery_count"] == 1
+    assert recovered["last_recovery_at"] == 120.0
+    assert recovered["episode_state"] == "healthy"
+    assert recovered["episode_started_at"] == 120.0
+
+
+def test_bridge_preserves_recovery_history(
+    tmp_path,
+):
+    clock = FakeClock()
+    bridge = LCDReaderStatusBridge(
+        tmp_path / "lcd-reader-status.json",
+        clock=clock,
+    )
+
+    bridge.publish(
+        {
+            "connected": False,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+        }
+    )
+
+    clock.value = 110.0
+
+    bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+        }
+    )
+
+    clock.value = 120.0
+
+    reader = bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+        }
+    )["reader"]
+
+    assert reader["recovery_count"] == 1
+    assert reader["last_recovery_at"] == 110.0
+    assert reader["last_healthy_at"] == 120.0
+    assert reader["episode_started_at"] == 110.0
