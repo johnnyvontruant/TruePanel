@@ -2489,5 +2489,12 @@ def main():
                 lcd.close()
             except Exception:
                 pass
+            finally:
+                try:
+                    publish_lcd_reader_status()
+                except Exception:
+                    LOGGER.exception(
+                        "Failed to publish final LCD reader status"
+                    )
 
 main()

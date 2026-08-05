@@ -347,3 +347,111 @@ def test_bridge_preserves_recovery_history(
     assert reader["last_recovery_at"] == 110.0
     assert reader["last_healthy_at"] == 120.0
     assert reader["episode_started_at"] == 110.0
+
+
+def test_bridge_does_not_count_planned_restart_as_recovery(
+    tmp_path,
+):
+    clock = FakeClock()
+    bridge = LCDReaderStatusBridge(
+        tmp_path / "lcd-reader-status.json",
+        clock=clock,
+    )
+
+    bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+            "stop_requested": False,
+        }
+    )
+
+    clock.value = 110.0
+
+    stopped = bridge.publish(
+        {
+            "connected": False,
+            "thread_alive": False,
+            "dispatcher_alive": False,
+            "stop_requested": True,
+        }
+    )["reader"]
+
+    assert stopped["healthy"] is False
+    assert stopped["stop_requested"] is True
+    assert stopped["recovery_count"] == 0
+
+    clock.value = 120.0
+
+    restarted = bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+            "stop_requested": False,
+        }
+    )["reader"]
+
+    assert restarted["healthy"] is True
+    assert restarted["recovery_count"] == 0
+    assert restarted["last_recovery_at"] is None
+    assert restarted["episode_started_at"] == 120.0
+
+
+def test_bridge_preserves_real_recovery_after_planned_restart(
+    tmp_path,
+):
+    clock = FakeClock()
+    bridge = LCDReaderStatusBridge(
+        tmp_path / "lcd-reader-status.json",
+        clock=clock,
+    )
+
+    bridge.publish(
+        {
+            "connected": False,
+            "thread_alive": False,
+            "dispatcher_alive": False,
+            "stop_requested": False,
+        }
+    )
+
+    clock.value = 110.0
+
+    recovered = bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+            "stop_requested": False,
+        }
+    )["reader"]
+
+    assert recovered["recovery_count"] == 1
+    assert recovered["last_recovery_at"] == 110.0
+
+    clock.value = 120.0
+
+    bridge.publish(
+        {
+            "connected": False,
+            "thread_alive": False,
+            "dispatcher_alive": False,
+            "stop_requested": True,
+        }
+    )
+
+    clock.value = 130.0
+
+    restarted = bridge.publish(
+        {
+            "connected": True,
+            "thread_alive": True,
+            "dispatcher_alive": True,
+            "stop_requested": False,
+        }
+    )["reader"]
+
+    assert restarted["recovery_count"] == 1
+    assert restarted["last_recovery_at"] == 110.0

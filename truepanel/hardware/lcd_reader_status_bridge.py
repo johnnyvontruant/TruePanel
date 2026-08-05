@@ -112,11 +112,18 @@ class LCDReaderStatusBridge:
         )
 
         previous_healthy = None
+        previous_planned_stop = False
 
         if previous_reader is not None:
             previous_healthy = bool(
                 previous_reader.get(
                     "healthy",
+                    False,
+                )
+            )
+            previous_planned_stop = bool(
+                previous_reader.get(
+                    "stop_requested",
                     False,
                 )
             )
@@ -164,8 +171,10 @@ class LCDReaderStatusBridge:
             previous_healthy is False
             and healthy
         ):
-            recovery_count += 1
-            last_recovery_at = timestamp
+            if not previous_planned_stop:
+                recovery_count += 1
+                last_recovery_at = timestamp
+
             episode_started_at = timestamp
         elif (
             previous_healthy is not None
