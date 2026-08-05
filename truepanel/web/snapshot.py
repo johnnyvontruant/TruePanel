@@ -11,37 +11,36 @@ from typing import Any
 
 from collector import TruePanelCollector
 from truepanel.config.loader import load_config
-from truepanel.hardware.fans import (
-    get_status as get_fan_status,
-)
-from truepanel.history.fan_control import (
-    DEFAULT_FAN_CONTROL_HISTORY_PATH,
-    FanControlHistory,
-)
-from truepanel.history.thermal_observer import (
-    DEFAULT_THERMAL_OBSERVER_HISTORY_PATH,
-    ThermalObserverHistory,
-)
-from truepanel.history.thermal_commissioning import (
-    DEFAULT_THERMAL_COMMISSIONING_HISTORY_PATH,
-    ThermalCommissioningHistory,
-)
 from truepanel.hardware.fan_status_bridge import (
     DEFAULT_FAN_CONTROL_STATUS_PATH,
     FanControlStatusBridge,
 )
-from truepanel.hardware.lcd_reader_status_bridge import (
-    DEFAULT_LCD_READER_STATUS_PATH,
-    LCDReaderStatusBridge,
+from truepanel.hardware.fans import (
+    get_status as get_fan_status,
 )
 from truepanel.hardware.lcd_display_status_bridge import (
     DEFAULT_LCD_DISPLAY_STATUS_PATH,
     LCDDisplayStatusBridge,
 )
+from truepanel.hardware.lcd_reader_status_bridge import (
+    DEFAULT_LCD_READER_STATUS_PATH,
+    LCDReaderStatusBridge,
+)
 from truepanel.hardware.thermal_commissioning import (
     thermal_commissioning_state,
 )
-
+from truepanel.history.fan_control import (
+    DEFAULT_FAN_CONTROL_HISTORY_PATH,
+    FanControlHistory,
+)
+from truepanel.history.thermal_commissioning import (
+    DEFAULT_THERMAL_COMMISSIONING_HISTORY_PATH,
+    ThermalCommissioningHistory,
+)
+from truepanel.history.thermal_observer import (
+    DEFAULT_THERMAL_OBSERVER_HISTORY_PATH,
+    ThermalObserverHistory,
+)
 
 DEFAULT_HISTORY_PATH = Path(
     "/var/lib/truepanel/history/telemetry.jsonl"
@@ -228,6 +227,10 @@ class SnapshotService:
         )
 
         default_reader = {
+            "connected": False,
+            "connection_error": None,
+            "port": None,
+            "speed": 0,
             "thread_alive": False,
             "dispatcher_alive": False,
             "stop_requested": False,

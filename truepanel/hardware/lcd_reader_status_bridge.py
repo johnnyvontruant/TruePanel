@@ -6,9 +6,10 @@ import json
 import os
 import tempfile
 import time
+from collections.abc import Callable, Mapping
+from contextlib import suppress
 from pathlib import Path
-from typing import Any, Callable, Mapping
-
+from typing import Any
 
 DEFAULT_LCD_READER_STATUS_PATH = Path(
     "/run/truepanel/lcd-reader-status.json"
@@ -58,6 +59,44 @@ class LCDReaderStatusBridge:
         )
 
         normalized_reader = {
+            "connected": bool(
+                reader.get(
+                    "connected",
+                    False,
+                )
+            ),
+            "connection_error": (
+                str(
+                    reader.get(
+                        "connection_error"
+                    )
+                )
+                if reader.get(
+                    "connection_error"
+                )
+                is not None
+                else None
+            ),
+            "port": (
+                str(
+                    reader.get(
+                        "port"
+                    )
+                )
+                if reader.get(
+                    "port"
+                )
+                is not None
+                else None
+            ),
+            "speed": max(
+                0,
+                _safe_int(
+                    reader.get(
+                        "speed"
+                    )
+                ),
+            ),
             "thread_alive": bool(
                 reader.get(
                     "thread_alive",
@@ -278,12 +317,12 @@ class LCDReaderStatusBridge:
                 )
 
             if temporary_name is not None:
-                try:
+                with suppress(
+                    FileNotFoundError
+                ):
                     os.unlink(
                         temporary_name
                     )
-                except FileNotFoundError:
-                    pass
 
     def read(
         self,

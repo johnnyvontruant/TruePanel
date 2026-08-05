@@ -165,3 +165,63 @@ def test_bridge_normalizes_reader_values(
         reader["last_reader_error"]
         == "serial failed"
     )
+
+
+def test_bridge_publishes_transport_diagnostics(
+    tmp_path,
+):
+    bridge = LCDReaderStatusBridge(
+        tmp_path / "lcd-reader-status.json",
+        clock=lambda: 100.0,
+    )
+
+    bridge.publish(
+        {
+            "connected": True,
+            "connection_error": None,
+            "port": "/dev/ttyS1",
+            "speed": 1200,
+        }
+    )
+
+    payload = bridge.read()
+
+    assert payload is not None
+    reader = payload["reader"]
+
+    assert reader["connected"] is True
+    assert reader["connection_error"] is None
+    assert reader["port"] == "/dev/ttyS1"
+    assert reader["speed"] == 1200
+
+
+def test_bridge_normalizes_transport_diagnostics(
+    tmp_path,
+):
+    bridge = LCDReaderStatusBridge(
+        tmp_path / "lcd-reader-status.json",
+        clock=lambda: 100.0,
+    )
+
+    bridge.publish(
+        {
+            "connected": 1,
+            "connection_error": PermissionError(
+                "permission denied"
+            ),
+            "port": 123,
+            "speed": "-1",
+        }
+    )
+
+    payload = bridge.read()
+
+    assert payload is not None
+    reader = payload["reader"]
+
+    assert reader["connected"] is True
+    assert reader["connection_error"] == (
+        "permission denied"
+    )
+    assert reader["port"] == "123"
+    assert reader["speed"] == 0

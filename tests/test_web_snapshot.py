@@ -1,6 +1,5 @@
-from pathlib import Path
-
 import json
+from pathlib import Path
 
 from truepanel.web.snapshot import (
     SnapshotService,
@@ -1100,11 +1099,11 @@ def test_status_snapshot_publishes_live_lcd_display(
         / "lcd-display-status.json"
     )
 
-    from truepanel.hardware.lcd_reader_status_bridge import (
-        LCDReaderStatusBridge,
-    )
     from truepanel.hardware.lcd_display_status_bridge import (
         LCDDisplayStatusBridge,
+    )
+    from truepanel.hardware.lcd_reader_status_bridge import (
+        LCDReaderStatusBridge,
     )
 
     LCDReaderStatusBridge(
@@ -1333,3 +1332,107 @@ def test_lcd_status_does_not_refresh_collector(
     assert collector.calls == 0
     assert payload["read_only"] is True
     assert payload["lcd"]["available"] is False
+
+
+def test_status_snapshot_publishes_lcd_transport_diagnostics(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    lcd_status_path = (
+        tmp_path
+        / "lcd-reader-status.json"
+    )
+
+    from truepanel.hardware.lcd_reader_status_bridge import (
+        LCDReaderStatusBridge,
+    )
+
+    LCDReaderStatusBridge(
+        lcd_status_path,
+        clock=lambda: 100.0,
+    ).publish(
+        {
+            "connected": False,
+            "connection_error": (
+                "PermissionError: permission denied"
+            ),
+            "port": "/dev/ttyS1",
+            "speed": 1200,
+            "reader_errors": 2,
+            "last_reader_error": (
+                "OSError: input/output error"
+            ),
+        }
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            lcd_status_path
+        ),
+        clock=lambda: 100.0,
+    )
+
+    reader = service.lcd_status()[
+        "lcd"
+    ]["reader"]
+
+    assert reader["connected"] is False
+    assert reader["connection_error"] == (
+        "PermissionError: permission denied"
+    )
+    assert reader["port"] == "/dev/ttyS1"
+    assert reader["speed"] == 1200
+    assert reader["reader_errors"] == 2
+    assert reader["last_reader_error"] == (
+        "OSError: input/output error"
+    )
+
+
+def test_status_snapshot_uses_safe_transport_defaults(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {},
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        lcd_reader_status_path=(
+            tmp_path
+            / "missing-lcd-status.json"
+        ),
+        clock=lambda: 100.0,
+    )
+
+    reader = service.lcd_status()[
+        "lcd"
+    ]["reader"]
+
+    assert reader["connected"] is False
+    assert reader["connection_error"] is None
+    assert reader["port"] is None
+    assert reader["speed"] == 0
