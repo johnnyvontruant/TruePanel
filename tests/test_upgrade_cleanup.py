@@ -6,6 +6,7 @@ from truepanel.upgrade.backup_receipt import (
 )
 from truepanel.upgrade.cleanup import (
     CLEANUP_CONFIRMATION,
+    backup_content_identity,
     build_cleanup_plan,
     run_cleanup,
 )
@@ -80,7 +81,7 @@ def create_completed_upgrade(
     return stage, backup
 
 
-def test_cleanup_keeps_newest_backup(
+def test_cleanup_keeps_two_distinct_generations(
     tmp_path,
 ):
     deployed = (
@@ -88,7 +89,7 @@ def test_cleanup_keeps_newest_backup(
     )
     create_deployment(deployed)
 
-    old_stage, old_backup = (
+    oldest_stage, oldest_backup = (
         create_completed_upgrade(
             tmp_path,
             deployed,
@@ -96,7 +97,7 @@ def test_cleanup_keeps_newest_backup(
         )
     )
 
-    new_stage, new_backup = (
+    middle_stage, middle_backup = (
         create_completed_upgrade(
             tmp_path,
             deployed,
@@ -104,10 +105,13 @@ def test_cleanup_keeps_newest_backup(
         )
     )
 
-    old_backup.touch()
-    old_stage.touch()
-    new_backup.touch()
-    new_stage.touch()
+    newest_stage, newest_backup = (
+        create_completed_upgrade(
+            tmp_path,
+            deployed,
+            token="20260103T000000Z",
+        )
+    )
 
     plan = build_cleanup_plan(
         deploy_root=deployed,
@@ -118,11 +122,13 @@ def test_cleanup_keeps_newest_backup(
         for asset in plan.assets
     }
 
-    assert actions[old_stage] == "remove"
-    assert actions[new_stage] == "remove"
-    assert actions[old_backup] == "remove"
-    assert actions[new_backup] == "keep"
+    assert actions[oldest_stage] == "remove"
+    assert actions[middle_stage] == "remove"
+    assert actions[newest_stage] == "remove"
 
+    assert actions[oldest_backup] == "remove"
+    assert actions[middle_backup] == "keep"
+    assert actions[newest_backup] == "keep"
 
 def test_cleanup_dry_run_changes_nothing(
     tmp_path,
@@ -274,3 +280,133 @@ def test_cleanup_preserves_deployment_and_newest_backup(
     assert (
         backup / "old.txt"
     ).read_text() == backup_marker
+
+
+def test_cleanup_removes_duplicate_generation(
+    tmp_path,
+):
+    deployed = (
+        tmp_path / "TruePanel"
+    )
+    create_deployment(deployed)
+
+    first_stage, first_backup = (
+        create_completed_upgrade(
+            tmp_path,
+            deployed,
+            token="20260101T000000Z",
+        )
+    )
+
+    second_stage, second_backup = (
+        create_completed_upgrade(
+            tmp_path,
+            deployed,
+            token="20260102T000000Z",
+        )
+    )
+
+    (
+        first_backup / "old.txt"
+    ).write_text("identical")
+
+    (
+        second_backup / "old.txt"
+    ).write_text("identical")
+
+    first_stage.touch()
+    first_backup.touch()
+    second_stage.touch()
+    second_backup.touch()
+
+    plan = build_cleanup_plan(
+        deploy_root=deployed,
+    )
+
+    actions = {
+        asset.path: asset.action
+        for asset in plan.assets
+    }
+
+    kept = {
+        path
+        for path in (
+            first_backup,
+            second_backup,
+        )
+        if actions[path] == "keep"
+    }
+
+    removed = {
+        path
+        for path in (
+            first_backup,
+            second_backup,
+        )
+        if actions[path] == "remove"
+    }
+
+    assert len(kept) == 1
+    assert len(removed) == 1
+
+
+def test_backup_identity_ignores_empty_and_cache_directories(
+    tmp_path,
+):
+    backup = (
+        tmp_path
+        / ".truepanel-backup-test"
+    )
+
+    (
+        backup
+        / "truepanel"
+    ).mkdir(
+        parents=True,
+    )
+
+    (
+        backup
+        / "truepanel"
+        / "runtime.py"
+    ).write_text(
+        "meaningful content\n"
+    )
+
+    identity_before = (
+        backup_content_identity(
+            backup
+        )
+    )
+
+    (
+        backup
+        / "truepanel"
+        / "upgrade"
+    ).mkdir(
+        parents=True,
+    )
+
+    cache = (
+        backup
+        / "truepanel"
+        / "__pycache__"
+    )
+    cache.mkdir(
+        parents=True,
+    )
+
+    (
+        cache
+        / "runtime.cpython-311.pyc"
+    ).write_bytes(
+        b"runtime cache"
+    )
+
+    identity_after = (
+        backup_content_identity(
+            backup
+        )
+    )
+
+    assert identity_after == identity_before

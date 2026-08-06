@@ -4,7 +4,9 @@ Guarded cleanup of completed TruePanel upgrade assets.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +14,7 @@ from typing import Any
 
 from .backup_receipt import (
     BACKUP_PREFIX,
+    BACKUP_RECEIPT_NAME,
     validate_backup_receipt,
 )
 from .promotion import MANIFEST_NAME
@@ -24,6 +27,8 @@ COMPLETED_STATES = {
     "promoted",
     "rolled_back",
 }
+
+BACKUP_GENERATIONS_TO_KEEP = 2
 
 
 @dataclass(frozen=True)
@@ -39,6 +44,125 @@ class CleanupPlan:
     deploy_root: Path
     assets: tuple[CleanupAsset, ...]
 
+
+def backup_content_identity(
+    backup_root: Path,
+) -> str:
+    """Hash meaningful synchronized backup file content."""
+    digest = hashlib.sha256()
+
+    ignored_directory_names = {
+        ".git",
+        ".venv",
+        ".pytest_cache",
+        ".ruff_cache",
+        "__pycache__",
+    }
+
+    ignored_relative_prefixes = {
+        "development/backups",
+        "development/firmware",
+        "development/logs",
+    }
+
+    ignored_file_names = {
+        BACKUP_RECEIPT_NAME,
+        MANIFEST_NAME,
+        "truepanel.yaml",
+    }
+
+    files: list[Path] = []
+
+    for item in backup_root.rglob("*"):
+        relative_path = item.relative_to(
+            backup_root
+        )
+        relative = relative_path.as_posix()
+
+        if any(
+            part in ignored_directory_names
+            for part in relative_path.parts
+        ):
+            continue
+
+        if any(
+            relative == prefix
+            or relative.startswith(
+                f"{prefix}/"
+            )
+            for prefix in ignored_relative_prefixes
+        ):
+            continue
+
+        if item.name in ignored_file_names:
+            continue
+
+        if item.name.endswith(
+            (
+                ".pyc",
+                ".bak",
+            )
+        ):
+            continue
+
+        if any(
+            part.startswith(
+                ".before-"
+            )
+            for part in relative_path.parts
+        ):
+            continue
+
+        if item.name.startswith(
+            "truepanel.backup-"
+        ):
+            continue
+
+        if item.is_file() or item.is_symlink():
+            files.append(item)
+
+    for item in sorted(
+        files,
+        key=lambda candidate: (
+            candidate.relative_to(
+                backup_root
+            ).as_posix()
+        ),
+    ):
+        relative = item.relative_to(
+            backup_root
+        ).as_posix()
+
+        digest.update(
+            relative.encode(
+                "utf-8"
+            )
+        )
+        digest.update(b"\\0")
+
+        if item.is_symlink():
+            digest.update(b"symlink\\0")
+            digest.update(
+                os.readlink(
+                    item
+                ).encode(
+                    "utf-8"
+                )
+            )
+            digest.update(b"\\0")
+            continue
+
+        digest.update(b"file\\0")
+
+        with item.open("rb") as handle:
+            while chunk := handle.read(
+                1024 * 1024
+            ):
+                digest.update(chunk)
+
+        digest.update(b"\\0")
+
+    return digest.hexdigest()
 
 def read_manifest(
     path: Path,
@@ -334,16 +458,59 @@ def build_cleanup_plan(
         else:
             verified_backups[backup] = None
 
-    newest_backup = (
-        max(
-            verified_backups,
+    generation_groups: dict[
+        str,
+        list[Path],
+    ] = {}
+
+    for backup in verified_backups:
+        identity = backup_content_identity(
+            backup
+        )
+
+        generation_groups.setdefault(
+            identity,
+            [],
+        ).append(backup)
+
+    ordered_generations = sorted(
+        generation_groups.values(),
+        key=lambda group: max(
+            path.stat().st_mtime
+            for path in group
+        ),
+        reverse=True,
+    )
+
+    retained_backups: set[Path] = set()
+    duplicate_backups: set[Path] = set()
+    expired_backups: set[Path] = set()
+
+    for index, group in enumerate(
+        ordered_generations
+    ):
+        ordered_group = sorted(
+            group,
             key=lambda path: (
                 path.stat().st_mtime
             ),
+            reverse=True,
         )
-        if verified_backups
-        else None
-    )
+
+        if (
+            index
+            < BACKUP_GENERATIONS_TO_KEEP
+        ):
+            retained_backups.add(
+                ordered_group[0]
+            )
+            duplicate_backups.update(
+                ordered_group[1:]
+            )
+        else:
+            expired_backups.update(
+                ordered_group
+            )
 
     handled_stages: set[Path] = {
         asset.path
@@ -381,14 +548,37 @@ def build_cleanup_plan(
         )
 
     for backup in backups:
-        if backup == newest_backup:
+        if backup in retained_backups:
             assets.append(
                 CleanupAsset(
                     path=backup,
                     kind="backup",
                     action="keep",
                     reason=(
-                        "newest verified backup"
+                        "retained backup generation"
+                    ),
+                )
+            )
+        elif backup in duplicate_backups:
+            assets.append(
+                CleanupAsset(
+                    path=backup,
+                    kind="backup",
+                    action="remove",
+                    reason=(
+                        "duplicate backup generation"
+                    ),
+                )
+            )
+        elif backup in expired_backups:
+            assets.append(
+                CleanupAsset(
+                    path=backup,
+                    kind="backup",
+                    action="remove",
+                    reason=(
+                        "generation exceeds "
+                        "retention limit"
                     ),
                 )
             )
@@ -399,7 +589,7 @@ def build_cleanup_plan(
                     kind="backup",
                     action="remove",
                     reason=(
-                        "older verified backup"
+                        "verified backup not retained"
                     ),
                 )
             )
