@@ -3,33 +3,38 @@ TruePanel CLI
 """
 
 import argparse
-import sys
-from truepanel.diagnostics.a125 import main as run_a125_diagnostics
-from truepanel.lab.commands import main as run_stargate_lab
-from pathlib import Path
 import platform
 import runpy
+import sys
 import time
+from pathlib import Path
 
 from truepanel import __version__
 from truepanel.collectors import create_collector
-from truepanel.doctor import run_doctor
-from truepanel.logging import setup_logging
 from truepanel.config.loader import load_config
+from truepanel.diagnostics.a125 import main as run_a125_diagnostics
+from truepanel.doctor import run_doctor
 from truepanel.hardware import Buzzer
-from truepanel.history import TelemetryRecorder
-from truepanel.themes import Theme, discover_theme_packs, load_theme_pack, validate_theme_pack
-from truepanel.plugins import load_plugins
-from truepanel.plugins.commands import add_plugin_subcommands, handle_plugin_command
 from truepanel.hardware.commands import (
     add_hardware_subcommands,
     handle_hardware_command,
 )
+from truepanel.history import TelemetryRecorder
+from truepanel.lab.commands import main as run_stargate_lab
+from truepanel.logging import setup_logging
+from truepanel.plugins import load_plugins
+from truepanel.plugins.commands import add_plugin_subcommands, handle_plugin_command
+from truepanel.themes import (
+    Theme,
+    discover_theme_packs,
+    load_theme_pack,
+    validate_theme_pack,
+)
+from truepanel.verify import run_verify
 from truepanel.web.operations import (
     add_mission_control_subcommands,
     handle_mission_control_command,
 )
-
 
 SCENARIOS = [
     "normal",
@@ -244,6 +249,18 @@ def build_parser():
 
     subcommands.add_parser("run", help="Run TruePanel")
     subcommands.add_parser("doctor", help="Run TruePanel diagnostics")
+    verify = subcommands.add_parser(
+        "verify",
+        help="Verify the TruePanel installation",
+    )
+    verify.add_argument(
+        "--root",
+        dest="verify_root",
+        help=(
+            "Installation root to verify; defaults to "
+            "/mnt/SSDs/Applications/TruePanel when present"
+        ),
+    )
     add_plugin_subcommands(subcommands)
     add_hardware_subcommands(subcommands)
     add_mission_control_subcommands(subcommands)
@@ -350,6 +367,18 @@ def main():
 
     logger = setup_logging(args.log_level)
     logger.info("TruePanel CLI starting")
+
+    if args.command == "verify":
+        verify_root = (
+            Path(args.verify_root).resolve()
+            if args.verify_root
+            else None
+        )
+        raise SystemExit(
+            run_verify(
+                root=verify_root,
+            )
+        )
 
     mission_control_result = (
         handle_mission_control_command(args)
