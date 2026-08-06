@@ -31,6 +31,7 @@ from truepanel.themes import (
     load_theme_pack,
     validate_theme_pack,
 )
+from truepanel.upgrade import run_upgrade
 from truepanel.verify import run_verify
 from truepanel.web.operations import (
     add_mission_control_subcommands,
@@ -267,6 +268,42 @@ def build_parser():
     add_mission_control_subcommands(subcommands)
     subcommands.add_parser("version", help="Show TruePanel version")
 
+    upgrade = subcommands.add_parser(
+        "upgrade",
+        help="Plan or stage a TruePanel upgrade",
+    )
+    upgrade.add_argument(
+        "--source",
+        dest="upgrade_source",
+        help="Source tree; defaults to the current directory",
+    )
+    upgrade.add_argument(
+        "--root",
+        dest="upgrade_root",
+        help=(
+            "Deployed installation root; defaults to "
+            "/mnt/SSDs/Applications/TruePanel"
+        ),
+    )
+    upgrade.add_argument(
+        "--stage-root",
+        dest="upgrade_stage_root",
+        help="Explicit staging directory",
+    )
+    upgrade_mode = upgrade.add_mutually_exclusive_group(
+        required=True
+    )
+    upgrade_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the upgrade plan without writing files",
+    )
+    upgrade_mode.add_argument(
+        "--stage-only",
+        action="store_true",
+        help="Create and validate a staging tree only",
+    )
+
     repair = subcommands.add_parser(
         "repair",
         help="Repair the TruePanel lifecycle installation",
@@ -396,6 +433,35 @@ def main():
         raise SystemExit(
             run_verify(
                 root=verify_root,
+            )
+        )
+
+    if args.command == "upgrade":
+        raise SystemExit(
+            run_upgrade(
+                source_root=(
+                    Path(
+                        args.upgrade_source
+                    ).resolve()
+                    if args.upgrade_source
+                    else None
+                ),
+                deploy_root=(
+                    Path(
+                        args.upgrade_root
+                    ).resolve()
+                    if args.upgrade_root
+                    else None
+                ),
+                stage_root=(
+                    Path(
+                        args.upgrade_stage_root
+                    ).resolve()
+                    if args.upgrade_stage_root
+                    else None
+                ),
+                dry_run=args.dry_run,
+                stage_only=args.stage_only,
             )
         )
 
