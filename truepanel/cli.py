@@ -293,12 +293,26 @@ def build_parser():
     upgrade.add_argument(
         "--backup-root",
         dest="upgrade_backup_root",
-        help="Explicit backup directory for promotion",
+        help=(
+            "Explicit backup directory for promotion "
+            "or selected backup for rollback"
+        ),
+    )
+    upgrade.add_argument(
+        "--safety-backup-root",
+        dest="upgrade_safety_backup_root",
+        help=(
+            "Explicit pre-rollback safety backup "
+            "directory"
+        ),
     )
     upgrade.add_argument(
         "--confirm",
         dest="upgrade_confirmation",
-        help="Required confirmation phrase for promotion",
+        help=(
+            "Required confirmation phrase for guarded "
+            "upgrade operations"
+        ),
     )
     upgrade_mode = upgrade.add_mutually_exclusive_group(
         required=True
@@ -327,6 +341,14 @@ def build_parser():
         help=(
             "List or remove completed upgrade assets "
             "without touching services"
+        ),
+    )
+    upgrade_mode.add_argument(
+        "--rollback",
+        action="store_true",
+        help=(
+            "Restore an explicit retained backup with "
+            "pre-rollback recovery protection"
         ),
     )
 
@@ -511,6 +533,34 @@ def main():
             raise SystemExit(
                 run_cleanup(
                     deploy_root=upgrade_root,
+                    confirmation=(
+                        args.upgrade_confirmation
+                    ),
+                )
+            )
+
+        if args.rollback:
+            from truepanel.upgrade import (
+                run_rollback,
+            )
+
+            raise SystemExit(
+                run_rollback(
+                    deploy_root=upgrade_root,
+                    selected_backup_root=(
+                        Path(
+                            args.upgrade_backup_root
+                        ).resolve()
+                        if args.upgrade_backup_root
+                        else None
+                    ),
+                    safety_backup_root=(
+                        Path(
+                            args.upgrade_safety_backup_root
+                        ).resolve()
+                        if args.upgrade_safety_backup_root
+                        else None
+                    ),
                     confirmation=(
                         args.upgrade_confirmation
                     ),

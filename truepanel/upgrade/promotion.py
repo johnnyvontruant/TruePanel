@@ -16,6 +16,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .backup_receipt import (
+    BACKUP_RECEIPT_NAME,
+    write_backup_receipt,
+)
 from .checks import (
     RSYNC_EXCLUDES,
     command_detail,
@@ -29,6 +33,7 @@ MANIFEST_NAME = (
 PROMOTION_EXCLUDES = (
     *RSYNC_EXCLUDES,
     MANIFEST_NAME,
+    BACKUP_RECEIPT_NAME,
 )
 
 
@@ -334,6 +339,23 @@ def promote_with_rollback(
         print(
             f"FAIL  Backup creation: "
             f"{backup_detail}"
+        )
+        return 1
+
+    try:
+        write_backup_receipt(
+            backup_root=plan.backup_root,
+            deploy_root=plan.deploy_root,
+            source_root=plan.deploy_root,
+            kind="promotion",
+        )
+    except (
+        OSError,
+        ValueError,
+    ) as error:
+        print(
+            "FAIL  Backup receipt: "
+            f"{error}"
         )
         return 1
 

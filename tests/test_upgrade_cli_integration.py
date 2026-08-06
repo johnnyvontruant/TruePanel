@@ -15,6 +15,7 @@ PRESERVED_NAMES = {
     ".venv",
     "truepanel.yaml",
     MANIFEST_NAME,
+    "truepanel-backup-receipt.json",
 }
 
 
@@ -146,7 +147,10 @@ def test_cli_successful_sandbox_promotion(
         tmp_path / "TruePanel"
     )
     stage = tmp_path / "stage"
-    backup = tmp_path / "backup"
+    backup = (
+        tmp_path
+        / ".truepanel-backup-test"
+    )
 
     create_install(
         deployed,
@@ -286,7 +290,10 @@ def test_cli_failed_verification_rolls_back(
         tmp_path / "TruePanel"
     )
     stage = tmp_path / "stage"
-    backup = tmp_path / "backup"
+    backup = (
+        tmp_path
+        / ".truepanel-backup-test"
+    )
 
     create_install(
         deployed,

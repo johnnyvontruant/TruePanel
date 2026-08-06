@@ -257,3 +257,106 @@ def test_cli_dispatches_cleanup(
             "CLEAN_TRUEPANEL"
         ),
     }
+
+
+def test_parser_accepts_guarded_rollback():
+    args = cli.build_parser().parse_args(
+        [
+            "upgrade",
+            "--root",
+            "/deploy",
+            "--backup-root",
+            "/backup",
+            "--safety-backup-root",
+            "/safety",
+            "--rollback",
+            "--confirm",
+            "ROLLBACK_TRUEPANEL",
+        ]
+    )
+
+    assert args.command == "upgrade"
+    assert args.rollback is True
+    assert args.upgrade_root == "/deploy"
+    assert (
+        args.upgrade_backup_root
+        == "/backup"
+    )
+    assert (
+        args.upgrade_safety_backup_root
+        == "/safety"
+    )
+    assert (
+        args.upgrade_confirmation
+        == "ROLLBACK_TRUEPANEL"
+    )
+
+
+def test_cli_dispatches_guarded_rollback(
+    monkeypatch,
+):
+    captured = {}
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "truepanel",
+            "upgrade",
+            "--root",
+            "/deploy",
+            "--backup-root",
+            "/backup",
+            "--safety-backup-root",
+            "/safety",
+            "--rollback",
+            "--confirm",
+            "ROLLBACK_TRUEPANEL",
+        ],
+    )
+
+    def fake_rollback(**kwargs):
+        captured.update(kwargs)
+        return 7
+
+    import truepanel.upgrade
+
+    monkeypatch.setattr(
+        truepanel.upgrade,
+        "run_rollback",
+        fake_rollback,
+    )
+
+    with pytest.raises(
+        SystemExit
+    ) as error:
+        cli.main()
+
+    assert error.value.code == 7
+    assert captured == {
+        "deploy_root": Path(
+            "/deploy"
+        ),
+        "selected_backup_root": Path(
+            "/backup"
+        ),
+        "safety_backup_root": Path(
+            "/safety"
+        ),
+        "confirmation": (
+            "ROLLBACK_TRUEPANEL"
+        ),
+    }
+
+
+def test_rollback_is_mutually_exclusive():
+    with pytest.raises(
+        SystemExit
+    ):
+        cli.build_parser().parse_args(
+            [
+                "upgrade",
+                "--rollback",
+                "--cleanup",
+            ]
+        )

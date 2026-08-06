@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+from truepanel.upgrade.backup_receipt import (
+    write_backup_receipt,
+)
 from truepanel.upgrade.cleanup import (
     CLEANUP_CONFIRMATION,
     build_cleanup_plan,
@@ -43,6 +46,13 @@ def create_completed_upgrade(
     (
         backup / "old.txt"
     ).write_text(token)
+
+    write_backup_receipt(
+        backup_root=backup,
+        deploy_root=deployed,
+        source_root=deployed,
+        kind="promotion",
+    )
 
     (
         stage / MANIFEST_NAME

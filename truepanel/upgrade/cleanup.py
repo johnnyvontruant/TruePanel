@@ -10,12 +10,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .backup_receipt import (
+    BACKUP_PREFIX,
+    validate_backup_receipt,
+)
 from .promotion import MANIFEST_NAME
 
 CLEANUP_CONFIRMATION = "CLEAN_TRUEPANEL"
 
 STAGE_PREFIX = ".truepanel-stage-"
-BACKUP_PREFIX = ".truepanel-backup-"
 
 COMPLETED_STATES = {
     "promoted",
@@ -310,6 +313,27 @@ def build_cleanup_plan(
 
         verified_backups[backup] = stage
 
+    receipt_errors: dict[
+        Path,
+        str,
+    ] = {}
+
+    for backup in backups:
+        if backup in verified_backups:
+            continue
+
+        try:
+            validate_backup_receipt(
+                backup_root=backup,
+                deploy_root=deploy_root,
+            )
+        except ValueError as error:
+            receipt_errors[backup] = str(
+                error
+            )
+        else:
+            verified_backups[backup] = None
+
     newest_backup = (
         max(
             verified_backups,
@@ -385,9 +409,12 @@ def build_cleanup_plan(
                     path=backup,
                     kind="backup",
                     action="refuse",
-                    reason=(
-                        "not referenced by a "
-                        "completed manifest"
+                    reason=receipt_errors.get(
+                        backup,
+                        (
+                            "not referenced by a "
+                            "completed manifest"
+                        ),
                     ),
                 )
             )
