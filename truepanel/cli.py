@@ -24,6 +24,7 @@ from truepanel.lab.commands import main as run_stargate_lab
 from truepanel.logging import setup_logging
 from truepanel.plugins import load_plugins
 from truepanel.plugins.commands import add_plugin_subcommands, handle_plugin_command
+from truepanel.repair import run_repair
 from truepanel.themes import (
     Theme,
     discover_theme_packs,
@@ -266,6 +267,24 @@ def build_parser():
     add_mission_control_subcommands(subcommands)
     subcommands.add_parser("version", help="Show TruePanel version")
 
+    repair = subcommands.add_parser(
+        "repair",
+        help="Repair the TruePanel lifecycle installation",
+    )
+    repair.add_argument(
+        "--root",
+        dest="repair_root",
+        help=(
+            "Installation root to repair; defaults to "
+            "/mnt/SSDs/Applications/TruePanel when present"
+        ),
+    )
+    repair.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show planned repairs without changing the system",
+    )
+
     themes = subcommands.add_parser("themes", help="Manage theme packs")
     theme_commands = themes.add_subparsers(dest="theme_command")
     theme_commands.add_parser("list", help="List installed themes")
@@ -377,6 +396,19 @@ def main():
         raise SystemExit(
             run_verify(
                 root=verify_root,
+            )
+        )
+
+    if args.command == "repair":
+        repair_root = (
+            Path(args.repair_root).resolve()
+            if args.repair_root
+            else None
+        )
+        raise SystemExit(
+            run_repair(
+                root=repair_root,
+                dry_run=args.dry_run,
             )
         )
 
