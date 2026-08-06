@@ -290,6 +290,16 @@ def build_parser():
         dest="upgrade_stage_root",
         help="Explicit staging directory",
     )
+    upgrade.add_argument(
+        "--backup-root",
+        dest="upgrade_backup_root",
+        help="Explicit backup directory for promotion",
+    )
+    upgrade.add_argument(
+        "--confirm",
+        dest="upgrade_confirmation",
+        help="Required confirmation phrase for promotion",
+    )
     upgrade_mode = upgrade.add_mutually_exclusive_group(
         required=True
     )
@@ -302,6 +312,14 @@ def build_parser():
         "--stage-only",
         action="store_true",
         help="Create and validate a staging tree only",
+    )
+    upgrade_mode.add_argument(
+        "--promote",
+        action="store_true",
+        help=(
+            "Promote a validated stage with backup "
+            "and automatic rollback"
+        ),
     )
 
     repair = subcommands.add_parser(
@@ -437,6 +455,46 @@ def main():
         )
 
     if args.command == "upgrade":
+        upgrade_root = (
+            Path(
+                args.upgrade_root
+            ).resolve()
+            if args.upgrade_root
+            else Path(
+                "/mnt/SSDs/Applications/TruePanel"
+            )
+        )
+
+        upgrade_stage_root = (
+            Path(
+                args.upgrade_stage_root
+            ).resolve()
+            if args.upgrade_stage_root
+            else None
+        )
+
+        if args.promote:
+            from truepanel.upgrade import (
+                run_promotion,
+            )
+
+            raise SystemExit(
+                run_promotion(
+                    stage_root=upgrade_stage_root,
+                    deploy_root=upgrade_root,
+                    backup_root=(
+                        Path(
+                            args.upgrade_backup_root
+                        ).resolve()
+                        if args.upgrade_backup_root
+                        else None
+                    ),
+                    confirmation=(
+                        args.upgrade_confirmation
+                    ),
+                )
+            )
+
         raise SystemExit(
             run_upgrade(
                 source_root=(
@@ -446,20 +504,8 @@ def main():
                     if args.upgrade_source
                     else None
                 ),
-                deploy_root=(
-                    Path(
-                        args.upgrade_root
-                    ).resolve()
-                    if args.upgrade_root
-                    else None
-                ),
-                stage_root=(
-                    Path(
-                        args.upgrade_stage_root
-                    ).resolve()
-                    if args.upgrade_stage_root
-                    else None
-                ),
+                deploy_root=upgrade_root,
+                stage_root=upgrade_stage_root,
                 dry_run=args.dry_run,
                 stage_only=args.stage_only,
             )

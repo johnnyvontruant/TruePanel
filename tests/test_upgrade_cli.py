@@ -97,3 +97,83 @@ def test_cli_dispatches_upgrade_before_plugins(
         "dry_run": True,
         "stage_only": False,
     }
+
+
+def test_parser_accepts_guarded_promotion():
+    args = cli.build_parser().parse_args(
+        [
+            "upgrade",
+            "--stage-root",
+            "/stage",
+            "--backup-root",
+            "/backup",
+            "--confirm",
+            "PROMOTE_TRUEPANEL",
+            "--promote",
+        ]
+    )
+
+    assert args.promote is True
+    assert (
+        args.upgrade_stage_root
+        == "/stage"
+    )
+    assert (
+        args.upgrade_backup_root
+        == "/backup"
+    )
+    assert (
+        args.upgrade_confirmation
+        == "PROMOTE_TRUEPANEL"
+    )
+
+
+def test_cli_dispatches_guarded_promotion(
+    monkeypatch,
+):
+    captured = {}
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "truepanel",
+            "upgrade",
+            "--root",
+            "/deploy",
+            "--stage-root",
+            "/stage",
+            "--backup-root",
+            "/backup",
+            "--confirm",
+            "PROMOTE_TRUEPANEL",
+            "--promote",
+        ],
+    )
+
+    def fake_promotion(**kwargs):
+        captured.update(kwargs)
+        return 9
+
+    import truepanel.upgrade
+
+    monkeypatch.setattr(
+        truepanel.upgrade,
+        "run_promotion",
+        fake_promotion,
+    )
+
+    with pytest.raises(
+        SystemExit
+    ) as error:
+        cli.main()
+
+    assert error.value.code == 9
+    assert captured == {
+        "stage_root": Path("/stage"),
+        "deploy_root": Path("/deploy"),
+        "backup_root": Path("/backup"),
+        "confirmation": (
+            "PROMOTE_TRUEPANEL"
+        ),
+    }

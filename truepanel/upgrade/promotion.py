@@ -465,3 +465,135 @@ def promote_with_rollback(
         "ROLLBACK VERIFIED"
     )
     return 1
+
+
+PROMOTION_CONFIRMATION = "PROMOTE_TRUEPANEL"
+
+
+def restart_truepanel(
+    deploy_root: Path,
+    *,
+    runner: Callable[..., Any] = run_command,
+) -> int:
+    startup = (
+        deploy_root
+        / "start-truepanel.sh"
+    )
+
+    if not startup.is_file():
+        print(
+            f"Missing startup script: {startup}"
+        )
+        return 1
+
+    response = runner(
+        [
+            str(startup),
+        ],
+        timeout=180.0,
+    )
+
+    if response.returncode != 0:
+        print(
+            "Service restart failed: "
+            + command_detail(response)
+        )
+
+    return int(
+        response.returncode
+    )
+
+
+def verify_truepanel(
+    deploy_root: Path,
+) -> int:
+    from truepanel.verify.checks import (
+        run_verify,
+    )
+
+    return int(
+        run_verify(
+            root=deploy_root,
+        )
+    )
+
+
+def run_promotion(
+    *,
+    stage_root: Path | None,
+    deploy_root: Path,
+    backup_root: Path | None = None,
+    confirmation: str | None = None,
+    runner: Callable[..., Any] = run_command,
+    restarter: Callable[[Path], int] | None = None,
+    verifier: Callable[[Path], int] | None = None,
+) -> int:
+    print()
+    print("TruePanel Guarded Upgrade Promotion")
+    print("==================================")
+    print()
+
+    if (
+        confirmation
+        != PROMOTION_CONFIRMATION
+    ):
+        print(
+            "Promotion confirmation rejected."
+        )
+        print(
+            "Required confirmation: "
+            f"{PROMOTION_CONFIRMATION}"
+        )
+        return 2
+
+    if stage_root is None:
+        print(
+            "Promotion requires an explicit "
+            "--stage-root."
+        )
+        return 2
+
+    try:
+        plan = build_promotion_plan(
+            stage_root=stage_root,
+            deploy_root=deploy_root,
+            backup_root=backup_root,
+        )
+    except ValueError as error:
+        print(
+            f"Promotion plan rejected: {error}"
+        )
+        return 1
+
+    selected_restarter = (
+        restarter
+        if restarter is not None
+        else lambda root: restart_truepanel(
+            root,
+            runner=runner,
+        )
+    )
+
+    selected_verifier = (
+        verifier
+        if verifier is not None
+        else verify_truepanel
+    )
+
+    print(
+        f"Stage:      {plan.stage_root}"
+    )
+    print(
+        f"Deployment: {plan.deploy_root}"
+    )
+    print(
+        f"Backup:     {plan.backup_root}"
+    )
+    print()
+
+    return promote_with_rollback(
+        plan,
+        runner=runner,
+        restarter=selected_restarter,
+        verifier=selected_verifier,
+    )

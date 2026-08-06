@@ -370,3 +370,128 @@ def test_rejects_unvalidated_stage(
         raise AssertionError(
             "Unvalidated stage was accepted"
         )
+
+
+def test_promotion_rejects_wrong_confirmation(
+    tmp_path,
+):
+    from truepanel.upgrade.promotion import (
+        run_promotion,
+    )
+
+    deployed = tmp_path / "TruePanel"
+    stage = tmp_path / "stage"
+
+    create_install(
+        deployed,
+        marker="old",
+        config="theme_pack: tactical\n",
+    )
+    create_install(
+        stage,
+        marker="new",
+        config="theme_pack: tactical\n",
+    )
+    write_manifest(
+        stage,
+        deployed,
+    )
+
+    result = run_promotion(
+        stage_root=stage,
+        deploy_root=deployed,
+        confirmation="NOPE",
+        restarter=lambda root: 0,
+        verifier=lambda root: 0,
+    )
+
+    assert result == 2
+    assert (
+        deployed
+        / "truepanel"
+        / "marker.txt"
+    ).read_text() == "old"
+
+
+def test_promotion_requires_explicit_stage(
+    tmp_path,
+):
+    from truepanel.upgrade.promotion import (
+        run_promotion,
+    )
+
+    deployed = tmp_path / "TruePanel"
+
+    create_install(
+        deployed,
+        marker="old",
+        config="theme_pack: tactical\n",
+    )
+
+    result = run_promotion(
+        stage_root=None,
+        deploy_root=deployed,
+        confirmation="PROMOTE_TRUEPANEL",
+        restarter=lambda root: 0,
+        verifier=lambda root: 0,
+    )
+
+    assert result == 2
+
+
+def test_rejected_confirmation_invokes_nothing(
+    tmp_path,
+):
+    from truepanel.upgrade.promotion import (
+        run_promotion,
+    )
+
+    deployed = tmp_path / "TruePanel"
+    stage = tmp_path / "stage"
+
+    create_install(
+        deployed,
+        marker="old",
+        config="theme_pack: tactical\n",
+    )
+    create_install(
+        stage,
+        marker="new",
+        config="theme_pack: tactical\n",
+    )
+    write_manifest(
+        stage,
+        deployed,
+    )
+
+    calls = []
+
+    def forbidden_runner(*args, **kwargs):
+        calls.append("runner")
+        raise AssertionError(
+            "runner must not be called"
+        )
+
+    def forbidden_restarter(root):
+        calls.append("restarter")
+        raise AssertionError(
+            "restarter must not be called"
+        )
+
+    def forbidden_verifier(root):
+        calls.append("verifier")
+        raise AssertionError(
+            "verifier must not be called"
+        )
+
+    result = run_promotion(
+        stage_root=stage,
+        deploy_root=deployed,
+        confirmation="WRONG",
+        runner=forbidden_runner,
+        restarter=forbidden_restarter,
+        verifier=forbidden_verifier,
+    )
+
+    assert result == 2
+    assert calls == []
