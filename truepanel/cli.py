@@ -321,6 +321,14 @@ def build_parser():
             "and automatic rollback"
         ),
     )
+    upgrade_mode.add_argument(
+        "--cleanup",
+        action="store_true",
+        help=(
+            "List or remove completed upgrade assets "
+            "without touching services"
+        ),
+    )
 
     repair = subcommands.add_parser(
         "repair",
@@ -489,6 +497,20 @@ def main():
                         if args.upgrade_backup_root
                         else None
                     ),
+                    confirmation=(
+                        args.upgrade_confirmation
+                    ),
+                )
+            )
+
+        if args.cleanup:
+            from truepanel.upgrade import (
+                run_cleanup,
+            )
+
+            raise SystemExit(
+                run_cleanup(
+                    deploy_root=upgrade_root,
                     confirmation=(
                         args.upgrade_confirmation
                     ),

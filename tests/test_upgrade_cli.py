@@ -177,3 +177,83 @@ def test_cli_dispatches_guarded_promotion(
             "PROMOTE_TRUEPANEL"
         ),
     }
+
+
+def test_parser_accepts_cleanup_dry_run():
+    args = cli.build_parser().parse_args(
+        [
+            "upgrade",
+            "--cleanup",
+        ]
+    )
+
+    assert args.command == "upgrade"
+    assert args.cleanup is True
+    assert args.upgrade_confirmation is None
+
+
+def test_parser_accepts_confirmed_cleanup():
+    args = cli.build_parser().parse_args(
+        [
+            "upgrade",
+            "--root",
+            "/deploy",
+            "--cleanup",
+            "--confirm",
+            "CLEAN_TRUEPANEL",
+        ]
+    )
+
+    assert args.cleanup is True
+    assert args.upgrade_root == "/deploy"
+    assert (
+        args.upgrade_confirmation
+        == "CLEAN_TRUEPANEL"
+    )
+
+
+def test_cli_dispatches_cleanup(
+    monkeypatch,
+):
+    captured = {}
+
+    monkeypatch.setattr(
+        cli.sys,
+        "argv",
+        [
+            "truepanel",
+            "upgrade",
+            "--root",
+            "/deploy",
+            "--cleanup",
+            "--confirm",
+            "CLEAN_TRUEPANEL",
+        ],
+    )
+
+    def fake_cleanup(**kwargs):
+        captured.update(kwargs)
+        return 6
+
+    import truepanel.upgrade
+
+    monkeypatch.setattr(
+        truepanel.upgrade,
+        "run_cleanup",
+        fake_cleanup,
+    )
+
+    with pytest.raises(
+        SystemExit
+    ) as error:
+        cli.main()
+
+    assert error.value.code == 6
+    assert captured == {
+        "deploy_root": Path(
+            "/deploy"
+        ),
+        "confirmation": (
+            "CLEAN_TRUEPANEL"
+        ),
+    }
