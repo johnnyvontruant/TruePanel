@@ -519,6 +519,7 @@ def run_repair(
     root: Path | None = None,
     dry_run: bool = False,
     runner: Callable[..., Any] = run_command,
+    verifier: Callable[..., int] = run_verify,
 ) -> int:
     root = (
         root.resolve()
@@ -902,6 +903,6 @@ def run_repair(
     print("\nPost-Repair Verification")
     print("------------------------")
 
-    return run_verify(
+    return verifier(
         root=root,
     )
