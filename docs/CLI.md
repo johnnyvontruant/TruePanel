@@ -31,6 +31,52 @@ truepanel version
 
 `doctor` checks the runtime environment and reports whether TruePanel is mission ready or degraded. `version` reports TruePanel, Python, system, and plugin information.
 
+## Compatibility
+
+The compatibility command performs a passive pre-install survey of the current system.
+
+```bash
+truepanel compatibility
+truepanel compatibility --json
+truepanel compatibility --support-bundle
+truepanel compatibility --support-bundle --output <path>
+```
+
+From a repository checkout, use the equivalent launcher:
+
+```bash
+python3 truepanel.py compatibility
+```
+
+The survey reports operating-system support, architecture, OEM identity evidence, Fintek/hwmon fan interfaces, PWM interfaces, enclosure topology, storage classification, ZFS tooling presence, and front-panel serial-device presence.
+
+The survey is passive. It does not open the LCD serial controller, write fan PWM values, operate bay LEDs, modify pools, or change TruePanel configuration.
+
+Results use these classifications:
+
+- `SUPPORTED` - required passive capabilities were detected
+- `PARTIAL` - some expected capabilities are unavailable
+- `REVIEW` - manual compatibility review is required
+- `UNSUPPORTED` - a required platform condition is not supported
+
+A `SUPPORTED` result is not authorization for active hardware control. Hardware control remains locked until the relevant hardware has been independently verified and commissioned.
+
+### Support bundles
+
+Use `--support-bundle` to write a privacy-safe JSON report suitable for compatibility review:
+
+```bash
+truepanel compatibility \
+  --support-bundle \
+  --output truepanel-support.json
+```
+
+If `--output` is omitted, TruePanel creates a timestamped filename. `--output` is valid only with `--support-bundle`.
+
+Support bundles exclude hostnames, IP addresses, drive serial numbers, WWIDs, MAC addresses, usernames, configuration secrets, and pool contents.
+
+The support-bundle schema is versioned independently and includes the TruePanel version, generation timestamp, privacy declaration, and compatibility report.
+
 ## Plugins
 
 ```bash
@@ -94,6 +140,8 @@ Important rules:
 ```bash
 truepanel doctor
 truepanel version
+truepanel compatibility
+truepanel compatibility --support-bundle
 truepanel themes list
 truepanel plugins
 truepanel hardware --help

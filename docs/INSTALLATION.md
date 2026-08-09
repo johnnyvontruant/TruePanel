@@ -22,11 +22,45 @@ Use TruePanel with a current configuration backup and expect major TrueNAS upgra
 - ZFS command-line tools
 - Access to the relevant serial, SMBus, and sysfs hardware paths
 
-## Native installation
+## Compatibility check before installation
+
+Unknown or unverified hardware should be surveyed before TruePanel services are installed.
 
 ```bash
 git clone https://github.com/johnnyvontruant/TruePanel.git
 cd TruePanel
+python3 truepanel.py compatibility
+```
+
+The compatibility survey is passive. It inspects platform and hardware evidence without opening the LCD controller, changing fan PWM state, operating bay LEDs, modifying storage pools, or granting active hardware-control authority.
+
+Compatibility classifications are:
+
+- `SUPPORTED` - passive capabilities required by the current platform were detected
+- `PARTIAL` - some useful capabilities were detected but expected interfaces are missing
+- `REVIEW` - manual compatibility review is required
+- `UNSUPPORTED` - a required platform condition is not supported
+
+A `SUPPORTED` result does not authorize fan, LCD, LED, or other active hardware control. Hardware control remains locked until the relevant interfaces have been separately verified and commissioned.
+
+For compatibility review, generate a privacy-safe support bundle:
+
+```bash
+python3 truepanel.py compatibility \
+  --support-bundle \
+  --output truepanel-support.json
+```
+
+The support bundle excludes hostnames, IP addresses, drive serial numbers, WWIDs, MAC addresses, usernames, configuration secrets, and pool contents.
+
+## Native installation
+
+For verified hardware, or after reviewing the compatibility survey:
+
+```bash
+git clone https://github.com/johnnyvontruant/TruePanel.git
+cd TruePanel
+python3 truepanel.py compatibility
 sudo bash install.sh
 ```
 
