@@ -11,6 +11,7 @@ from pathlib import Path
 
 from truepanel import __version__
 from truepanel.collectors import create_collector
+from truepanel.compatibility import run_compatibility
 from truepanel.config.loader import load_config
 from truepanel.diagnostics.a125 import main as run_a125_diagnostics
 from truepanel.doctor import run_doctor
@@ -263,6 +264,16 @@ def build_parser():
             "/mnt/SSDs/Applications/TruePanel when present"
         ),
     )
+    compatibility = subcommands.add_parser(
+        "compatibility",
+        help="Survey passive TruePanel compatibility",
+    )
+    compatibility.add_argument(
+        "--json",
+        action="store_true",
+        dest="compatibility_json",
+        help="Output machine-readable JSON",
+    )
     add_plugin_subcommands(subcommands)
     add_hardware_subcommands(subcommands)
     add_mission_control_subcommands(subcommands)
@@ -471,6 +482,13 @@ def main():
 
     logger = setup_logging(args.log_level)
     logger.info("TruePanel CLI starting")
+
+    if args.command == "compatibility":
+        raise SystemExit(
+            run_compatibility(
+                json_output=args.compatibility_json,
+            )
+        )
 
     if args.command == "verify":
         verify_root = (
