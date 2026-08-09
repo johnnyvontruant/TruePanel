@@ -1,122 +1,202 @@
 # Upgrading TruePanel
 
-This guide covers upgrades for the native TrueNAS SCALE installation under `/opt/truepanel`.
+TruePanel provides a guarded lifecycle workflow for verifying, staging, promoting, cleaning up, repairing, and rolling back an installation.
 
-## Before upgrading
+The examples below use `/opt/truepanel` for a native installation. Use the deployed root appropriate for your system.
 
-Record the current release and service state:
+## Lifecycle overview
 
-```bash
-/opt/truepanel/bin/truepanel version
-systemctl status truepanel --no-pager
-```
+The recommended sequence is:
 
-Back up the active configuration:
+1. verify the current deployment;
+2. preview the upgrade;
+3. create and validate a staging tree;
+4. promote that validated stage with explicit confirmation;
+5. verify the deployed result;
+6. retain rollback backups until the upgrade has proven stable;
+7. clean completed upgrade assets only when they are no longer needed.
 
-```bash
-cp /opt/truepanel/truepanel.yaml   /root/truepanel.yaml.before-upgrade
-```
+Promotion and rollback are guarded operations. Do not bypass their confirmation phrases or manually replace the deployment tree while a lifecycle operation is in progress.
 
-Keep a repository checkpoint or release tag available for rollback.
-
-## Upgrade from Git
-
-From a clean checkout of the desired release:
+## 1. Verify the current deployment
 
 ```bash
-git fetch --tags
-git switch --detach v1.0.0
-bash install.sh
+truepanel verify --root /opt/truepanel
 ```
 
-The installer synchronizes the application into `/opt/truepanel`, preserves an existing `/opt/truepanel/truepanel.yaml`, creates the CLI wrapper, refreshes the systemd unit, and runs TruePanel Doctor.
+`verify` inspects the installed lifecycle contract without modifying files, services, configuration, or hardware state.
 
-Restart and verify:
+Resolve verification failures before beginning an upgrade.
 
-```bash
-systemctl restart truepanel
-systemctl is-active truepanel
-/opt/truepanel/bin/truepanel version
-/opt/truepanel/bin/truepanel doctor
-journalctl -u truepanel -n 100 --no-pager
-```
+## 2. Prepare the desired source checkout
 
-## Configuration review
-
-Compare new configuration options in the release checkout with the active `/opt/truepanel/truepanel.yaml`. The installer does not overwrite an existing configuration.
-
-Pay particular attention to:
-
-- serial port and baud rate
-- Flight Deck timing
-- night mode
-- history storage
-- plugins
-- buzzer behavior
-- storage-health thresholds
-- bay LED enablement and startup clearing
-
-## Rollback
-
-Check out the previous known-good tag and reinstall:
-
-```bash
-git switch --detach v0.9.0
-bash install.sh
-systemctl restart truepanel
-```
-
-Restore the saved configuration only when the previous release cannot understand the current configuration.
-
-## Hardware verification
-
-After an upgrade, confirm normal LCD rotation and button behavior before running direct laboratory commands. Bay LEDs should be clear unless an active storage condition requests identification.
-
-Never run an A125 laboratory command while `truepanel.service` owns the serial controller.
-
-## Adding Mission Control to an existing installation
-
-Existing TruePanel installations can add the Mission Control companion service without replacing `truepanel.yaml` or stopping the primary LCD service.
-
-From an updated repository checkout:
+Use a clean repository checkout containing the release or commit you intend to deploy.
 
 ```bash
 cd ~/TruePanel
-
-sudo rsync -a --delete \
-  --exclude=__pycache__/ \
-  --exclude=*.pyc \
-  truepanel/ \
-  /opt/truepanel/truepanel/
-
-sudo install -m 0644 \
-  packaging/systemd/truepanel-mission-control.service \
-  /etc/systemd/system/truepanel-mission-control.service
+git status --short
+git fetch --tags
 ```
 
-Create the environment file only when one does not already exist:
+Select the desired release or commit using the normal Git workflow for your environment. The lifecycle manager treats the selected checkout as the upgrade source.
+
+## 3. Preview the upgrade
 
 ```bash
-if [ ! -f /etc/default/truepanel-mission-control ]; then
-  sudo install -m 0644 \
-    packaging/systemd/truepanel-mission-control.env \
-    /etc/default/truepanel-mission-control
-fi
+python3 truepanel.py upgrade \
+  --source ~/TruePanel \
+  --root /opt/truepanel \
+  --dry-run
 ```
 
-Reload systemd and start the companion service:
+`--dry-run` shows the upgrade plan without writing deployment files.
+
+Review the plan before creating a stage.
+
+## 4. Create and validate a staging tree
+
+Choose an explicit staging path so the same validated stage can be selected for promotion:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now truepanel-mission-control
-sudo /opt/truepanel/bin/truepanel mission-control status
+python3 truepanel.py upgrade \
+  --source ~/TruePanel \
+  --root /opt/truepanel \
+  --stage-root <stage-root> \
+  --stage-only
 ```
 
-Preserve these files during upgrades:
+`--stage-only` creates and validates the staging tree without replacing the active deployment.
+
+Do not promote a stage that did not complete validation successfully.
+
+## 5. Promote the validated stage
+
+Promotion requires the exact confirmation phrase `PROMOTE_TRUEPANEL`:
+
+```bash
+python3 truepanel.py upgrade \
+  --root /opt/truepanel \
+  --stage-root <stage-root> \
+  --backup-root <backup-root> \
+  --promote \
+  --confirm PROMOTE_TRUEPANEL
+```
+
+Promotion creates a deployment backup, installs the validated stage, restarts the required runtime, and verifies the promoted deployment.
+
+If promotion verification fails, TruePanel automatically attempts to restore the pre-upgrade deployment and verifies that rollback before returning control to the operator.
+
+An automatic rollback during failed promotion is not the same operation as an operator-requested rollback described later in this guide.
+
+## 6. Verify after promotion
+
+```bash
+truepanel verify --root /opt/truepanel
+truepanel version
+truepanel doctor
+systemctl is-active truepanel
+systemctl is-active truepanel-mission-control
+```
+
+Also confirm normal LCD rotation, telemetry, Mission Control, and button behavior appropriate for the commissioned hardware.
+
+Never use a successful software upgrade as evidence that previously uncommissioned hardware controls are now safe to actuate.
+
+## Upgrade cleanup
+
+Cleanup is deliberately separate from promotion so rollback generations remain available while an upgrade is being evaluated.
+
+First preview the cleanup plan:
+
+```bash
+python3 truepanel.py upgrade \
+  --root /opt/truepanel \
+  --cleanup
+```
+
+Without a confirmation phrase, cleanup reports the plan and does not remove eligible assets.
+
+When the plan has been reviewed, execute cleanup with:
+
+```bash
+python3 truepanel.py upgrade \
+  --root /opt/truepanel \
+  --cleanup \
+  --confirm CLEAN_TRUEPANEL
+```
+
+Cleanup removes eligible completed staging assets and older or duplicate backup generations according to the retention policy. It preserves the active deployment and retained recovery generations and does not restart services.
+
+Do not manually delete retained backups merely to make the directory look tidy. Those backups are part of the recovery system.
+
+## Operator-requested rollback
+
+Operator rollback restores an explicitly selected retained backup. It requires the exact confirmation phrase `ROLLBACK_TRUEPANEL`.
+
+```bash
+python3 truepanel.py upgrade \
+  --root /opt/truepanel \
+  --backup-root <retained-backup-root> \
+  --rollback \
+  --confirm ROLLBACK_TRUEPANEL
+```
+
+Before replacing the current deployment, TruePanel creates a separate pre-rollback safety backup.
+
+After restoring the selected generation, TruePanel verifies the result. If rollback verification fails, it attempts to restore and verify the pre-rollback state instead.
+
+A rollback therefore has two recovery layers:
+
+- the retained generation selected by the operator;
+- the pre-rollback safety copy of the deployment being replaced.
+
+The selected backup must be an explicit valid retained backup. TruePanel does not guess which historical generation the operator intended.
+
+## Repair
+
+`repair` is for lifecycle drift or damaged deployment plumbing. It is not an upgrade mechanism and does not select a different TruePanel release.
+
+Preview repairs first:
+
+```bash
+truepanel repair \
+  --root /opt/truepanel \
+  --dry-run
+```
+
+If the proposed repairs are appropriate:
+
+```bash
+truepanel repair --root /opt/truepanel
+```
+
+Run verification again after repair:
+
+```bash
+truepanel verify --root /opt/truepanel
+```
+
+## Configuration preservation
+
+Treat the deployed `truepanel.yaml` and Mission Control environment as operator-owned state. Preserve the primary LCD service configuration and review release changes before adopting new configuration options.
+
+Important deployment-specific files may include:
 
 - `/opt/truepanel/truepanel.yaml`
 - `/etc/default/truepanel-mission-control`
 
-Review the environment file after upgrading. New installations remain localhost-bound and read-only unless an administrator deliberately changes those settings.
+Do not copy extracted firmware, laboratory captures, Python caches, compiled probes, or development artifacts into the production tree.
 
-To roll back the companion service, restore the previous `/opt/truepanel/truepanel/web` package and systemd unit from the deployment backup, run `systemctl daemon-reload`, and restart `truepanel-mission-control`. The primary `truepanel.service` can remain running throughout the rollback.
+## Hardware verification after an upgrade
+
+After lifecycle verification passes, confirm the hardware behaviors that were already commissioned for that machine.
+
+On systems with a physical front panel, verify normal display rotation and button behavior before running any direct laboratory operation.
+
+Never run an A125 laboratory command while `truepanel.service` owns the serial controller.
+
+## Recovery principle
+
+The lifecycle manager follows one rule throughout the upgrade path:
+
+**preserve a known recovery path before replacing the state that is currently working.**

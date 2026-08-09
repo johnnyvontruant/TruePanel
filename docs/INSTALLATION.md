@@ -115,25 +115,28 @@ BattleStation enables TVS-671 bay LEDs under `mission_control.storage_health`. L
 
 ## Upgrade
 
-From a clean repository checkout:
+Do not upgrade an existing deployment by switching to `develop` and rerunning `install.sh` over the active tree.
+
+TruePanel provides a guarded lifecycle manager for upgrades.
+
+Begin by verifying the current installation:
 
 ```bash
-cd ~/TruePanel
-git checkout develop
-git pull --ff-only origin develop
-sudo bash install.sh
-sudo systemctl restart truepanel
-sudo /opt/truepanel/bin/truepanel doctor
+truepanel verify --root /opt/truepanel
 ```
 
-Before upgrading, preserve the installed configuration and package:
+Then preview the desired source tree:
 
 ```bash
-sudo cp -a /opt/truepanel "/opt/truepanel.backup-$(date +%Y%m%d-%H%M%S)"
+python3 truepanel.py upgrade \
+  --source ~/TruePanel \
+  --root /opt/truepanel \
+  --dry-run
 ```
 
-Do not copy extracted firmware, compiled laboratory probes, caches, or development captures into `/opt/truepanel`.
+The full lifecycle supports validated staging, guarded promotion, automatic rollback after failed promotion verification, retained backup generations, explicit operator rollback, cleanup, and repair.
 
+See [Upgrade and rollback](UPGRADING.md) for the complete procedure and required confirmation phrases.
 ## Manual verification
 
 ```bash
