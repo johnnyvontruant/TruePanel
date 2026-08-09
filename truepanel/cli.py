@@ -268,11 +268,28 @@ def build_parser():
         "compatibility",
         help="Survey passive TruePanel compatibility",
     )
-    compatibility.add_argument(
+    compatibility_mode = (
+        compatibility.add_mutually_exclusive_group()
+    )
+    compatibility_mode.add_argument(
         "--json",
         action="store_true",
         dest="compatibility_json",
         help="Output machine-readable JSON",
+    )
+    compatibility_mode.add_argument(
+        "--support-bundle",
+        action="store_true",
+        dest="compatibility_support_bundle",
+        help="Write a privacy-safe support bundle",
+    )
+    compatibility.add_argument(
+        "--output",
+        dest="compatibility_output",
+        help=(
+            "Support bundle destination; valid only with "
+            "--support-bundle"
+        ),
     )
     add_plugin_subcommands(subcommands)
     add_hardware_subcommands(subcommands)
@@ -484,9 +501,21 @@ def main():
     logger.info("TruePanel CLI starting")
 
     if args.command == "compatibility":
+        if (
+            args.compatibility_output
+            and not args.compatibility_support_bundle
+        ):
+            parser.error(
+                "--output requires --support-bundle"
+            )
+
         raise SystemExit(
             run_compatibility(
                 json_output=args.compatibility_json,
+                support_bundle=(
+                    args.compatibility_support_bundle
+                ),
+                output=args.compatibility_output,
             )
         )
 

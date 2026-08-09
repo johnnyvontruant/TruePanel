@@ -5,9 +5,11 @@ Compatibility survey presentation.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from .checks import collect_compatibility
 from .models import CompatibilityReport
+from .support import write_support_bundle
 
 
 def print_report(
@@ -45,10 +47,27 @@ def print_report(
 def run_compatibility(
     *,
     json_output: bool = False,
+    support_bundle: bool = False,
+    output: str | Path | None = None,
 ) -> int:
     report = collect_compatibility()
 
-    if json_output:
+    if support_bundle:
+        path = write_support_bundle(
+            report,
+            output=output,
+        )
+
+        print()
+        print("TruePanel Support Bundle")
+        print("========================")
+        print(f"Written: {path}")
+        print(
+            "Privacy: hostnames, addresses, serials, "
+            "WWIDs, MACs, usernames, and secrets excluded"
+        )
+
+    elif json_output:
         print(
             json.dumps(
                 report.to_dict(),
