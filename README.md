@@ -41,6 +41,43 @@ The production reference system is:
 
 Other QNAP systems may share parts of this hardware design, but they must be treated as unverified until their controller paths and command maps are reproduced safely.
 
+## Check compatibility before installation
+
+Unknown or unverified systems should be surveyed before TruePanel is installed.
+
+Clone the repository, enter the project directory, and run the passive compatibility survey before deploying services:
+
+```bash
+git clone https://github.com/johnnyvontruant/TruePanel.git
+cd TruePanel
+python3 truepanel.py compatibility
+```
+
+The compatibility survey is read-only. It inspects passive operating-system and hardware signals such as TrueNAS version, architecture, DMI identity, hwmon fan interfaces, enclosure topology, storage classification, and front-panel serial-device presence.
+
+It does **not** open the LCD serial controller, change fan PWM values, operate bay LEDs, modify pools, change configuration, or grant hardware-control authority.
+
+Compatibility results are classified as:
+
+- `SUPPORTED` - the passive capabilities required by the current TruePanel platform were detected
+- `PARTIAL` - useful TruePanel capabilities were detected, but some expected hardware interfaces are unavailable
+- `REVIEW` - the system requires manual compatibility review before deployment
+- `UNSUPPORTED` - a required platform condition is not currently supported
+
+A `SUPPORTED` result means the system is suitable for the documented observation-first workflow. It does **not** authorize active fan, LED, LCD, or other hardware control. Hardware control remains locked until the relevant hardware has been separately verified and commissioned.
+
+For an unknown system, generate a privacy-safe support bundle:
+
+```bash
+python3 truepanel.py compatibility \
+  --support-bundle \
+  --output truepanel-support.json
+```
+
+The support bundle intentionally excludes hostnames, IP addresses, drive serial numbers, WWIDs, MAC addresses, usernames, configuration secrets, and pool contents. It can be shared when requesting compatibility review without exposing those identifiers.
+
+Only proceed to installation after the compatibility result and any `REVIEW` items have been understood.
+
 ## LCD Flight Deck
 
 TruePanel turns the QNAP front-panel LCD into a rotating
@@ -136,9 +173,12 @@ The TVS-671 reference deployment lives under `/mnt/SSDs/Applications/TruePanel` 
 
 ## Installation
 
+For verified hardware, or after completing the compatibility workflow above:
+
 ```bash
 git clone https://github.com/johnnyvontruant/TruePanel.git
 cd TruePanel
+python3 truepanel.py compatibility
 sudo bash install.sh
 ```
 
@@ -157,6 +197,8 @@ TrueNAS administrators should read [Installation](docs/INSTALLATION.md) before d
 ```bash
 truepanel doctor
 truepanel version
+truepanel compatibility
+truepanel compatibility --support-bundle
 truepanel plugins
 truepanel themes list
 truepanel hardware --help
@@ -213,7 +255,7 @@ Do not perform generic I2C scans, random register writes, or destructive storage
 
 ## Project status
 
-TruePanel is active software. The consolidated platform passed **1,161 automated tests** on July 30, 2026. Hardware support beyond the TVS-671 reference system remains experimental until independently verified.
+TruePanel is active software. The consolidated platform passed **1,507 automated tests** on August 9, 2026. Hardware support beyond the TVS-671 reference system remains experimental until independently verified.
 
 ## License and lineage
 
