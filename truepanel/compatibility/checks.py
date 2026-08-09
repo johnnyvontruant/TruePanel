@@ -9,11 +9,14 @@ commands, or alter service state.
 from __future__ import annotations
 
 import platform
+import shutil
 from pathlib import Path
 from typing import Callable
 
+from truepanel.hardware.commands import build_storage_report
 from truepanel.hardware.discovery import find_fintek_hwmon
 from truepanel.hardware.enclosure import EnclosureController
+from truepanel.hardware.manager import HardwareManager
 
 from .models import CompatibilityCheck, CompatibilityReport
 
@@ -348,6 +351,118 @@ def _enclosure_check(
     )
 
 
+def _storage_checks(
+    report_builder: Callable[[], dict],
+) -> list[CompatibilityCheck]:
+    """
+    Report passive storage topology.
+
+    Storage layout is descriptive evidence only and does not affect the
+    compatibility classification.
+    """
+
+    try:
+        payload = report_builder()
+    except Exception as error:
+        return [
+            check(
+                REVIEW,
+                "Storage Discovery",
+                f"inventory error: {error}",
+            ),
+            check(
+                REVIEW,
+                "Storage Topology",
+                "inventory unavailable",
+            ),
+        ]
+
+    counts = payload.get("category_counts", {})
+    total = int(payload.get("device_count", 0))
+
+    front_bays = int(counts.get("front_bay", 0))
+    internal_nvme = int(counts.get("internal_nvme", 0))
+    boot_media = int(counts.get("boot_media", 0))
+    unassigned = int(counts.get("unassigned", 0))
+
+    def device_count_detail(count: int) -> str:
+        noun = "device" if count == 1 else "devices"
+        return f"{count} {noun} classified"
+
+    results = [
+        check(
+            PASS if total else REVIEW,
+            "Storage Discovery",
+            f"{total} whole-disk devices discovered",
+        ),
+        check(
+            PASS if front_bays else REVIEW,
+            "Front-Bay Storage",
+            device_count_detail(front_bays),
+        ),
+        check(
+            PASS if internal_nvme else REVIEW,
+            "Internal NVMe",
+            device_count_detail(internal_nvme),
+        ),
+        check(
+            PASS if boot_media else REVIEW,
+            "Boot Media",
+            device_count_detail(boot_media),
+        ),
+    ]
+
+    if unassigned:
+        results.append(
+            check(
+                REVIEW,
+                "Unassigned Storage",
+                f"{unassigned} devices require topology review",
+            )
+        )
+    else:
+        results.append(
+            check(
+                PASS,
+                "Storage Topology",
+                "all discovered devices classified",
+            )
+        )
+
+    return results
+
+
+def _zfs_visibility_check() -> CompatibilityCheck:
+    """
+    Check whether ZFS tooling is available without invoking it.
+    """
+
+    zpool = shutil.which("zpool")
+
+    if zpool:
+        return check(
+            PASS,
+            "ZFS Visibility",
+            f"zpool available at {zpool}; not invoked",
+        )
+
+    return check(
+        REVIEW,
+        "ZFS Visibility",
+        "zpool command not found",
+    )
+
+
+def _default_storage_report() -> dict:
+    """
+    Build the existing read-only TruePanel storage inventory.
+    """
+
+    return build_storage_report(
+        HardwareManager()
+    )
+
+
 def _front_panel_check(
     root: Path,
 ) -> tuple[CompatibilityCheck, bool]:
@@ -412,6 +527,7 @@ def collect_compatibility(
     root: str | Path = "/",
     fintek_finder: Callable[[], object] = find_fintek_hwmon,
     enclosure: EnclosureController | None = None,
+    storage_reporter: Callable[[], dict] = _default_storage_report,
 ) -> CompatibilityReport:
     """
     Inspect passive TruePanel compatibility signals.
@@ -453,6 +569,27 @@ def collect_compatibility(
         )
     )
     checks.append(enclosure_result)
+
+    checks.extend(
+        _storage_checks(
+            storage_reporter
+        )
+    )
+
+    checks.append(
+        _zfs_visibility_check()
+    )
+
+    checks.append(
+        check(
+            PASS,
+            "Storage Safety",
+            (
+                "storage layout reported only; "
+                "no pool operations performed"
+            ),
+        )
+    )
 
     front_panel_result, front_panel_ready = (
         _front_panel_check(root_path)

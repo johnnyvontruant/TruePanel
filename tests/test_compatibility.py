@@ -250,3 +250,151 @@ def test_missing_fan_inputs_prevents_full_support(
     )
 
     assert telemetry.status == "REVIEW"
+
+
+def fake_storage_report(
+    *,
+    front_bay=6,
+    internal_nvme=2,
+    boot_media=1,
+    unassigned=0,
+):
+    return {
+        "device_count": (
+            front_bay
+            + internal_nvme
+            + boot_media
+            + unassigned
+        ),
+        "category_counts": {
+            "front_bay": front_bay,
+            "internal_nvme": internal_nvme,
+            "boot_media": boot_media,
+            "unassigned": unassigned,
+        },
+        "devices": [],
+    }
+
+
+def test_storage_inventory_is_reported_without_gating(
+    tmp_path,
+):
+    root = make_root(tmp_path)
+
+    report = collect_compatibility(
+        root=root,
+        fintek_finder=lambda: Path(
+            "/sys/class/hwmon/hwmon10/device"
+        ),
+        enclosure=FakeEnclosure(),
+        storage_reporter=lambda: fake_storage_report(),
+    )
+
+    storage = next(
+        item
+        for item in report.checks
+        if item.name == "Storage Discovery"
+    )
+
+    front_bays = next(
+        item
+        for item in report.checks
+        if item.name == "Front-Bay Storage"
+    )
+
+    nvme = next(
+        item
+        for item in report.checks
+        if item.name == "Internal NVMe"
+    )
+
+    boot = next(
+        item
+        for item in report.checks
+        if item.name == "Boot Media"
+    )
+
+    assert storage.status == "PASS"
+    assert storage.detail == "9 whole-disk devices discovered"
+    assert front_bays.detail == "6 devices classified"
+    assert nvme.detail == "2 devices classified"
+    assert boot.detail == "1 device classified"
+    assert report.classification == "SUPPORTED"
+
+
+def test_unassigned_storage_requests_review_but_does_not_gate(
+    tmp_path,
+):
+    root = make_root(tmp_path)
+
+    report = collect_compatibility(
+        root=root,
+        fintek_finder=lambda: Path(
+            "/sys/class/hwmon/hwmon10/device"
+        ),
+        enclosure=FakeEnclosure(),
+        storage_reporter=lambda: fake_storage_report(
+            unassigned=2
+        ),
+    )
+
+    unassigned = next(
+        item
+        for item in report.checks
+        if item.name == "Unassigned Storage"
+    )
+
+    assert unassigned.status == "REVIEW"
+    assert "2 devices" in unassigned.detail
+    assert report.classification == "SUPPORTED"
+
+
+def test_storage_inventory_failure_does_not_block_compatibility(
+    tmp_path,
+):
+    root = make_root(tmp_path)
+
+    def fail_storage():
+        raise RuntimeError("inventory unavailable")
+
+    report = collect_compatibility(
+        root=root,
+        fintek_finder=lambda: Path(
+            "/sys/class/hwmon/hwmon10/device"
+        ),
+        enclosure=FakeEnclosure(),
+        storage_reporter=fail_storage,
+    )
+
+    storage = next(
+        item
+        for item in report.checks
+        if item.name == "Storage Discovery"
+    )
+
+    assert storage.status == "REVIEW"
+    assert report.classification == "SUPPORTED"
+
+
+def test_storage_safety_is_explicit(
+    tmp_path,
+):
+    root = make_root(tmp_path)
+
+    report = collect_compatibility(
+        root=root,
+        fintek_finder=lambda: Path(
+            "/sys/class/hwmon/hwmon10/device"
+        ),
+        enclosure=FakeEnclosure(),
+        storage_reporter=lambda: fake_storage_report(),
+    )
+
+    safety = next(
+        item
+        for item in report.checks
+        if item.name == "Storage Safety"
+    )
+
+    assert safety.status == "PASS"
+    assert "no pool operations" in safety.detail
