@@ -106,7 +106,7 @@ def test_lcd_records_reconcile_source_from_classifier():
         "def reconcile_fan_control():"
     )
     reconcile_end = text.index(
-        "def build_fan_command_server():",
+        "\ndef ",
         reconcile_start,
     )
     reconcile = text[

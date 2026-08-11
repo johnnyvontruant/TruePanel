@@ -643,7 +643,7 @@ def test_safety_reconcile_precedes_thermal_control():
         "def reconcile_fan_control():"
     )
     end = source.index(
-        "def build_fan_command_server():",
+        "\ndef ",
         start,
     )
     reconcile = source[start:end]
@@ -671,7 +671,7 @@ def test_thermal_transition_uses_existing_history():
         "def reconcile_fan_control():"
     )
     end = source.index(
-        "def build_fan_command_server():",
+        "\ndef ",
         start,
     )
     reconcile = source[start:end]
@@ -1056,7 +1056,7 @@ def test_supervised_handler_declares_deadline_global():
         "def set_thermal_operator_arm_state"
     )
     end = source.index(
-        "def build_fan_command_server",
+        "\ndef ",
         start,
     )
     handler = source[start:end]
@@ -1082,7 +1082,7 @@ def test_supervised_handler_sets_bounded_deadline():
         "def set_thermal_operator_arm_state"
     )
     end = source.index(
-        "def build_fan_command_server",
+        "\ndef ",
         start,
     )
     handler = source[start:end]
@@ -1124,7 +1124,7 @@ def test_disarm_synchronously_restores_motherboard_control():
         "def set_thermal_operator_arm_state"
     )
     handler_end = source.index(
-        "def build_fan_command_server",
+        "\ndef ",
         handler_start,
     )
     handler = source[
@@ -1311,7 +1311,7 @@ def test_guarded_runtime_commands_can_still_arm():
         "def set_thermal_operator_arm_state"
     )
     end = source.index(
-        "def build_fan_command_server",
+        "\ndef ",
         start,
     )
     handler = source[start:end]

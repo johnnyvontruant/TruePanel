@@ -16,11 +16,7 @@ from truepanel.hardware.lcd_reader_status_bridge import (
 from truepanel.hardware.lcd_display_status_bridge import (
     LCDDisplayStatusBridge,
 )
-from truepanel.hardware.lcd_command import (
-    LCDCommandProcessor,
-    LCDCommandServer,
-)
-from truepanel.host import HostAgentRuntime
+from truepanel.host import build_host_agent_runtime
 
 from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
@@ -63,10 +59,6 @@ from truepanel.hardware.bounded_automatic import (
 )
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
-)
-from truepanel.hardware.fan_command import (
-    FanCommandProcessor,
-    FanCommandServer,
 )
 from truepanel.hardware.fans import (
     get_status as get_fan_status,
@@ -1807,53 +1799,6 @@ def set_thermal_operator_arm_state(
     }
 
 
-def build_fan_command_server():
-    if not fan_control_runtime.enabled:
-        return None
-
-    processor = FanCommandProcessor(
-        fan_control_runtime,
-        telemetry_provider=(
-            fan_command_telemetry
-        ),
-        status_publisher=(
-            publish_fan_control_status
-        ),
-        event_recorder=lambda decision, telemetry: (
-            record_fan_control_event(
-                decision,
-                fan_command_telemetry(),
-                source="manual",
-            )
-        ),
-        thermal_control_handler=(
-            set_thermal_operator_arm_state
-        ),
-    )
-
-    return FanCommandServer(
-        processor
-    )
-
-
-def build_lcd_command_server():
-    if lcd is None:
-        return None
-
-    processor = LCDCommandProcessor(
-        lambda button_mask, source: (
-            lcd.submit_button_event(
-                button_mask,
-                source=source,
-            )
-        )
-    )
-
-    return LCDCommandServer(
-        processor
-    )
-
-
 def lcd_on():
     global lcd_timer
 
@@ -2389,13 +2334,33 @@ def main():
         observe_thermal_fan_policy()
         publish_fan_control_status()
 
-        host_agent_runtime = HostAgentRuntime(
+        host_agent_runtime = build_host_agent_runtime(
             fan_runtime=fan_control_runtime,
-            fan_server_factory=(
-                build_fan_command_server
+            fan_telemetry_provider=(
+                fan_command_telemetry
             ),
-            lcd_server_factory=(
-                build_lcd_command_server
+            fan_status_publisher=(
+                publish_fan_control_status
+            ),
+            fan_event_recorder=lambda decision, telemetry: (
+                record_fan_control_event(
+                    decision,
+                    fan_command_telemetry(),
+                    source="manual",
+                )
+            ),
+            thermal_control_handler=(
+                set_thermal_operator_arm_state
+            ),
+            lcd_button_handler=(
+                lambda button_mask, source: (
+                    lcd.submit_button_event(
+                        button_mask,
+                        source=source,
+                    )
+                )
+                if lcd is not None
+                else False
             ),
         )
 

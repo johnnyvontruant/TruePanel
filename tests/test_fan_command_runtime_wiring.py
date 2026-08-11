@@ -9,19 +9,6 @@ def source():
     )
 
 
-def test_lcd_imports_command_server():
-    text = source()
-
-    assert (
-        "FanCommandProcessor"
-        in text
-    )
-    assert (
-        "FanCommandServer"
-        in text
-    )
-
-
 def test_lcd_builds_command_telemetry():
     text = source()
 
@@ -39,19 +26,6 @@ def test_lcd_builds_command_telemetry():
     )
     assert (
         '"telemetry_fresh":'
-        in text
-    )
-
-
-def test_disabled_runtime_does_not_build_socket():
-    text = source()
-
-    assert (
-        "if not fan_control_runtime.enabled:"
-        in text
-    )
-    assert (
-        "return None"
         in text
     )
 
