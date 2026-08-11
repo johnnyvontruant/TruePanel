@@ -10,9 +10,11 @@ from .capabilities import (
     HostCapability,
     capabilities_from_compatibility,
 )
+from .runtime import HostAgentRuntime
 
 __all__ = [
     "HostAgentCapabilities",
+    "HostAgentRuntime",
     "HostCapability",
     "capabilities_from_compatibility",
 ]

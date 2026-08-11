@@ -20,6 +20,7 @@ from truepanel.hardware.lcd_command import (
     LCDCommandProcessor,
     LCDCommandServer,
 )
+from truepanel.host import HostAgentRuntime
 
 from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
@@ -118,8 +119,7 @@ fan_control_runtime = build_fan_control_runtime(
     config
 )
 
-fan_command_server = None
-lcd_command_server = None
+host_agent_runtime = None
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -2356,8 +2356,7 @@ def response_handler(command, data):
 
 def main():
     global lcd, menu_item
-    global fan_command_server
-    global lcd_command_server
+    global host_agent_runtime
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
@@ -2390,19 +2389,17 @@ def main():
         observe_thermal_fan_policy()
         publish_fan_control_status()
 
-        fan_command_server = (
-            build_fan_command_server()
+        host_agent_runtime = HostAgentRuntime(
+            fan_runtime=fan_control_runtime,
+            fan_server_factory=(
+                build_fan_command_server
+            ),
+            lcd_server_factory=(
+                build_lcd_command_server
+            ),
         )
 
-        if fan_command_server is not None:
-            fan_command_server.start()
-
-        lcd_command_server = (
-            build_lcd_command_server()
-        )
-
-        if lcd_command_server is not None:
-            lcd_command_server.start()
+        host_agent_runtime.start()
 
         if bay_led_startup_animation is not None:
             bay_led_startup_animation.run()
@@ -2440,26 +2437,18 @@ def main():
                     menu_item + 1
                 ) % len(menu)
     finally:
-        if lcd_command_server is not None:
+        if host_agent_runtime is not None:
             try:
-                lcd_command_server.stop()
+                host_agent_runtime.shutdown()
             except Exception:
                 pass
             finally:
-                lcd_command_server = None
-
-        if fan_command_server is not None:
+                host_agent_runtime = None
+        else:
             try:
-                fan_command_server.stop()
+                fan_control_runtime.shutdown()
             except Exception:
                 pass
-            finally:
-                fan_command_server = None
-
-        try:
-            fan_control_runtime.shutdown()
-        except Exception:
-            pass
 
         try:
             publish_fan_control_status(
