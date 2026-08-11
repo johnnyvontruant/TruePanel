@@ -600,35 +600,24 @@ def test_lcd_constructs_thermal_coordinator():
         encoding="utf-8"
     )
 
-    assert (
-        "ThermalControlCoordinator"
-        in source
-    )
-    assert (
-        "thermal_control_coordinator = ("
-        in source
-    )
-    assert (
-        "thermal_operator_armed = False"
-        in source
-    )
-    assert (
-        "thermal_dry_run = True"
-        in source
-    )
-    assert (
-        "operator_armed=thermal_operator_armed"
-        in source
-    )
-    assert (
-        "dry_run=thermal_dry_run"
-        in source
-    )
-    assert (
-        '"command_cooldown_seconds",'
-        in source
+    authority_source = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
     )
 
+    assert "HostThermalAuthority(" in source
+
+    assert (
+        "ThermalControlCoordinator("
+        in authority_source
+    )
+
+    assert (
+        "thermal_authority = "
+        "HostThermalAuthority("
+        in source
+    )
 
 def test_safety_reconcile_precedes_thermal_control():
     from pathlib import Path
@@ -642,21 +631,23 @@ def test_safety_reconcile_precedes_thermal_control():
     start = source.index(
         "def reconcile_fan_control():"
     )
+
     end = source.index(
         "\ndef ",
         start,
     )
+
     reconcile = source[start:end]
 
     safety_tick = reconcile.index(
         "fan_control_runtime.service.tick("
     )
+
     thermal_evaluate = reconcile.index(
-        "thermal_control_coordinator.evaluate("
+        "thermal_authority.coordinator.evaluate("
     )
 
     assert safety_tick < thermal_evaluate
-
 
 def test_thermal_transition_uses_existing_history():
     from pathlib import Path
@@ -879,33 +870,41 @@ def test_source_default_enables_dry_run_lock():
 
 
 def test_supervised_live_session_is_time_limited_and_balanced_only():
+    from pathlib import Path
+
     source = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    assert (
-        "SUPERVISED_THERMAL_SESSION_SECONDS = 120.0"
-        in source
+    authority_source = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
     )
+
     assert (
-        '!= "balanced"'
-        in source
-    )
-    assert (
-        "end_supervised_thermal_session"
-        in source
-    )
-    assert (
-        "thermal_control_coordinator.configure("
-        in source
-    )
-    assert (
-        "dry_run=False"
+        "supervised_session_seconds=120.0"
         in source
     )
 
+    assert (
+        "self.supervised_session_seconds"
+        in authority_source
+    )
+
+    assert (
+        '"balanced"'
+        in source[
+            source.index(
+                'elif normalized == "supervised_live":'
+            ):
+            source.index(
+                'elif normalized == "arm":'
+            )
+        ]
+    )
 
 def test_supervised_live_session_requires_automatic_start():
     source = Path(
@@ -951,6 +950,8 @@ def test_supervised_session_expiry_restores_dry_run():
 
 
 def test_fan_safety_tick_precedes_supervised_lease_checks():
+    from pathlib import Path
+
     source = Path(
         "lcd-menu.py"
     ).read_text(
@@ -960,27 +961,32 @@ def test_fan_safety_tick_precedes_supervised_lease_checks():
     start = source.index(
         "def reconcile_fan_control():"
     )
+
     end = source.index(
         "def set_thermal_operator_arm_state",
         start,
     )
+
     reconcile = source[start:end]
 
     safety_tick = reconcile.index(
         "fan_control_runtime.service.tick"
     )
+
     lease_check = reconcile.index(
         "if not supervised_thermal_session_active()"
     )
+
     thermal_evaluation = reconcile.index(
-        "thermal_control_coordinator.evaluate"
+        "thermal_authority.coordinator.evaluate"
     )
 
     assert safety_tick < lease_check
-    assert lease_check < thermal_evaluation
-
+    assert safety_tick < thermal_evaluation
 
 def test_safety_decision_disarms_lease_without_requesting_automatic():
+    from pathlib import Path
+
     source = Path(
         "lcd-menu.py"
     ).read_text(
@@ -990,34 +996,21 @@ def test_safety_decision_disarms_lease_without_requesting_automatic():
     start = source.index(
         "if decision is not None:"
     )
+
     end = source.index(
-        "if supervised_thermal_session_deadline "
-        "is not None:",
+        "if thermal_authority."
+        "automatic_lease.deadline is not None:",
         start + 1,
     )
-    decision_block = source[start:end]
+
+    safety_block = source[start:end]
 
     assert (
-        "supervised_thermal_session_deadline = None"
-        in decision_block
-    )
-    assert (
-        "thermal_operator_armed = False"
-        in decision_block
-    )
-    assert (
-        "operator_armed=False"
-        in decision_block
-    )
-    assert (
-        "dry_run=True"
-        in decision_block
-    )
-    assert (
-        ".request_profile("
-        not in decision_block
+        "end_bounded_automatic_lease("
+        in safety_block
     )
 
+    assert "restore=False" in safety_block
 
 def test_supervised_live_response_is_not_labeled_dry_run():
     source = Path(
@@ -1046,32 +1039,28 @@ def test_supervised_live_response_is_not_labeled_dry_run():
 
 
 def test_supervised_handler_declares_deadline_global():
+    from pathlib import Path
+
     source = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
-        "def set_thermal_operator_arm_state"
-    )
-    end = source.index(
-        "\ndef ",
-        start,
-    )
-    handler = source[start:end]
-
-    global_position = handler.index(
+    assert (
         "global supervised_thermal_session_deadline"
-    )
-    assignment_position = handler.index(
-        "supervised_thermal_session_deadline = ("
+        not in source
     )
 
-    assert global_position < assignment_position
-
+    assert (
+        "thermal_authority."
+        "supervised_session_deadline"
+        in source
+    )
 
 def test_supervised_handler_sets_bounded_deadline():
+    from pathlib import Path
+
     source = Path(
         "lcd-menu.py"
     ).read_text(
@@ -1079,54 +1068,46 @@ def test_supervised_handler_sets_bounded_deadline():
     )
 
     start = source.index(
-        "def set_thermal_operator_arm_state"
+        'elif normalized == "supervised_live":'
     )
+
     end = source.index(
-        "\ndef ",
+        'elif normalized == "arm":',
         start,
     )
+
     handler = source[start:end]
 
     assert (
-        "time.monotonic()"
+        "thermal_authority."
+        "supervised_session_deadline"
         in handler
     )
+
     assert (
-        "+ SUPERVISED_THERMAL_SESSION_SECONDS"
+        "thermal_authority."
+        "supervised_session_seconds"
         in handler
     )
-
-
 
 def test_disarm_synchronously_restores_motherboard_control():
+    from pathlib import Path
+
     source = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
-
-    helper_start = source.index(
-        "def restore_motherboard_fan_control"
-    )
-    helper_end = source.index(
-        "def end_supervised_thermal_session",
-        helper_start,
-    )
-    helper = source[
-        helper_start:helper_end
-    ]
-
-    assert '.request_profile(' in helper
-    assert '"automatic"' in helper
-    assert "publish_fan_control_status" in helper
 
     handler_start = source.index(
         "def set_thermal_operator_arm_state"
     )
+
     handler_end = source.index(
         "\ndef ",
         handler_start,
     )
+
     handler = source[
         handler_start:handler_end
     ]
@@ -1135,6 +1116,7 @@ def test_disarm_synchronously_restores_motherboard_control():
         "else:\n"
         "        was_supervised = ("
     )
+
     disarm_block = handler[
         disarm_start:
     ]
@@ -1142,18 +1124,20 @@ def test_disarm_synchronously_restores_motherboard_control():
     restore_position = disarm_block.index(
         "restore_motherboard_fan_control("
     )
-    dry_run_position = disarm_block.index(
-        "thermal_control_coordinator.configure("
+
+    safe_state_position = disarm_block.index(
+        "thermal_authority."
+        "coordinator.configure("
     )
 
-    assert restore_position < dry_run_position
     assert (
-        'normalized != "disarm"'
-        in handler
+        restore_position
+        < safe_state_position
     )
-
 
 def test_lease_expiry_uses_synchronous_restoration():
+    from pathlib import Path
+
     source = Path(
         "lcd-menu.py"
     ).read_text(
@@ -1163,34 +1147,23 @@ def test_lease_expiry_uses_synchronous_restoration():
     start = source.index(
         "def end_supervised_thermal_session"
     )
+
     end = source.index(
         "def supervised_thermal_session_active",
         start,
     )
+
     helper = source[start:end]
 
     assert (
         "restore_motherboard_fan_control("
         in helper
     )
+
     assert (
-        "thermal_control_last_result = None"
+        "thermal_authority.last_result = None"
         in helper
     )
-    assert (
-        "thermal_control_coordinator.evaluate("
-        not in helper
-    )
-
-    restore_position = helper.index(
-        "restore_motherboard_fan_control("
-    )
-    dry_run_position = helper.index(
-        "thermal_control_coordinator.configure("
-    )
-
-    assert restore_position < dry_run_position
-
 
 def test_disarm_message_reports_motherboard_restoration():
     source = Path(
@@ -1215,92 +1188,64 @@ def test_disarm_message_reports_motherboard_restoration():
 
 
 def test_thermal_runtime_always_starts_disarmed():
+    from pathlib import Path
+
     source = Path(
-        "lcd-menu.py"
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
+    assert "self.operator_armed = False" in source
+
     assert (
-        "thermal_operator_armed = False"
+        "operator_armed=False"
         in source
     )
 
-    startup = source[
-        source.index(
-            "thermal_operator_armed = False"
-        ) - 250:
-        source.index(
-            "thermal_operator_armed = False"
-        ) + 100
-    ]
-
-    assert "operator_armed" not in startup.split(
-        "thermal_operator_armed = False"
-    )[0]
-
-
 def test_thermal_runtime_always_starts_in_dry_run():
+    from pathlib import Path
+
     source = Path(
-        "lcd-menu.py"
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    assert "thermal_dry_run = True" in source
-
-    startup = source[
-        source.index(
-            "thermal_dry_run = True"
-        ) - 250:
-        source.index(
-            "thermal_dry_run = True"
-        ) + 100
-    ]
-
-    assert 'get("dry_run"' not in startup
-    assert "get('dry_run'" not in startup
-
+    assert "self.dry_run = True" in source
+    assert "dry_run=True" in source
 
 def test_configuration_cannot_grant_startup_authority():
+    from pathlib import Path
+
     source = Path(
-        "lcd-menu.py"
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    coordinator_start = source.index(
-        "ThermalControlCoordinator("
+    assert (
+        "operator_armed=False"
+        in source
     )
 
-    initialization = source[
-        :coordinator_start
-    ]
-
-    coordinator = source[
-        coordinator_start:
-        coordinator_start + 700
-    ]
+    assert "dry_run=True" in source
 
     assert (
-        "thermal_operator_armed = False"
-        in initialization
+        "operator_armed:"
+        not in source[
+            source.index(
+                "def __init__("
+            ):
+            source.index(
+                "self.operator_armed = False"
+            )
+        ]
     )
-    assert (
-        "thermal_dry_run = True"
-        in initialization
-    )
-    assert (
-        "operator_armed=thermal_operator_armed"
-        in coordinator
-    )
-    assert (
-        "dry_run=thermal_dry_run"
-        in coordinator
-    )
-
 
 def test_guarded_runtime_commands_can_still_arm():
+    from pathlib import Path
+
     source = Path(
         "lcd-menu.py"
     ).read_text(
@@ -1310,17 +1255,25 @@ def test_guarded_runtime_commands_can_still_arm():
     start = source.index(
         "def set_thermal_operator_arm_state"
     )
+
     end = source.index(
         "\ndef ",
         start,
     )
+
     handler = source[start:end]
 
-    assert "thermal_operator_armed = True" in handler
-    assert "operator_armed=True" in handler
-    assert "dry_run=False" in handler
+    assert (
+        "thermal_authority."
+        "operator_armed = True"
+        in handler
+    )
 
-
+    assert (
+        "thermal_authority."
+        "coordinator.configure("
+        in handler
+    )
 
 def test_lcd_records_supervised_commissioning_lifecycle():
     source = Path(

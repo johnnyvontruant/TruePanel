@@ -66,10 +66,10 @@ def test_safety_tick_precedes_automatic_lease_checks():
         "fan_control_runtime.service.tick"
     )
     lease_check = block.index(
-        "bounded_automatic_lease.deadline"
+        "thermal_authority.automatic_lease.deadline"
     )
     evaluation = block.index(
-        "thermal_control_coordinator.evaluate"
+        "thermal_authority.coordinator.evaluate"
     )
 
     assert safety_tick < lease_check < evaluation
@@ -141,17 +141,63 @@ def test_production_default_has_no_commissioned_authority():
 
 
 def test_runtime_authority_remains_ephemeral():
-    source = Path("lcd-menu.py").read_text(
+    runtime = Path(
+        "lcd-menu.py"
+    ).read_text(
         encoding="utf-8"
     )
 
-    assert "thermal_operator_armed = False" in source
-    assert "thermal_dry_run = True" in source
-    assert (
-        "bounded_automatic_lease = "
-        "BoundedAutomaticLease("
-        in source
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
     )
+
+    assert (
+        "thermal_authority = "
+        "HostThermalAuthority("
+        in runtime
+    )
+
+    constructor_start = authority.index(
+        "def __init__("
+    )
+
+    constructor_end = authority.index(
+        "\n    @property",
+        constructor_start,
+    )
+
+    constructor = authority[
+        constructor_start:constructor_end
+    ]
+
+    assert (
+        "self.operator_armed = False"
+        in constructor
+    )
+
+    assert (
+        "self.dry_run = True"
+        in constructor
+    )
+
+    runtime_start = runtime.index(
+        "thermal_authority = "
+        "HostThermalAuthority("
+    )
+
+    runtime_end = runtime.index(
+        "thermal_observer_previous_profile",
+        runtime_start,
+    )
+
+    construction = runtime[
+        runtime_start:runtime_end
+    ]
+
+    assert "operator_armed=" not in construction
+    assert "dry_run=" not in construction
 
 
 def test_stage_three_runtime_supports_renewal():
@@ -175,7 +221,7 @@ def test_stage_three_runtime_supports_renewal():
     )
 
     assert "automatic_lease_renew" in runtime
-    assert "bounded_automatic_lease.renew(" in runtime
+    assert "thermal_authority.automatic_lease.renew(" in runtime
     assert "automatic_lease_renewed" in runtime
     assert "automatic_lease_renew" in command
     assert "RENEW_STAGE_3_AUTOMATIC_CONTROL" in command
