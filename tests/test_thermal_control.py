@@ -620,62 +620,73 @@ def test_lcd_constructs_thermal_coordinator():
     )
 
 def test_safety_reconcile_precedes_thermal_control():
-    from pathlib import Path
-
-    source = Path(
+    runtime = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = runtime.index(
         "def reconcile_fan_control():"
     )
 
-    end = source.index(
+    end = runtime.index(
         "\ndef ",
         start,
     )
 
-    reconcile = source[start:end]
+    reconcile = runtime[start:end]
 
     safety_tick = reconcile.index(
         "fan_control_runtime.service.tick("
     )
 
-    thermal_evaluate = reconcile.index(
-        "thermal_authority.coordinator.evaluate("
+    safety_transition = reconcile.index(
+        "thermal_authority."
+        "handle_fan_safety_transition("
     )
 
-    assert safety_tick < thermal_evaluate
+    thermal_reconcile = reconcile.index(
+        "thermal_authority.reconcile("
+    )
+
+    assert safety_tick < safety_transition
+    assert safety_tick < thermal_reconcile
+
+    assert (
+        "self.coordinator.evaluate("
+        in authority
+    )
 
 def test_thermal_transition_uses_existing_history():
-    from pathlib import Path
-
-    source = Path(
+    runtime = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
-        "def reconcile_fan_control():"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
     )
-    end = source.index(
-        "\ndef ",
-        start,
+
+    assert (
+        "record_fan_event="
+        "record_fan_control_event"
+        in runtime
     )
-    reconcile = source[start:end]
 
     assert (
         'source="thermal_policy"'
-        in reconcile
+        in authority
     )
-    assert (
-        "record_fan_control_event("
-        in reconcile
-    )
-
 
 def test_dry_run_simulates_without_service_request():
     service = FakeService()
@@ -930,89 +941,148 @@ def test_supervised_live_session_requires_automatic_start():
     )
 
 def test_supervised_session_expiry_restores_dry_run():
-    source = Path(
-        "lcd-menu.py"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
-        "def end_supervised_thermal_session"
+    start = authority.index(
+        "def end_supervised_session("
     )
-    end = source.index(
-        "def supervised_thermal_session_active",
+
+    end = authority.index(
+        "def end_automatic_lease(",
         start,
     )
-    helper = source[start:end]
 
-    assert "operator_armed=False" in helper
+    helper = authority[start:end]
+
+    assert (
+        "self.operator_armed = False"
+        in helper
+    )
+
+    assert (
+        "operator_armed=False"
+        in helper
+    )
+
     assert "dry_run=True" in helper
-    assert "automatic" in helper
 
-
+    assert (
+        "self.last_result = None"
+        in helper
+    )
 
 def test_fan_safety_tick_precedes_supervised_lease_checks():
-    from pathlib import Path
-
-    source = Path(
+    runtime = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = runtime.index(
         "def reconcile_fan_control():"
     )
 
-    end = source.index(
+    end = runtime.index(
         "def set_thermal_operator_arm_state",
         start,
     )
 
-    reconcile = source[start:end]
+    reconcile = runtime[start:end]
 
     safety_tick = reconcile.index(
         "fan_control_runtime.service.tick"
     )
 
-    lease_check = reconcile.index(
-        "if not supervised_thermal_session_active()"
+    thermal_reconcile = reconcile.index(
+        "thermal_authority.reconcile("
     )
 
-    thermal_evaluation = reconcile.index(
-        "thermal_authority.coordinator.evaluate"
+    assert safety_tick < thermal_reconcile
+
+    authority_start = authority.index(
+        "def reconcile("
     )
 
-    assert safety_tick < lease_check
-    assert safety_tick < thermal_evaluation
+    authority_end = authority.index(
+        "def handle_action(",
+        authority_start,
+    )
+
+    host_reconcile = authority[
+        authority_start:authority_end
+    ]
+
+    assert (
+        "self.supervised_session_deadline"
+        in host_reconcile
+    )
+
+    assert (
+        "self.supervised_session_active()"
+        in host_reconcile
+    )
 
 def test_safety_decision_disarms_lease_without_requesting_automatic():
-    from pathlib import Path
-
-    source = Path(
+    runtime = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
-        "if decision is not None:"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
     )
 
-    end = source.index(
-        "if thermal_authority."
-        "automatic_lease.deadline is not None:",
-        start + 1,
+    runtime_start = runtime.index(
+        "if decision is not None:",
+        runtime.index(
+            "def reconcile_fan_control():"
+        ),
     )
 
-    safety_block = source[start:end]
+    runtime_end = runtime.index(
+        "return decision",
+        runtime_start,
+    )
+
+    safety_branch = runtime[
+        runtime_start:runtime_end
+    ]
 
     assert (
-        "end_bounded_automatic_lease("
-        in safety_block
+        "handle_fan_safety_transition("
+        in safety_branch
     )
 
-    assert "restore=False" in safety_block
+    start = authority.index(
+        "def handle_fan_safety_transition("
+    )
+
+    end = authority.index(
+        "def reconcile(",
+        start,
+    )
+
+    handler = authority[start:end]
+
+    assert (
+        "self.end_automatic_lease("
+        in handler
+    )
+
+    assert "restore=False" in handler
 
 def test_supervised_live_response_is_not_labeled_dry_run():
     authority = Path(
@@ -1128,34 +1198,32 @@ def test_disarm_synchronously_restores_motherboard_control():
     )
 
 def test_lease_expiry_uses_synchronous_restoration():
-    from pathlib import Path
-
-    source = Path(
-        "lcd-menu.py"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
-        "def end_supervised_thermal_session"
+    start = authority.index(
+        "def end_supervised_session("
     )
 
-    end = source.index(
-        "def supervised_thermal_session_active",
+    end = authority.index(
+        "def end_automatic_lease(",
         start,
     )
 
-    helper = source[start:end]
+    helper = authority[start:end]
 
-    assert (
-        "restore_motherboard_fan_control("
-        in helper
+    restore = helper.index(
+        "restore_automatic("
     )
 
-    assert (
-        "thermal_authority.last_result = None"
-        in helper
+    reset = helper.index(
+        "self.coordinator.configure("
     )
+
+    assert restore < reset
 
 def test_disarm_message_reports_motherboard_restoration():
     authority = Path(
@@ -1289,37 +1357,35 @@ def test_lcd_records_supervised_commissioning_lifecycle():
     for action in (
         "supervised_started",
         "supervised_disarmed",
-    ):
-        assert action in authority
-
-    for action in (
         "supervised_expired",
         "supervised_safety_cancelled",
     ):
-        assert action in runtime
+        assert action in authority
 
 def test_session_end_requires_lifecycle_action():
-    source = Path(
-        "lcd-menu.py"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
-        "def end_supervised_thermal_session("
+    start = authority.index(
+        "def end_supervised_session("
     )
-    end = source.index(
-        "def supervised_thermal_session_active",
+
+    end = authority.index(
+        "def end_automatic_lease(",
         start,
     )
-    helper = source[start:end]
+
+    helper = authority[start:end]
 
     assert "lifecycle_action" in helper
+
     assert (
-        "record_thermal_commissioning_event("
+        "record_commissioning_event("
         in helper
     )
-
 
 def test_commissioning_history_has_no_hardware_path():
     source = Path(

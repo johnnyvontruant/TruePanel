@@ -15,6 +15,7 @@ from collections.abc import Callable
 from typing import Any
 
 from truepanel.hardware.bounded_automatic import (
+    AUTOMATIC_LEASE_ALLOWED_PROFILES,
     AUTOMATIC_LEASE_SECONDS,
     BoundedAutomaticLease,
 )
@@ -179,6 +180,336 @@ class HostThermalAuthority:
 
         self.coordinator.owns_control = False
 
+
+
+    def end_supervised_session(
+        self,
+        reason,
+        *,
+        lifecycle_action,
+        telemetry=None,
+        telemetry_provider,
+        restore_automatic,
+        publish_status,
+        record_commissioning_event,
+        restore=True,
+    ):
+        """End supervised thermal authority safely."""
+
+        self.supervised_session_deadline = None
+        self.operator_armed = False
+
+        current_telemetry = (
+            telemetry
+            if telemetry is not None
+            else telemetry_provider()
+        )
+
+        if restore:
+            restore_automatic(
+                reason,
+                telemetry=current_telemetry,
+            )
+
+        self.coordinator.configure(
+            operator_armed=False,
+            dry_run=True,
+        )
+
+        self.coordinator.simulated_profile = (
+            self.coordinator._profile(
+                "automatic"
+            )
+        )
+
+        self.coordinator.owns_control = False
+        self.last_result = None
+
+        publish_status(
+            reason=reason
+        )
+
+        record_commissioning_event(
+            lifecycle_action,
+            reason,
+            lease_remaining=0.0,
+        )
+
+    def end_automatic_lease(
+        self,
+        reason,
+        *,
+        lifecycle_action,
+        telemetry=None,
+        telemetry_provider,
+        restore_automatic,
+        publish_status,
+        record_commissioning_event,
+        restore=True,
+    ):
+        """End bounded automatic thermal authority safely."""
+
+        was_active = self.automatic_lease.cancel()
+        self.operator_armed = False
+
+        current_telemetry = (
+            telemetry
+            if telemetry is not None
+            else telemetry_provider()
+        )
+
+        if restore:
+            restore_automatic(
+                reason,
+                telemetry=current_telemetry,
+            )
+
+        self.coordinator.configure(
+            operator_armed=False,
+            dry_run=True,
+        )
+
+        self.coordinator.simulated_profile = (
+            self.coordinator._profile(
+                "automatic"
+            )
+        )
+
+        self.coordinator.owns_control = False
+        self.last_result = None
+
+        publish_status(
+            reason=reason
+        )
+
+        if was_active:
+            record_commissioning_event(
+                lifecycle_action,
+                reason,
+                lease_remaining=0.0,
+            )
+
+    def handle_fan_safety_transition(
+        self,
+        *,
+        telemetry,
+        telemetry_provider,
+        restore_automatic,
+        publish_status,
+        record_commissioning_event,
+    ):
+        """
+        Reconcile thermal authority after the fan safety service
+        has already changed control state.
+        """
+
+        if self.automatic_lease.active():
+            cancellation_reason = (
+                "Bounded automatic thermal lease ended because "
+                "the fan safety service changed control state."
+            )
+
+            self.end_automatic_lease(
+                cancellation_reason,
+                lifecycle_action=(
+                    "automatic_lease_safety_cancelled"
+                ),
+                telemetry=telemetry,
+                telemetry_provider=telemetry_provider,
+                restore_automatic=restore_automatic,
+                publish_status=publish_status,
+                record_commissioning_event=(
+                    record_commissioning_event
+                ),
+                restore=False,
+            )
+
+        elif (
+            self.supervised_session_deadline
+            is not None
+        ):
+            cancellation_reason = (
+                "Supervised thermal session ended "
+                "because the fan safety service "
+                "changed control state."
+            )
+
+            self.end_supervised_session(
+                cancellation_reason,
+                lifecycle_action=(
+                    "supervised_safety_cancelled"
+                ),
+                telemetry=telemetry,
+                telemetry_provider=telemetry_provider,
+                restore_automatic=restore_automatic,
+                publish_status=publish_status,
+                record_commissioning_event=(
+                    record_commissioning_event
+                ),
+                restore=False,
+            )
+
+        else:
+            publish_status()
+
+    def reconcile(
+        self,
+        recommendation,
+        *,
+        telemetry,
+        runtime_status_provider,
+        telemetry_provider,
+        restore_automatic,
+        publish_status,
+        record_fan_event,
+        record_commissioning_event,
+    ):
+        """
+        Reconcile active thermal authority after fan safety passes.
+
+        The caller must run the fan-control safety tick first.
+        """
+
+        if self.automatic_lease.deadline is not None:
+            if not self.automatic_lease.active():
+                self.end_automatic_lease(
+                    "Bounded automatic thermal lease expired; "
+                    "returned control to the motherboard.",
+                    lifecycle_action=(
+                        "automatic_lease_expired"
+                    ),
+                    telemetry=telemetry,
+                    telemetry_provider=telemetry_provider,
+                    restore_automatic=restore_automatic,
+                    publish_status=publish_status,
+                    record_commissioning_event=(
+                        record_commissioning_event
+                    ),
+                )
+                return None
+
+            if not telemetry["telemetry_fresh"]:
+                self.end_automatic_lease(
+                    "Bounded automatic thermal lease ended "
+                    "because telemetry became stale.",
+                    lifecycle_action=(
+                        "automatic_lease_safety_cancelled"
+                    ),
+                    telemetry=telemetry,
+                    telemetry_provider=telemetry_provider,
+                    restore_automatic=restore_automatic,
+                    publish_status=publish_status,
+                    record_commissioning_event=(
+                        record_commissioning_event
+                    ),
+                )
+                return None
+
+            if (
+                recommendation.recommended_profile.value
+                not in AUTOMATIC_LEASE_ALLOWED_PROFILES
+            ):
+                self.end_automatic_lease(
+                    "Bounded automatic thermal lease ended "
+                    "because the recommendation left the "
+                    "approved profile envelope.",
+                    lifecycle_action=(
+                        "automatic_lease_safety_cancelled"
+                    ),
+                    telemetry=telemetry,
+                    telemetry_provider=telemetry_provider,
+                    restore_automatic=restore_automatic,
+                    publish_status=publish_status,
+                    record_commissioning_event=(
+                        record_commissioning_event
+                    ),
+                )
+                return None
+
+        if self.supervised_session_deadline is not None:
+            if not self.supervised_session_active():
+                self.end_supervised_session(
+                    "Supervised thermal session expired; "
+                    "returned control to the motherboard.",
+                    lifecycle_action=(
+                        "supervised_expired"
+                    ),
+                    telemetry=telemetry,
+                    telemetry_provider=telemetry_provider,
+                    restore_automatic=restore_automatic,
+                    publish_status=publish_status,
+                    record_commissioning_event=(
+                        record_commissioning_event
+                    ),
+                )
+                return None
+
+            if not telemetry["telemetry_fresh"]:
+                self.end_supervised_session(
+                    "Supervised thermal session ended "
+                    "because telemetry became stale.",
+                    lifecycle_action=(
+                        "supervised_safety_cancelled"
+                    ),
+                    telemetry=telemetry,
+                    telemetry_provider=telemetry_provider,
+                    restore_automatic=restore_automatic,
+                    publish_status=publish_status,
+                    record_commissioning_event=(
+                        record_commissioning_event
+                    ),
+                )
+                return None
+
+            if (
+                recommendation.recommended_profile.value
+                != "balanced"
+            ):
+                self.end_supervised_session(
+                    "Supervised thermal session ended "
+                    "because the recommendation left "
+                    "the balanced profile.",
+                    lifecycle_action=(
+                        "supervised_safety_cancelled"
+                    ),
+                    telemetry=telemetry,
+                    telemetry_provider=telemetry_provider,
+                    restore_automatic=restore_automatic,
+                    publish_status=publish_status,
+                    record_commissioning_event=(
+                        record_commissioning_event
+                    ),
+                )
+                return None
+
+        self.last_result = (
+            self.coordinator.evaluate(
+                recommendation,
+                telemetry=telemetry,
+                runtime_status=(
+                    runtime_status_provider()
+                ),
+            )
+        )
+
+        thermal_decision = (
+            self.last_result.decision
+        )
+
+        if thermal_decision is not None:
+            post_transition_telemetry = (
+                telemetry_provider()
+            )
+
+            record_fan_event(
+                thermal_decision,
+                post_transition_telemetry,
+                source="thermal_policy",
+            )
+
+            publish_status()
+
+        return thermal_decision
 
     def handle_action(
         self,

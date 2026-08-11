@@ -62,42 +62,73 @@ def test_runtime_declares_bounded_automatic_contract():
     )
 
 def test_safety_tick_precedes_automatic_lease_checks():
-    source = Path("lcd-menu.py").read_text(
+    runtime = Path(
+        "lcd-menu.py"
+    ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = runtime.index(
         "def reconcile_fan_control"
     )
-    end = source.index(
+
+    end = runtime.index(
         "def set_thermal_operator_arm_state",
         start,
     )
-    block = source[start:end]
+
+    block = runtime[start:end]
 
     safety_tick = block.index(
         "fan_control_runtime.service.tick"
     )
-    lease_check = block.index(
-        "thermal_authority.automatic_lease.deadline"
-    )
-    evaluation = block.index(
-        "thermal_authority.coordinator.evaluate"
+
+    thermal_reconcile = block.index(
+        "thermal_authority.reconcile("
     )
 
-    assert safety_tick < lease_check < evaluation
+    assert safety_tick < thermal_reconcile
 
+    host_start = authority.index(
+        "def reconcile("
+    )
+
+    host_end = authority.index(
+        "def handle_action(",
+        host_start,
+    )
+
+    host_reconcile = authority[
+        host_start:host_end
+    ]
+
+    assert (
+        "self.automatic_lease.deadline"
+        in host_reconcile
+    )
 
 def test_automatic_lease_envelope_excludes_afterburners():
-    source = Path("lcd-menu.py").read_text(
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
         encoding="utf-8"
     )
 
     assert (
         "not in AUTOMATIC_LEASE_ALLOWED_PROFILES"
-        in source
+        in authority
     )
 
+    assert (
+        "approved profile envelope"
+        in authority
+    )
 
 def test_command_protocol_requires_explicit_confirmation():
     source = Path(
