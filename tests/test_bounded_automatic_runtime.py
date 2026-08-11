@@ -68,39 +68,78 @@ def test_safety_tick_precedes_automatic_lease_checks():
         encoding="utf-8"
     )
 
+    safety = Path(
+        "truepanel/host/safety.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
     authority = Path(
         "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = runtime.index(
+    assert (
+        "fan_control_runtime.service.tick"
+        not in runtime
+    )
+
+    safety_start = safety.index(
+        "    def reconcile("
+    )
+
+    safety_end = safety.index(
+        "    def restore_automatic(",
+        safety_start,
+    )
+
+    safety_reconcile = safety[
+        safety_start:safety_end
+    ]
+
+    assert (
+        "service.tick("
+        in safety_reconcile
+    )
+
+    runtime_start = runtime.index(
         "def reconcile_fan_control"
     )
 
-    end = runtime.index(
+    runtime_end = runtime.index(
         "def set_thermal_operator_arm_state",
-        start,
+        runtime_start,
     )
 
-    block = runtime[start:end]
+    runtime_reconcile = runtime[
+        runtime_start:runtime_end
+    ]
 
-    safety_tick = block.index(
-        "fan_control_runtime.service.tick"
+    host_safety = (
+        runtime_reconcile.index(
+            ".safety"
+            "\n        .reconcile("
+        )
     )
 
-    thermal_reconcile = block.index(
-        "thermal_authority.reconcile("
+    thermal_reconcile = (
+        runtime_reconcile.index(
+            "thermal_authority.reconcile("
+        )
     )
 
-    assert safety_tick < thermal_reconcile
+    assert (
+        host_safety
+        < thermal_reconcile
+    )
 
     host_start = authority.index(
-        "def reconcile("
+        "    def reconcile("
     )
 
     host_end = authority.index(
-        "def handle_action(",
+        "    def handle_action(",
         host_start,
     )
 

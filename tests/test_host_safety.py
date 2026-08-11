@@ -10,6 +10,17 @@ class FakeDecision:
 class FakeService:
     def __init__(self):
         self.requests = []
+        self.tick_calls = []
+        self.tick_decision = None
+
+    def tick(
+        self,
+        **kwargs,
+    ):
+        self.tick_calls.append(
+            kwargs
+        )
+        return self.tick_decision
 
     def request_profile(
         self,
@@ -33,6 +44,7 @@ class FakeRuntime:
         authority="manual",
     ):
         self.service = FakeService()
+        self.connected = True
         self.active_profile = active_profile
         self.authority = authority
 
@@ -213,4 +225,119 @@ def test_missing_thermal_handler_fails_closed():
     assert (
         result["status"]
         == "thermal_control_unavailable"
+    )
+
+
+def test_reconcile_runs_guarded_service_tick():
+    runtime = FakeRuntime()
+
+    coordinator = HostAgentSafetyCoordinator(
+        fan_runtime=runtime,
+        telemetry_provider=telemetry,
+    )
+
+    decision, payload = (
+        coordinator.reconcile()
+    )
+
+    assert decision is None
+
+    assert payload == telemetry()
+
+    assert len(
+        runtime.service.tick_calls
+    ) == 1
+
+    tick = (
+        runtime.service.tick_calls[0]
+    )
+
+    assert tick[
+        "fan_status"
+    ] == telemetry()[
+        "fan_status"
+    ]
+
+    assert tick[
+        "temperatures_c"
+    ] == (
+        42.0,
+        43.0,
+    )
+
+    assert (
+        tick[
+            "telemetry_fresh"
+        ]
+        is True
+    )
+
+
+def test_reconcile_records_authoritative_transition():
+    runtime = FakeRuntime()
+    runtime.service.tick_decision = (
+        FakeDecision()
+    )
+    events = []
+
+    coordinator = HostAgentSafetyCoordinator(
+        fan_runtime=runtime,
+        telemetry_provider=telemetry,
+        event_recorder=(
+            lambda decision, payload, source: (
+                events.append(
+                    (
+                        decision,
+                        payload,
+                        source,
+                    )
+                )
+            )
+        ),
+    )
+
+    decision, payload = (
+        coordinator.reconcile(
+            source_classifier=(
+                lambda value: "timeout"
+            ),
+        )
+    )
+
+    assert isinstance(
+        decision,
+        FakeDecision,
+    )
+
+    assert payload == telemetry()
+
+    assert len(events) == 1
+
+    assert events[0][0] is decision
+
+    assert events[0][1] == payload
+
+    assert events[0][2] == "timeout"
+
+
+def test_reconcile_does_not_tick_disconnected_runtime():
+    runtime = FakeRuntime()
+    runtime.connected = False
+
+    coordinator = HostAgentSafetyCoordinator(
+        fan_runtime=runtime,
+        telemetry_provider=telemetry,
+    )
+
+    decision, payload = (
+        coordinator.reconcile()
+    )
+
+    assert decision is None
+
+    assert payload == telemetry()
+
+    assert (
+        runtime.service.tick_calls
+        == []
     )

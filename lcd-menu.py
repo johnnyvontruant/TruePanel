@@ -703,10 +703,17 @@ def end_bounded_automatic_lease(
 
 def reconcile_fan_control():
 
-    if not fan_control_runtime.connected:
+    if (
+        host_agent_runtime is None
+        or not fan_control_runtime.connected
+    ):
         return None
 
-    telemetry = fan_command_telemetry()
+    telemetry = (
+        host_agent_runtime
+        .safety
+        .telemetry()
+    )
 
     recommendation = (
         observe_thermal_fan_policy(
@@ -714,35 +721,23 @@ def reconcile_fan_control():
         )
     )
 
-    # Existing dead-man, emergency, and recovery logic
-    # owns the first safety decision of every cycle.
-    decision = fan_control_runtime.service.tick(
-        fan_status=telemetry["fan_status"],
-        temperatures_c=(
-            telemetry["temperatures_c"]
-        ),
-        telemetry_fresh=(
-            telemetry["telemetry_fresh"]
-        ),
+    (
+        decision,
+        safety_telemetry,
+    ) = (
+        host_agent_runtime
+        .safety
+        .reconcile(
+            telemetry=telemetry,
+            source_classifier=(
+                fan_control_event_source
+            ),
+        )
     )
 
     if decision is not None:
-        source = fan_control_event_source(
-            decision
-        )
-
-        post_transition_telemetry = (
-            fan_command_telemetry()
-        )
-
-        record_fan_control_event(
-            decision,
-            post_transition_telemetry,
-            source=source,
-        )
-
         thermal_authority.handle_fan_safety_transition(
-            telemetry=post_transition_telemetry,
+            telemetry=safety_telemetry,
             telemetry_provider=fan_command_telemetry,
             restore_automatic=(
                 restore_motherboard_fan_control
@@ -773,7 +768,6 @@ def reconcile_fan_control():
             record_thermal_commissioning_event
         ),
     )
-
 
 def set_thermal_operator_arm_state(
     action,

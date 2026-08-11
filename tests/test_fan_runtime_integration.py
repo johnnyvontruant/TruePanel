@@ -59,32 +59,42 @@ def test_lcd_runtime_shuts_down_fan_control():
 
 
 def test_fan_history_uses_post_transition_telemetry():
-    source = Path(
-        "lcd-menu.py"
+    safety = Path(
+        "truepanel/host/safety.py"
     ).read_text(
-        encoding="utf-8",
+        encoding="utf-8"
     )
+
+    start = safety.index(
+        "    def reconcile("
+    )
+
+    end = safety.index(
+        "    def restore_automatic(",
+        start,
+    )
+
+    reconcile = safety[start:end]
 
     assert (
         "post_transition_telemetry = ("
-        in source
+        in reconcile
     )
 
     assert (
-        "fan_command_telemetry()"
-        in source
+        "self.telemetry()"
+        in reconcile
     )
 
     assert (
-        "record_fan_control_event("
-        in source
+        "self.record_event("
+        in reconcile
     )
 
     assert (
         "post_transition_telemetry,"
-        in source
+        in reconcile
     )
-
 
 def test_lcd_classifies_completed_safety_recovery():
     runtime = Path(
@@ -141,28 +151,59 @@ def test_lcd_preserves_timeout_classification():
     )
 
 def test_lcd_records_reconcile_source_from_classifier():
-    text = Path("lcd-menu.py").read_text()
+    runtime = Path(
+        "lcd-menu.py"
+    ).read_text()
 
-    reconcile_start = text.index(
+    safety = Path(
+        "truepanel/host/safety.py"
+    ).read_text()
+
+    reconcile_start = runtime.index(
         "def reconcile_fan_control():"
     )
-    reconcile_end = text.index(
+
+    reconcile_end = runtime.index(
         "\ndef ",
         reconcile_start,
     )
-    reconcile = text[
+
+    reconcile = runtime[
         reconcile_start:reconcile_end
     ]
 
     assert (
-        "source = fan_control_event_source("
-        in reconcile
-    )
-    assert (
-        "record_fan_control_event("
+        "source_classifier=("
         in reconcile
     )
 
+    assert (
+        "fan_control_event_source"
+        in reconcile
+    )
+
+    assert (
+        "record_fan_control_event("
+        not in reconcile
+    )
+
+    safety_start = safety.index(
+        "    def reconcile("
+    )
+
+    safety_end = safety.index(
+        "    def restore_automatic(",
+        safety_start,
+    )
+
+    host_reconcile = safety[
+        safety_start:safety_end
+    ]
+
+    assert (
+        "self.record_event("
+        in host_reconcile
+    )
 
 def test_lcd_wires_fan_control_status_page():
     text = Path("lcd-menu.py").read_text()

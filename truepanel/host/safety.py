@@ -115,6 +115,95 @@ class HostAgentSafetyCoordinator:
             action
         )
 
+    def reconcile(
+        self,
+        *,
+        telemetry: Mapping[str, Any] | None = None,
+        source_classifier: Callable[
+            [Any],
+            str,
+        ] | None = None,
+    ) -> tuple[
+        Any | None,
+        Mapping[str, Any],
+    ]:
+        """
+        Run one authoritative Host Agent fan-safety cycle.
+
+        Existing dead-man, emergency, and recovery behavior receives first
+        refusal before thermal-control reconciliation is allowed to proceed.
+        """
+
+        current_telemetry = (
+            telemetry
+            if telemetry is not None
+            else self.telemetry()
+        )
+
+        if not self._fan_runtime.connected:
+            return (
+                None,
+                current_telemetry,
+            )
+
+        service = getattr(
+            self._fan_runtime,
+            "service",
+            None,
+        )
+
+        if service is None:
+            return (
+                None,
+                current_telemetry,
+            )
+
+        decision = service.tick(
+            fan_status=current_telemetry.get(
+                "fan_status",
+                {},
+            ),
+            temperatures_c=current_telemetry.get(
+                "temperatures_c",
+                (),
+            ),
+            telemetry_fresh=bool(
+                current_telemetry.get(
+                    "telemetry_fresh",
+                    False,
+                )
+            ),
+        )
+
+        if decision is None:
+            return (
+                None,
+                current_telemetry,
+            )
+
+        post_transition_telemetry = (
+            self.telemetry()
+        )
+
+        source = (
+            source_classifier(
+                decision
+            )
+            if source_classifier is not None
+            else "safety"
+        )
+
+        self.record_event(
+            decision,
+            post_transition_telemetry,
+            source=source,
+        )
+
+        return (
+            decision,
+            post_transition_telemetry,
+        )
+
     def restore_automatic(
         self,
         reason: str,

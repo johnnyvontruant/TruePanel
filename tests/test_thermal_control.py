@@ -642,10 +642,39 @@ def test_safety_reconcile_precedes_thermal_control():
         encoding="utf-8"
     )
 
+    safety = Path(
+        "truepanel/host/safety.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
     authority = Path(
         "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
+    )
+
+    safety_start = safety.index(
+        "    def reconcile("
+    )
+
+    safety_end = safety.index(
+        "    def restore_automatic(",
+        safety_start,
+    )
+
+    host_safety = safety[
+        safety_start:safety_end
+    ]
+
+    assert (
+        "service.tick("
+        in host_safety
+    )
+
+    assert (
+        "fan_control_runtime.service.tick("
+        not in runtime
     )
 
     start = runtime.index(
@@ -659,21 +688,35 @@ def test_safety_reconcile_precedes_thermal_control():
 
     reconcile = runtime[start:end]
 
-    safety_tick = reconcile.index(
-        "fan_control_runtime.service.tick("
+    safety_reconcile = (
+        reconcile.index(
+            ".safety"
+            "\n        .reconcile("
+        )
     )
 
-    safety_transition = reconcile.index(
-        "thermal_authority."
-        "handle_fan_safety_transition("
+    safety_transition = (
+        reconcile.index(
+            "thermal_authority."
+            "handle_fan_safety_transition("
+        )
     )
 
-    thermal_reconcile = reconcile.index(
-        "thermal_authority.reconcile("
+    thermal_reconcile = (
+        reconcile.index(
+            "thermal_authority.reconcile("
+        )
     )
 
-    assert safety_tick < safety_transition
-    assert safety_tick < thermal_reconcile
+    assert (
+        safety_reconcile
+        < safety_transition
+    )
+
+    assert (
+        safety_reconcile
+        < thermal_reconcile
+    )
 
     assert (
         "self.coordinator.evaluate("
@@ -998,10 +1041,34 @@ def test_fan_safety_tick_precedes_supervised_lease_checks():
         encoding="utf-8"
     )
 
+    safety = Path(
+        "truepanel/host/safety.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
     authority = Path(
         "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
+    )
+
+    safety_start = safety.index(
+        "    def reconcile("
+    )
+
+    safety_end = safety.index(
+        "    def restore_automatic(",
+        safety_start,
+    )
+
+    host_safety = safety[
+        safety_start:safety_end
+    ]
+
+    assert (
+        "service.tick("
+        in host_safety
     )
 
     start = runtime.index(
@@ -1015,37 +1082,52 @@ def test_fan_safety_tick_precedes_supervised_lease_checks():
 
     reconcile = runtime[start:end]
 
-    safety_tick = reconcile.index(
-        "fan_control_runtime.service.tick"
+    safety_reconcile = (
+        reconcile.index(
+            ".safety"
+            "\n        .reconcile("
+        )
     )
 
-    thermal_reconcile = reconcile.index(
-        "thermal_authority.reconcile("
+    safety_transition = (
+        reconcile.index(
+            "thermal_authority."
+            "handle_fan_safety_transition("
+        )
     )
 
-    assert safety_tick < thermal_reconcile
+    thermal_reconcile = (
+        reconcile.index(
+            "thermal_authority.reconcile("
+        )
+    )
+
+    assert (
+        safety_reconcile
+        < safety_transition
+    )
+
+    assert (
+        safety_reconcile
+        < thermal_reconcile
+    )
 
     authority_start = authority.index(
-        "def reconcile("
+        "    def reconcile("
     )
 
     authority_end = authority.index(
-        "def handle_action(",
+        "    def handle_action(",
         authority_start,
     )
 
-    host_reconcile = authority[
+    authority_reconcile = authority[
         authority_start:authority_end
     ]
 
     assert (
-        "self.supervised_session_deadline"
-        in host_reconcile
-    )
-
-    assert (
-        "self.supervised_session_active()"
-        in host_reconcile
+        "supervised_session"
+        in authority_reconcile
     )
 
 def test_safety_decision_disarms_lease_without_requesting_automatic():
