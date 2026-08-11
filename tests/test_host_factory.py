@@ -1,6 +1,7 @@
 from truepanel.host import factory
 from truepanel.host.hooks import (
     HostAgentApplicationHooks,
+    HostAgentSafetyServices,
 )
 
 
@@ -76,9 +77,11 @@ def test_fan_callbacks_reach_processor():
     def record(
         decision,
         telemetry_payload,
+        source,
     ):
         del decision
         del telemetry_payload
+        del source
 
     def thermal(action):
         return {
@@ -169,8 +172,10 @@ def test_host_runtime_receives_command_factories(
     runtime = (
         factory.build_host_agent_runtime(
             fan_runtime=fan_runtime,
-            hooks=HostAgentApplicationHooks(
+            safety_services=HostAgentSafetyServices(
                 fan_telemetry_provider=telemetry,
+            ),
+            application_hooks=HostAgentApplicationHooks(
                 lcd_button_handler=(
                     submit_button
                 ),
@@ -199,8 +204,13 @@ def test_host_runtime_receives_command_factories(
     assert (
         captured_fan[
             "telemetry_provider"
-        ]
-        is telemetry
+        ]()
+        == telemetry()
+    )
+
+    assert (
+        runtime.safety.telemetry()
+        == telemetry()
     )
 
     assert (
@@ -225,9 +235,10 @@ def test_factory_does_not_start_runtime(
     runtime = (
         factory.build_host_agent_runtime(
             fan_runtime=FakeFanRuntime(),
-            hooks=HostAgentApplicationHooks(
+            safety_services=HostAgentSafetyServices(
                 fan_telemetry_provider=telemetry
             ),
+            application_hooks=HostAgentApplicationHooks(),
         )
     )
 

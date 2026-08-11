@@ -11,13 +11,19 @@ from .capabilities import (
     capabilities_from_compatibility,
 )
 from .factory import build_host_agent_runtime
-from .hooks import HostAgentApplicationHooks
+from .hooks import (
+    HostAgentApplicationHooks,
+    HostAgentSafetyServices,
+)
 from .runtime import HostAgentRuntime
+from .safety import HostAgentSafetyCoordinator
 
 __all__ = [
     "HostAgentCapabilities",
     "HostAgentApplicationHooks",
     "HostAgentRuntime",
+    "HostAgentSafetyCoordinator",
+    "HostAgentSafetyServices",
     "HostCapability",
     "build_host_agent_runtime",
     "capabilities_from_compatibility",

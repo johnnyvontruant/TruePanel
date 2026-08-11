@@ -18,6 +18,7 @@ from truepanel.hardware.lcd_display_status_bridge import (
 )
 from truepanel.host import (
     HostAgentApplicationHooks,
+    HostAgentSafetyServices,
     build_host_agent_runtime,
 )
 
@@ -793,7 +794,30 @@ def restore_motherboard_fan_control(
     *,
     telemetry=None,
 ):
-    """Synchronously restore controlled channels to motherboard Automatic."""
+    """
+    Restore motherboard Automatic through the Host Agent safety boundary.
+
+    This wrapper remains temporarily for thermal-policy callers while ownership
+    migrates into the Host Agent.
+    """
+
+    if (
+        host_agent_runtime is not None
+        and getattr(
+            host_agent_runtime,
+            "safety",
+            None,
+        )
+        is not None
+    ):
+        return (
+            host_agent_runtime
+            .safety
+            .restore_automatic(
+                reason,
+                telemetry=telemetry,
+            )
+        )
 
     current_telemetry = (
         telemetry
@@ -802,13 +826,18 @@ def restore_motherboard_fan_control(
     )
 
     runtime_status = (
-        fan_control_runtime.status_payload()
+        fan_control_runtime
+        .status_payload()
     )
 
     if (
-        runtime_status.get("active_profile")
+        runtime_status.get(
+            "active_profile"
+        )
         == "automatic"
-        and runtime_status.get("control_authority")
+        and runtime_status.get(
+            "control_authority"
+        )
         == "automatic"
     ):
         return None
@@ -817,13 +846,17 @@ def restore_motherboard_fan_control(
         fan_control_runtime.service
         .request_profile(
             "automatic",
-            fan_status=current_telemetry.get(
-                "fan_status",
-                {},
+            fan_status=(
+                current_telemetry.get(
+                    "fan_status",
+                    {},
+                )
             ),
-            temperatures_c=current_telemetry.get(
-                "temperatures_c",
-                (),
+            temperatures_c=(
+                current_telemetry.get(
+                    "temperatures_c",
+                    (),
+                )
             ),
             telemetry_fresh=bool(
                 current_telemetry.get(
@@ -2337,23 +2370,28 @@ def main():
         observe_thermal_fan_policy()
         publish_fan_control_status()
 
-        host_agent_hooks = HostAgentApplicationHooks(
+        host_agent_safety_services = HostAgentSafetyServices(
             fan_telemetry_provider=(
                 fan_command_telemetry
             ),
             fan_status_publisher=(
                 publish_fan_control_status
             ),
-            fan_event_recorder=lambda decision, telemetry: (
-                record_fan_control_event(
-                    decision,
-                    fan_command_telemetry(),
-                    source="manual",
+            fan_event_recorder=(
+                lambda decision, telemetry, source: (
+                    record_fan_control_event(
+                        decision,
+                        telemetry,
+                        source=source,
+                    )
                 )
             ),
             thermal_control_handler=(
                 set_thermal_operator_arm_state
             ),
+        )
+
+        host_agent_application_hooks = HostAgentApplicationHooks(
             lcd_button_handler=(
                 lambda button_mask, source: (
                     lcd.submit_button_event(
@@ -2368,7 +2406,12 @@ def main():
 
         host_agent_runtime = build_host_agent_runtime(
             fan_runtime=fan_control_runtime,
-            hooks=host_agent_hooks,
+            safety_services=(
+                host_agent_safety_services
+            ),
+            application_hooks=(
+                host_agent_application_hooks
+            ),
         )
 
         host_agent_runtime.start()

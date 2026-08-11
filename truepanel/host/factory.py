@@ -20,8 +20,12 @@ from truepanel.hardware.lcd_command import (
     LCDCommandServer,
 )
 
-from .hooks import HostAgentApplicationHooks
+from .hooks import (
+    HostAgentApplicationHooks,
+    HostAgentSafetyServices,
+)
 from .runtime import HostAgentRuntime
+from .safety import HostAgentSafetyCoordinator
 
 
 def build_fan_command_server(
@@ -96,42 +100,72 @@ def build_lcd_command_server(
 def build_host_agent_runtime(
     *,
     fan_runtime: Any,
-    hooks: HostAgentApplicationHooks,
+    safety_services: HostAgentSafetyServices,
+    application_hooks: HostAgentApplicationHooks,
 ) -> HostAgentRuntime:
     """
     Assemble the current TruePanel Host Agent runtime.
 
-    This function owns command-server construction only. It does not start the
-    runtime and grants no additional hardware authority.
+    Safety behavior is grouped behind HostAgentSafetyCoordinator while
+    application behavior remains an explicit non-privileged hook surface.
     """
 
-    return HostAgentRuntime(
+    safety = HostAgentSafetyCoordinator(
+        fan_runtime=fan_runtime,
+        telemetry_provider=(
+            safety_services
+            .fan_telemetry_provider
+        ),
+        status_publisher=(
+            safety_services
+            .fan_status_publisher
+        ),
+        event_recorder=(
+            safety_services
+            .fan_event_recorder
+        ),
+        thermal_control_handler=(
+            safety_services
+            .thermal_control_handler
+        ),
+    )
+
+    runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
         fan_server_factory=lambda: (
             build_fan_command_server(
                 fan_runtime=fan_runtime,
                 telemetry_provider=(
-                    hooks.fan_telemetry_provider
+                    safety.telemetry
                 ),
                 status_publisher=(
-                    hooks.fan_status_publisher
+                    safety.publish_status
                 ),
-                event_recorder=(
-                    hooks.fan_event_recorder
+                event_recorder=lambda decision, telemetry: (
+                    safety.record_event(
+                        decision,
+                        telemetry,
+                        source="manual",
+                    )
                 ),
                 thermal_control_handler=(
-                    hooks.thermal_control_handler
+                    safety.handle_thermal_control
                 ),
             )
         ),
         lcd_server_factory=lambda: (
             build_lcd_command_server(
                 submit_button=(
-                    hooks.lcd_button_handler
+                    application_hooks
+                    .lcd_button_handler
                 ),
             )
         ),
     )
+
+    runtime.safety = safety
+
+    return runtime
 
 
 __all__ = [

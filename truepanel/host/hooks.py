@@ -1,8 +1,13 @@
 """
-Application callback contract for the TruePanel Host Agent.
+Explicit process-boundary contracts for the TruePanel Host Agent.
 
-These hooks describe application-owned behavior that the Host Agent may invoke.
-They do not grant hardware authority and contain no lifecycle logic.
+Safety services describe behavior that belongs on the privileged Host Agent
+side of the architecture.
+
+Application hooks describe behavior that belongs outside the privileged Host
+Agent and may eventually cross an IPC boundary.
+
+These contracts define ownership. They do not grant hardware authority.
 """
 
 from __future__ import annotations
@@ -16,15 +21,13 @@ FanTelemetryProvider = Callable[
     Mapping[str, Any],
 ]
 
-FanStatusPublisher = Callable[
-    [],
-    None,
-]
+FanStatusPublisher = Callable[..., Any]
 
 FanEventRecorder = Callable[
     [
         Any,
         Mapping[str, Any],
+        str,
     ],
     None,
 ]
@@ -41,18 +44,28 @@ LCDButtonHandler = Callable[
 
 
 @dataclass(frozen=True)
-class HostAgentApplicationHooks:
+class HostAgentSafetyServices:
     """
-    Application-owned callbacks exposed to the Host Agent.
+    Safety-related services consumed by the privileged Host Agent.
 
-    The Host Agent may invoke these callbacks but does not own their policy,
-    state, or authorization rules.
+    Some services are still supplied by the legacy LCD runtime during the
+    migration. Their presence here defines their intended ownership boundary.
     """
 
     fan_telemetry_provider: FanTelemetryProvider
     fan_status_publisher: FanStatusPublisher | None = None
     fan_event_recorder: FanEventRecorder | None = None
     thermal_control_handler: ThermalControlHandler | None = None
+
+
+@dataclass(frozen=True)
+class HostAgentApplicationHooks:
+    """
+    Non-privileged application behavior exposed to the Host Agent.
+
+    These hooks must not be treated as hardware authorization.
+    """
+
     lcd_button_handler: LCDButtonHandler | None = None
 
 
@@ -61,6 +74,7 @@ __all__ = [
     "FanStatusPublisher",
     "FanTelemetryProvider",
     "HostAgentApplicationHooks",
+    "HostAgentSafetyServices",
     "LCDButtonHandler",
     "ThermalControlHandler",
 ]

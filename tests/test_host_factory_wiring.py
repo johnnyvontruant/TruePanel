@@ -9,74 +9,84 @@ def source():
     )
 
 
-def test_lcd_runtime_uses_host_agent_contract():
+def test_lcd_runtime_declares_process_boundary():
+    text = source()
+
+    assert "HostAgentSafetyServices" in text
+    assert "HostAgentApplicationHooks" in text
+
+
+def test_safety_services_hold_hardware_policy_hooks():
+    text = source()
+
+    start = text.index(
+        "host_agent_safety_services = "
+        "HostAgentSafetyServices("
+    )
+
+    end = text.index(
+        "host_agent_application_hooks = ",
+        start,
+    )
+
+    block = text[start:end]
+
+    assert "fan_telemetry_provider" in block
+    assert "fan_status_publisher" in block
+    assert "fan_event_recorder" in block
+    assert "thermal_control_handler" in block
+
+    assert "lcd_button_handler" not in block
+
+
+def test_application_hooks_hold_only_lcd_dispatch():
+    text = source()
+
+    start = text.index(
+        "host_agent_application_hooks = "
+        "HostAgentApplicationHooks("
+    )
+
+    end = text.index(
+        "host_agent_runtime = "
+        "build_host_agent_runtime(",
+        start,
+    )
+
+    block = text[start:end]
+
+    assert "lcd_button_handler" in block
+    assert "lcd.submit_button_event(" in block
+
+    assert "thermal_control_handler" not in block
+    assert "fan_event_recorder" not in block
+
+
+def test_factory_receives_explicit_boundaries():
     text = source()
 
     assert (
-        "HostAgentApplicationHooks"
+        "safety_services=("
         in text
     )
 
     assert (
-        "build_host_agent_runtime"
-        in text
-    )
-
-
-def test_lcd_runtime_builds_explicit_hook_surface():
-    text = source()
-
-    assert (
-        "host_agent_hooks = HostAgentApplicationHooks("
+        "host_agent_safety_services"
         in text
     )
 
     assert (
-        "fan_telemetry_provider=("
+        "application_hooks=("
         in text
     )
 
     assert (
-        "fan_status_publisher=("
-        in text
-    )
-
-    assert (
-        "fan_event_recorder="
-        in text
-    )
-
-    assert (
-        "thermal_control_handler=("
-        in text
-    )
-
-    assert (
-        "lcd_button_handler=("
+        "host_agent_application_hooks"
         in text
     )
 
 
-def test_lcd_runtime_passes_hooks_to_factory():
-    text = source()
-
-    assert (
-        "host_agent_runtime = build_host_agent_runtime("
-        in text
-    )
-
-    assert (
-        "fan_runtime=fan_control_runtime"
-        in text
-    )
-
-    assert (
-        "hooks=host_agent_hooks"
-        in text
-    )
-
-
-def test_lcd_runtime_no_longer_builds_command_servers():
+def test_lcd_runtime_has_no_command_implementation_classes():
     text = source()
 
     for name in (
@@ -88,7 +98,7 @@ def test_lcd_runtime_no_longer_builds_command_servers():
         assert name not in text
 
 
-def test_host_runtime_still_starts_before_visual_startup():
+def test_host_runtime_starts_before_visual_startup():
     text = source()
 
     main_start = text.index(
