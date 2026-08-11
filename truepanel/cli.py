@@ -21,6 +21,10 @@ from truepanel.hardware.commands import (
     handle_hardware_command,
 )
 from truepanel.history import TelemetryRecorder
+from truepanel.host.commands import (
+    add_host_subcommands,
+    handle_host_command,
+)
 from truepanel.lab.commands import main as run_stargate_lab
 from truepanel.logging import setup_logging
 from truepanel.plugins import load_plugins
@@ -293,6 +297,7 @@ def build_parser():
     )
     add_plugin_subcommands(subcommands)
     add_hardware_subcommands(subcommands)
+    add_host_subcommands(subcommands)
     add_mission_control_subcommands(subcommands)
     subcommands.add_parser("version", help="Show TruePanel version")
 
@@ -648,6 +653,13 @@ def main():
     if mission_control_result is not None:
         raise SystemExit(
             mission_control_result
+        )
+
+    host_result = handle_host_command(args)
+
+    if host_result is not None:
+        raise SystemExit(
+            host_result
         )
 
     registry = load_plugins()
