@@ -1,9 +1,9 @@
 """
-Host-owned safety telemetry normalization.
+Host-owned safety telemetry.
 
-This module owns the narrow telemetry contract consumed by privileged fan and
-thermal safety logic. Physical collection remains injectable while the legacy
-embedded runtime is migrated to the standalone Host Agent.
+The privileged Host Agent owns the narrow telemetry contract used by fan and
+thermal safety logic. Storage temperatures are collected independently from
+the broader application telemetry stack.
 """
 
 from __future__ import annotations
@@ -15,18 +15,18 @@ from typing import Any
 
 class HostFanTelemetryProvider:
     """
-    Normalize the telemetry snapshot consumed by Host Agent safety services.
+    Build the safety snapshot consumed by the Host Agent.
 
-    The provider deliberately exposes only safety-relevant data:
-    fan status, temperatures, and freshness.
+    A snapshot is fresh only when the Host Agent successfully obtains at least
+    one valid temperature measurement during the current sampling cycle.
     """
 
     def __init__(
         self,
         *,
-        state_provider: Callable[
+        temperature_provider: Callable[
             [],
-            Mapping[str, Any],
+            tuple[float, ...],
         ],
         fan_status_provider: Callable[
             [],
@@ -35,7 +35,9 @@ class HostFanTelemetryProvider:
         clock: Callable[[], float] = time.time,
         freshness_seconds: float = 10.0,
     ) -> None:
-        self._state_provider = state_provider
+        self._temperature_provider = (
+            temperature_provider
+        )
         self._fan_status_provider = (
             fan_status_provider
         )
@@ -43,38 +45,25 @@ class HostFanTelemetryProvider:
         self._freshness_seconds = float(
             freshness_seconds
         )
+        self._last_successful_sample: (
+            float | None
+        ) = None
 
-    @staticmethod
-    def temperatures_from_state(
-        state: Mapping[str, Any],
-    ) -> tuple[float, ...]:
-        """Normalize legacy collector temperatures."""
+    def snapshot(
+        self,
+    ) -> dict[str, Any]:
+        """Return one normalized Host Agent safety snapshot."""
+
+        try:
+            raw_temperatures = (
+                self._temperature_provider()
+            )
+        except Exception:
+            raw_temperatures = ()
 
         temperatures_c: list[float] = []
 
-        for item in (
-            state.get(
-                "temps",
-                [],
-            )
-            or []
-        ):
-            if not isinstance(
-                item,
-                Mapping,
-            ):
-                continue
-
-            value = item.get(
-                "temperature_c",
-                item.get(
-                    "temperature",
-                    item.get(
-                        "temp"
-                    ),
-                ),
-            )
-
+        for value in raw_temperatures:
             try:
                 temperatures_c.append(
                     float(value)
@@ -85,56 +74,32 @@ class HostFanTelemetryProvider:
             ):
                 continue
 
-        return tuple(
-            temperatures_c
-        )
+        now = self._clock()
 
-    def telemetry_is_fresh(
-        self,
-        state: Mapping[str, Any],
-    ) -> bool:
-        """Return whether the supplied telemetry state is recent enough."""
+        if temperatures_c:
+            self._last_successful_sample = now
 
-        last_updated = state.get(
-            "last_updated"
-        )
+        telemetry_fresh = False
 
-        try:
-            age = (
-                self._clock()
-                - float(last_updated)
-            )
-        except (
-            TypeError,
-            ValueError,
+        if (
+            self._last_successful_sample
+            is not None
         ):
-            return False
-
-        return (
-            age
-            <= self._freshness_seconds
-        )
-
-    def snapshot(
-        self,
-    ) -> dict[str, Any]:
-        """Return one normalized Host Agent safety snapshot."""
-
-        state = self._state_provider()
+            telemetry_fresh = (
+                now
+                - self._last_successful_sample
+                <= self._freshness_seconds
+            )
 
         return {
             "fan_status": dict(
                 self._fan_status_provider()
             ),
-            "temperatures_c": (
-                self.temperatures_from_state(
-                    state
-                )
+            "temperatures_c": tuple(
+                temperatures_c
             ),
             "telemetry_fresh": (
-                self.telemetry_is_fresh(
-                    state
-                )
+                telemetry_fresh
             ),
         }
 

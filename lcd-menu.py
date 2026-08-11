@@ -4,55 +4,56 @@ import json
 import logging
 import os
 import platform
-import subprocess
 import signal
+import subprocess
 import threading
 import time
 
 import qnaplcd
-from truepanel.hardware.lcd_reader_status_bridge import (
-    LCDReaderStatusBridge,
-)
-from truepanel.hardware.lcd_display_status_bridge import (
-    LCDDisplayStatusBridge,
-)
-from truepanel.host import (
-    HostAgentApplicationHooks,
-    HostAgentSafetyServices,
-    build_host_agent_bootstrap,
-    build_host_agent_runtime,
-    HostFanTelemetryProvider,
-)
-
 from collector import TruePanelCollector
-from truepanel.display.widgets import progress_bar
 from truepanel.config.loader import load_config
+from truepanel.display.widgets import progress_bar
 from truepanel.flightdeck.autopilot import AutoPilot
 from truepanel.hardware import Buzzer
-from truepanel.history import (
-    TelemetryRecorder,
-    ThermalObserverHistory,
-    event_from_recommendation,
-)
-from truepanel.mission_control import MissionControl
 from truepanel.hardware.bay_led_animation import (
     build_bay_led_startup_animation,
-)
-from truepanel.hardware.fan_status_bridge import (
-    FanControlStatusBridge,
-)
-
-from truepanel.hardware.thermal_fan_policy import (
-    ThermalFanPolicy,
 )
 from truepanel.hardware.bounded_automatic import (
     AUTOMATIC_LEASE_ALLOWED_PROFILES,
     AUTOMATIC_LEASE_SECONDS,
     thermal_safety_fingerprint,
 )
+from truepanel.hardware.drive_temperatures import (
+    DriveTemperatureProvider,
+)
+from truepanel.hardware.fan_status_bridge import (
+    FanControlStatusBridge,
+)
 from truepanel.hardware.fans import (
     get_status as get_fan_status,
 )
+from truepanel.hardware.lcd_display_status_bridge import (
+    LCDDisplayStatusBridge,
+)
+from truepanel.hardware.lcd_reader_status_bridge import (
+    LCDReaderStatusBridge,
+)
+from truepanel.hardware.thermal_fan_policy import (
+    ThermalFanPolicy,
+)
+from truepanel.history import (
+    TelemetryRecorder,
+    ThermalObserverHistory,
+    event_from_recommendation,
+)
+from truepanel.host import (
+    HostAgentApplicationHooks,
+    HostAgentSafetyServices,
+    HostFanTelemetryProvider,
+    build_host_agent_bootstrap,
+    build_host_agent_runtime,
+)
+from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.fan_health import (
@@ -71,7 +72,6 @@ from truepanel.pages.fans import (
     fan_pwm_page,
     fan_rpm_page,
 )
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -446,29 +446,28 @@ def publish_fan_control_status(
     )
 
 
-host_fan_telemetry_provider = None
+host_drive_temperature_provider = (
+    DriveTemperatureProvider()
+)
+
+host_fan_telemetry_provider = (
+    HostFanTelemetryProvider(
+        temperature_provider=(
+            host_drive_temperature_provider
+        ),
+        fan_status_provider=(
+            get_fan_status
+        ),
+    )
+)
+
+host_bootstrap.telemetry = (
+    host_fan_telemetry_provider
+)
 
 
 def fan_command_telemetry():
     """Compatibility adapter for Host-owned safety telemetry."""
-
-    global host_fan_telemetry_provider
-
-    if host_fan_telemetry_provider is None:
-        host_fan_telemetry_provider = (
-            HostFanTelemetryProvider(
-                state_provider=lambda: get_state(
-                    max_age=5
-                ),
-                fan_status_provider=(
-                    get_fan_status
-                ),
-            )
-        )
-
-        host_bootstrap.telemetry = (
-            host_fan_telemetry_provider
-        )
 
     return (
         host_fan_telemetry_provider

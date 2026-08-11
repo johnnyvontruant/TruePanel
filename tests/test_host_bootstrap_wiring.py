@@ -150,10 +150,41 @@ def test_automatic_restoration_has_no_lcd_hardware_fallback():
 def test_lcd_uses_host_owned_telemetry_normalizer():
     runtime = source()
 
-    provider = Path(
+    host_provider = Path(
         "truepanel/host/telemetry.py"
     ).read_text(
         encoding="utf-8"
+    )
+
+    hardware_provider = Path(
+        "truepanel/hardware/drive_temperatures.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "DriveTemperatureProvider()"
+        in runtime
+    )
+
+    assert (
+        "HostFanTelemetryProvider("
+        in runtime
+    )
+
+    assert (
+        "temperature_provider=("
+        in runtime
+    )
+
+    assert (
+        "host_drive_temperature_provider"
+        in runtime
+    )
+
+    assert (
+        "host_bootstrap.telemetry ="
+        in runtime
     )
 
     start = runtime.index(
@@ -168,31 +199,20 @@ def test_lcd_uses_host_owned_telemetry_normalizer():
     block = runtime[start:end]
 
     assert (
-        "HostFanTelemetryProvider("
+        "host_fan_telemetry_provider"
         in block
     )
 
+    assert ".snapshot()" in block
+
+    assert "get_state(" not in block
+
     assert (
-        ".snapshot()"
-        in block
+        "class HostFanTelemetryProvider"
+        in host_provider
     )
 
     assert (
-        '"temperatures_c"'
-        not in block
-    )
-
-    assert (
-        '"telemetry_fresh"'
-        not in block
-    )
-
-    assert (
-        "temperatures_from_state"
-        in provider
-    )
-
-    assert (
-        "telemetry_is_fresh"
-        in provider
+        "class DriveTemperatureProvider"
+        in hardware_provider
     )

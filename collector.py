@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import os
-import time
 import subprocess
+import time
+
+from truepanel.hardware.drive_temperatures import (
+    DriveTemperatureProvider,
+)
 
 
 class TruePanelCollector:
@@ -127,43 +131,9 @@ class TruePanelCollector:
         return pools
 
     def get_drive_temps(self):
-        disks = self.shell(
-            "lsblk -ndo NAME,TYPE | awk '$2==\"disk\"{print \"/dev/\"$1}'"
-        ).splitlines()
-
-        temps = []
-
-        for disk in disks:
-            if disk.endswith("/sdf"):
-                continue
-
-            out = self.shell(f"smartctl -a {disk} 2>/dev/null")
-            temp = None
-
-            for line in out.splitlines():
-                lower = line.lower()
-
-                if "temperature_celsius" in lower or "airflow_temperature" in lower:
-                    for part in reversed(line.split()):
-                        cleaned = part.strip("()")
-                        if cleaned.isdigit():
-                            temp = int(cleaned)
-                            break
-
-                if temp is None and line.strip().startswith("Temperature:"):
-                    for part in line.split():
-                        if part.isdigit():
-                            temp = int(part)
-                            break
-
-                if temp is not None:
-                    break
-
-            if temp is not None:
-                temps.append({"drive": disk.split("/")[-1], "temp": temp})
-
-        temps.sort(key=lambda x: x["temp"], reverse=True)
-        return temps
+        return DriveTemperatureProvider(
+            runner=self.shell,
+        ).records()
 
     def get_arc_stats(self):
         path = "/proc/spl/kstat/zfs/arcstats"
