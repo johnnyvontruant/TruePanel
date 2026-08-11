@@ -132,6 +132,7 @@ def build_host_agent_runtime(
 
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: (
             build_fan_command_server(
                 fan_runtime=fan_runtime,
@@ -162,8 +163,6 @@ def build_host_agent_runtime(
             )
         ),
     )
-
-    runtime.safety = safety
 
     return runtime
 

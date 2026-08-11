@@ -27,10 +27,12 @@ class HostAgentRuntime:
         self,
         *,
         fan_runtime: Any,
+        safety: Any,
         fan_server_factory: Callable[[], Any | None],
         lcd_server_factory: Callable[[], Any | None],
     ):
         self._fan_runtime = fan_runtime
+        self._safety = safety
         self._fan_server_factory = fan_server_factory
         self._lcd_server_factory = lcd_server_factory
 
@@ -38,6 +40,12 @@ class HostAgentRuntime:
         self._lcd_server = None
         self._started = False
         self._shutdown = False
+
+    @property
+    def safety(self) -> Any:
+        """Return the Host Agent safety coordinator."""
+
+        return self._safety
 
     @property
     def started(self) -> bool:

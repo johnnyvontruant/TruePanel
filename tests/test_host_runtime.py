@@ -77,8 +77,11 @@ def test_runtime_starts_fan_then_lcd_server():
         events,
     )
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: fan_server,
         lcd_server_factory=lambda: lcd_server,
     )
@@ -98,8 +101,11 @@ def test_runtime_allows_missing_servers():
     events = []
     fan_runtime = FakeFanRuntime(events)
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: None,
         lcd_server_factory=lambda: None,
     )
@@ -124,8 +130,11 @@ def test_runtime_start_is_idempotent():
         events,
     )
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: fan_server,
         lcd_server_factory=lambda: lcd_server,
     )
@@ -149,8 +158,11 @@ def test_shutdown_stops_lcd_then_fan_then_runtime():
         events,
     )
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: fan_server,
         lcd_server_factory=lambda: lcd_server,
     )
@@ -183,8 +195,11 @@ def test_shutdown_is_idempotent():
         events,
     )
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: fan_server,
         lcd_server_factory=lambda: lcd_server,
     )
@@ -214,8 +229,11 @@ def test_lcd_start_failure_rolls_back_host_runtime():
         fail_start=True,
     )
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: fan_server,
         lcd_server_factory=lambda: lcd_server,
     )
@@ -247,8 +265,11 @@ def test_fan_start_failure_restores_runtime():
         fail_start=True,
     )
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: fan_server,
         lcd_server_factory=lambda: None,
     )
@@ -281,8 +302,11 @@ def test_shutdown_continues_after_server_failure():
         fail_stop=True,
     )
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: fan_server,
         lcd_server_factory=lambda: lcd_server,
     )
@@ -308,8 +332,11 @@ def test_shutdown_tolerates_fan_runtime_failure():
         fail_shutdown=True,
     )
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
+        safety=safety,
         fan_server_factory=lambda: None,
         lcd_server_factory=lambda: None,
     )
@@ -326,8 +353,11 @@ def test_shutdown_tolerates_fan_runtime_failure():
 def test_runtime_cannot_restart_after_shutdown():
     events = []
 
+    safety = object()
+
     runtime = HostAgentRuntime(
         fan_runtime=FakeFanRuntime(events),
+        safety=safety,
         fan_server_factory=lambda: None,
         lcd_server_factory=lambda: None,
     )
@@ -340,3 +370,18 @@ def test_runtime_cannot_restart_after_shutdown():
         match="cannot restart after shutdown",
     ):
         runtime.start()
+
+
+def test_runtime_owns_safety_coordinator():
+    events = []
+    fan_runtime = FakeFanRuntime(events)
+    safety = object()
+
+    runtime = HostAgentRuntime(
+        fan_runtime=fan_runtime,
+        safety=safety,
+        fan_server_factory=lambda: None,
+        lcd_server_factory=lambda: None,
+    )
+
+    assert runtime.safety is safety
