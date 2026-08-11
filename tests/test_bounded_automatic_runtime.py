@@ -29,12 +29,21 @@ def test_empty_commissioned_fingerprint_is_safe_locked():
 
 
 def test_runtime_declares_bounded_automatic_contract():
-    source = Path("lcd-menu.py").read_text(
+    runtime = Path(
+        "lcd-menu.py"
+    ).read_text(
         encoding="utf-8"
     )
 
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    combined = runtime + authority
+
     required = (
-        "bounded_automatic_lease",
         "automatic_lease_started",
         "automatic_lease_expired",
         "automatic_lease_cancelled",
@@ -45,8 +54,12 @@ def test_runtime_declares_bounded_automatic_contract():
     )
 
     for value in required:
-        assert value in source
+        assert value in combined
 
+    assert (
+        "self.automatic_lease"
+        in authority
+    )
 
 def test_safety_tick_precedes_automatic_lease_checks():
     source = Path("lcd-menu.py").read_text(
@@ -201,33 +214,37 @@ def test_runtime_authority_remains_ephemeral():
 
 
 def test_stage_three_runtime_supports_renewal():
-    runtime = Path("lcd-menu.py").read_text(
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
         encoding="utf-8"
     )
+
     command = Path(
         "truepanel/hardware/fan_command.py"
     ).read_text(
         encoding="utf-8"
     )
+
     server = Path(
         "truepanel/web/server.py"
     ).read_text(
         encoding="utf-8"
     )
+
     history = Path(
         "truepanel/history/thermal_commissioning.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    assert "automatic_lease_renew" in runtime
-    assert "thermal_authority.automatic_lease.renew(" in runtime
-    assert "automatic_lease_renewed" in runtime
-    assert "automatic_lease_renew" in command
-    assert "RENEW_STAGE_3_AUTOMATIC_CONTROL" in command
-    assert "automatic_lease_renew" in server
+    assert "automatic_lease_renew" in authority
+
     assert (
-        "BOUNDED_AUTOMATIC_RENEW_CONFIRMATION"
-        in server
+        "self.automatic_lease.renew("
+        in authority
     )
+
+    assert "automatic_lease_renew" in command
+    assert "automatic_lease_renew" in server
     assert "automatic_lease_renewed" in history

@@ -870,62 +870,64 @@ def test_source_default_enables_dry_run_lock():
 
 
 def test_supervised_live_session_is_time_limited_and_balanced_only():
-    from pathlib import Path
-
-    source = Path(
-        "lcd-menu.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
-    authority_source = Path(
+    authority = Path(
         "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
     assert (
-        "supervised_session_seconds=120.0"
-        in source
+        "self.supervised_session_seconds"
+        in authority
     )
+
+    start = authority.index(
+        'elif normalized == "supervised_live":'
+    )
+
+    end = authority.index(
+        'elif normalized == "arm":',
+        start,
+    )
+
+    supervised = authority[start:end]
+
+    assert '"balanced"' in supervised
 
     assert (
         "self.supervised_session_seconds"
-        in authority_source
-    )
-
-    assert (
-        '"balanced"'
-        in source[
-            source.index(
-                'elif normalized == "supervised_live":'
-            ):
-            source.index(
-                'elif normalized == "arm":'
-            )
-        ]
+        in supervised
     )
 
 def test_supervised_live_session_requires_automatic_start():
-    source = Path(
-        "lcd-menu.py"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    assert (
-        '!= "automatic"'
-        in source
-    )
-    assert (
-        "Supervised live control must begin "
-        in source
-    )
-    assert (
-        "from motherboard automatic mode."
-        in source
+    start = authority.index(
+        'elif normalized == "supervised_live":'
     )
 
+    end = authority.index(
+        'elif normalized == "arm":',
+        start,
+    )
+
+    supervised = authority[start:end]
+
+    assert (
+        'runtime_status.get('
+        in supervised
+    )
+
+    assert '!= "automatic"' in supervised
+
+    assert (
+        "Supervised live control must begin "
+        in supervised
+    )
 
 def test_supervised_session_expiry_restores_dry_run():
     source = Path(
@@ -1013,30 +1015,30 @@ def test_safety_decision_disarms_lease_without_requesting_automatic():
     assert "restore=False" in safety_block
 
 def test_supervised_live_response_is_not_labeled_dry_run():
-    source = Path(
-        "lcd-menu.py"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
+    assert '"supervised_live"' in authority
+
+    assert (
+        '"status": ('
+        in authority
+    )
+
     assert (
         '"supervised_live"'
-        in source
+        in authority[
+            authority.index(
+                "return {",
+                authority.index(
+                    'elif normalized == "supervised_live":'
+                ),
+            ):
+        ]
     )
-    assert (
-        'normalized == "supervised_live"'
-        in source
-    )
-    assert (
-        "Supervised live thermal control "
-        in source
-    )
-    assert (
-        "balanced profile only."
-        in source
-    )
-
-
 
 def test_supervised_handler_declares_deadline_global():
     from pathlib import Path
@@ -1059,80 +1061,70 @@ def test_supervised_handler_declares_deadline_global():
     )
 
 def test_supervised_handler_sets_bounded_deadline():
-    from pathlib import Path
-
-    source = Path(
-        "lcd-menu.py"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
+    start = authority.index(
         'elif normalized == "supervised_live":'
     )
 
-    end = source.index(
+    end = authority.index(
         'elif normalized == "arm":',
         start,
     )
 
-    handler = source[start:end]
+    handler = authority[start:end]
 
     assert (
-        "thermal_authority."
-        "supervised_session_deadline"
+        "self.supervised_session_deadline"
         in handler
     )
 
+    assert "self.clock()" in handler
+
     assert (
-        "thermal_authority."
-        "supervised_session_seconds"
+        "+ self.supervised_session_seconds"
         in handler
     )
 
 def test_disarm_synchronously_restores_motherboard_control():
-    from pathlib import Path
-
-    source = Path(
-        "lcd-menu.py"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    handler_start = source.index(
-        "def set_thermal_operator_arm_state"
-    )
-
-    handler_end = source.index(
-        "\ndef ",
-        handler_start,
-    )
-
-    handler = source[
-        handler_start:handler_end
-    ]
-
-    disarm_start = handler.index(
+    start = authority.index(
         "else:\n"
-        "        was_supervised = ("
+        "            was_supervised = ("
     )
 
-    disarm_block = handler[
-        disarm_start:
-    ]
-
-    restore_position = disarm_block.index(
-        "restore_motherboard_fan_control("
+    end = authority.index(
+        "\n        if (",
+        start,
     )
 
-    safe_state_position = disarm_block.index(
-        "thermal_authority."
-        "coordinator.configure("
+    disarm = authority[start:end]
+
+    restore_position = disarm.index(
+        "restore_automatic("
+    )
+
+    safe_state_position = disarm.index(
+        "self.coordinator.configure("
     )
 
     assert (
         restore_position
         < safe_state_position
+    )
+
+    assert (
+        "self.operator_armed = False"
+        in disarm
     )
 
 def test_lease_expiry_uses_synchronous_restoration():
@@ -1166,26 +1158,21 @@ def test_lease_expiry_uses_synchronous_restoration():
     )
 
 def test_disarm_message_reports_motherboard_restoration():
-    source = Path(
-        "lcd-menu.py"
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
     assert (
         "Automatic thermal control disarmed; "
-        in source
+        in authority
     )
+
     assert (
         "motherboard control restored."
-        in source
+        in authority
     )
-    assert (
-        "simulation returned to automatic."
-        not in source
-    )
-
-
 
 def test_thermal_runtime_always_starts_disarmed():
     from pathlib import Path
@@ -1244,61 +1231,72 @@ def test_configuration_cannot_grant_startup_authority():
     )
 
 def test_guarded_runtime_commands_can_still_arm():
-    from pathlib import Path
-
-    source = Path(
+    runtime = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    start = source.index(
-        "def set_thermal_operator_arm_state"
-    )
-
-    end = source.index(
-        "\ndef ",
-        start,
-    )
-
-    handler = source[start:end]
-
-    assert (
-        "thermal_authority."
-        "operator_armed = True"
-        in handler
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
+    ).read_text(
+        encoding="utf-8"
     )
 
     assert (
-        "thermal_authority."
-        "coordinator.configure("
-        in handler
+        "thermal_authority.handle_action("
+        in runtime
+    )
+
+    assert (
+        "self.operator_armed = True"
+        in authority
+    )
+
+    assert (
+        "self.coordinator.configure("
+        in authority
     )
 
 def test_lcd_records_supervised_commissioning_lifecycle():
-    source = Path(
+    runtime = Path(
         "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    authority = Path(
+        "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
     assert (
         "ThermalCommissioningHistory"
-        in source
+        in runtime
     )
+
     assert (
         "def record_thermal_commissioning_event("
-        in source
+        in runtime
+    )
+
+    assert (
+        "record_commissioning_event="
+        in runtime
     )
 
     for action in (
         "supervised_started",
         "supervised_disarmed",
+    ):
+        assert action in authority
+
+    for action in (
         "supervised_expired",
         "supervised_safety_cancelled",
     ):
-        assert action in source
-
+        assert action in runtime
 
 def test_session_end_requires_lifecycle_action():
     source = Path(

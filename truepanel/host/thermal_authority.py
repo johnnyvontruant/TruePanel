@@ -180,6 +180,660 @@ class HostThermalAuthority:
         self.coordinator.owns_control = False
 
 
+    def handle_action(
+        self,
+        action,
+        *,
+        telemetry_provider,
+        runtime_status_provider,
+        restore_automatic,
+        record_commissioning_event,
+    ):
+        """Apply a guarded runtime arm-state change.
+
+        This first operator workflow intentionally supports dry-run only.
+        Live thermal actuation remains locked out until separately enabled
+        and reviewed.
+        """
+
+
+        normalized = str(
+            action
+        ).strip().lower()
+
+        if normalized not in {
+            "arm",
+            "disarm",
+            "supervised_live",
+            "automatic_lease",
+            "automatic_lease_renew",
+        }:
+            return {
+                "ok": False,
+                "status": "invalid_action",
+                "message": (
+                    "Thermal-control action must be arm, disarm, "
+                    "supervised_live, automatic_lease, or "
+                    "automatic_lease_renew."
+                ),
+            }
+
+        if self.policy_mode != "automatic_control":
+            return {
+                "ok": False,
+                "status": "wrong_mode",
+                "message": (
+                    "Thermal policy mode must be "
+                    "automatic_control."
+                ),
+                "policy_mode": self.policy_mode,
+            }
+
+        if (
+            normalized == "arm"
+            and not self.dry_run
+        ):
+            return {
+                "ok": False,
+                "status": "live_control_locked",
+                "message": (
+                    "Standard runtime arming is limited "
+                    "to dry-run mode."
+                ),
+                "dry_run": False,
+            }
+
+        telemetry = telemetry_provider()
+        runtime_status = (
+            runtime_status_provider()
+        )
+
+        if normalized == "automatic_lease":
+            recommendation_profile = (
+                self.current_recommendation
+                .recommended_profile
+                .value
+                if self.current_recommendation is not None
+                else "automatic"
+            )
+
+            lease_decision = self.automatic_lease.start(
+                current_fingerprint=(
+                    self.current_fingerprint
+                ),
+                active_profile=runtime_status.get(
+                    "active_profile",
+                    "automatic",
+                ),
+                recommended_profile=(
+                    recommendation_profile
+                ),
+                telemetry_valid=bool(
+                    self.current_recommendation is not None
+                    and self.current_recommendation
+                    .telemetry_valid
+                ),
+                telemetry_fresh=bool(
+                    telemetry.get(
+                        "telemetry_fresh",
+                        False,
+                    )
+                ),
+                connected=bool(
+                    runtime_status.get(
+                        "connected",
+                        False,
+                    )
+                ),
+                safety_hold=bool(
+                    runtime_status.get(
+                        "safety_hold",
+                        False,
+                    )
+                ),
+                recovery_pending=bool(
+                    runtime_status.get(
+                        "recovery_pending",
+                        False,
+                    )
+                ),
+            )
+
+            if not lease_decision.accepted:
+                return {
+                    "ok": False,
+                    "status": lease_decision.status,
+                    "message": lease_decision.message,
+                    "blocking_reasons": list(
+                        lease_decision.blocking_reasons
+                    ),
+                    "operator_armed": (
+                        self.operator_armed
+                    ),
+                    "dry_run": self.dry_run,
+                    "automatic_lease_active": False,
+                }
+
+            self.operator_armed = True
+
+            self.coordinator.configure(
+                operator_armed=True,
+                dry_run=False,
+            )
+
+        elif normalized == "automatic_lease_renew":
+            recommendation_profile = (
+                self.current_recommendation
+                .recommended_profile
+                .value
+                if self.current_recommendation is not None
+                else "automatic"
+            )
+
+            lease_decision = self.automatic_lease.renew(
+                current_fingerprint=(
+                    self.current_fingerprint
+                ),
+                active_profile=runtime_status.get(
+                    "active_profile",
+                    "automatic",
+                ),
+                recommended_profile=(
+                    recommendation_profile
+                ),
+                telemetry_valid=bool(
+                    self.current_recommendation is not None
+                    and self.current_recommendation
+                    .telemetry_valid
+                ),
+                telemetry_fresh=bool(
+                    telemetry.get(
+                        "telemetry_fresh",
+                        False,
+                    )
+                ),
+                connected=bool(
+                    runtime_status.get(
+                        "connected",
+                        False,
+                    )
+                ),
+                safety_hold=bool(
+                    runtime_status.get(
+                        "safety_hold",
+                        False,
+                    )
+                ),
+                recovery_pending=bool(
+                    runtime_status.get(
+                        "recovery_pending",
+                        False,
+                    )
+                ),
+            )
+
+            if not lease_decision.accepted:
+                return {
+                    "ok": False,
+                    "status": lease_decision.status,
+                    "message": lease_decision.message,
+                    "blocking_reasons": list(
+                        lease_decision.blocking_reasons
+                    ),
+                    "operator_armed": (
+                        self.operator_armed
+                    ),
+                    "dry_run": self.dry_run,
+                    "automatic_lease_active": (
+                        self.automatic_lease.active()
+                    ),
+                    "automatic_lease_remaining": (
+                        self.automatic_lease
+                        .remaining_seconds()
+                    ),
+                }
+
+            self.operator_armed = True
+
+            self.coordinator.configure(
+                operator_armed=True,
+                dry_run=False,
+            )
+
+        elif normalized == "supervised_live":
+            blocking_reasons = []
+
+            if not self.dry_run:
+                blocking_reasons.append(
+                    "The supervised session must begin "
+                    "from dry-run mode."
+                )
+
+            if self.current_recommendation is None:
+                blocking_reasons.append(
+                    "Thermal recommendation is unavailable."
+                )
+            elif not bool(
+                self.current_recommendation
+                .telemetry_valid
+            ):
+                blocking_reasons.append(
+                    "Thermal recommendation telemetry "
+                    "is invalid."
+                )
+            elif (
+                self.current_recommendation
+                .recommended_profile
+                .value
+                != "balanced"
+            ):
+                blocking_reasons.append(
+                    "Supervised live control permits "
+                    "only the balanced recommendation."
+                )
+
+            if not bool(
+                telemetry.get(
+                    "telemetry_fresh",
+                    False,
+                )
+            ):
+                blocking_reasons.append(
+                    "Thermal telemetry is stale."
+                )
+
+            if not bool(
+                runtime_status.get(
+                    "connected",
+                    False,
+                )
+            ):
+                blocking_reasons.append(
+                    "Fan-control runtime is disconnected."
+                )
+
+            if (
+                runtime_status.get(
+                    "active_profile"
+                )
+                != "automatic"
+            ):
+                blocking_reasons.append(
+                    "Supervised live control must begin "
+                    "from motherboard automatic mode."
+                )
+
+            if bool(
+                runtime_status.get(
+                    "safety_hold",
+                    False,
+                )
+            ):
+                blocking_reasons.append(
+                    "Fan-control safety hold is active."
+                )
+
+            if bool(
+                runtime_status.get(
+                    "recovery_pending",
+                    False,
+                )
+            ):
+                blocking_reasons.append(
+                    "Fan-control safety recovery is pending."
+                )
+
+            fan_channels = (
+                telemetry
+                .get("fan_status", {})
+                .get("fan_channels", [])
+            )
+
+            controlled = {
+                int(item.get("number")): item
+                for item in fan_channels
+                if isinstance(item, dict)
+                and item.get("number") in (1, 2)
+            }
+
+            for channel in (1, 2):
+                item = controlled.get(channel)
+
+                if item is None:
+                    blocking_reasons.append(
+                        f"Controlled fan {channel} "
+                        "telemetry is unavailable."
+                    )
+                    continue
+
+                try:
+                    rpm = float(
+                        item.get("rpm", 0)
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    rpm = 0.0
+
+                if rpm < 300:
+                    blocking_reasons.append(
+                        f"Controlled fan {channel} "
+                        "is below the safe RPM floor."
+                    )
+
+                if bool(
+                    item.get("alarm", False)
+                ):
+                    blocking_reasons.append(
+                        f"Controlled fan {channel} "
+                        "reports an alarm."
+                    )
+
+            if blocking_reasons:
+                return {
+                    "ok": False,
+                    "status": "readiness_blocked",
+                    "message": blocking_reasons[0],
+                    "blocking_reasons": blocking_reasons,
+                    "operator_armed": (
+                        self.operator_armed
+                    ),
+                    "dry_run": self.dry_run,
+                }
+
+            self.operator_armed = True
+
+            self.coordinator.configure(
+                operator_armed=True,
+                dry_run=False,
+            )
+
+            self.supervised_session_deadline = (
+                self.clock()
+                + self.supervised_session_seconds
+            )
+
+        elif normalized == "arm":
+            blocking_reasons = []
+
+            if self.current_recommendation is None:
+                blocking_reasons.append(
+                    "Thermal recommendation is unavailable."
+                )
+            elif not bool(
+                self.current_recommendation
+                .telemetry_valid
+            ):
+                blocking_reasons.append(
+                    "Thermal recommendation telemetry "
+                    "is invalid."
+                )
+
+            if not bool(
+                telemetry.get(
+                    "telemetry_fresh",
+                    False,
+                )
+            ):
+                blocking_reasons.append(
+                    "Thermal telemetry is stale."
+                )
+
+            if not bool(
+                runtime_status.get(
+                    "connected",
+                    False,
+                )
+            ):
+                blocking_reasons.append(
+                    "Fan-control runtime is disconnected."
+                )
+
+            if bool(
+                runtime_status.get(
+                    "safety_hold",
+                    False,
+                )
+            ):
+                blocking_reasons.append(
+                    "Fan-control safety hold is active."
+                )
+
+            if blocking_reasons:
+                return {
+                    "ok": False,
+                    "status": "readiness_blocked",
+                    "message": blocking_reasons[0],
+                    "blocking_reasons": (
+                        blocking_reasons
+                    ),
+                    "operator_armed": (
+                        self.operator_armed
+                    ),
+                    "dry_run": self.dry_run,
+                }
+
+            self.operator_armed = True
+            self.coordinator.configure(
+                operator_armed=True
+            )
+
+        else:
+            was_supervised = (
+                self.supervised_session_deadline
+                is not None
+            )
+            was_automatic_lease = (
+                self.automatic_lease.deadline
+                is not None
+            )
+
+            self.automatic_lease.cancel()
+            self.supervised_session_deadline = None
+            self.operator_armed = False
+
+            restore_automatic(
+                (
+                    "Automatic thermal control disarmed; "
+                    "motherboard control restored."
+                ),
+                telemetry=telemetry,
+            )
+
+            self.coordinator.configure(
+                operator_armed=False,
+                dry_run=True,
+            )
+            self.coordinator.simulated_profile = (
+                self.coordinator._profile(
+                    "automatic"
+                )
+            )
+            self.coordinator.owns_control = False
+            self.last_result = None
+
+            if was_automatic_lease:
+                record_commissioning_event(
+                    "automatic_lease_cancelled",
+                    (
+                        "Bounded automatic thermal control "
+                        "manually cancelled; motherboard "
+                        "control restored."
+                    ),
+                    lease_remaining=0.0,
+                )
+
+            if was_supervised:
+                record_commissioning_event(
+                    "supervised_disarmed",
+                    (
+                        "Automatic thermal control "
+                        "manually disarmed; motherboard "
+                        "control restored."
+                    ),
+                    lease_remaining=0.0,
+                )
+
+        if (
+            normalized != "disarm"
+            and self.current_recommendation is not None
+        ):
+            self.last_result = (
+                self.coordinator
+                .evaluate(
+                    self.current_recommendation,
+                    telemetry=telemetry,
+                    runtime_status=runtime_status,
+                )
+            )
+
+        if (
+            normalized == "automatic_lease"
+            and self.automatic_lease.active()
+        ):
+            record_commissioning_event(
+                "automatic_lease_started",
+                (
+                    "Bounded automatic thermal control "
+                    "engaged for 86400 seconds with balanced "
+                    "and cooling boost profiles only."
+                ),
+                lease_remaining=AUTOMATIC_LEASE_SECONDS,
+            )
+
+        if (
+            normalized == "automatic_lease_renew"
+            and self.automatic_lease.active()
+        ):
+            record_commissioning_event(
+                "automatic_lease_renewed",
+                (
+                    "Stage 3 automatic thermal control "
+                    "renewed for 86400 seconds."
+                ),
+                lease_remaining=AUTOMATIC_LEASE_SECONDS,
+            )
+
+        if (
+            normalized == "supervised_live"
+            and self.supervised_session_active()
+        ):
+            record_commissioning_event(
+                "supervised_started",
+                (
+                    "Supervised live thermal control "
+                    "engaged for 120 seconds with the "
+                    "balanced profile only."
+                ),
+                lease_remaining=(
+                    self.supervised_session_seconds
+                ),
+            )
+
+        return {
+            "ok": True,
+            "status": (
+                "automatic_lease_renewed"
+                if (
+                    normalized == "automatic_lease_renew"
+                    and self.operator_armed
+                )
+                else (
+                    "automatic_lease"
+                    if (
+                        normalized == "automatic_lease"
+                        and self.operator_armed
+                    )
+                else (
+                    "supervised_live"
+                    if (
+                        normalized == "supervised_live"
+                        and self.operator_armed
+                    )
+                    else (
+                        "armed"
+                        if self.operator_armed
+                        else "disarmed"
+                    )
+                )
+            )
+            ),
+            "message": (
+                (
+                    "Stage 3 automatic thermal control "
+                    "renewed for 86400 seconds."
+                )
+                if (
+                    normalized == "automatic_lease_renew"
+                    and self.operator_armed
+                )
+                else (
+                (
+                    "Bounded automatic thermal control "
+                    "engaged for 86400 seconds with balanced "
+                    "and cooling boost profiles only."
+                )
+                if (
+                    normalized == "automatic_lease"
+                    and self.operator_armed
+                )
+                else (
+                    (
+                        "Supervised live thermal control "
+                        "engaged for 120 seconds with the "
+                        "balanced profile only."
+                    )
+                    if (
+                        normalized == "supervised_live"
+                        and self.operator_armed
+                    )
+                    else (
+                        "Automatic thermal control armed "
+                        "in dry-run mode."
+                        if self.operator_armed
+                        else (
+                            "Automatic thermal control disarmed; "
+                            "motherboard control restored."
+                        )
+                    )
+                )
+            )
+            ),
+            "operator_armed": (
+                self.operator_armed
+            ),
+            "dry_run": (
+                self.coordinator.dry_run
+            ),
+            "policy_mode": self.policy_mode,
+            "supervised_session_active": (
+                self.supervised_session_active()
+            ),
+            "supervised_session_seconds": (
+                self.supervised_session_seconds
+                if self.supervised_session_active()
+                else 0.0
+            ),
+            "automatic_lease_active": (
+                self.automatic_lease.active()
+            ),
+            "automatic_lease_seconds": (
+                AUTOMATIC_LEASE_SECONDS
+                if self.automatic_lease.active()
+                else 0.0
+            ),
+            "automatic_lease_remaining": (
+                self.automatic_lease
+                .remaining_seconds()
+            ),
+            "simulated_profile": (
+                self.coordinator
+                .simulated_profile
+                .value
+            ),
+        }
+
 __all__ = [
     "HostThermalAuthority",
 ]
