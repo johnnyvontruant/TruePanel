@@ -2,19 +2,28 @@ from pathlib import Path
 
 
 def test_lcd_runtime_builds_fan_control_runtime():
-    source = Path(
+    runtime = Path(
         "lcd-menu.py"
     ).read_text()
 
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
+
     assert (
-        "build_fan_control_runtime"
-        in source
+        "build_host_agent_bootstrap("
+        in runtime
     )
 
     assert (
         "fan_control_runtime = "
-        "build_fan_control_runtime("
-        in source
+        "host_bootstrap.fan_runtime"
+        in runtime
+    )
+
+    assert (
+        "build_fan_control_runtime"
+        in bootstrap
     )
 
 

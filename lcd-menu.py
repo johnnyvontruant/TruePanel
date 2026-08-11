@@ -19,7 +19,7 @@ from truepanel.hardware.lcd_display_status_bridge import (
 from truepanel.host import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
-    HostThermalAuthority,
+    build_host_agent_bootstrap,
     build_host_agent_runtime,
 )
 
@@ -29,14 +29,12 @@ from truepanel.config.loader import load_config
 from truepanel.flightdeck.autopilot import AutoPilot
 from truepanel.hardware import Buzzer
 from truepanel.history import (
-    FanControlHistory,
     TelemetryRecorder,
     ThermalObserverHistory,
     event_from_decision,
     event_from_recommendation,
 )
 from truepanel.history.thermal_commissioning import (
-    ThermalCommissioningHistory,
     commissioning_event,
 )
 from truepanel.mission_control import MissionControl
@@ -57,9 +55,6 @@ from truepanel.hardware.bounded_automatic import (
     AUTOMATIC_LEASE_ALLOWED_PROFILES,
     AUTOMATIC_LEASE_SECONDS,
     thermal_safety_fingerprint,
-)
-from truepanel.hardware.fan_runtime import (
-    build_fan_control_runtime,
 )
 from truepanel.hardware.fans import (
     get_status as get_fan_status,
@@ -108,9 +103,10 @@ mission = MissionControl()
 alert_manager = AlertManager()
 config = load_config()
 fan_control_status_bridge = FanControlStatusBridge()
-fan_control_runtime = build_fan_control_runtime(
+host_bootstrap = build_host_agent_bootstrap(
     config
 )
+fan_control_runtime = host_bootstrap.fan_runtime
 
 host_agent_runtime = None
 storage_health_watcher = build_storage_health_watcher(config)
@@ -118,49 +114,11 @@ fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
 history_recorder = TelemetryRecorder(config.get("history", {}))
-fan_control_history = FanControlHistory(
-    config.get(
-        "history",
-        {},
-    ).get(
-        "fan_control_path",
-        (
-            "/var/lib/truepanel/history/"
-            "fan-control.jsonl"
-        ),
-    ),
-    enabled=bool(
-        config.get(
-            "history",
-            {},
-        ).get(
-            "enabled",
-            True,
-        )
-    ),
+fan_control_history = (
+    host_bootstrap.fan_control_history
 )
 thermal_commissioning_history = (
-    ThermalCommissioningHistory(
-        config.get(
-            "history",
-            {},
-        ).get(
-            "thermal_commissioning_path",
-            (
-                "/var/lib/truepanel/history/"
-                "thermal-commissioning.jsonl"
-            ),
-        ),
-        enabled=bool(
-            config.get(
-                "history",
-                {},
-            ).get(
-                "enabled",
-                True,
-            )
-        ),
-    )
+    host_bootstrap.thermal_commissioning_history
 )
 
 thermal_observer_history = ThermalObserverHistory(
@@ -292,22 +250,8 @@ _commissioned_thermal_safety_fingerprint = str(
     or ""
 ).strip().lower()
 
-thermal_authority = HostThermalAuthority(
-    service=fan_control_runtime.service,
-    policy_mode=thermal_policy_mode,
-    command_cooldown_seconds=(
-        thermal_command_cooldown_seconds
-    ),
-    current_fingerprint=(
-        _current_thermal_safety_fingerprint
-    ),
-    commissioned_fingerprint=(
-        _commissioned_thermal_safety_fingerprint
-    ),
-    automatic_lease_seconds=(
-        AUTOMATIC_LEASE_SECONDS
-    ),
-    supervised_session_seconds=120.0,
+thermal_authority = (
+    host_bootstrap.thermal_authority
 )
 
 thermal_observer_previous_profile = "automatic"

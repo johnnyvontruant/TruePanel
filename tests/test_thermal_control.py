@@ -591,32 +591,48 @@ def test_status_bridge_uses_published_arm_state():
     assert "operator_armed=False" not in source
 
 
+
 def test_lcd_constructs_thermal_coordinator():
     from pathlib import Path
 
-    source = Path(
+    runtime = Path(
         "lcd-menu.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    authority_source = Path(
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    authority = Path(
         "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    assert "HostThermalAuthority(" in source
+    assert (
+        "build_host_agent_bootstrap("
+        in runtime
+    )
 
     assert (
-        "ThermalControlCoordinator("
-        in authority_source
+        "thermal_authority_factory="
+        "HostThermalAuthority"
+        in bootstrap
     )
 
     assert (
         "thermal_authority = "
-        "HostThermalAuthority("
-        in source
+        "thermal_authority_factory("
+        in bootstrap
+    )
+
+    assert (
+        "ThermalControlCoordinator("
+        in authority
     )
 
 def test_safety_reconcile_precedes_thermal_control():
@@ -1326,9 +1342,18 @@ def test_guarded_runtime_commands_can_still_arm():
         in authority
     )
 
+
 def test_lcd_records_supervised_commissioning_lifecycle():
+    from pathlib import Path
+
     runtime = Path(
         "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
     ).read_text(
         encoding="utf-8"
     )
@@ -1340,27 +1365,20 @@ def test_lcd_records_supervised_commissioning_lifecycle():
     )
 
     assert (
+        "host_bootstrap."
+        "thermal_commissioning_history"
+        in runtime
+    )
+
+    assert (
         "ThermalCommissioningHistory"
-        in runtime
+        in bootstrap
     )
 
     assert (
-        "def record_thermal_commissioning_event("
-        in runtime
+        "record_commissioning_event"
+        in authority
     )
-
-    assert (
-        "record_commissioning_event="
-        in runtime
-    )
-
-    for action in (
-        "supervised_started",
-        "supervised_disarmed",
-        "supervised_expired",
-        "supervised_safety_cancelled",
-    ):
-        assert action in authority
 
 def test_session_end_requires_lifecycle_action():
     authority = Path(

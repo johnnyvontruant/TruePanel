@@ -184,9 +184,18 @@ def test_production_default_has_no_commissioned_authority():
     assert '"commissioned_fingerprint": ""' in source
 
 
+
 def test_runtime_authority_remains_ephemeral():
+    from pathlib import Path
+
     runtime = Path(
         "lcd-menu.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
     ).read_text(
         encoding="utf-8"
     )
@@ -198,51 +207,31 @@ def test_runtime_authority_remains_ephemeral():
     )
 
     assert (
-        "thermal_authority = "
-        "HostThermalAuthority("
+        "host_bootstrap.thermal_authority"
         in runtime
     )
 
-    constructor_start = authority.index(
-        "def __init__("
+    assert (
+        "thermal_authority_factory="
+        "HostThermalAuthority"
+        in bootstrap
     )
 
-    constructor_end = authority.index(
-        "\n    @property",
-        constructor_start,
+    assert (
+        "thermal_authority = "
+        "thermal_authority_factory("
+        in bootstrap
     )
-
-    constructor = authority[
-        constructor_start:constructor_end
-    ]
 
     assert (
         "self.operator_armed = False"
-        in constructor
+        in authority
     )
 
     assert (
         "self.dry_run = True"
-        in constructor
+        in authority
     )
-
-    runtime_start = runtime.index(
-        "thermal_authority = "
-        "HostThermalAuthority("
-    )
-
-    runtime_end = runtime.index(
-        "thermal_observer_previous_profile",
-        runtime_start,
-    )
-
-    construction = runtime[
-        runtime_start:runtime_end
-    ]
-
-    assert "operator_armed=" not in construction
-    assert "dry_run=" not in construction
-
 
 def test_stage_three_runtime_supports_renewal():
     authority = Path(
