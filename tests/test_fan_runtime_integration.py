@@ -56,6 +56,8 @@ def test_lcd_runtime_shuts_down_fan_control():
     )
 
 
+
+
 def test_fan_history_uses_post_transition_telemetry():
     source = Path(
         "lcd-menu.py"
@@ -67,46 +69,76 @@ def test_fan_history_uses_post_transition_telemetry():
         "post_transition_telemetry = ("
         in source
     )
+
     assert (
-        "fan_command_telemetry(),"
+        "fan_command_telemetry()"
         in source
     )
+
     assert (
-        "decision,\n"
-        "            post_transition_telemetry,"
+        "record_fan_control_event("
+        in source
+    )
+
+    assert (
+        "post_transition_telemetry,"
         in source
     )
 
 
 def test_lcd_classifies_completed_safety_recovery():
-    text = Path("lcd-menu.py").read_text()
+    runtime = Path(
+        "lcd-menu.py"
+    ).read_text()
+
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
 
     assert (
         "def fan_control_event_source("
-        in text
+        in runtime
     )
+
+    assert (
+        "host_bootstrap.fan_event_source("
+        in runtime
+    )
+
     assert (
         '"safety recovery confirmed"'
-        in text
+        in bootstrap
     )
+
     assert (
         'return "recovery"'
-        in text
+        in bootstrap
     )
 
 
 def test_lcd_preserves_timeout_classification():
-    text = Path("lcd-menu.py").read_text()
+    runtime = Path(
+        "lcd-menu.py"
+    ).read_text()
+
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
+
+    assert (
+        "host_bootstrap.fan_event_source("
+        in runtime
+    )
 
     assert (
         'and "expired" in reason_lower'
-        in text
-    )
-    assert (
-        'return "timeout"'
-        in text
+        in bootstrap
     )
 
+    assert (
+        'return "timeout"'
+        in bootstrap
+    )
 
 def test_lcd_records_reconcile_source_from_classifier():
     text = Path("lcd-menu.py").read_text()

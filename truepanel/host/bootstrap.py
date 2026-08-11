@@ -8,6 +8,7 @@ remains locked until the migration is explicitly completed.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -18,12 +19,21 @@ from truepanel.hardware.bounded_automatic import (
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
 )
-from truepanel.history import FanControlHistory
+from truepanel.hardware.thermal_commissioning import (
+    thermal_commissioning_state,
+)
+from truepanel.history import (
+    FanControlHistory,
+    event_from_decision,
+)
 from truepanel.history.thermal_commissioning import (
     ThermalCommissioningHistory,
+    commissioning_event,
 )
 
 from .thermal_authority import HostThermalAuthority
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -35,6 +45,110 @@ class HostAgentBootstrap:
     thermal_authority: HostThermalAuthority
     fan_control_history: FanControlHistory
     thermal_commissioning_history: ThermalCommissioningHistory
+
+    def record_fan_event(
+        self,
+        decision: Any,
+        telemetry: dict[str, Any],
+        *,
+        source: str,
+    ) -> None:
+        """Record one authoritative Host fan-control decision."""
+
+        try:
+            self.fan_control_history.append(
+                event_from_decision(
+                    decision,
+                    source=source,
+                    telemetry=telemetry,
+                )
+            )
+        except Exception:
+            LOGGER.exception(
+                "Could not append fan-control history"
+            )
+
+    @staticmethod
+    def fan_event_source(
+        decision: Any,
+    ) -> str:
+        """Classify a Host fan-safety decision for history."""
+
+        reason_lower = decision.reason.lower()
+
+        if (
+            decision.force_automatic
+            and "safety recovery confirmed"
+            in reason_lower
+        ):
+            return "recovery"
+
+        if (
+            decision.force_automatic
+            and "expired" in reason_lower
+        ):
+            return "timeout"
+
+        return "safety"
+
+    def record_commissioning_event(
+        self,
+        lifecycle_action: str,
+        reason: str,
+        *,
+        lease_remaining: float | None = None,
+    ) -> None:
+        """Record one normalized Host thermal-authority lifecycle event."""
+
+        runtime_status = (
+            self.fan_runtime.status_payload()
+        )
+
+        if lease_remaining is None:
+            lease_remaining = (
+                self.thermal_authority
+                .supervised_session_remaining()
+            )
+
+        state = thermal_commissioning_state(
+            policy_mode=(
+                self.thermal_authority.policy_mode
+            ),
+            operator_armed=(
+                self.thermal_authority.operator_armed
+            ),
+            dry_run=(
+                self.thermal_authority
+                .coordinator
+                .dry_run
+            ),
+            supervised_session_active=(
+                self.thermal_authority
+                .supervised_session_active()
+            ),
+        )
+
+        try:
+            self.thermal_commissioning_history.append(
+                commissioning_event(
+                    lifecycle_action=lifecycle_action,
+                    reason=reason,
+                    commissioning_state=state,
+                    active_profile=runtime_status.get(
+                        "active_profile",
+                        "automatic",
+                    ),
+                    control_authority=runtime_status.get(
+                        "control_authority",
+                        "automatic",
+                    ),
+                    lease_remaining=lease_remaining,
+                )
+            )
+        except Exception:
+            LOGGER.exception(
+                "Could not append thermal commissioning history"
+            )
 
 
 def _thermal_policy_config(

@@ -31,11 +31,7 @@ from truepanel.hardware import Buzzer
 from truepanel.history import (
     TelemetryRecorder,
     ThermalObserverHistory,
-    event_from_decision,
     event_from_recommendation,
-)
-from truepanel.history.thermal_commissioning import (
-    commissioning_event,
 )
 from truepanel.mission_control import MissionControl
 from truepanel.hardware.bay_led_animation import (
@@ -43,9 +39,6 @@ from truepanel.hardware.bay_led_animation import (
 )
 from truepanel.hardware.fan_status_bridge import (
     FanControlStatusBridge,
-)
-from truepanel.hardware.thermal_commissioning import (
-    thermal_commissioning_state,
 )
 
 from truepanel.hardware.thermal_fan_policy import (
@@ -620,61 +613,20 @@ def observe_thermal_fan_policy(
     return recommendation
 
 
+
 def record_thermal_commissioning_event(
     lifecycle_action,
     reason,
     *,
     lease_remaining=None,
 ):
-    """Append one normalized commissioning lifecycle event."""
+    """Compatibility adapter for Host-owned commissioning history."""
 
-    runtime_status = (
-        fan_control_runtime.status_payload()
+    return host_bootstrap.record_commissioning_event(
+        lifecycle_action,
+        reason,
+        lease_remaining=lease_remaining,
     )
-
-    if lease_remaining is None:
-        if thermal_authority.supervised_session_deadline is None:
-            lease_remaining = 0.0
-        else:
-            lease_remaining = max(
-                0.0,
-                thermal_authority.supervised_session_deadline
-                - time.monotonic(),
-            )
-
-    state = thermal_commissioning_state(
-        policy_mode=thermal_policy_mode,
-        operator_armed=thermal_authority.operator_armed,
-        dry_run=(
-            thermal_authority.coordinator.dry_run
-        ),
-        supervised_session_active=(
-            supervised_thermal_session_active()
-        ),
-    )
-
-    try:
-        thermal_commissioning_history.append(
-            commissioning_event(
-                lifecycle_action=lifecycle_action,
-                reason=reason,
-                commissioning_state=state,
-                active_profile=runtime_status.get(
-                    "active_profile",
-                    "automatic",
-                ),
-                control_authority=runtime_status.get(
-                    "control_authority",
-                    "automatic",
-                ),
-                lease_remaining=lease_remaining,
-            )
-        )
-    except Exception:
-        LOGGER.exception(
-            "Could not append thermal "
-            "commissioning history"
-        )
 
 
 def record_fan_control_event(
@@ -683,39 +635,23 @@ def record_fan_control_event(
     *,
     source,
 ):
-    try:
-        fan_control_history.append(
-            event_from_decision(
-                decision,
-                source=source,
-                telemetry=telemetry,
-            )
-        )
-    except Exception:
-        LOGGER.exception(
-            "Could not append fan-control history"
-        )
+    """Compatibility adapter for Host-owned fan history."""
+
+    return host_bootstrap.record_fan_event(
+        decision,
+        telemetry,
+        source=source,
+    )
 
 
 def fan_control_event_source(
     decision,
 ):
-    reason_lower = decision.reason.lower()
+    """Compatibility adapter for Host-owned event classification."""
 
-    if (
-        decision.force_automatic
-        and "safety recovery confirmed"
-        in reason_lower
-    ):
-        return "recovery"
-
-    if (
-        decision.force_automatic
-        and "expired" in reason_lower
-    ):
-        return "timeout"
-
-    return "safety"
+    return host_bootstrap.fan_event_source(
+        decision
+    )
 
 
 def restore_motherboard_fan_control(
@@ -723,91 +659,31 @@ def restore_motherboard_fan_control(
     *,
     telemetry=None,
 ):
-    """
-    Restore motherboard Automatic through the Host Agent safety boundary.
-
-    This wrapper remains temporarily for thermal-policy callers while ownership
-    migrates into the Host Agent.
-    """
+    """Restore Automatic only through the Host Agent safety boundary."""
 
     if (
-        host_agent_runtime is not None
-        and getattr(
+        host_agent_runtime is None
+        or getattr(
             host_agent_runtime,
             "safety",
             None,
         )
-        is not None
+        is None
     ):
-        return (
-            host_agent_runtime
-            .safety
-            .restore_automatic(
-                reason,
-                telemetry=telemetry,
-            )
+        LOGGER.warning(
+            "Host Agent safety coordinator unavailable; "
+            "Automatic restoration request ignored."
         )
-
-    current_telemetry = (
-        telemetry
-        if telemetry is not None
-        else fan_command_telemetry()
-    )
-
-    runtime_status = (
-        fan_control_runtime
-        .status_payload()
-    )
-
-    if (
-        runtime_status.get(
-            "active_profile"
-        )
-        == "automatic"
-        and runtime_status.get(
-            "control_authority"
-        )
-        == "automatic"
-    ):
         return None
 
-    decision = (
-        fan_control_runtime.service
-        .request_profile(
-            "automatic",
-            fan_status=(
-                current_telemetry.get(
-                    "fan_status",
-                    {},
-                )
-            ),
-            temperatures_c=(
-                current_telemetry.get(
-                    "temperatures_c",
-                    (),
-                )
-            ),
-            telemetry_fresh=bool(
-                current_telemetry.get(
-                    "telemetry_fresh",
-                    False,
-                )
-            ),
+    return (
+        host_agent_runtime
+        .safety
+        .restore_automatic(
+            reason,
+            telemetry=telemetry,
         )
     )
-
-    record_fan_control_event(
-        decision,
-        fan_command_telemetry(),
-        source="thermal_policy",
-    )
-
-    publish_fan_control_status(
-        reason=reason
-    )
-
-    return decision
-
 
 def end_supervised_thermal_session(
     reason,

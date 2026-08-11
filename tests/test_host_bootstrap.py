@@ -166,3 +166,62 @@ def test_bootstrap_owns_history_paths():
         bootstrap.thermal_commissioning_history.enabled
         is False
     )
+
+
+class FakeDecision:
+    def __init__(
+        self,
+        reason,
+        *,
+        force_automatic=False,
+    ):
+        self.reason = reason
+        self.force_automatic = force_automatic
+
+
+class RecordingHistory:
+    def __init__(self):
+        self.events = []
+
+    def append(self, event):
+        self.events.append(event)
+
+
+def test_bootstrap_classifies_safety_event_sources():
+    recovery = FakeDecision(
+        "Safety recovery confirmed",
+        force_automatic=True,
+    )
+    timeout = FakeDecision(
+        "Manual profile expired",
+        force_automatic=True,
+    )
+    safety = FakeDecision(
+        "Fan RPM below threshold",
+        force_automatic=True,
+    )
+
+    from truepanel.host.bootstrap import (
+        HostAgentBootstrap,
+    )
+
+    assert (
+        HostAgentBootstrap.fan_event_source(
+            recovery
+        )
+        == "recovery"
+    )
+
+    assert (
+        HostAgentBootstrap.fan_event_source(
+            timeout
+        )
+        == "timeout"
+    )
+
+    assert (
+        HostAgentBootstrap.fan_event_source(
+            safety
+        )
+        == "safety"
+    )

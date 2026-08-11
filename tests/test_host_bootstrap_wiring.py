@@ -66,3 +66,82 @@ def test_observer_history_remains_application_owned():
         "ThermalObserverHistory("
         in text
     )
+
+
+
+
+def test_host_bootstrap_owns_history_behavior():
+    runtime = source()
+
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "host_bootstrap.record_fan_event("
+        in runtime
+    )
+
+    assert (
+        "host_bootstrap.record_commissioning_event("
+        in runtime
+    )
+
+    assert (
+        "host_bootstrap.fan_event_source("
+        in runtime
+    )
+
+    assert (
+        "fan_control_history.append("
+        not in runtime
+    )
+
+    assert (
+        "thermal_commissioning_history.append("
+        not in runtime
+    )
+
+    assert "event_from_decision(" in bootstrap
+    assert "commissioning_event(" in bootstrap
+
+    assert (
+        "fan_control_history.append("
+        in bootstrap
+    )
+
+    assert (
+        "thermal_commissioning_history.append("
+        in bootstrap
+    )
+
+def test_automatic_restoration_has_no_lcd_hardware_fallback():
+    runtime = source()
+
+    start = runtime.index(
+        "def restore_motherboard_fan_control("
+    )
+
+    end = runtime.index(
+        "\ndef ",
+        start + 1,
+    )
+
+    block = runtime[start:end]
+
+    assert (
+        ".safety"
+        in block
+    )
+
+    assert (
+        ".restore_automatic("
+        in block
+    )
+
+    assert (
+        ".request_profile("
+        not in block
+    )
