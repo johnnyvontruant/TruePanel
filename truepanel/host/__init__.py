@@ -5,6 +5,10 @@ The host package defines the boundary between TruePanel applications and
 privileged host hardware services.
 """
 
+from .bootstrap import (
+    HostAgentBootstrap,
+    build_host_agent_bootstrap,
+)
 from .capabilities import (
     HostAgentCapabilities,
     HostCapability,
@@ -20,6 +24,8 @@ from .safety import HostAgentSafetyCoordinator
 from .thermal_authority import HostThermalAuthority
 
 __all__ = [
+    "build_host_agent_bootstrap",
+    "HostAgentBootstrap",
     "HostAgentCapabilities",
     "HostAgentApplicationHooks",
     "HostAgentRuntime",
