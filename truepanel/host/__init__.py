@@ -21,6 +21,7 @@ from .hooks import (
 )
 from .runtime import HostAgentRuntime
 from .safety import HostAgentSafetyCoordinator
+from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
 
 __all__ = [
@@ -35,4 +36,6 @@ __all__ = [
     "HostCapability",
     "build_host_agent_runtime",
     "capabilities_from_compatibility",
+    "HostFanTelemetryProvider",
 ]
+

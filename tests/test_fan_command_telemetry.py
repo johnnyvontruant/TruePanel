@@ -1,11 +1,18 @@
 from pathlib import Path
 
 
-def test_fan_command_telemetry_accepts_temp_key():
-    text = Path(
-        "lcd-menu.py"
-    ).read_text()
 
-    assert '''item.get(
-                    "temp"
-                )''' in text
+def test_fan_command_telemetry_accepts_temp_key():
+    provider = Path(
+        "truepanel/host/telemetry.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        'item.get(\n'
+        '                        "temp"\n'
+        '                    )'
+        in provider
+    )
+

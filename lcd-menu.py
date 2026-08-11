@@ -21,6 +21,7 @@ from truepanel.host import (
     HostAgentSafetyServices,
     build_host_agent_bootstrap,
     build_host_agent_runtime,
+    HostFanTelemetryProvider,
 )
 
 from collector import TruePanelCollector
@@ -445,73 +446,34 @@ def publish_fan_control_status(
     )
 
 
+host_fan_telemetry_provider = None
+
+
 def fan_command_telemetry():
-    state = get_state(
-        max_age=5
-    )
+    """Compatibility adapter for Host-owned safety telemetry."""
 
-    temperatures_c = []
+    global host_fan_telemetry_provider
 
-    for item in (
-        state.get(
-            "temps",
-            [],
-        )
-        or []
-    ):
-        if not isinstance(
-            item,
-            dict,
-        ):
-            continue
-
-        value = item.get(
-            "temperature_c",
-            item.get(
-                "temperature",
-                item.get(
-                    "temp"
+    if host_fan_telemetry_provider is None:
+        host_fan_telemetry_provider = (
+            HostFanTelemetryProvider(
+                state_provider=lambda: get_state(
+                    max_age=5
                 ),
-            ),
-        )
-
-        try:
-            temperatures_c.append(
-                float(value)
+                fan_status_provider=(
+                    get_fan_status
+                ),
             )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            continue
-
-    last_updated = state.get(
-        "last_updated"
-    )
-    telemetry_fresh = False
-
-    try:
-        telemetry_fresh = (
-            time.time()
-            - float(last_updated)
-            <= 10
         )
-    except (
-        TypeError,
-        ValueError,
-    ):
-        telemetry_fresh = False
 
-    return {
-        "fan_status": get_fan_status(),
-        "temperatures_c": tuple(
-            temperatures_c
-        ),
-        "telemetry_fresh": (
-            telemetry_fresh
-        ),
-    }
+        host_bootstrap.telemetry = (
+            host_fan_telemetry_provider
+        )
 
+    return (
+        host_fan_telemetry_provider
+        .snapshot()
+    )
 
 
 def observe_thermal_fan_policy(

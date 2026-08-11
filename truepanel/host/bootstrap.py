@@ -31,6 +31,7 @@ from truepanel.history.thermal_commissioning import (
     commissioning_event,
 )
 
+from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
 
 LOGGER = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class HostAgentBootstrap:
     thermal_authority: HostThermalAuthority
     fan_control_history: FanControlHistory
     thermal_commissioning_history: ThermalCommissioningHistory
+    telemetry: HostFanTelemetryProvider | None = None
 
     def record_fan_event(
         self,

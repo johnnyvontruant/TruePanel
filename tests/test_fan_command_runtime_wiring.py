@@ -9,26 +9,45 @@ def source():
     )
 
 
+
 def test_lcd_builds_command_telemetry():
-    text = source()
+    runtime = source()
+
+    provider = Path(
+        "truepanel/host/telemetry.py"
+    ).read_text(
+        encoding="utf-8"
+    )
 
     assert (
         "def fan_command_telemetry():"
-        in text
-    )
-    assert (
-        '"fan_status": get_fan_status()'
-        in text
-    )
-    assert (
-        '"temperatures_c": tuple('
-        in text
-    )
-    assert (
-        '"telemetry_fresh":'
-        in text
+        in runtime
     )
 
+    assert (
+        "HostFanTelemetryProvider("
+        in runtime
+    )
+
+    assert (
+        "fan_status_provider=("
+        in runtime
+    )
+
+    assert (
+        "get_fan_status"
+        in runtime
+    )
+
+    assert (
+        '"fan_status": dict('
+        in provider
+    )
+
+    assert (
+        "self._fan_status_provider()"
+        in provider
+    )
 
 def test_lcd_publishes_observe_only_thermal_policy():
     text = source()

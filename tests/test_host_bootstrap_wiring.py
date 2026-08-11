@@ -145,3 +145,54 @@ def test_automatic_restoration_has_no_lcd_hardware_fallback():
         ".request_profile("
         not in block
     )
+
+
+def test_lcd_uses_host_owned_telemetry_normalizer():
+    runtime = source()
+
+    provider = Path(
+        "truepanel/host/telemetry.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = runtime.index(
+        "def fan_command_telemetry("
+    )
+
+    end = runtime.index(
+        "\ndef ",
+        start + 1,
+    )
+
+    block = runtime[start:end]
+
+    assert (
+        "HostFanTelemetryProvider("
+        in block
+    )
+
+    assert (
+        ".snapshot()"
+        in block
+    )
+
+    assert (
+        '"temperatures_c"'
+        not in block
+    )
+
+    assert (
+        '"telemetry_fresh"'
+        not in block
+    )
+
+    assert (
+        "temperatures_from_state"
+        in provider
+    )
+
+    assert (
+        "telemetry_is_fresh"
+        in provider
+    )
