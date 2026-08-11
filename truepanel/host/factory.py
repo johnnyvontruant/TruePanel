@@ -20,6 +20,7 @@ from truepanel.hardware.lcd_command import (
     LCDCommandServer,
 )
 
+from .hooks import HostAgentApplicationHooks
 from .runtime import HostAgentRuntime
 
 
@@ -95,29 +96,7 @@ def build_lcd_command_server(
 def build_host_agent_runtime(
     *,
     fan_runtime: Any,
-    fan_telemetry_provider: Callable[
-        [],
-        Mapping[str, Any],
-    ],
-    fan_status_publisher: Callable[
-        [],
-        None,
-    ] | None = None,
-    fan_event_recorder: Callable[
-        [
-            Any,
-            Mapping[str, Any],
-        ],
-        None,
-    ] | None = None,
-    thermal_control_handler: Callable[
-        [str],
-        Mapping[str, Any],
-    ] | None = None,
-    lcd_button_handler: Callable[
-        [int, str],
-        bool,
-    ] | None = None,
+    hooks: HostAgentApplicationHooks,
 ) -> HostAgentRuntime:
     """
     Assemble the current TruePanel Host Agent runtime.
@@ -132,23 +111,23 @@ def build_host_agent_runtime(
             build_fan_command_server(
                 fan_runtime=fan_runtime,
                 telemetry_provider=(
-                    fan_telemetry_provider
+                    hooks.fan_telemetry_provider
                 ),
                 status_publisher=(
-                    fan_status_publisher
+                    hooks.fan_status_publisher
                 ),
                 event_recorder=(
-                    fan_event_recorder
+                    hooks.fan_event_recorder
                 ),
                 thermal_control_handler=(
-                    thermal_control_handler
+                    hooks.thermal_control_handler
                 ),
             )
         ),
         lcd_server_factory=lambda: (
             build_lcd_command_server(
                 submit_button=(
-                    lcd_button_handler
+                    hooks.lcd_button_handler
                 ),
             )
         ),

@@ -16,7 +16,10 @@ from truepanel.hardware.lcd_reader_status_bridge import (
 from truepanel.hardware.lcd_display_status_bridge import (
     LCDDisplayStatusBridge,
 )
-from truepanel.host import build_host_agent_runtime
+from truepanel.host import (
+    HostAgentApplicationHooks,
+    build_host_agent_runtime,
+)
 
 from collector import TruePanelCollector
 from truepanel.display.widgets import progress_bar
@@ -2334,8 +2337,7 @@ def main():
         observe_thermal_fan_policy()
         publish_fan_control_status()
 
-        host_agent_runtime = build_host_agent_runtime(
-            fan_runtime=fan_control_runtime,
+        host_agent_hooks = HostAgentApplicationHooks(
             fan_telemetry_provider=(
                 fan_command_telemetry
             ),
@@ -2362,6 +2364,11 @@ def main():
                 if lcd is not None
                 else False
             ),
+        )
+
+        host_agent_runtime = build_host_agent_runtime(
+            fan_runtime=fan_control_runtime,
+            hooks=host_agent_hooks,
         )
 
         host_agent_runtime.start()

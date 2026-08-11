@@ -1,4 +1,7 @@
 from truepanel.host import factory
+from truepanel.host.hooks import (
+    HostAgentApplicationHooks,
+)
 
 
 class FakeFanRuntime:
@@ -166,9 +169,11 @@ def test_host_runtime_receives_command_factories(
     runtime = (
         factory.build_host_agent_runtime(
             fan_runtime=fan_runtime,
-            fan_telemetry_provider=telemetry,
-            lcd_button_handler=(
-                submit_button
+            hooks=HostAgentApplicationHooks(
+                fan_telemetry_provider=telemetry,
+                lcd_button_handler=(
+                    submit_button
+                ),
             ),
         )
     )
@@ -220,7 +225,9 @@ def test_factory_does_not_start_runtime(
     runtime = (
         factory.build_host_agent_runtime(
             fan_runtime=FakeFanRuntime(),
-            fan_telemetry_provider=telemetry,
+            hooks=HostAgentApplicationHooks(
+                fan_telemetry_provider=telemetry
+            ),
         )
     )
 

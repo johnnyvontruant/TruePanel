@@ -9,59 +9,25 @@ def source():
     )
 
 
-def test_lcd_runtime_uses_host_agent_factory():
+def test_lcd_runtime_uses_host_agent_contract():
     text = source()
 
     assert (
-        "from truepanel.host import build_host_agent_runtime"
+        "HostAgentApplicationHooks"
         in text
     )
 
     assert (
-        "host_agent_runtime = build_host_agent_runtime("
+        "build_host_agent_runtime"
         in text
     )
 
 
-def test_lcd_runtime_no_longer_builds_command_servers():
+def test_lcd_runtime_builds_explicit_hook_surface():
     text = source()
 
     assert (
-        "def build_fan_command_server():"
-        not in text
-    )
-
-    assert (
-        "def build_lcd_command_server():"
-        not in text
-    )
-
-    assert (
-        "FanCommandProcessor"
-        not in text
-    )
-
-    assert (
-        "FanCommandServer"
-        not in text
-    )
-
-    assert (
-        "LCDCommandProcessor"
-        not in text
-    )
-
-    assert (
-        "LCDCommandServer"
-        not in text
-    )
-
-
-def test_factory_receives_fan_runtime_hooks():
-    text = source()
-
-    assert (
-        "fan_runtime=fan_control_runtime"
+        "host_agent_hooks = HostAgentApplicationHooks("
         in text
     )
 
@@ -71,17 +37,12 @@ def test_factory_receives_fan_runtime_hooks():
     )
 
     assert (
-        "fan_command_telemetry"
-        in text
-    )
-
-    assert (
         "fan_status_publisher=("
         in text
     )
 
     assert (
-        "publish_fan_control_status"
+        "fan_event_recorder="
         in text
     )
 
@@ -91,23 +52,40 @@ def test_factory_receives_fan_runtime_hooks():
     )
 
     assert (
-        "set_thermal_operator_arm_state"
-        in text
-    )
-
-
-def test_factory_receives_lcd_button_hook():
-    text = source()
-
-    assert (
         "lcd_button_handler=("
         in text
     )
 
+
+def test_lcd_runtime_passes_hooks_to_factory():
+    text = source()
+
     assert (
-        "lcd.submit_button_event("
+        "host_agent_runtime = build_host_agent_runtime("
         in text
     )
+
+    assert (
+        "fan_runtime=fan_control_runtime"
+        in text
+    )
+
+    assert (
+        "hooks=host_agent_hooks"
+        in text
+    )
+
+
+def test_lcd_runtime_no_longer_builds_command_servers():
+    text = source()
+
+    for name in (
+        "FanCommandProcessor",
+        "FanCommandServer",
+        "LCDCommandProcessor",
+        "LCDCommandServer",
+    ):
+        assert name not in text
 
 
 def test_host_runtime_still_starts_before_visual_startup():
