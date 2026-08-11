@@ -212,7 +212,8 @@ def discover_candidates(
             )
         ),
         key=lambda path: (
-            path.stat().st_mtime
+            path.stat().st_mtime,
+            path.name,
         ),
     )
 
@@ -228,7 +229,8 @@ def discover_candidates(
             )
         ),
         key=lambda path: (
-            path.stat().st_mtime
+            path.stat().st_mtime,
+            path.name,
         ),
     )
 
@@ -476,7 +478,10 @@ def build_cleanup_plan(
     ordered_generations = sorted(
         generation_groups.values(),
         key=lambda group: max(
-            path.stat().st_mtime
+            (
+                path.stat().st_mtime,
+                path.name,
+            )
             for path in group
         ),
         reverse=True,
@@ -492,7 +497,8 @@ def build_cleanup_plan(
         ordered_group = sorted(
             group,
             key=lambda path: (
-                path.stat().st_mtime
+                path.stat().st_mtime,
+                path.name,
             ),
             reverse=True,
         )

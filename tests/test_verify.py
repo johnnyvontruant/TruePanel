@@ -238,45 +238,24 @@ def test_run_verify_returns_failure(
     assert code == 1
 
 
-def test_project_root_prefers_deployed_installation(
+def test_project_root_honors_shared_environment_root(
     tmp_path,
     monkeypatch,
 ):
-    from truepanel.verify import checks
-
-    deployed = (
-        tmp_path
-        / "mnt"
-        / "SSDs"
-        / "Applications"
-        / "TruePanel"
+    from truepanel.verify.checks import (
+        project_root,
     )
-    deployed.mkdir(parents=True)
-
-    real_path = checks.Path
-
-    def fake_path(value):
-        if (
-            value
-            == "/mnt/SSDs/Applications/TruePanel"
-        ):
-            return deployed
-
-        return real_path(value)
 
     monkeypatch.delenv(
         "TRUEPANEL_VERIFY_ROOT",
         raising=False,
     )
-    monkeypatch.setattr(
-        checks,
-        "Path",
-        fake_path,
+    monkeypatch.setenv(
+        "TRUEPANEL_ROOT",
+        str(tmp_path),
     )
 
-    assert checks.project_root() == (
-        deployed.resolve()
-    )
+    assert project_root() == tmp_path.resolve()
 
 
 def test_project_root_honors_environment_override(

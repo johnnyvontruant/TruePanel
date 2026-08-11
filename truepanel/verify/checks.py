@@ -18,6 +18,7 @@ from urllib.request import urlopen
 
 from truepanel import __version__
 from truepanel.config.loader import load_config
+from truepanel.paths import installation_root
 
 PASS = "PASS"
 WARN = "WARN"
@@ -58,21 +59,23 @@ def failed(
 
 
 def project_root() -> Path:
+    """
+    Resolve the installation root for verification.
+
+    TRUEPANEL_VERIFY_ROOT remains supported as a
+    compatibility override. Shared lifecycle path
+    resolution is otherwise delegated to
+    truepanel.paths.installation_root().
+    """
+
     override = os.environ.get(
         "TRUEPANEL_VERIFY_ROOT"
     )
 
     if override:
-        return Path(override).resolve()
+        return installation_root(override)
 
-    deployed = Path(
-        "/mnt/SSDs/Applications/TruePanel"
-    )
-
-    if deployed.is_dir():
-        return deployed.resolve()
-
-    return Path(__file__).resolve().parents[2]
+    return installation_root()
 
 
 def systemd_root() -> Path:

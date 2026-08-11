@@ -130,6 +130,63 @@ def test_cleanup_keeps_two_distinct_generations(
     assert actions[middle_backup] == "keep"
     assert actions[newest_backup] == "keep"
 
+def test_cleanup_generation_order_is_deterministic_for_equal_mtimes(
+    tmp_path,
+):
+    deployed = tmp_path / "TruePanel"
+    create_deployment(deployed)
+
+    oldest_stage, oldest_backup = create_completed_upgrade(
+        tmp_path,
+        deployed,
+        token="20260101T000000Z",
+    )
+    middle_stage, middle_backup = create_completed_upgrade(
+        tmp_path,
+        deployed,
+        token="20260102T000000Z",
+    )
+    newest_stage, newest_backup = create_completed_upgrade(
+        tmp_path,
+        deployed,
+        token="20260103T000000Z",
+    )
+
+    equal_mtime = 1_700_000_000
+
+    for path in (
+        oldest_stage,
+        middle_stage,
+        newest_stage,
+        oldest_backup,
+        middle_backup,
+        newest_backup,
+    ):
+        path.touch()
+        path.chmod(path.stat().st_mode)
+        import os
+        os.utime(
+            path,
+            (
+                equal_mtime,
+                equal_mtime,
+            ),
+        )
+
+    plan = build_cleanup_plan(
+        deploy_root=deployed,
+    )
+
+    actions = {
+        asset.path: asset.action
+        for asset in plan.assets
+    }
+
+    assert actions[oldest_backup] == "remove"
+    assert actions[middle_backup] == "keep"
+    assert actions[newest_backup] == "keep"
+
+
 def test_cleanup_dry_run_changes_nothing(
     tmp_path,
 ):

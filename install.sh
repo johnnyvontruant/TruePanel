@@ -1,18 +1,93 @@
-INSTALL_DIR="/opt/truepanel"
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SOURCE_ROOT="$(
+  cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+  pwd
+)"
+
+INSTALL_DIR="${TRUEPANEL_INSTALL_ROOT:-}"
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
 MISSION_CONTROL_SERVICE_FILE="/etc/systemd/system/truepanel-mission-control.service"
 MISSION_CONTROL_ENV_FILE="/etc/default/truepanel-mission-control"
+PYTHON_BIN=""
+
+usage() {
+  printf 'Usage: %s --root /mnt/POOL/DATASET/TruePanel\n' "$0"
+  printf '       TRUEPANEL_INSTALL_ROOT=/mnt/POOL/DATASET/TruePanel %s\n' "$0"
+}
+
+while [[ $# -gt 0 ]]
+do
+  case "$1" in
+    --root)
+      if [[ -z "${2:-}" ]]
+      then
+        printf 'Missing value for --root.\n' >&2
+        usage >&2
+        exit 2
+      fi
+
+      INSTALL_DIR="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'Unknown argument: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ -z "$INSTALL_DIR" ]]
+then
+  INSTALL_DIR="$(
+    systemctl show truepanel.service       --property=WorkingDirectory       --value       --no-pager       2>/dev/null       || true
+  )"
+fi
+
+if [[ -z "$INSTALL_DIR" ]]
+then
+  printf '%s\n'     'No persistent TruePanel installation root was provided.'     'Use --root /mnt/POOL/DATASET/TruePanel.'     'The installer will not guess a storage pool or use the system root filesystem.'     >&2
+  exit 1
+fi
+
+case "$INSTALL_DIR" in
+  /mnt/*)
+    ;;
+  *)
+    printf 'Installation root must be persistent storage under /mnt/: %s\n'       "$INSTALL_DIR" >&2
+    exit 1
+    ;;
+esac
+
+if [[ "$(id -u)" -ne 0 ]]
+then
+  printf 'Please run as root: sudo %s --root %s\n' \
+    "$0" "$INSTALL_DIR" >&2
+  exit 1
+fi
+
+mkdir -p -- "$INSTALL_DIR"
+
+INSTALL_DIR="$(
+  cd -- "$INSTALL_DIR"
+  pwd
+)"
+
 BIN_DIR="$INSTALL_DIR/bin"
 BIN_FILE="$BIN_DIR/truepanel"
-PYTHON_BIN=""
 
 echo "== TruePanel Installer =="
 echo
-
-if [ "$(id -u)" -ne 0 ]; then
-  echo "Please run as root: sudo ./install.sh"
-  exit 1
-fi
+echo "Installation root:"
+echo "  $INSTALL_DIR"
+echo
 
 echo "Checking prerequisites..."
 for command in python3 rsync systemctl; do
@@ -31,7 +106,7 @@ rsync -a --delete \
   --exclude "__pycache__" \
   --exclude "*.pyc" \
   --exclude "truepanel.backup-*" \
-  ./ "$INSTALL_DIR/"
+  "$SOURCE_ROOT/" "$INSTALL_DIR/"
 
 echo "Creating default configuration if needed..."
 if [ ! -f "$INSTALL_DIR/truepanel.yaml" ]; then
@@ -121,11 +196,45 @@ CLI
 chmod +x "$BIN_FILE"
 
 echo "Installing Mission Control service..."
-install -m 0644   "$INSTALL_DIR/packaging/systemd/truepanel-mission-control.service"   "$MISSION_CONTROL_SERVICE_FILE"
+cat > "$MISSION_CONTROL_SERVICE_FILE" <<SERVICE
+[Unit]
+Description=TruePanel Mission Control Web Dashboard
+After=network-online.target truepanel.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=$INSTALL_DIR
+EnvironmentFile=-$MISSION_CONTROL_ENV_FILE
+ExecStart=$PYTHON_BIN -m truepanel.web.service
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+chmod 0644 "$MISSION_CONTROL_SERVICE_FILE"
 
 echo "Creating Mission Control environment if needed..."
 if [ ! -f "$MISSION_CONTROL_ENV_FILE" ]; then
-  install -m 0644     "$INSTALL_DIR/packaging/systemd/truepanel-mission-control.env"     "$MISSION_CONTROL_ENV_FILE"
+  cat > "$MISSION_CONTROL_ENV_FILE" <<ENV
+TRUEPANEL_MC_HOST=127.0.0.1
+TRUEPANEL_MC_PORT=8787
+TRUEPANEL_MC_CONFIG_PATH=$INSTALL_DIR/truepanel.yaml
+TRUEPANEL_MC_ALLOW_CONFIG_WRITES=false
+ENV
+
+  chmod 0644 "$MISSION_CONTROL_ENV_FILE"
 else
   echo "Preserving existing Mission Control environment:"
   echo "  $MISSION_CONTROL_ENV_FILE"

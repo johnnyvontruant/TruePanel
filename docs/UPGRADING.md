@@ -2,7 +2,7 @@
 
 TruePanel provides a guarded lifecycle workflow for verifying, staging, promoting, cleaning up, repairing, and rolling back an installation.
 
-The examples below use `/opt/truepanel` for a native installation. Use the deployed root appropriate for your system.
+The examples below use `/mnt/POOL/DATASET/TruePanel` for a native installation. Use the deployed root appropriate for your system.
 
 ## Lifecycle overview
 
@@ -21,7 +21,7 @@ Promotion and rollback are guarded operations. Do not bypass their confirmation 
 ## 1. Verify the current deployment
 
 ```bash
-truepanel verify --root /opt/truepanel
+truepanel verify --root /mnt/POOL/DATASET/TruePanel
 ```
 
 `verify` inspects the installed lifecycle contract without modifying files, services, configuration, or hardware state.
@@ -45,7 +45,7 @@ Select the desired release or commit using the normal Git workflow for your envi
 ```bash
 python3 truepanel.py upgrade \
   --source ~/TruePanel \
-  --root /opt/truepanel \
+  --root /mnt/POOL/DATASET/TruePanel \
   --dry-run
 ```
 
@@ -60,7 +60,7 @@ Choose an explicit staging path so the same validated stage can be selected for 
 ```bash
 python3 truepanel.py upgrade \
   --source ~/TruePanel \
-  --root /opt/truepanel \
+  --root /mnt/POOL/DATASET/TruePanel \
   --stage-root <stage-root> \
   --stage-only
 ```
@@ -75,7 +75,7 @@ Promotion requires the exact confirmation phrase `PROMOTE_TRUEPANEL`:
 
 ```bash
 python3 truepanel.py upgrade \
-  --root /opt/truepanel \
+  --root /mnt/POOL/DATASET/TruePanel \
   --stage-root <stage-root> \
   --backup-root <backup-root> \
   --promote \
@@ -91,7 +91,7 @@ An automatic rollback during failed promotion is not the same operation as an op
 ## 6. Verify after promotion
 
 ```bash
-truepanel verify --root /opt/truepanel
+truepanel verify --root /mnt/POOL/DATASET/TruePanel
 truepanel version
 truepanel doctor
 systemctl is-active truepanel
@@ -110,7 +110,7 @@ First preview the cleanup plan:
 
 ```bash
 python3 truepanel.py upgrade \
-  --root /opt/truepanel \
+  --root /mnt/POOL/DATASET/TruePanel \
   --cleanup
 ```
 
@@ -120,7 +120,7 @@ When the plan has been reviewed, execute cleanup with:
 
 ```bash
 python3 truepanel.py upgrade \
-  --root /opt/truepanel \
+  --root /mnt/POOL/DATASET/TruePanel \
   --cleanup \
   --confirm CLEAN_TRUEPANEL
 ```
@@ -135,7 +135,7 @@ Operator rollback restores an explicitly selected retained backup. It requires t
 
 ```bash
 python3 truepanel.py upgrade \
-  --root /opt/truepanel \
+  --root /mnt/POOL/DATASET/TruePanel \
   --backup-root <retained-backup-root> \
   --rollback \
   --confirm ROLLBACK_TRUEPANEL
@@ -160,20 +160,20 @@ Preview repairs first:
 
 ```bash
 truepanel repair \
-  --root /opt/truepanel \
+  --root /mnt/POOL/DATASET/TruePanel \
   --dry-run
 ```
 
 If the proposed repairs are appropriate:
 
 ```bash
-truepanel repair --root /opt/truepanel
+truepanel repair --root /mnt/POOL/DATASET/TruePanel
 ```
 
 Run verification again after repair:
 
 ```bash
-truepanel verify --root /opt/truepanel
+truepanel verify --root /mnt/POOL/DATASET/TruePanel
 ```
 
 ## Configuration preservation
@@ -182,7 +182,7 @@ Treat the deployed `truepanel.yaml` and Mission Control environment as operator-
 
 Important deployment-specific files may include:
 
-- `/opt/truepanel/truepanel.yaml`
+- `/mnt/POOL/DATASET/TruePanel/truepanel.yaml`
 - `/etc/default/truepanel-mission-control`
 
 Do not copy extracted firmware, laboratory captures, Python caches, compiled probes, or development artifacts into the production tree.

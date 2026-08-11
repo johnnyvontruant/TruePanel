@@ -19,8 +19,8 @@ Synchronize the release candidate into the reference TrueNAS system using `insta
 Verify:
 
 ```bash
-/opt/truepanel/bin/truepanel version
-/opt/truepanel/bin/truepanel doctor
+/mnt/POOL/DATASET/TruePanel/bin/truepanel version
+/mnt/POOL/DATASET/TruePanel/bin/truepanel doctor
 systemctl restart truepanel
 systemctl is-active truepanel
 journalctl -u truepanel -n 100 --no-pager

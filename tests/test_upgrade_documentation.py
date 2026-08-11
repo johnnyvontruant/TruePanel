@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 INSTALLATION = Path("docs/INSTALLATION.md")
 UPGRADING = Path("docs/UPGRADING.md")
 
@@ -14,7 +13,7 @@ def read(path):
 def test_installation_uses_lifecycle_upgrade():
     text = read(INSTALLATION)
 
-    assert "truepanel verify --root /opt/truepanel" in text
+    assert "truepanel verify --root /mnt/POOL/DATASET/TruePanel" in text
     assert "--dry-run" in text
     assert "guarded lifecycle manager" in text
 

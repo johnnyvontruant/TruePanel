@@ -17,7 +17,7 @@ truepanel.py
           -> A125 LCD driver
 ```
 
-The installed service launches `/opt/truepanel/bin/truepanel run`.
+The installed service launches `/mnt/POOL/DATASET/TruePanel/bin/truepanel run`.
 
 ## Core layers
 

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+
+from truepanel.paths import installation_root
 
 from .server import serve
 
@@ -19,7 +21,7 @@ class ServiceConfigurationError(ValueError):
 class MissionControlServiceSettings:
     host: str = "127.0.0.1"
     port: int = 8787
-    config_path: Path = Path("/opt/truepanel/truepanel.yaml")
+    config_path: Path = installation_root() / "truepanel.yaml"
     allow_config_writes: bool = False
 
 
@@ -59,7 +61,10 @@ class MissionControlServiceSettings:
 
         raw_path = values.get(
             "TRUEPANEL_MC_CONFIG_PATH",
-            "/opt/truepanel/truepanel.yaml",
+            str(
+                installation_root()
+                / "truepanel.yaml"
+            ),
         ).strip()
 
         if not raw_path:

@@ -3,7 +3,7 @@
 The installed CLI wrapper is:
 
 ```text
-/opt/truepanel/bin/truepanel
+/mnt/POOL/DATASET/TruePanel/bin/truepanel
 ```
 
 From a repository checkout, the equivalent launcher is:

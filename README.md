@@ -169,7 +169,7 @@ The normal runtime is launched through:
 truepanel.py -> truepanel.cli -> lcd-menu.py
 ```
 
-The TVS-671 reference deployment lives under `/mnt/SSDs/Applications/TruePanel` and starts through TrueNAS POSTINIT tasks. Other layouts may use `/opt/truepanel`.
+The TVS-671 reference deployment lives under `/mnt/SSDs/Applications/TruePanel` and starts through TrueNAS POSTINIT tasks. Other systems should use an operator-selected persistent dataset path such as `/mnt/POOL/DATASET/TruePanel`.
 
 ## Installation
 
@@ -185,7 +185,7 @@ sudo bash install.sh
 Then verify:
 
 ```bash
-sudo /opt/truepanel/bin/truepanel doctor
+sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel doctor
 sudo systemctl status truepanel
 sudo journalctl -u truepanel -f
 ```

@@ -16,8 +16,9 @@ def test_service_defaults_are_local_and_read_only():
 
     assert settings.host == "127.0.0.1"
     assert settings.port == 8787
-    assert settings.config_path == Path(
-        "/opt/truepanel/truepanel.yaml"
+    assert settings.config_path == (
+        Path(__file__).resolve().parents[1]
+        / "truepanel.yaml"
     )
     assert settings.allow_config_writes is False
 

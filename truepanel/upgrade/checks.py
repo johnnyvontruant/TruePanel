@@ -17,9 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-DEFAULT_DEPLOY_ROOT = Path(
-    "/mnt/SSDs/Applications/TruePanel"
-)
+from truepanel.paths import installation_root
 
 STAGE_PREFIX = ".truepanel-stage-"
 
@@ -545,10 +543,8 @@ def run_upgrade(
         if source_root is not None
         else Path.cwd().resolve()
     )
-    deployment = (
-        deploy_root.resolve()
-        if deploy_root is not None
-        else DEFAULT_DEPLOY_ROOT
+    deployment = installation_root(
+        deploy_root
     )
 
     print("\nTruePanel Upgrade")

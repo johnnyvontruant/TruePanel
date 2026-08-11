@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -34,7 +33,7 @@ def test_cli_documents_operator_commands():
 def test_upgrade_guide_preserves_live_configuration():
     text = read("docs/UPGRADING.md")
 
-    assert "/opt/truepanel/truepanel.yaml" in text
+    assert "/mnt/POOL/DATASET/TruePanel/truepanel.yaml" in text
     assert "/etc/default/truepanel-mission-control" in text
     assert "primary LCD service" in text
 

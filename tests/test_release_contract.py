@@ -1,10 +1,9 @@
-from pathlib import Path
 import re
 import tomllib
+from pathlib import Path
 
 import truepanel
 from truepanel.mission_control.constants import MISSION_CONTROL_VERSION
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,7 +20,7 @@ def dependency_name(requirement):
 def test_stable_product_version():
     assert truepanel.__version__ == "1.1.0"
     assert re.fullmatch(r"\d+\.\d+\.\d+", truepanel.__version__)
-    assert MISSION_CONTROL_VERSION == truepanel.__version__
+    assert truepanel.__version__ == MISSION_CONTROL_VERSION
 
 
 def test_project_metadata_uses_authoritative_version():
@@ -81,12 +80,25 @@ def test_installer_release_paths_are_consistent():
     installer = (ROOT / "install.sh").read_text(encoding="utf-8")
     uninstaller = (ROOT / "uninstall.sh").read_text(encoding="utf-8")
 
-    assert 'INSTALL_DIR="/opt/truepanel"' in installer
+    for source in (
+        installer,
+        uninstaller,
+    ):
+        assert "TRUEPANEL_INSTALL_ROOT" in source
+        assert "--root" in source
+        assert (
+            "systemctl show truepanel.service"
+            in source
+        )
+        assert "/opt/truepanel" not in source
+
     assert 'BIN_DIR="$INSTALL_DIR/bin"' in installer
     assert 'ExecStart=$BIN_FILE run' in installer
 
-    assert 'INSTALL_DIR="/opt/truepanel"' in uninstaller
-    assert 'BIN_FILE="$INSTALL_DIR/bin/truepanel"' in uninstaller
+    assert (
+        'BIN_FILE="$INSTALL_DIR/bin/truepanel"'
+        in uninstaller
+    )
 
 def test_production_entrypoints_compile():
     entrypoints = (

@@ -2,7 +2,7 @@
 
 ## Scope
 
-The native installer deploys TruePanel to `/opt/truepanel`, creates `/opt/truepanel/bin/truepanel`, and installs `truepanel.service`.
+The native installer deploys TruePanel to an operator-selected persistent dataset path under `/mnt/`. The examples in this guide use `/mnt/POOL/DATASET/TruePanel`. The installer creates the CLI wrapper inside that installation root and installs `truepanel.service`.
 
 The reference platform is TrueNAS SCALE on a QNAP TVS-671. The installer may also work on compatible Debian-based systems, but physical hardware support must be verified separately.
 
@@ -61,12 +61,13 @@ For verified hardware, or after reviewing the compatibility survey:
 git clone https://github.com/johnnyvontruant/TruePanel.git
 cd TruePanel
 python3 truepanel.py compatibility
-sudo bash install.sh
+sudo bash install.sh \
+  --root /mnt/POOL/DATASET/TruePanel
 ```
 
 The installer:
 
-1. copies the repository to `/opt/truepanel`;
+1. copies the repository to `/mnt/POOL/DATASET/TruePanel`;
 2. attempts to create a Python virtual environment;
 3. falls back to system Python when the TrueNAS Python environment cannot create a usable venv;
 4. verifies required imports;
@@ -88,17 +89,17 @@ sudo journalctl -u truepanel -f
 The service executes:
 
 ```text
-/opt/truepanel/bin/truepanel run
+/mnt/POOL/DATASET/TruePanel/bin/truepanel run
 ```
 
-with `/opt/truepanel` as its working directory.
+with `/mnt/POOL/DATASET/TruePanel` as its working directory.
 
 ## Configuration
 
 The installed configuration is:
 
 ```text
-/opt/truepanel/truepanel.yaml
+/mnt/POOL/DATASET/TruePanel/truepanel.yaml
 ```
 
 The repository includes `truepanel.yaml` as the reference configuration. Important sections include:
@@ -122,7 +123,7 @@ TruePanel provides a guarded lifecycle manager for upgrades.
 Begin by verifying the current installation:
 
 ```bash
-truepanel verify --root /opt/truepanel
+truepanel verify --root /mnt/POOL/DATASET/TruePanel
 ```
 
 Then preview the desired source tree:
@@ -130,7 +131,7 @@ Then preview the desired source tree:
 ```bash
 python3 truepanel.py upgrade \
   --source ~/TruePanel \
-  --root /opt/truepanel \
+  --root /mnt/POOL/DATASET/TruePanel \
   --dry-run
 ```
 
@@ -140,9 +141,9 @@ See [Upgrade and rollback](UPGRADING.md) for the complete procedure and required
 ## Manual verification
 
 ```bash
-sudo /bin/python3 -m compileall -q /opt/truepanel/truepanel
-sudo /opt/truepanel/bin/truepanel version
-sudo /opt/truepanel/bin/truepanel doctor
+sudo /bin/python3 -m compileall -q /mnt/POOL/DATASET/TruePanel/truepanel
+sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel version
+sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel doctor
 systemctl is-active truepanel
 sudo journalctl -u truepanel -n 80 --no-pager
 ```
@@ -157,10 +158,11 @@ ls -l /dev/ttyS1 /dev/i2c-0
 
 ```bash
 cd ~/TruePanel
-sudo bash uninstall.sh
+sudo bash uninstall.sh \
+  --root /mnt/POOL/DATASET/TruePanel
 ```
 
-The uninstaller stops and disables the service, removes the systemd unit, removes both current and legacy CLI wrapper paths, reloads systemd, and deletes `/opt/truepanel`.
+The uninstaller stops and disables the service, removes the systemd unit, removes both current and legacy CLI wrapper paths, reloads systemd, and deletes `/mnt/POOL/DATASET/TruePanel`.
 
 Local repository clones, external firmware archives, and Git history are not removed.
 
@@ -176,14 +178,14 @@ The installer places these files:
 
 - `/etc/systemd/system/truepanel-mission-control.service`
 - `/etc/default/truepanel-mission-control`
-- `/opt/truepanel/truepanel/web/`
+- `/mnt/POOL/DATASET/TruePanel/truepanel/web/`
 
 The service is installed with conservative defaults:
 
 ```text
 TRUEPANEL_MC_HOST=127.0.0.1
 TRUEPANEL_MC_PORT=8787
-TRUEPANEL_MC_CONFIG_PATH=/opt/truepanel/truepanel.yaml
+TRUEPANEL_MC_CONFIG_PATH=/mnt/POOL/DATASET/TruePanel/truepanel.yaml
 TRUEPANEL_MC_ALLOW_CONFIG_WRITES=false
 ```
 
@@ -196,7 +198,7 @@ sudo systemctl enable --now truepanel-mission-control
 Check its state:
 
 ```bash
-sudo /opt/truepanel/bin/truepanel mission-control status
+sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel mission-control status
 ```
 
 The default dashboard is available only from the TrueNAS host:
@@ -241,7 +243,7 @@ After changing the environment file, restart the companion service:
 sudo systemctl restart truepanel-mission-control
 ```
 
-Write mode permits validated Night Mode changes to `/opt/truepanel/truepanel.yaml`. Each save uses atomic replacement and creates a timestamped backup. Mission Control does not automatically restart the primary TruePanel service after a save.
+Write mode permits validated Night Mode changes to `/mnt/POOL/DATASET/TruePanel/truepanel.yaml`. Each save uses atomic replacement and creates a timestamped backup. Mission Control does not automatically restart the primary TruePanel service after a save.
 
 Keep write mode disabled unless remote configuration is specifically required. The web service never writes directly to the LCD serial interface, I2C devices, sysfs controls, or other hardware endpoints.
 

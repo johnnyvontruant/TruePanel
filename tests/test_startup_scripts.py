@@ -70,6 +70,7 @@ def test_deploy_script_preserves_runtime_state():
         "--exclude='.venv/'",
         "--exclude='truepanel.yaml'",
         "--exclude='development/logs/'",
+        "--exclude='development/firmware/lab/'",
     ):
         assert exclusion in source
 
@@ -82,6 +83,55 @@ def test_deploy_script_requires_explicit_restart():
         "deploy-truenas.sh"
     )
 
-    assert '"${1:-}" == "--restart"' in source
     assert 'RESTART=false' in source
+    assert '--restart)' in source
+    assert 'RESTART=true' in source
     assert 'if [[ "$RESTART" == "true" ]]' in source
+
+
+def test_deploy_script_discovers_installed_root():
+    source = script_source(
+        "deploy-truenas.sh"
+    )
+
+    assert "TRUEPANEL_DEPLOY_ROOT" in source
+    assert (
+        "systemctl show truepanel.service"
+        in source
+    )
+    assert "WorkingDirectory" in source
+    assert (
+        "/mnt/SSDs/Applications/TruePanel"
+        not in source
+    )
+
+
+def test_deploy_script_fails_without_safe_target():
+    source = script_source(
+        "deploy-truenas.sh"
+    )
+
+    assert (
+        "Could not determine the deployed "
+        "TruePanel root."
+        in source
+    )
+    assert (
+        "Set TRUEPANEL_DEPLOY_ROOT"
+        in source
+    )
+
+
+def test_deploy_script_supports_dry_run():
+    source = script_source(
+        "deploy-truenas.sh"
+    )
+
+    assert 'DRY_RUN=false' in source
+    assert '--dry-run)' in source
+    assert '--itemize-changes' in source
+    assert (
+        "Deployment preview complete; "
+        "no files were changed."
+        in source
+    )

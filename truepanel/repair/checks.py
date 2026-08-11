@@ -18,10 +18,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from truepanel.paths import installation_root
 from truepanel.verify import run_verify
 from truepanel.verify.checks import (
     environment_root,
-    project_root,
     systemd_root,
 )
 
@@ -521,11 +521,7 @@ def run_repair(
     runner: Callable[..., Any] = run_command,
     verifier: Callable[..., int] = run_verify,
 ) -> int:
-    root = (
-        root.resolve()
-        if root is not None
-        else project_root()
-    )
+    root = installation_root(root)
     units_root = systemd_root()
     env_root = environment_root()
 

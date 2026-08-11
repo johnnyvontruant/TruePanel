@@ -261,7 +261,7 @@ def build_parser():
         dest="verify_root",
         help=(
             "Installation root to verify; defaults to "
-            "/mnt/SSDs/Applications/TruePanel when present"
+            "TRUEPANEL_ROOT or the running TruePanel tree"
         ),
     )
     compatibility = subcommands.add_parser(
@@ -310,7 +310,7 @@ def build_parser():
         dest="upgrade_root",
         help=(
             "Deployed installation root; defaults to "
-            "/mnt/SSDs/Applications/TruePanel"
+            "TRUEPANEL_ROOT or the running TruePanel tree"
         ),
     )
     upgrade.add_argument(
@@ -389,7 +389,7 @@ def build_parser():
         dest="repair_root",
         help=(
             "Installation root to repair; defaults to "
-            "/mnt/SSDs/Applications/TruePanel when present"
+            "TRUEPANEL_ROOT or the running TruePanel tree"
         ),
     )
     repair.add_argument(
@@ -533,14 +533,12 @@ def main():
 
     if args.command == "upgrade":
         upgrade_root = (
-            Path(
-                args.upgrade_root
-            ).resolve()
-            if args.upgrade_root
-            else Path(
-                "/mnt/SSDs/Applications/TruePanel"
-            )
-        )
+        Path(
+            args.upgrade_root
+        ).resolve()
+        if args.upgrade_root
+        else None
+    )
 
         upgrade_stage_root = (
             Path(
