@@ -84,14 +84,14 @@ class HostAgentBootstrap:
 
         if (
             decision.force_automatic
-        and "safety recovery confirmed"
+            and "safety recovery confirmed"
             in reason_lower
         ):
             return "recovery"
 
         if (
             decision.force_automatic
-        and "expired" in reason_lower
+            and "expired" in reason_lower
         ):
             return "timeout"
 
