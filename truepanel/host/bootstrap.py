@@ -22,8 +22,10 @@ from truepanel.hardware.fan_runtime import (
 from truepanel.hardware.thermal_commissioning import (
     thermal_commissioning_state,
 )
+from truepanel.hardware.thermal_fan_policy import ThermalFanPolicy
 from truepanel.history import (
     FanControlHistory,
+    ThermalObserverHistory,
     event_from_decision,
 )
 from truepanel.history.thermal_commissioning import (
@@ -33,6 +35,7 @@ from truepanel.history.thermal_commissioning import (
 
 from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
+from .thermal_observer import HostThermalObserver
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,6 +47,7 @@ class HostAgentBootstrap:
     config: dict[str, Any]
     fan_runtime: Any
     thermal_authority: HostThermalAuthority
+    thermal_observer: HostThermalObserver
     fan_control_history: FanControlHistory
     thermal_commissioning_history: ThermalCommissioningHistory
     telemetry: HostFanTelemetryProvider | None = None
@@ -213,7 +217,10 @@ def build_host_agent_bootstrap(
     commissioning_history_factory=(
         ThermalCommissioningHistory
     ),
+    thermal_observer_history_factory=ThermalObserverHistory,
+    thermal_policy_factory=ThermalFanPolicy,
     thermal_authority_factory=HostThermalAuthority,
+    thermal_observer_factory=HostThermalObserver,
 ) -> HostAgentBootstrap:
     """
     Construct Host-owned runtime dependencies.
@@ -268,17 +275,29 @@ def build_host_agent_bootstrap(
         )
     )
 
+    thermal_observer_history = (
+        thermal_observer_history_factory(
+            history.get(
+                "thermal_observer_path",
+                (
+                    "/var/lib/truepanel/history/"
+                    "thermal-observer.jsonl"
+                ),
+            ),
+            enabled=history_enabled,
+        )
+    )
+
     thermal = _thermal_policy_config(
+        config
+    )
+    policy_mode = _thermal_policy_mode(
         config
     )
 
     thermal_authority = thermal_authority_factory(
         service=fan_runtime.service,
-        policy_mode=(
-            _thermal_policy_mode(
-                config
-            )
-        ),
+        policy_mode=policy_mode,
         command_cooldown_seconds=float(
             thermal.get(
                 "command_cooldown_seconds",
@@ -303,10 +322,52 @@ def build_host_agent_bootstrap(
         supervised_session_seconds=120.0,
     )
 
+    thermal_policy = thermal_policy_factory(
+        balanced_temperature_c=float(
+            thermal.get(
+                "balanced_temperature_c",
+                42,
+            )
+        ),
+        cooling_boost_temperature_c=float(
+            thermal.get(
+                "cooling_boost_temperature_c",
+                50,
+            )
+        ),
+        afterburners_temperature_c=float(
+            thermal.get(
+                "afterburners_temperature_c",
+                60,
+            )
+        ),
+        hysteresis_c=float(
+            thermal.get(
+                "hysteresis_c",
+                3,
+            )
+        ),
+        minimum_dwell_seconds=float(
+            thermal.get(
+                "minimum_dwell_seconds",
+                30,
+            )
+        ),
+    )
+
+    thermal_observer = thermal_observer_factory(
+        policy=thermal_policy,
+        policy_mode=policy_mode,
+        thermal_authority=thermal_authority,
+        history=thermal_observer_history,
+        runtime_status_provider=fan_runtime.status_payload,
+    )
+
     return HostAgentBootstrap(
         config=config,
         fan_runtime=fan_runtime,
         thermal_authority=thermal_authority,
+        thermal_observer=thermal_observer,
         fan_control_history=fan_control_history,
         thermal_commissioning_history=(
             thermal_commissioning_history
