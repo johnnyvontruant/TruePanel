@@ -196,6 +196,20 @@ def test_lcd_delegates_fan_reconciliation_to_host():
     assert "thermal_authority.reconcile(" not in runtime
 
 
+def test_lcd_uses_bootstrap_owned_host_telemetry():
+    runtime = Path("lcd-menu.py").read_text()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
+
+    assert "DriveTemperatureProvider" not in runtime
+    assert "HostFanTelemetryProvider" not in runtime
+    assert "get_fan_status" not in runtime
+    assert "host_bootstrap\n        .telemetry" in runtime
+    assert "DriveTemperatureProvider" in bootstrap
+    assert "HostFanTelemetryProvider" in bootstrap
+
+
 def test_lcd_wires_fan_control_status_page():
     text = Path("lcd-menu.py").read_text()
 

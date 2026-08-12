@@ -26,6 +26,17 @@ class FakeAuthority:
         self.dry_run = True
 
 
+class FakeTelemetry:
+    def __init__(
+        self,
+        *,
+        temperature_provider,
+        fan_status_provider,
+    ):
+        self.temperature_provider = temperature_provider
+        self.fan_status_provider = fan_status_provider
+
+
 def test_bootstrap_owns_host_dependencies():
     runtime = FakeFanRuntime()
 
@@ -41,6 +52,35 @@ def test_bootstrap_owns_host_dependencies():
     assert bootstrap.thermal_authority is not None
     assert bootstrap.fan_control_history is not None
     assert bootstrap.thermal_commissioning_history is not None
+
+
+def test_bootstrap_owns_production_telemetry():
+    runtime = FakeFanRuntime()
+    temperature_provider = object()
+    fan_status_provider = lambda: {}
+
+    bootstrap = build_host_agent_bootstrap(
+        {},
+        fan_runtime_factory=lambda config: runtime,
+        fan_history_factory=FakeHistory,
+        commissioning_history_factory=FakeHistory,
+        thermal_authority_factory=FakeAuthority,
+        drive_temperature_provider_factory=(
+            lambda: temperature_provider
+        ),
+        fan_status_provider=fan_status_provider,
+        telemetry_factory=FakeTelemetry,
+    )
+
+    assert isinstance(bootstrap.telemetry, FakeTelemetry)
+    assert (
+        bootstrap.telemetry.temperature_provider
+        is temperature_provider
+    )
+    assert (
+        bootstrap.telemetry.fan_status_provider
+        is fan_status_provider
+    )
 
 
 def test_bootstrap_starts_thermal_authority_safe():

@@ -21,14 +21,8 @@ from truepanel.hardware.bay_led_animation import (
 from truepanel.hardware.bounded_automatic import (
     thermal_safety_fingerprint,
 )
-from truepanel.hardware.drive_temperatures import (
-    DriveTemperatureProvider,
-)
 from truepanel.hardware.fan_status_bridge import (
     FanControlStatusBridge,
-)
-from truepanel.hardware.fans import (
-    get_status as get_fan_status,
 )
 from truepanel.hardware.lcd_display_status_bridge import (
     LCDDisplayStatusBridge,
@@ -43,7 +37,6 @@ from truepanel.host import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
     HostFanReconciliationCoordinator,
-    HostFanTelemetryProvider,
     build_host_agent_bootstrap,
     build_host_agent_runtime,
 )
@@ -201,31 +194,12 @@ def publish_fan_control_status(
     )
 
 
-host_drive_temperature_provider = (
-    DriveTemperatureProvider()
-)
-
-host_fan_telemetry_provider = (
-    HostFanTelemetryProvider(
-        temperature_provider=(
-            host_drive_temperature_provider
-        ),
-        fan_status_provider=(
-            get_fan_status
-        ),
-    )
-)
-
-host_bootstrap.telemetry = (
-    host_fan_telemetry_provider
-)
-
-
 def fan_command_telemetry():
     """Compatibility adapter for Host-owned safety telemetry."""
 
     return (
-        host_fan_telemetry_provider
+        host_bootstrap
+        .telemetry
         .snapshot()
     )
 

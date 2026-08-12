@@ -16,6 +16,12 @@ from truepanel.hardware.bounded_automatic import (
     AUTOMATIC_LEASE_SECONDS,
     thermal_safety_fingerprint,
 )
+from truepanel.hardware.drive_temperatures import (
+    DriveTemperatureProvider,
+)
+from truepanel.hardware.fans import (
+    get_status as get_fan_status,
+)
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
 )
@@ -50,7 +56,7 @@ class HostAgentBootstrap:
     thermal_observer: HostThermalObserver
     fan_control_history: FanControlHistory
     thermal_commissioning_history: ThermalCommissioningHistory
-    telemetry: HostFanTelemetryProvider | None = None
+    telemetry: HostFanTelemetryProvider
 
     def record_fan_event(
         self,
@@ -218,6 +224,9 @@ def build_host_agent_bootstrap(
         ThermalCommissioningHistory
     ),
     thermal_observer_history_factory=ThermalObserverHistory,
+    drive_temperature_provider_factory=DriveTemperatureProvider,
+    fan_status_provider=get_fan_status,
+    telemetry_factory=HostFanTelemetryProvider,
     thermal_policy_factory=ThermalFanPolicy,
     thermal_authority_factory=HostThermalAuthority,
     thermal_observer_factory=HostThermalObserver,
@@ -363,6 +372,17 @@ def build_host_agent_bootstrap(
         runtime_status_provider=(
             lambda: fan_runtime.status_payload()
         ),
+    )
+
+    drive_temperature_provider = (
+        drive_temperature_provider_factory()
+    )
+
+    telemetry = telemetry_factory(
+        temperature_provider=(
+            drive_temperature_provider
+        ),
+        fan_status_provider=fan_status_provider,
     )
 
     return HostAgentBootstrap(
