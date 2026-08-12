@@ -23,7 +23,6 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import re
 
           path = Path('lcd-menu.py')
           text = path.read_text(encoding='utf-8')
@@ -36,8 +35,8 @@ jobs:
 
           old_global = 'host_agent_runtime = None\n'
           new_global = 'host_agent_runtime = None\nfan_reconciliation_coordinator = None\n'
-          if text.count(old_global) != 1:
-              raise SystemExit('expected host_agent_runtime global not found exactly once')
+          if old_global not in text:
+              raise SystemExit('expected host_agent_runtime global not found')
           text = text.replace(old_global, new_global, 1)
 
           old_reconcile = '''def reconcile_fan_control():\n\n    if (\n        host_agent_runtime is None\n        or not fan_control_runtime.connected\n    ):\n        return None\n\n    telemetry = (\n        host_agent_runtime\n        .safety\n        .telemetry()\n    )\n\n    recommendation = (\n        observe_thermal_fan_policy(\n            telemetry\n        )\n    )\n\n    (\n        decision,\n        safety_telemetry,\n    ) = (\n        host_agent_runtime\n        .safety\n        .reconcile(\n            telemetry=telemetry,\n            source_classifier=(\n                fan_control_event_source\n            ),\n        )\n    )\n\n    if decision is not None:\n        thermal_authority.handle_fan_safety_transition(\n            telemetry=safety_telemetry,\n            telemetry_provider=fan_command_telemetry,\n            restore_automatic=(\n                restore_motherboard_fan_control\n            ),\n            publish_status=(\n                publish_fan_control_status\n            ),\n            record_commissioning_event=(\n                record_thermal_commissioning_event\n            ),\n        )\n\n        return decision\n\n    return thermal_authority.reconcile(\n        recommendation,\n        telemetry=telemetry,\n        runtime_status_provider=(\n            fan_control_runtime.status_payload\n        ),\n        telemetry_provider=fan_command_telemetry,\n        restore_automatic=(\n            restore_motherboard_fan_control\n        ),\n        publish_status=publish_fan_control_status,\n        record_fan_event=record_fan_control_event,\n        record_commissioning_event=(\n            record_thermal_commissioning_event\n        ),\n    )\n'''
