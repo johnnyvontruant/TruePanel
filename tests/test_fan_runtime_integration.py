@@ -187,7 +187,8 @@ def test_lcd_uses_bootstrap_owned_status_bridge():
     assert "FanControlStatusBridge" not in runtime
     assert "publish_host_fan_status" not in runtime
     assert "host_agent_runtime.publish_fan_status(" in runtime
-    assert "host_bootstrap.status_bridge.read(" in runtime
+    assert "host_bootstrap.status_bridge.read(" not in runtime
+    assert "host_agent_runtime.read_fan_status(" in runtime
     assert "FanControlStatusBridge" in bootstrap
 
 

@@ -445,3 +445,36 @@ def test_runtime_exposes_non_actuating_thermal_observation():
         "recommended_profile": "automatic"
     }
     assert reconciliation.observe_calls == [telemetry]
+
+def test_runtime_exposes_read_only_fan_status():
+    events = []
+    reads = []
+
+    def read_status(*, max_age=30.0):
+        reads.append(max_age)
+        return {"active_profile": "automatic"}
+
+    runtime = HostAgentRuntime(
+        fan_runtime=FakeFanRuntime(events),
+        safety=object(),
+        fan_status_reader=read_status,
+        fan_server_factory=lambda: None,
+        lcd_server_factory=lambda: None,
+    )
+
+    assert runtime.read_fan_status(max_age=12.0) == {
+        "active_profile": "automatic"
+    }
+    assert reads == [12.0]
+
+
+def test_runtime_fan_status_read_fails_closed_without_reader():
+    events = []
+    runtime = HostAgentRuntime(
+        fan_runtime=FakeFanRuntime(events),
+        safety=object(),
+        fan_server_factory=lambda: None,
+        lcd_server_factory=lambda: None,
+    )
+
+    assert runtime.read_fan_status() is None

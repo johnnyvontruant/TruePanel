@@ -30,11 +30,13 @@ class HostAgentRuntime:
         safety: Any,
         fan_server_factory: Callable[[], Any | None],
         lcd_server_factory: Callable[[], Any | None],
+        fan_status_reader: Callable[..., Any] | None = None,
         fan_reconciliation: Any | None = None,
         thermal_lifecycle: Any | None = None,
     ):
         self._fan_runtime = fan_runtime
         self._safety = safety
+        self._fan_status_reader = fan_status_reader
         self._fan_reconciliation = fan_reconciliation
         self._thermal_lifecycle = thermal_lifecycle
         self._fan_server_factory = fan_server_factory
@@ -50,6 +52,20 @@ class HostAgentRuntime:
         """Return the Host Agent safety coordinator."""
 
         return self._safety
+
+    def read_fan_status(
+        self,
+        *,
+        max_age: float = 30.0,
+    ) -> Any:
+        """Read the latest Host-published fan/thermal status snapshot."""
+
+        if self._fan_status_reader is None:
+            return None
+
+        return self._fan_status_reader(
+            max_age=max_age
+        )
 
     def fan_telemetry(self) -> Any:
         """Return the Host-owned fan/thermal telemetry snapshot."""

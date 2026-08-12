@@ -23,6 +23,8 @@ FanTelemetryProvider = Callable[
 
 FanStatusPublisher = Callable[..., Any]
 
+FanStatusReader = Callable[..., Mapping[str, Any] | None]
+
 FanEventRecorder = Callable[
     [
         Any,
@@ -63,6 +65,7 @@ class HostAgentSafetyServices:
 
     fan_telemetry_provider: FanTelemetryProvider
     fan_status_publisher: FanStatusPublisher | None = None
+    fan_status_reader: FanStatusReader | None = None
     fan_event_recorder: FanEventRecorder | None = None
     thermal_control_handler_factory: (
         ThermalControlHandlerFactory | None
@@ -87,6 +90,7 @@ class HostAgentApplicationHooks:
 __all__ = [
     "FanEventRecorder",
     "FanStatusPublisher",
+    "FanStatusReader",
     "FanTelemetryProvider",
     "HostAgentApplicationHooks",
     "HostAgentSafetyServices",

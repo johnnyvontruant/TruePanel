@@ -472,8 +472,12 @@ def show_fan_rpm():
 
 
 def show_fan_control():
-    status = host_bootstrap.status_bridge.read(
-        max_age=30.0
+    status = (
+        host_agent_runtime.read_fan_status(
+            max_age=30.0
+        )
+        if host_agent_runtime is not None
+        else None
     )
 
     lcd.clear()

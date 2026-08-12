@@ -87,6 +87,17 @@ class HostAgentBootstrap:
             reason=reason,
         )
 
+    def read_fan_status(
+        self,
+        *,
+        max_age: float = 30.0,
+    ) -> dict[str, Any] | None:
+        """Read one non-authoritative Host fan/thermal status snapshot."""
+
+        return self.status_bridge.read(
+            max_age=max_age
+        )
+
     def build_thermal_control_handler(
         self,
         restore_automatic: ThermalAutomaticRestorer,
@@ -155,6 +166,9 @@ class HostAgentBootstrap:
             ),
             fan_status_publisher=(
                 self.publish_fan_status
+            ),
+            fan_status_reader=(
+                self.read_fan_status
             ),
             fan_event_recorder=(
                 lambda decision, telemetry, source: (

@@ -133,6 +133,10 @@ def test_bootstrap_builds_host_safety_services():
         services.fan_status_publisher
         == bootstrap.publish_fan_status
     )
+    assert (
+        services.fan_status_reader
+        == bootstrap.read_fan_status
+    )
     assert services.fan_event_recorder is not None
     assert (
         services.thermal_control_handler_factory

@@ -161,6 +161,9 @@ def build_host_agent_runtime(
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
         safety=safety,
+        fan_status_reader=(
+            safety_services.fan_status_reader
+        ),
         fan_reconciliation=fan_reconciliation,
         thermal_lifecycle=thermal_lifecycle,
         fan_server_factory=lambda: (
