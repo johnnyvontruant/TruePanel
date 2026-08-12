@@ -33,9 +33,6 @@ from truepanel.history.thermal_commissioning import (
     commissioning_event,
 )
 
-from .reconciliation import (
-    HostFanReconciliationCoordinator,
-)
 from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
 from .thermal_observer import HostThermalObserver
@@ -53,7 +50,6 @@ class HostAgentBootstrap:
     thermal_observer: HostThermalObserver
     fan_control_history: FanControlHistory
     thermal_commissioning_history: ThermalCommissioningHistory
-    reconciliation: HostFanReconciliationCoordinator | None = None
     telemetry: HostFanTelemetryProvider | None = None
 
     def record_fan_event(
@@ -88,14 +84,14 @@ class HostAgentBootstrap:
 
         if (
             decision.force_automatic
-            and "safety recovery confirmed"
+        and "safety recovery confirmed"
             in reason_lower
         ):
             return "recovery"
 
         if (
             decision.force_automatic
-            and "expired" in reason_lower
+        and "expired" in reason_lower
         ):
             return "timeout"
 
@@ -369,7 +365,7 @@ def build_host_agent_bootstrap(
         ),
     )
 
-    bootstrap = HostAgentBootstrap(
+    return HostAgentBootstrap(
         config=config,
         fan_runtime=fan_runtime,
         thermal_authority=thermal_authority,
@@ -379,22 +375,6 @@ def build_host_agent_bootstrap(
             thermal_commissioning_history
         ),
     )
-
-    bootstrap.reconciliation = (
-        HostFanReconciliationCoordinator(
-            fan_runtime=fan_runtime,
-            safety=bootstrap.safety,
-            thermal_observer=thermal_observer,
-            thermal_authority=thermal_authority,
-            fan_event_source=bootstrap.fan_event_source,
-            record_fan_event=bootstrap.record_fan_event,
-            record_commissioning_event=(
-                bootstrap.record_commissioning_event
-            ),
-        )
-    )
-
-    return bootstrap
 
 
 __all__ = [
