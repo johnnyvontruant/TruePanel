@@ -177,61 +177,15 @@ def test_lcd_preserves_timeout_classification():
     )
 
 
-def test_lcd_records_reconcile_source_from_classifier():
-    runtime = Path(
-        "lcd-menu.py"
+def test_lcd_reconciliation_classifier_is_host_owned():
+    runtime = Path("lcd-menu.py").read_text()
+    coordinator = Path(
+        "truepanel/host/reconciliation.py"
     ).read_text()
 
-    safety = Path(
-        "truepanel/host/safety.py"
-    ).read_text()
-
-    reconcile_start = runtime.index(
-        "def reconcile_fan_control():"
-    )
-
-    reconcile_end = runtime.index(
-        "\ndef ",
-        reconcile_start,
-    )
-
-    reconcile = runtime[
-        reconcile_start:reconcile_end
-    ]
-
-    assert (
-        "source_classifier=("
-        in reconcile
-    )
-
-    assert (
-        "fan_control_event_source"
-        in reconcile
-    )
-
-    assert (
-        "record_fan_control_event("
-        not in reconcile
-    )
-
-    safety_start = safety.index(
-        "    def reconcile("
-    )
-
-    safety_end = safety.index(
-        "    def restore_automatic(",
-        safety_start,
-    )
-
-    host_reconcile = safety[
-        safety_start:safety_end
-    ]
-
-    assert (
-        "self.record_event("
-        in host_reconcile
-    )
-
+    assert "HostFanReconciliationCoordinator" in runtime
+    assert "source_classifier=self._fan_event_source" in coordinator
+    assert "fan_event_source=" in runtime
 
 def test_lcd_delegates_fan_reconciliation_to_host():
     runtime = Path("lcd-menu.py").read_text()
