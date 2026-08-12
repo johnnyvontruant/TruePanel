@@ -54,7 +54,7 @@ def test_host_thermal_observer_reads_runtime_status():
     )
 
     assert (
-        "lambda: fan_runtime.status_payload()"
+        "lambda:fan_runtime.status_payload()"
         in bootstrap.replace("\n", "").replace(" ", "")
     )
 
