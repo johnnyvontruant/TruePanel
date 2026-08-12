@@ -86,12 +86,6 @@ fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
 history_recorder = TelemetryRecorder(config.get("history", {}))
-fan_control_history = (
-    host_bootstrap.fan_control_history
-)
-thermal_commissioning_history = (
-    host_bootstrap.thermal_commissioning_history
-)
 
 buzzer = Buzzer(config.get("buzzer", {}))
 bay_led_startup_animation = (
@@ -172,77 +166,6 @@ def observe_thermal_fan_policy(
         .observe(telemetry)
     )
 
-
-def record_thermal_commissioning_event(
-    lifecycle_action,
-    reason,
-    *,
-    lease_remaining=None,
-):
-    """Compatibility adapter for Host-owned commissioning history."""
-
-    return host_bootstrap.record_commissioning_event(
-        lifecycle_action,
-        reason,
-        lease_remaining=lease_remaining,
-    )
-
-
-def record_fan_control_event(
-    decision,
-    telemetry,
-    *,
-    source,
-):
-    """Compatibility adapter for Host-owned fan history."""
-
-    return host_bootstrap.record_fan_event(
-        decision,
-        telemetry,
-        source=source,
-    )
-
-
-def fan_control_event_source(
-    decision,
-):
-    """Compatibility adapter for Host-owned event classification."""
-
-    return host_bootstrap.fan_event_source(
-        decision
-    )
-
-
-def restore_motherboard_fan_control(
-    reason,
-    *,
-    telemetry=None,
-):
-    """Restore Automatic only through the Host Agent safety boundary."""
-
-    if (
-        host_agent_runtime is None
-        or getattr(
-            host_agent_runtime,
-            "safety",
-            None,
-        )
-        is None
-    ):
-        LOGGER.warning(
-            "Host Agent safety coordinator unavailable; "
-            "Automatic restoration request ignored."
-        )
-        return None
-
-    return (
-        host_agent_runtime
-        .safety
-        .restore_automatic(
-            reason,
-            telemetry=telemetry,
-        )
-    )
 
 def end_supervised_thermal_session(
     reason,

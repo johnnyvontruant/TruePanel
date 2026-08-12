@@ -122,73 +122,31 @@ def test_fan_history_uses_post_transition_telemetry():
     )
 
 
-def test_lcd_classifies_completed_safety_recovery():
-    runtime = Path(
-        "lcd-menu.py"
-    ).read_text()
-
-    bootstrap = Path(
-        "truepanel/host/bootstrap.py"
-    ).read_text()
-
-    assert (
-        "def fan_control_event_source("
-        in runtime
-    )
-
-    assert (
-        "host_bootstrap.fan_event_source("
-        in runtime
-    )
-
-    assert (
-        '"safety recovery confirmed"'
-        in bootstrap
-    )
-
-    assert (
-        'return "recovery"'
-        in bootstrap
-    )
-
-
-def test_lcd_preserves_timeout_classification():
-    runtime = Path(
-        "lcd-menu.py"
-    ).read_text()
-
-    bootstrap = Path(
-        "truepanel/host/bootstrap.py"
-    ).read_text()
-
-    assert (
-        "host_bootstrap.fan_event_source("
-        in runtime
-    )
-
-    assert (
-        'and "expired" in reason_lower'
-        in bootstrap
-    )
-
-    assert (
-        'return "timeout"'
-        in bootstrap
-    )
-
-
-def test_lcd_reconciliation_classifier_is_host_owned():
+def test_host_classifies_completed_safety_recovery():
     runtime = Path("lcd-menu.py").read_text()
-    coordinator = Path(
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
+    reconciliation = Path(
         "truepanel/host/reconciliation.py"
     ).read_text()
+
+    assert "def fan_control_event_source(" not in runtime
+    assert '"safety recovery confirmed"' in bootstrap
+    assert 'return "recovery"' in bootstrap
+    assert "fan_event_source=self.fan_event_source" in bootstrap
+    assert "source_classifier=self._fan_event_source" in reconciliation
+
+
+def test_host_preserves_timeout_classification():
+    runtime = Path("lcd-menu.py").read_text()
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
     ).read_text()
 
-    assert "HostFanReconciliationCoordinator" not in runtime
-    assert "source_classifier=self._fan_event_source" in coordinator
-    assert "fan_event_source=self.fan_event_source" in bootstrap
+    assert "host_bootstrap.fan_event_source(" not in runtime
+    assert 'and "expired" in reason_lower' in bootstrap
+    assert 'return "timeout"' in bootstrap
 
 
 def test_lcd_delegates_fan_reconciliation_to_host():

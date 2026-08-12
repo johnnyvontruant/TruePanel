@@ -1245,7 +1245,12 @@ def test_lcd_records_supervised_commissioning_lifecycle():
     assert (
         "host_bootstrap."
         "thermal_commissioning_history"
-        in runtime
+        not in runtime
+    )
+
+    assert (
+        "thermal_commissioning_history"
+        in bootstrap
     )
 
     assert (
