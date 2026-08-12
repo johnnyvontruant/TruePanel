@@ -9,8 +9,14 @@ def source():
     )
 
 
-def test_lcd_builds_command_telemetry():
+def test_lcd_uses_bootstrap_command_telemetry():
     runtime = source()
+
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
 
     provider = Path(
         "truepanel/host/telemetry.py"
@@ -25,16 +31,23 @@ def test_lcd_builds_command_telemetry():
 
     assert (
         "HostFanTelemetryProvider("
-        in runtime
+        not in runtime
     )
 
     assert (
-        "fan_status_provider=("
-        in runtime
+        "HostFanTelemetryProvider"
+        in bootstrap
     )
 
     assert (
-        "get_fan_status"
+        "fan_status_provider=get_fan_status"
+        in bootstrap
+    )
+
+    assert (
+        "host_bootstrap"
+        "\n        .telemetry"
+        "\n        .snapshot()"
         in runtime
     )
 
