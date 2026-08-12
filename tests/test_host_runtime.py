@@ -385,3 +385,63 @@ def test_runtime_owns_safety_coordinator():
     )
 
     assert runtime.safety is safety
+
+class FakeSafetySurface:
+    def __init__(self):
+        self.telemetry_calls = 0
+        self.status_reasons = []
+
+    def telemetry(self):
+        self.telemetry_calls += 1
+        return {"telemetry_fresh": True}
+
+    def publish_status(self, reason=None):
+        self.status_reasons.append(reason)
+        return {"reason": reason}
+
+
+class FakeReconciliationSurface:
+    def __init__(self):
+        self.observe_calls = []
+
+    def observe(self, telemetry=None):
+        self.observe_calls.append(telemetry)
+        return {"recommended_profile": "automatic"}
+
+    def reconcile(self):
+        return "reconciled"
+
+
+def test_runtime_exposes_host_telemetry_and_status():
+    events = []
+    safety = FakeSafetySurface()
+    runtime = HostAgentRuntime(
+        fan_runtime=FakeFanRuntime(events),
+        safety=safety,
+        fan_server_factory=lambda: None,
+        lcd_server_factory=lambda: None,
+    )
+
+    assert runtime.fan_telemetry() == {"telemetry_fresh": True}
+    assert runtime.publish_fan_status("snapshot") == {"reason": "snapshot"}
+    assert safety.telemetry_calls == 1
+    assert safety.status_reasons == ["snapshot"]
+
+
+def test_runtime_exposes_non_actuating_thermal_observation():
+    events = []
+    safety = FakeSafetySurface()
+    reconciliation = FakeReconciliationSurface()
+    runtime = HostAgentRuntime(
+        fan_runtime=FakeFanRuntime(events),
+        safety=safety,
+        fan_reconciliation=reconciliation,
+        fan_server_factory=lambda: None,
+        lcd_server_factory=lambda: None,
+    )
+
+    telemetry = {"sample": 1}
+    assert runtime.observe_thermal(telemetry) == {
+        "recommended_profile": "automatic"
+    }
+    assert reconciliation.observe_calls == [telemetry]

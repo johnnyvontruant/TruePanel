@@ -132,18 +132,13 @@ def publish_fan_control_status(
 ):
     """Compatibility adapter for Host-owned status publication."""
 
-    return host_bootstrap.publish_fan_status(
+    if host_agent_runtime is None:
+        return host_bootstrap.publish_fan_status(
+            reason=reason,
+        )
+
+    return host_agent_runtime.publish_fan_status(
         reason=reason,
-    )
-
-
-def fan_command_telemetry():
-    """Compatibility adapter for Host-owned safety telemetry."""
-
-    return (
-        host_bootstrap
-        .telemetry
-        .snapshot()
     )
 
 
@@ -157,13 +152,11 @@ def observe_thermal_fan_policy(
     not request profiles, invoke the command socket, or write fan hardware.
     """
 
-    if telemetry is None:
-        telemetry = fan_command_telemetry()
+    if host_agent_runtime is None:
+        return None
 
-    return (
-        host_bootstrap
-        .thermal_observer
-        .observe(telemetry)
+    return host_agent_runtime.observe_thermal(
+        telemetry
     )
 
 
@@ -753,9 +746,6 @@ def main():
     lcd.clear()
 
     try:
-        observe_thermal_fan_policy()
-        publish_fan_control_status()
-
         host_agent_safety_services = (
             host_bootstrap.safety_services()
         )
@@ -782,6 +772,9 @@ def main():
                 host_agent_application_hooks
             ),
         )
+
+        observe_thermal_fan_policy()
+        publish_fan_control_status()
 
         host_agent_runtime.start()
 

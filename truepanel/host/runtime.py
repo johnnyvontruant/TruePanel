@@ -51,6 +51,34 @@ class HostAgentRuntime:
 
         return self._safety
 
+    def fan_telemetry(self) -> Any:
+        """Return the Host-owned fan/thermal telemetry snapshot."""
+
+        return self._safety.telemetry()
+
+    def publish_fan_status(
+        self,
+        reason: str | None = None,
+    ) -> Any:
+        """Publish the Host-owned fan/thermal status snapshot."""
+
+        return self._safety.publish_status(
+            reason=reason
+        )
+
+    def observe_thermal(
+        self,
+        telemetry: Any = None,
+    ) -> Any:
+        """Evaluate Host thermal guidance without granting authority."""
+
+        if self._fan_reconciliation is None:
+            return None
+
+        return self._fan_reconciliation.observe(
+            telemetry
+        )
+
     def reconcile_fans(self) -> Any | None:
         """Run one Host-owned fan/thermal reconciliation cycle."""
 

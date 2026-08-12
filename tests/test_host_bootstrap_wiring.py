@@ -127,94 +127,39 @@ def test_automatic_restoration_is_host_only():
 
 def test_lcd_uses_host_owned_telemetry_normalizer():
     runtime = source()
-
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
+    ).read_text(encoding="utf-8")
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
+    ).read_text(encoding="utf-8")
     host_provider = Path(
         "truepanel/host/telemetry.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
+    ).read_text(encoding="utf-8")
     hardware_provider = Path(
         "truepanel/hardware/drive_temperatures.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    ).read_text(encoding="utf-8")
 
-    assert (
-        "DriveTemperatureProvider"
-        not in runtime
-    )
-
-    assert (
-        "HostFanTelemetryProvider"
-        not in runtime
-    )
-
-    assert (
-        "DriveTemperatureProvider"
-        in bootstrap
-    )
-
-    assert (
-        "HostFanTelemetryProvider"
-        in bootstrap
-    )
-
-    assert (
-        "telemetry=telemetry"
-        in bootstrap
-    )
-
-    start = runtime.index(
-        "def fan_command_telemetry("
-    )
-
-    end = runtime.index(
-        "\ndef ",
-        start + 1,
-    )
-
-    block = runtime[start:end]
-
-    assert (
-        "host_bootstrap"
-        in block
-    )
-
-    assert (
-        ".telemetry"
-        in block
-    )
-
-    assert ".snapshot()" in block
-
-    assert "get_state(" not in block
-
-    assert (
-        "class HostFanTelemetryProvider"
-        in host_provider
-    )
-
-    assert (
-        "class DriveTemperatureProvider"
-        in hardware_provider
-    )
+    assert "DriveTemperatureProvider" not in runtime
+    assert "HostFanTelemetryProvider" not in runtime
+    assert "def fan_command_telemetry(" not in runtime
+    assert "DriveTemperatureProvider" in bootstrap
+    assert "HostFanTelemetryProvider" in bootstrap
+    assert "telemetry=telemetry" in bootstrap
+    assert "def fan_telemetry(" in host_runtime
+    assert "self._safety.telemetry()" in host_runtime
+    assert "class HostFanTelemetryProvider" in host_provider
+    assert "class DriveTemperatureProvider" in hardware_provider
 
 
 def test_lcd_uses_host_owned_status_publisher():
     runtime = source()
-
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    ).read_text(encoding="utf-8")
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
+    ).read_text(encoding="utf-8")
 
     assert "FanControlStatusBridge" not in runtime
     assert "publish_host_fan_status" not in runtime
@@ -225,14 +170,16 @@ def test_lcd_uses_host_owned_status_publisher():
         "def publish_fan_control_status("
     )
     publisher_end = runtime.index(
-        "\ndef fan_command_telemetry(",
-        publisher_start,
+        "\ndef ",
+        publisher_start + 1,
     )
     publisher = runtime[publisher_start:publisher_end]
 
-    assert "host_bootstrap.publish_fan_status(" in publisher
+    assert "host_agent_runtime.publish_fan_status(" in publisher
+    assert "def publish_fan_status(" in host_runtime
     assert "fan_control_runtime.status_payload()" not in publisher
     assert "fan_control_status_bridge.publish(" not in publisher
+
 
 def test_lcd_delegates_host_safety_service_assembly():
     runtime = source()

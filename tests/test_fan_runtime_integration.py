@@ -172,7 +172,8 @@ def test_lcd_uses_bootstrap_owned_host_telemetry():
     assert "DriveTemperatureProvider" not in runtime
     assert "HostFanTelemetryProvider" not in runtime
     assert "get_fan_status" not in runtime
-    assert "host_bootstrap\n        .telemetry" in runtime
+    assert "host_bootstrap\n        .telemetry" not in runtime
+    assert "host_agent_runtime.observe_thermal(" in runtime
     assert "DriveTemperatureProvider" in bootstrap
     assert "HostFanTelemetryProvider" in bootstrap
 
@@ -185,7 +186,7 @@ def test_lcd_uses_bootstrap_owned_status_bridge():
 
     assert "FanControlStatusBridge" not in runtime
     assert "publish_host_fan_status" not in runtime
-    assert "host_bootstrap.publish_fan_status(" in runtime
+    assert "host_agent_runtime.publish_fan_status(" in runtime
     assert "host_bootstrap.status_bridge.read(" in runtime
     assert "FanControlStatusBridge" in bootstrap
 

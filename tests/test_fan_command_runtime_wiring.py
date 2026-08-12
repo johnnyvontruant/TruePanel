@@ -9,95 +9,54 @@ def source():
     )
 
 
-def test_lcd_uses_bootstrap_command_telemetry():
+def test_lcd_routes_host_telemetry_through_runtime():
     runtime = source()
-
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
+    ).read_text(encoding="utf-8")
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
+    ).read_text(encoding="utf-8")
     provider = Path(
         "truepanel/host/telemetry.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    ).read_text(encoding="utf-8")
 
-    assert (
-        "def fan_command_telemetry():"
-        in runtime
-    )
-
-    assert (
-        "HostFanTelemetryProvider("
-        not in runtime
-    )
-
-    assert (
-        "HostFanTelemetryProvider"
-        in bootstrap
-    )
-
-    assert (
-        "fan_status_provider=get_fan_status"
-        in bootstrap
-    )
-
-    assert (
-        "host_bootstrap"
-        "\n        .telemetry"
-        "\n        .snapshot()"
-        in runtime
-    )
-
-    assert (
-        '"fan_status": dict('
-        in provider
-    )
-
-    assert (
-        "self._fan_status_provider()"
-        in provider
-    )
+    assert "def fan_command_telemetry():" not in runtime
+    assert "HostFanTelemetryProvider(" not in runtime
+    assert "HostFanTelemetryProvider" in bootstrap
+    assert "fan_status_provider=get_fan_status" in bootstrap
+    assert "def fan_telemetry(" in host_runtime
+    assert "return self._safety.telemetry()" in host_runtime
+    assert '"fan_status": dict(' in provider
+    assert "self._fan_status_provider()" in provider
 
 
-def test_lcd_publishes_host_owned_thermal_policy():
+def test_lcd_routes_thermal_observation_and_status_through_runtime():
     runtime = source()
-
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
+    ).read_text(encoding="utf-8")
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
+    ).read_text(encoding="utf-8")
+    reconciliation = Path(
+        "truepanel/host/reconciliation.py"
+    ).read_text(encoding="utf-8")
     status = Path(
         "truepanel/host/status.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    ).read_text(encoding="utf-8")
 
     assert "ThermalFanPolicy" not in runtime
     assert "ThermalFanPolicy" in bootstrap
-    assert (
-        "def observe_thermal_fan_policy("
-        in runtime
-    )
-    assert (
-        ".thermal_observer"
-        in runtime
-    )
-
+    assert "def observe_thermal_fan_policy(" in runtime
+    assert "host_agent_runtime.observe_thermal(" in runtime
+    assert ".thermal_observer" not in runtime
+    assert "def observe(" in reconciliation
+    assert "def observe_thermal(" in host_runtime
+    assert "def publish_fan_status(" in host_runtime
+    assert "host_agent_runtime.publish_fan_status(" in runtime
     assert "publish_host_fan_status" in bootstrap
-    assert (
-        "host_bootstrap.publish_fan_status("
-        in runtime
-    )
-
-    assert (
-        '"thermal_policy_mode"'
-        in status
-    )
+    assert '"thermal_policy_mode"' in status
     assert '"thermal_recommended_profile"' in status
     assert "observe_thermal_fan_policy()" in runtime
 

@@ -35,6 +35,19 @@ class HostFanReconciliationCoordinator:
             record_commissioning_event
         )
 
+    def observe(
+        self,
+        telemetry: Any = None,
+    ) -> Any:
+        """Evaluate one Host-owned thermal recommendation without actuation."""
+
+        if telemetry is None:
+            telemetry = self._safety.telemetry()
+
+        return self._thermal_observer.observe(
+            telemetry
+        )
+
     def reconcile(
         self,
         *,
@@ -46,7 +59,7 @@ class HostFanReconciliationCoordinator:
             return None
 
         telemetry = self._safety.telemetry()
-        recommendation = self._thermal_observer.observe(
+        recommendation = self.observe(
             telemetry
         )
 
