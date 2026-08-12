@@ -1,0 +1,61 @@
+name: Update observer test boundaries
+
+on:
+  push:
+    branches:
+      - agent/lcd-host-adapter-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: ${{ !contains(github.event.head_commit.message, '[observer-boundary-tests]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/lcd-host-adapter-cleanup
+          fetch-depth: 0
+
+      - name: Make observer tests use structural function boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+
+          replacements = {
+              Path('tests/test_fan_command_runtime_wiring.py'): (
+                  '''    observer_end = text.index(\n        "def record_fan_control_event(",\n        observer_start,\n    )\n''',
+                  '''    observer_end = text.index(\n        "\\ndef ",\n        observer_start + 1,\n    )\n''',
+              ),
+              Path('tests/test_thermal_policy_contract.py'): (
+                  '''    end = source.index(\n        "def record_fan_control_event(",\n        start,\n    )\n''',
+                  '''    end = source.index(\n        "\\ndef ",\n        start + 1,\n    )\n''',
+              ),
+          }
+
+          for path, (old, new) in replacements.items():
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'observer boundary anchor not found: {path}')
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+      - name: Validate tests
+        run: |
+          python -m compileall -q \
+            tests/test_fan_command_runtime_wiring.py \
+            tests/test_thermal_policy_contract.py
+          git diff --check
+
+      - name: Commit structural observer test boundaries
+        run: |
+          rm .github/workflows/update-observer-test-boundaries.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            tests/test_fan_command_runtime_wiring.py \
+            tests/test_thermal_policy_contract.py \
+            .github/workflows/update-observer-test-boundaries.yml
+          git diff --cached --check
+          git commit -m '[observer-boundary-tests] Use structural observer boundaries'
+          git push origin HEAD:agent/lcd-host-adapter-cleanup
