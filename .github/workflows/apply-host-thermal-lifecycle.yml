@@ -1,0 +1,179 @@
+name: Apply Host thermal lifecycle
+
+on:
+  push:
+    branches:
+      - agent/host-thermal-lifecycle
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ !contains(github.event.head_commit.message, '[host-thermal-lifecycle]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/host-thermal-lifecycle
+          fetch-depth: 0
+
+      - name: Move thermal lifecycle wiring into Host runtime
+        shell: python
+        run: |
+          from pathlib import Path
+
+          lifecycle = Path('truepanel/host/thermal_lifecycle.py')
+          lifecycle.write_text('''"""Host-owned thermal session and bounded-lease lifecycle wiring."""\n\nfrom __future__ import annotations\n\nfrom typing import Any\n\n\nclass HostThermalLifecycleCoordinator:\n    """Bind thermal-authority lifecycle operations to Host safety services."""\n\n    def __init__(\n        self,\n        *,\n        thermal_authority: Any,\n        safety: Any,\n        record_commissioning_event: Any,\n    ):\n        self._thermal_authority = thermal_authority\n        self._safety = safety\n        self._record_commissioning_event = (\n            record_commissioning_event\n        )\n\n    def end_supervised_session(\n        self,\n        reason: str,\n        *,\n        lifecycle_action: str,\n        telemetry: Any = None,\n    ) -> Any:\n        """End a supervised thermal session through Host-owned callbacks."""\n\n        return self._thermal_authority.end_supervised_session(\n            reason,\n            lifecycle_action=lifecycle_action,\n            telemetry=telemetry,\n            telemetry_provider=self._safety.telemetry,\n            restore_automatic=self._safety.restore_automatic,\n            publish_status=self._safety.publish_status,\n            record_commissioning_event=(\n                self._record_commissioning_event\n            ),\n        )\n\n    def supervised_session_active(self) -> bool:\n        """Return whether the Host thermal authority has a live session."""\n\n        return bool(\n            self._thermal_authority\n            .supervised_session_active()\n        )\n\n    def end_bounded_automatic_lease(\n        self,\n        reason: str,\n        *,\n        lifecycle_action: str,\n        telemetry: Any = None,\n        restore: bool = True,\n    ) -> Any:\n        """End bounded automatic control through Host-owned callbacks."""\n\n        return self._thermal_authority.end_automatic_lease(\n            reason,\n            lifecycle_action=lifecycle_action,\n            telemetry=telemetry,\n            telemetry_provider=self._safety.telemetry,\n            restore_automatic=self._safety.restore_automatic,\n            publish_status=self._safety.publish_status,\n            record_commissioning_event=(\n                self._record_commissioning_event\n            ),\n            restore=restore,\n        )\n\n\n__all__ = [\n    "HostThermalLifecycleCoordinator",\n]\n''', encoding='utf-8')
+
+          path = Path('truepanel/host/hooks.py')
+          text = path.read_text(encoding='utf-8')
+          anchor = '''    fan_reconciliation_factory: (\n        FanReconciliationFactory | None\n    ) = None\n'''
+          field = '''    thermal_lifecycle_factory: Callable[[Any], Any] | None = None\n'''
+          if field not in text:
+              if anchor not in text:
+                  raise SystemExit('Host safety services lifecycle anchor not found')
+              text = text.replace(anchor, anchor + field, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('truepanel/host/bootstrap.py')
+          text = path.read_text(encoding='utf-8')
+          import_anchor = 'from .thermal_observer import HostThermalObserver\n'
+          lifecycle_import = '''from .thermal_lifecycle import (\n    HostThermalLifecycleCoordinator,\n)\n'''
+          if lifecycle_import not in text:
+              if import_anchor not in text:
+                  raise SystemExit('bootstrap lifecycle import anchor not found')
+              text = text.replace(import_anchor, lifecycle_import + import_anchor, 1)
+
+          method_anchor = '    def safety_services(\n'
+          method = '''    def build_thermal_lifecycle(\n        self,\n        safety: Any,\n    ) -> HostThermalLifecycleCoordinator:\n        """Build Host-owned thermal lifecycle wiring after safety exists."""\n\n        return HostThermalLifecycleCoordinator(\n            thermal_authority=self.thermal_authority,\n            safety=safety,\n            record_commissioning_event=(\n                self.record_commissioning_event\n            ),\n        )\n\n'''
+          if '    def build_thermal_lifecycle(\n' not in text:
+              if method_anchor not in text:
+                  raise SystemExit('bootstrap safety services anchor not found')
+              text = text.replace(method_anchor, method + method_anchor, 1)
+
+          services_anchor = '''            fan_reconciliation_factory=(\n                self.build_fan_reconciliation\n            ),\n'''
+          services_field = '''            thermal_lifecycle_factory=(\n                self.build_thermal_lifecycle\n            ),\n'''
+          if '            thermal_lifecycle_factory=(\n' not in text:
+              if services_anchor not in text:
+                  raise SystemExit('bootstrap lifecycle service anchor not found')
+              text = text.replace(services_anchor, services_anchor + services_field, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('truepanel/host/factory.py')
+          text = path.read_text(encoding='utf-8')
+          runtime_anchor = '''    runtime = HostAgentRuntime(\n'''
+          construction = '''    thermal_lifecycle_factory = (\n        safety_services\n        .thermal_lifecycle_factory\n    )\n    thermal_lifecycle = (\n        thermal_lifecycle_factory(safety)\n        if thermal_lifecycle_factory is not None\n        else None\n    )\n\n'''
+          if '    thermal_lifecycle_factory = (\n' not in text:
+              if runtime_anchor not in text:
+                  raise SystemExit('Host runtime construction anchor not found')
+              text = text.replace(runtime_anchor, construction + runtime_anchor, 1)
+
+          field_anchor = '''        fan_reconciliation=fan_reconciliation,\n        fan_server_factory=lambda: (\n'''
+          field = '''        fan_reconciliation=fan_reconciliation,\n        thermal_lifecycle=thermal_lifecycle,\n        fan_server_factory=lambda: (\n'''
+          if '        thermal_lifecycle=thermal_lifecycle,\n' not in text:
+              if field_anchor not in text:
+                  raise SystemExit('Host runtime lifecycle field anchor not found')
+              text = text.replace(field_anchor, field, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('truepanel/host/runtime.py')
+          text = path.read_text(encoding='utf-8')
+          signature_anchor = '''        fan_reconciliation: Any | None = None,\n    ):\n'''
+          signature = '''        fan_reconciliation: Any | None = None,\n        thermal_lifecycle: Any | None = None,\n    ):\n'''
+          if '        thermal_lifecycle: Any | None = None,\n' not in text:
+              if signature_anchor not in text:
+                  raise SystemExit('Host runtime lifecycle signature anchor not found')
+              text = text.replace(signature_anchor, signature, 1)
+
+          init_anchor = '''        self._fan_reconciliation = fan_reconciliation\n        self._fan_server_factory = fan_server_factory\n'''
+          init = '''        self._fan_reconciliation = fan_reconciliation\n        self._thermal_lifecycle = thermal_lifecycle\n        self._fan_server_factory = fan_server_factory\n'''
+          if '        self._thermal_lifecycle = thermal_lifecycle\n' not in text:
+              if init_anchor not in text:
+                  raise SystemExit('Host runtime lifecycle init anchor not found')
+              text = text.replace(init_anchor, init, 1)
+
+          method_anchor = '''    @property\n    def started(self) -> bool:\n'''
+          methods = '''    def end_supervised_thermal_session(\n        self,\n        reason: str,\n        *,\n        lifecycle_action: str,\n        telemetry: Any = None,\n    ) -> Any:\n        """End one Host-owned supervised thermal session."""\n\n        if self._thermal_lifecycle is None:\n            return None\n\n        return self._thermal_lifecycle.end_supervised_session(\n            reason,\n            lifecycle_action=lifecycle_action,\n            telemetry=telemetry,\n        )\n\n    def supervised_thermal_session_active(self) -> bool:\n        """Return whether Host thermal supervision is active."""\n\n        if self._thermal_lifecycle is None:\n            return False\n\n        return (\n            self._thermal_lifecycle\n            .supervised_session_active()\n        )\n\n    def end_bounded_automatic_lease(\n        self,\n        reason: str,\n        *,\n        lifecycle_action: str,\n        telemetry: Any = None,\n        restore: bool = True,\n    ) -> Any:\n        """End one Host-owned bounded automatic-control lease."""\n\n        if self._thermal_lifecycle is None:\n            return None\n\n        return (\n            self._thermal_lifecycle\n            .end_bounded_automatic_lease(\n                reason,\n                lifecycle_action=lifecycle_action,\n                telemetry=telemetry,\n                restore=restore,\n            )\n        )\n\n'''
+          if '    def end_supervised_thermal_session(\n' not in text:
+              if method_anchor not in text:
+                  raise SystemExit('Host runtime lifecycle method anchor not found')
+              text = text.replace(method_anchor, methods + method_anchor, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('lcd-menu.py')
+          text = path.read_text(encoding='utf-8')
+          authority_alias = '''thermal_authority = (\n    host_bootstrap.thermal_authority\n)\n\n\n'''
+          text = text.replace(authority_alias, '', 1)
+
+          start = text.index('def end_supervised_thermal_session(\n')
+          end = text.index('def reconcile_fan_control():\n', start)
+          replacement = '''def end_supervised_thermal_session(\n    reason,\n    *,\n    lifecycle_action,\n    telemetry=None,\n):\n    """Compatibility adapter for Host-owned thermal lifecycle."""\n\n    if host_agent_runtime is None:\n        return None\n\n    return host_agent_runtime.end_supervised_thermal_session(\n        reason,\n        lifecycle_action=lifecycle_action,\n        telemetry=telemetry,\n    )\n\n\ndef supervised_thermal_session_active():\n    if host_agent_runtime is None:\n        return False\n\n    return (\n        host_agent_runtime\n        .supervised_thermal_session_active()\n    )\n\n\ndef end_bounded_automatic_lease(\n    reason,\n    *,\n    lifecycle_action,\n    telemetry=None,\n    restore=True,\n):\n    """Compatibility adapter for Host-owned thermal lifecycle."""\n\n    if host_agent_runtime is None:\n        return None\n\n    return host_agent_runtime.end_bounded_automatic_lease(\n        reason,\n        lifecycle_action=lifecycle_action,\n        telemetry=telemetry,\n        restore=restore,\n    )\n\n\n'''
+          text = text[:start] + replacement + text[end:]
+          path.write_text(text, encoding='utf-8')
+
+      - name: Add thermal lifecycle ownership tests
+        shell: python
+        run: |
+          from pathlib import Path
+
+          Path('tests/test_host_thermal_lifecycle.py').write_text('''from truepanel.host.thermal_lifecycle import (\n    HostThermalLifecycleCoordinator,\n)\n\n\nclass FakeAuthority:\n    def __init__(self):\n        self.supervised_calls = []\n        self.lease_calls = []\n        self.active = True\n\n    def end_supervised_session(self, reason, **kwargs):\n        self.supervised_calls.append((reason, kwargs))\n        return "supervised-ended"\n\n    def supervised_session_active(self):\n        return self.active\n\n    def end_automatic_lease(self, reason, **kwargs):\n        self.lease_calls.append((reason, kwargs))\n        return "lease-ended"\n\n\nclass FakeSafety:\n    def __init__(self):\n        self.restore_calls = []\n        self.status_calls = []\n\n    def telemetry(self):\n        return {"telemetry_fresh": True}\n\n    def restore_automatic(self, reason, **kwargs):\n        self.restore_calls.append((reason, kwargs))\n        return "restored"\n\n    def publish_status(self, reason=None):\n        self.status_calls.append(reason)\n        return {"reason": reason}\n\n\ndef build_lifecycle():\n    authority = FakeAuthority()\n    safety = FakeSafety()\n    commissioning = []\n\n    coordinator = HostThermalLifecycleCoordinator(\n        thermal_authority=authority,\n        safety=safety,\n        record_commissioning_event=(\n            lambda *args, **kwargs: commissioning.append(\n                (args, kwargs)\n            )\n        ),\n    )\n\n    return coordinator, authority, safety, commissioning\n\n\ndef test_supervised_session_uses_host_callbacks():\n    coordinator, authority, safety, commissioning = build_lifecycle()\n\n    result = coordinator.end_supervised_session(\n        "session complete",\n        lifecycle_action="supervised_session_ended",\n        telemetry={"sample": 1},\n    )\n\n    assert result == "supervised-ended"\n    reason, kwargs = authority.supervised_calls[0]\n    assert reason == "session complete"\n    assert kwargs["telemetry"] == {"sample": 1}\n    assert kwargs["telemetry_provider"]() == {"telemetry_fresh": True}\n    assert kwargs["restore_automatic"]("restore") == "restored"\n    assert kwargs["publish_status"](reason="publish") == {"reason": "publish"}\n    kwargs["record_commissioning_event"]("event", "reason")\n    assert safety.restore_calls[0][0] == "restore"\n    assert safety.status_calls == ["publish"]\n    assert commissioning[0][0] == ("event", "reason")\n\n\ndef test_bounded_lease_uses_host_callbacks_and_restore_flag():\n    coordinator, authority, safety, commissioning = build_lifecycle()\n\n    result = coordinator.end_bounded_automatic_lease(\n        "lease complete",\n        lifecycle_action="automatic_lease_cancelled",\n        telemetry={"sample": 2},\n        restore=False,\n    )\n\n    assert result == "lease-ended"\n    reason, kwargs = authority.lease_calls[0]\n    assert reason == "lease complete"\n    assert kwargs["telemetry"] == {"sample": 2}\n    assert kwargs["restore"] is False\n    assert kwargs["telemetry_provider"]() == {"telemetry_fresh": True}\n    assert kwargs["restore_automatic"]("restore") == "restored"\n    assert kwargs["publish_status"](reason="publish") == {"reason": "publish"}\n    kwargs["record_commissioning_event"]("event", "reason")\n    assert safety.restore_calls[0][0] == "restore"\n    assert safety.status_calls == ["publish"]\n    assert commissioning[0][0] == ("event", "reason")\n\n\ndef test_supervised_session_activity_is_authority_owned():\n    coordinator, authority, _, _ = build_lifecycle()\n\n    assert coordinator.supervised_session_active() is True\n\n    authority.active = False\n\n    assert coordinator.supervised_session_active() is False\n''', encoding='utf-8')
+
+          path = Path('tests/test_host_hooks.py')
+          text = path.read_text(encoding='utf-8')
+          anchor = '    assert services.fan_reconciliation_factory is None\n'
+          addition = '    assert services.thermal_lifecycle_factory is None\n'
+          if addition not in text:
+              if anchor not in text:
+                  raise SystemExit('Host hooks lifecycle test anchor not found')
+              text = text.replace(anchor, anchor + addition, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_host_bootstrap_wiring.py')
+          text = path.read_text(encoding='utf-8')
+          addition = '''\n\ndef test_lcd_delegates_thermal_lifecycle_to_host_runtime():\n    runtime = source()\n    bootstrap = Path(\n        "truepanel/host/bootstrap.py"\n    ).read_text(encoding="utf-8")\n    factory = Path(\n        "truepanel/host/factory.py"\n    ).read_text(encoding="utf-8")\n    host_runtime = Path(\n        "truepanel/host/runtime.py"\n    ).read_text(encoding="utf-8")\n    lifecycle = Path(\n        "truepanel/host/thermal_lifecycle.py"\n    ).read_text(encoding="utf-8")\n\n    assert "host_bootstrap.thermal_authority" not in runtime\n    assert "thermal_authority.end_supervised_session(" not in runtime\n    assert "thermal_authority.end_automatic_lease(" not in runtime\n    assert "host_agent_runtime.end_supervised_thermal_session(" in runtime\n    assert "host_agent_runtime.end_bounded_automatic_lease(" in runtime\n    assert "build_thermal_lifecycle" in bootstrap\n    assert "thermal_lifecycle_factory" in factory\n    assert "thermal_lifecycle=thermal_lifecycle" in factory\n    assert "def end_supervised_thermal_session(" in host_runtime\n    assert "def end_bounded_automatic_lease(" in host_runtime\n    assert "HostThermalLifecycleCoordinator" in lifecycle\n'''
+          if 'def test_lcd_delegates_thermal_lifecycle_to_host_runtime():' not in text:
+              text = text.rstrip() + addition.rstrip() + '\n'
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_bounded_automatic_runtime.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''    assert (\n        "host_bootstrap.thermal_authority"\n        in runtime\n    )\n\n'''
+          new = '''    assert (\n        "host_bootstrap.thermal_authority"\n        not in runtime\n    )\n\n    lifecycle = Path(\n        "truepanel/host/thermal_lifecycle.py"\n    ).read_text(\n        encoding="utf-8"\n    )\n\n    assert (\n        "thermal_authority=self.thermal_authority"\n        in bootstrap\n    )\n\n    assert (\n        "self._thermal_authority"\n        in lifecycle\n    )\n\n'''
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif '        "host_bootstrap.thermal_authority"\n        not in runtime\n' not in text:
+              raise SystemExit('bounded automatic ownership anchor not found')
+          path.write_text(text, encoding='utf-8')
+
+      - name: Validate migration
+        run: |
+          python -m compileall -q \
+            truepanel \
+            lcd-menu.py \
+            tests/test_host_thermal_lifecycle.py \
+            tests/test_host_bootstrap_wiring.py \
+            tests/test_host_hooks.py \
+            tests/test_bounded_automatic_runtime.py
+          git diff --check
+
+      - name: Commit Host thermal lifecycle ownership
+        run: |
+          rm .github/workflows/apply-host-thermal-lifecycle.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            truepanel/host/thermal_lifecycle.py \
+            truepanel/host/hooks.py \
+            truepanel/host/bootstrap.py \
+            truepanel/host/factory.py \
+            truepanel/host/runtime.py \
+            lcd-menu.py \
+            tests/test_host_thermal_lifecycle.py \
+            tests/test_host_hooks.py \
+            tests/test_host_bootstrap_wiring.py \
+            tests/test_bounded_automatic_runtime.py \
+            .github/workflows/apply-host-thermal-lifecycle.yml
+          git diff --cached --check
+          git commit -m '[host-thermal-lifecycle] Move thermal lifecycle into Host runtime'
+          git push origin HEAD:agent/host-thermal-lifecycle
