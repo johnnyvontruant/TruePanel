@@ -1,0 +1,180 @@
+name: Apply Host telemetry bootstrap
+
+on:
+  push:
+    branches:
+      - agent/host-telemetry-bootstrap
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ !contains(github.event.head_commit.message, '[host-telemetry]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/host-telemetry-bootstrap
+          fetch-depth: 0
+
+      - name: Move telemetry construction into Host bootstrap
+        shell: python
+        run: |
+          from pathlib import Path
+
+          bootstrap_path = Path('truepanel/host/bootstrap.py')
+          bootstrap = bootstrap_path.read_text(encoding='utf-8')
+
+          import_anchor = '''from truepanel.hardware.bounded_automatic import (\n    AUTOMATIC_LEASE_SECONDS,\n    thermal_safety_fingerprint,\n)\n'''
+          import_addition = '''from truepanel.hardware.drive_temperatures import (\n    DriveTemperatureProvider,\n)\nfrom truepanel.hardware.fans import (\n    get_status as get_fan_status,\n)\n'''
+          if import_addition not in bootstrap:
+              if import_anchor not in bootstrap:
+                  raise SystemExit('bootstrap hardware import anchor not found')
+              bootstrap = bootstrap.replace(
+                  import_anchor,
+                  import_anchor + import_addition,
+                  1,
+              )
+
+          old_field = '    telemetry: HostFanTelemetryProvider | None = None\n'
+          new_field = '    telemetry: HostFanTelemetryProvider\n'
+          if old_field in bootstrap:
+              bootstrap = bootstrap.replace(old_field, new_field, 1)
+          elif new_field not in bootstrap:
+              raise SystemExit('bootstrap telemetry field not found')
+
+          signature_anchor = '''    thermal_observer_history_factory=ThermalObserverHistory,\n    thermal_policy_factory=ThermalFanPolicy,\n'''
+          signature_replacement = '''    thermal_observer_history_factory=ThermalObserverHistory,\n    drive_temperature_provider_factory=DriveTemperatureProvider,\n    fan_status_provider=get_fan_status,\n    telemetry_factory=HostFanTelemetryProvider,\n    thermal_policy_factory=ThermalFanPolicy,\n'''
+          if '    telemetry_factory=HostFanTelemetryProvider,\n' not in bootstrap:
+              if signature_anchor not in bootstrap:
+                  raise SystemExit('bootstrap factory signature anchor not found')
+              bootstrap = bootstrap.replace(
+                  signature_anchor,
+                  signature_replacement,
+                  1,
+              )
+
+          construction = '''    drive_temperature_provider = (\n        drive_temperature_provider_factory()\n    )\n\n    telemetry = telemetry_factory(\n        temperature_provider=(\n            drive_temperature_provider\n        ),\n        fan_status_provider=fan_status_provider,\n    )\n\n'''
+          return_anchor = '    return HostAgentBootstrap(\n'
+          if construction not in bootstrap:
+              if return_anchor not in bootstrap:
+                  raise SystemExit('bootstrap return anchor not found')
+              bootstrap = bootstrap.replace(
+                  return_anchor,
+                  construction + return_anchor,
+                  1,
+              )
+
+          return_anchor_field = '''        thermal_observer=thermal_observer,\n        fan_control_history=fan_control_history,\n'''
+          return_with_telemetry = '''        thermal_observer=thermal_observer,\n        telemetry=telemetry,\n        fan_control_history=fan_control_history,\n'''
+          if '        telemetry=telemetry,\n' not in bootstrap:
+              if return_anchor_field not in bootstrap:
+                  raise SystemExit('bootstrap return field anchor not found')
+              bootstrap = bootstrap.replace(
+                  return_anchor_field,
+                  return_with_telemetry,
+                  1,
+              )
+
+          bootstrap_path.write_text(bootstrap, encoding='utf-8')
+
+          lcd_path = Path('lcd-menu.py')
+          lcd = lcd_path.read_text(encoding='utf-8')
+
+          for block in (
+              '''from truepanel.hardware.drive_temperatures import (\n    DriveTemperatureProvider,\n)\n''',
+              '''from truepanel.hardware.fans import (\n    get_status as get_fan_status,\n)\n''',
+          ):
+              lcd = lcd.replace(block, '', 1)
+
+          lcd = lcd.replace(
+              '    HostFanTelemetryProvider,\n',
+              '',
+              1,
+          )
+
+          legacy_telemetry = '''host_drive_temperature_provider = (\n    DriveTemperatureProvider()\n)\n\nhost_fan_telemetry_provider = (\n    HostFanTelemetryProvider(\n        temperature_provider=(\n            host_drive_temperature_provider\n        ),\n        fan_status_provider=(\n            get_fan_status\n        ),\n    )\n)\n\nhost_bootstrap.telemetry = (\n    host_fan_telemetry_provider\n)\n\n\n'''
+          if legacy_telemetry in lcd:
+              lcd = lcd.replace(legacy_telemetry, '', 1)
+          elif 'host_drive_temperature_provider' in lcd:
+              raise SystemExit('legacy LCD telemetry construction changed unexpectedly')
+
+          old_adapter = '''    return (\n        host_fan_telemetry_provider\n        .snapshot()\n    )\n'''
+          new_adapter = '''    return (\n        host_bootstrap\n        .telemetry\n        .snapshot()\n    )\n'''
+          if old_adapter in lcd:
+              lcd = lcd.replace(old_adapter, new_adapter, 1)
+          elif new_adapter not in lcd:
+              raise SystemExit('LCD telemetry adapter anchor not found')
+
+          lcd_path.write_text(lcd, encoding='utf-8')
+
+      - name: Update Host ownership contracts
+        shell: python
+        run: |
+          from pathlib import Path
+
+          test_path = Path('tests/test_host_bootstrap.py')
+          tests = test_path.read_text(encoding='utf-8')
+
+          fake_anchor = '''class FakeAuthority:\n    def __init__(self, **kwargs):\n        self.kwargs = kwargs\n        self.operator_armed = False\n        self.dry_run = True\n\n\n'''
+          fake_telemetry = '''class FakeTelemetry:\n    def __init__(\n        self,\n        *,\n        temperature_provider,\n        fan_status_provider,\n    ):\n        self.temperature_provider = temperature_provider\n        self.fan_status_provider = fan_status_provider\n\n\n'''
+          if fake_telemetry not in tests:
+              if fake_anchor not in tests:
+                  raise SystemExit('FakeAuthority anchor not found')
+              tests = tests.replace(
+                  fake_anchor,
+                  fake_anchor + fake_telemetry,
+                  1,
+              )
+
+          next_test = '''def test_bootstrap_starts_thermal_authority_safe():\n'''
+          ownership_test = '''def test_bootstrap_owns_production_telemetry():\n    runtime = FakeFanRuntime()\n    temperature_provider = object()\n    fan_status_provider = lambda: {}\n\n    bootstrap = build_host_agent_bootstrap(\n        {},\n        fan_runtime_factory=lambda config: runtime,\n        fan_history_factory=FakeHistory,\n        commissioning_history_factory=FakeHistory,\n        thermal_authority_factory=FakeAuthority,\n        drive_temperature_provider_factory=(\n            lambda: temperature_provider\n        ),\n        fan_status_provider=fan_status_provider,\n        telemetry_factory=FakeTelemetry,\n    )\n\n    assert isinstance(bootstrap.telemetry, FakeTelemetry)\n    assert (\n        bootstrap.telemetry.temperature_provider\n        is temperature_provider\n    )\n    assert (\n        bootstrap.telemetry.fan_status_provider\n        is fan_status_provider\n    )\n\n\n'''
+          if 'def test_bootstrap_owns_production_telemetry():' not in tests:
+              if next_test not in tests:
+                  raise SystemExit('bootstrap test insertion anchor not found')
+              tests = tests.replace(
+                  next_test,
+                  ownership_test + next_test,
+                  1,
+              )
+
+          test_path.write_text(tests, encoding='utf-8')
+
+          integration_path = Path('tests/test_fan_runtime_integration.py')
+          integration = integration_path.read_text(encoding='utf-8')
+          marker = '''def test_lcd_wires_fan_control_status_page():\n'''
+          contract = '''def test_lcd_uses_bootstrap_owned_host_telemetry():\n    runtime = Path("lcd-menu.py").read_text()\n    bootstrap = Path(\n        "truepanel/host/bootstrap.py"\n    ).read_text()\n\n    assert "DriveTemperatureProvider" not in runtime\n    assert "HostFanTelemetryProvider" not in runtime\n    assert "get_fan_status" not in runtime\n    assert "host_bootstrap\\n        .telemetry" in runtime\n    assert "DriveTemperatureProvider" in bootstrap\n    assert "HostFanTelemetryProvider" in bootstrap\n\n\n'''
+          if 'def test_lcd_uses_bootstrap_owned_host_telemetry():' not in integration:
+              if marker not in integration:
+                  raise SystemExit('integration contract anchor not found')
+              integration = integration.replace(
+                  marker,
+                  contract + marker,
+                  1,
+              )
+          integration_path.write_text(integration, encoding='utf-8')
+
+      - name: Verify syntax
+        run: |
+          python -m compileall -q \
+            truepanel \
+            lcd-menu.py \
+            tests/test_host_bootstrap.py \
+            tests/test_fan_runtime_integration.py
+
+      - name: Commit Host telemetry ownership
+        run: |
+          rm .github/workflows/apply-host-telemetry-bootstrap.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            lcd-menu.py \
+            truepanel/host/bootstrap.py \
+            tests/test_host_bootstrap.py \
+            tests/test_fan_runtime_integration.py \
+            .github/workflows/apply-host-telemetry-bootstrap.yml
+          git diff --cached --check
+          git commit -m '[host-telemetry] Move production telemetry into Host bootstrap'
+          git push origin HEAD:agent/host-telemetry-bootstrap
