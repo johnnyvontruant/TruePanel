@@ -1187,16 +1187,28 @@ def test_guarded_runtime_commands_can_still_arm():
         encoding="utf-8"
     )
 
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
     authority = Path(
         "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    assert (
-        "thermal_authority.handle_action("
-        in runtime
-    )
+    assert "thermal_authority.handle_action(" not in runtime
+    assert "self.thermal_authority.handle_action(" in bootstrap
+    assert "bind_thermal_control_handler(" in factory
+    assert "safety.restore_automatic" in factory
 
     assert (
         "self.operator_armed = True"

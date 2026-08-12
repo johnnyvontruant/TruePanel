@@ -281,11 +281,8 @@ def test_lcd_delegates_host_safety_service_assembly():
     assert "fan_telemetry_provider=(" in bootstrap
     assert "fan_status_publisher=(" in bootstrap
     assert "fan_event_recorder=(" in bootstrap
-    assert (
-        "thermal_control_handler=("
-        "\n                    set_thermal_operator_arm_state"
-        in runtime
-    )
+    assert "set_thermal_operator_arm_state" not in runtime
+    assert "thermal_control_handler_factory=(" in bootstrap
 
 def test_lcd_delegates_thermal_action_binding_to_host():
     runtime = source()
