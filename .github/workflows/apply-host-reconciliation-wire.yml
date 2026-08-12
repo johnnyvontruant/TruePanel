@@ -68,16 +68,13 @@ jobs:
           path = Path('tests/test_fan_runtime_integration.py')
           text = path.read_text(encoding='utf-8')
 
-          old = '''def test_lcd_classifies_completed_safety_recovery():\n    runtime = Path(\n        "lcd-menu.py"\n    ).read_text()\n'''
-          if old not in text:
-              raise SystemExit('expected integration test anchor not found')
-
           marker = '''def test_lcd_wires_fan_control_status_page():\n'''
           if marker not in text:
               raise SystemExit('expected integration test marker not found')
 
           insertion = '''def test_lcd_delegates_fan_reconciliation_to_host():\n    runtime = Path("lcd-menu.py").read_text()\n\n    assert "HostFanReconciliationCoordinator" in runtime\n    assert "fan_reconciliation_coordinator.reconcile(" in runtime\n    assert "host_agent_runtime.safety.reconcile(" not in runtime\n    assert "thermal_authority.reconcile(" not in runtime\n\n\n'''
-          text = text.replace(marker, insertion + marker, 1)
+          if "def test_lcd_delegates_fan_reconciliation_to_host():" not in text:
+              text = text.replace(marker, insertion + marker, 1)
           path.write_text(text, encoding='utf-8')
 
       - name: Commit generated wiring and remove one-shot workflow
