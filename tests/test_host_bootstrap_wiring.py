@@ -58,16 +58,24 @@ def test_lcd_runtime_no_longer_constructs_host_dependencies():
     )
 
 
-def test_observer_history_remains_application_owned():
+def test_thermal_observer_is_host_owned():
     text = source()
 
     assert (
-        "thermal_observer_history = "
-        "ThermalObserverHistory("
+        "host_bootstrap"
+        "\n        .thermal_observer"
+        "\n        .observe(telemetry)"
         in text
     )
 
-
+    for application_owned in (
+        "ThermalObserverHistory(",
+        "ThermalFanPolicy(",
+        "event_from_recommendation(",
+        "thermal_observer_last_signature",
+        "thermal_observer_previous_profile",
+    ):
+        assert application_owned not in text
 
 
 def test_host_bootstrap_owns_history_behavior():
@@ -116,6 +124,7 @@ def test_host_bootstrap_owns_history_behavior():
         "thermal_commissioning_history.append("
         in bootstrap
     )
+
 
 def test_automatic_restoration_has_no_lcd_hardware_fallback():
     runtime = source()
