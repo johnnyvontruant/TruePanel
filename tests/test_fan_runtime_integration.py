@@ -182,16 +182,25 @@ def test_lcd_reconciliation_classifier_is_host_owned():
     coordinator = Path(
         "truepanel/host/reconciliation.py"
     ).read_text()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
 
-    assert "HostFanReconciliationCoordinator" in runtime
+    assert "HostFanReconciliationCoordinator" not in runtime
     assert "source_classifier=self._fan_event_source" in coordinator
-    assert "fan_event_source=" in runtime
+    assert "fan_event_source=self.fan_event_source" in bootstrap
+
 
 def test_lcd_delegates_fan_reconciliation_to_host():
     runtime = Path("lcd-menu.py").read_text()
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
+    ).read_text()
 
-    assert "HostFanReconciliationCoordinator" in runtime
-    assert "fan_reconciliation_coordinator.reconcile(" in runtime
+    assert "HostFanReconciliationCoordinator" not in runtime
+    assert "fan_reconciliation_coordinator" not in runtime
+    assert "host_agent_runtime.reconcile_fans()" in runtime
+    assert "def reconcile_fans(" in host_runtime
     assert "host_agent_runtime.safety.reconcile(" not in runtime
     assert "thermal_authority.reconcile(" not in runtime
 
