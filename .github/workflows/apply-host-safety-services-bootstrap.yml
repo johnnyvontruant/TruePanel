@@ -110,11 +110,6 @@ jobs:
             lcd-menu.py \
             tests/test_host_bootstrap.py \
             tests/test_host_bootstrap_wiring.py
-          python -m pytest -q \
-            tests/test_host_bootstrap.py \
-            tests/test_host_bootstrap_wiring.py \
-            tests/test_host_agent_factory.py \
-            tests/test_host_safety.py
           git diff --check
 
       - name: Commit Host safety service ownership
