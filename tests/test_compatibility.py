@@ -63,16 +63,32 @@ def make_root(
     return tmp_path
 
 
+def make_hwmon(tmp_path):
+    hwmon = tmp_path / "hwmon-device"
+    hwmon.mkdir()
+
+    for name in (
+        "fan1_input",
+        "fan2_input",
+        "pwm1",
+        "pwm1_enable",
+        "pwm2",
+        "pwm2_enable",
+    ):
+        (hwmon / name).touch()
+
+    return hwmon
+
+
 def test_known_passive_capabilities_are_supported(
     tmp_path,
 ):
     root = make_root(tmp_path)
+    hwmon = make_hwmon(tmp_path)
 
     report = collect_compatibility(
         root=root,
-        fintek_finder=lambda: Path(
-            "/sys/class/hwmon/hwmon10/device"
-        ),
+        fintek_finder=lambda: hwmon,
         enclosure=FakeEnclosure(),
     )
 
@@ -122,12 +138,11 @@ def test_partial_when_only_some_capabilities_exist(
         tmp_path,
         serial=False,
     )
+    hwmon = make_hwmon(tmp_path)
 
     report = collect_compatibility(
         root=root,
-        fintek_finder=lambda: Path(
-            "/sys/class/hwmon/hwmon10/device"
-        ),
+        fintek_finder=lambda: hwmon,
         enclosure=FakeEnclosure(
             available=False
         ),
@@ -159,12 +174,11 @@ def test_survey_always_locks_hardware_control(
     tmp_path,
 ):
     root = make_root(tmp_path)
+    hwmon = make_hwmon(tmp_path)
 
     report = collect_compatibility(
         root=root,
-        fintek_finder=lambda: Path(
-            "/sys/class/hwmon/hwmon10/device"
-        ),
+        fintek_finder=lambda: hwmon,
         enclosure=FakeEnclosure(),
     )
 
@@ -183,19 +197,7 @@ def test_fan_channel_inventory_reports_interfaces(
     tmp_path,
 ):
     root = make_root(tmp_path)
-
-    hwmon = tmp_path / "hwmon-device"
-    hwmon.mkdir()
-
-    for name in (
-        "fan1_input",
-        "fan2_input",
-        "pwm1",
-        "pwm1_enable",
-        "pwm2",
-        "pwm2_enable",
-    ):
-        (hwmon / name).touch()
+    hwmon = make_hwmon(tmp_path)
 
     report = collect_compatibility(
         root=root,
@@ -280,12 +282,11 @@ def test_storage_inventory_is_reported_without_gating(
     tmp_path,
 ):
     root = make_root(tmp_path)
+    hwmon = make_hwmon(tmp_path)
 
     report = collect_compatibility(
         root=root,
-        fintek_finder=lambda: Path(
-            "/sys/class/hwmon/hwmon10/device"
-        ),
+        fintek_finder=lambda: hwmon,
         enclosure=FakeEnclosure(),
         storage_reporter=lambda: fake_storage_report(),
     )
@@ -326,12 +327,11 @@ def test_unassigned_storage_requests_review_but_does_not_gate(
     tmp_path,
 ):
     root = make_root(tmp_path)
+    hwmon = make_hwmon(tmp_path)
 
     report = collect_compatibility(
         root=root,
-        fintek_finder=lambda: Path(
-            "/sys/class/hwmon/hwmon10/device"
-        ),
+        fintek_finder=lambda: hwmon,
         enclosure=FakeEnclosure(),
         storage_reporter=lambda: fake_storage_report(
             unassigned=2
@@ -353,15 +353,14 @@ def test_storage_inventory_failure_does_not_block_compatibility(
     tmp_path,
 ):
     root = make_root(tmp_path)
+    hwmon = make_hwmon(tmp_path)
 
     def fail_storage():
         raise RuntimeError("inventory unavailable")
 
     report = collect_compatibility(
         root=root,
-        fintek_finder=lambda: Path(
-            "/sys/class/hwmon/hwmon10/device"
-        ),
+        fintek_finder=lambda: hwmon,
         enclosure=FakeEnclosure(),
         storage_reporter=fail_storage,
     )
@@ -380,12 +379,11 @@ def test_storage_safety_is_explicit(
     tmp_path,
 ):
     root = make_root(tmp_path)
+    hwmon = make_hwmon(tmp_path)
 
     report = collect_compatibility(
         root=root,
-        fintek_finder=lambda: Path(
-            "/sys/class/hwmon/hwmon10/device"
-        ),
+        fintek_finder=lambda: hwmon,
         enclosure=FakeEnclosure(),
         storage_reporter=lambda: fake_storage_report(),
     )
