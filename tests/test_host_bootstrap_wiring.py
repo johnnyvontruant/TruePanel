@@ -319,3 +319,30 @@ def test_lcd_delegates_reconciliation_construction_to_host():
     assert "fan_reconciliation_factory" in factory
     assert "fan_reconciliation=fan_reconciliation" in factory
     assert "def reconcile_fans(" in host_runtime
+
+def test_lcd_delegates_thermal_lifecycle_to_host_runtime():
+    runtime = source()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(encoding="utf-8")
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(encoding="utf-8")
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
+    ).read_text(encoding="utf-8")
+    lifecycle = Path(
+        "truepanel/host/thermal_lifecycle.py"
+    ).read_text(encoding="utf-8")
+
+    assert "host_bootstrap.thermal_authority" not in runtime
+    assert "thermal_authority.end_supervised_session(" not in runtime
+    assert "thermal_authority.end_automatic_lease(" not in runtime
+    assert "host_agent_runtime.end_supervised_thermal_session(" in runtime
+    assert "host_agent_runtime.end_bounded_automatic_lease(" in runtime
+    assert "build_thermal_lifecycle" in bootstrap
+    assert "thermal_lifecycle_factory" in factory
+    assert "thermal_lifecycle=thermal_lifecycle" in factory
+    assert "def end_supervised_thermal_session(" in host_runtime
+    assert "def end_bounded_automatic_lease(" in host_runtime
+    assert "HostThermalLifecycleCoordinator" in lifecycle

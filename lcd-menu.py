@@ -149,11 +149,6 @@ _commissioned_thermal_safety_fingerprint = str(
     or ""
 ).strip().lower()
 
-thermal_authority = (
-    host_bootstrap.thermal_authority
-)
-
-
 def publish_lcd_reader_status():
     """Publish a read-only snapshot of the LCD reader thread."""
 
@@ -288,27 +283,25 @@ def end_supervised_thermal_session(
     lifecycle_action,
     telemetry=None,
 ):
-    """Compatibility adapter for Host-owned thermal authority."""
+    """Compatibility adapter for Host-owned thermal lifecycle."""
 
-    return thermal_authority.end_supervised_session(
+    if host_agent_runtime is None:
+        return None
+
+    return host_agent_runtime.end_supervised_thermal_session(
         reason,
         lifecycle_action=lifecycle_action,
         telemetry=telemetry,
-        telemetry_provider=fan_command_telemetry,
-        restore_automatic=(
-            restore_motherboard_fan_control
-        ),
-        publish_status=publish_fan_control_status,
-        record_commissioning_event=(
-            record_thermal_commissioning_event
-        ),
     )
 
 
 def supervised_thermal_session_active():
+    if host_agent_runtime is None:
+        return False
+
     return (
-        thermal_authority
-        .supervised_session_active()
+        host_agent_runtime
+        .supervised_thermal_session_active()
     )
 
 
@@ -319,20 +312,15 @@ def end_bounded_automatic_lease(
     telemetry=None,
     restore=True,
 ):
-    """Compatibility adapter for Host-owned thermal authority."""
+    """Compatibility adapter for Host-owned thermal lifecycle."""
 
-    return thermal_authority.end_automatic_lease(
+    if host_agent_runtime is None:
+        return None
+
+    return host_agent_runtime.end_bounded_automatic_lease(
         reason,
         lifecycle_action=lifecycle_action,
         telemetry=telemetry,
-        telemetry_provider=fan_command_telemetry,
-        restore_automatic=(
-            restore_motherboard_fan_control
-        ),
-        publish_status=publish_fan_control_status,
-        record_commissioning_event=(
-            record_thermal_commissioning_event
-        ),
         restore=restore,
     )
 

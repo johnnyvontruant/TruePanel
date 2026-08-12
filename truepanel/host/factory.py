@@ -148,10 +148,21 @@ def build_host_agent_runtime(
         else None
     )
 
+    thermal_lifecycle_factory = (
+        safety_services
+        .thermal_lifecycle_factory
+    )
+    thermal_lifecycle = (
+        thermal_lifecycle_factory(safety)
+        if thermal_lifecycle_factory is not None
+        else None
+    )
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
         safety=safety,
         fan_reconciliation=fan_reconciliation,
+        thermal_lifecycle=thermal_lifecycle,
         fan_server_factory=lambda: (
             build_fan_command_server(
                 fan_runtime=fan_runtime,

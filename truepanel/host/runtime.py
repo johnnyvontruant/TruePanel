@@ -31,10 +31,12 @@ class HostAgentRuntime:
         fan_server_factory: Callable[[], Any | None],
         lcd_server_factory: Callable[[], Any | None],
         fan_reconciliation: Any | None = None,
+        thermal_lifecycle: Any | None = None,
     ):
         self._fan_runtime = fan_runtime
         self._safety = safety
         self._fan_reconciliation = fan_reconciliation
+        self._thermal_lifecycle = thermal_lifecycle
         self._fan_server_factory = fan_server_factory
         self._lcd_server_factory = lcd_server_factory
 
@@ -56,6 +58,58 @@ class HostAgentRuntime:
             return None
 
         return self._fan_reconciliation.reconcile()
+
+    def end_supervised_thermal_session(
+        self,
+        reason: str,
+        *,
+        lifecycle_action: str,
+        telemetry: Any = None,
+    ) -> Any:
+        """End one Host-owned supervised thermal session."""
+
+        if self._thermal_lifecycle is None:
+            return None
+
+        return self._thermal_lifecycle.end_supervised_session(
+            reason,
+            lifecycle_action=lifecycle_action,
+            telemetry=telemetry,
+        )
+
+    def supervised_thermal_session_active(self) -> bool:
+        """Return whether Host thermal supervision is active."""
+
+        if self._thermal_lifecycle is None:
+            return False
+
+        return (
+            self._thermal_lifecycle
+            .supervised_session_active()
+        )
+
+    def end_bounded_automatic_lease(
+        self,
+        reason: str,
+        *,
+        lifecycle_action: str,
+        telemetry: Any = None,
+        restore: bool = True,
+    ) -> Any:
+        """End one Host-owned bounded automatic-control lease."""
+
+        if self._thermal_lifecycle is None:
+            return None
+
+        return (
+            self._thermal_lifecycle
+            .end_bounded_automatic_lease(
+                reason,
+                lifecycle_action=lifecycle_action,
+                telemetry=telemetry,
+                restore=restore,
+            )
+        )
 
     @property
     def started(self) -> bool:

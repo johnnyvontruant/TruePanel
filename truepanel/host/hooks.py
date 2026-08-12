@@ -70,6 +70,7 @@ class HostAgentSafetyServices:
     fan_reconciliation_factory: (
         FanReconciliationFactory | None
     ) = None
+    thermal_lifecycle_factory: Callable[[Any], Any] | None = None
 
 
 @dataclass(frozen=True)

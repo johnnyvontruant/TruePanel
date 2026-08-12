@@ -177,7 +177,23 @@ def test_runtime_authority_remains_ephemeral():
 
     assert (
         "host_bootstrap.thermal_authority"
-        in runtime
+        not in runtime
+    )
+
+    lifecycle = Path(
+        "truepanel/host/thermal_lifecycle.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "thermal_authority=self.thermal_authority"
+        in bootstrap
+    )
+
+    assert (
+        "self._thermal_authority"
+        in lifecycle
     )
 
     assert (

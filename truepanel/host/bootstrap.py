@@ -53,6 +53,9 @@ from .reconciliation import (
 from .status import publish_host_fan_status
 from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
+from .thermal_lifecycle import (
+    HostThermalLifecycleCoordinator,
+)
 from .thermal_observer import HostThermalObserver
 
 LOGGER = logging.getLogger(__name__)
@@ -127,6 +130,20 @@ class HostAgentBootstrap:
             ),
         )
 
+    def build_thermal_lifecycle(
+        self,
+        safety: Any,
+    ) -> HostThermalLifecycleCoordinator:
+        """Build Host-owned thermal lifecycle wiring after safety exists."""
+
+        return HostThermalLifecycleCoordinator(
+            thermal_authority=self.thermal_authority,
+            safety=safety,
+            record_commissioning_event=(
+                self.record_commissioning_event
+            ),
+        )
+
     def safety_services(
         self,
     ) -> HostAgentSafetyServices:
@@ -153,6 +170,9 @@ class HostAgentBootstrap:
             ),
             fan_reconciliation_factory=(
                 self.build_fan_reconciliation
+            ),
+            thermal_lifecycle_factory=(
+                self.build_thermal_lifecycle
             ),
         )
 
