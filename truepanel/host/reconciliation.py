@@ -35,7 +35,11 @@ class HostFanReconciliationCoordinator:
             record_commissioning_event
         )
 
-    def reconcile(self) -> Any | None:
+    def reconcile(
+        self,
+        *,
+        publish_status: Callable[..., Any] | None = None,
+    ) -> Any | None:
         """Run one Host-owned fan safety and thermal-control cycle."""
 
         if not self._fan_runtime.connected:
@@ -51,12 +55,18 @@ class HostFanReconciliationCoordinator:
             source_classifier=self._fan_event_source,
         )
 
+        status_publisher = (
+            publish_status
+            if publish_status is not None
+            else self._safety.publish_status
+        )
+
         if decision is not None:
             self._thermal_authority.handle_fan_safety_transition(
                 telemetry=safety_telemetry,
                 telemetry_provider=self._safety.telemetry,
                 restore_automatic=self._safety.restore_automatic,
-                publish_status=self._safety.publish_status,
+                publish_status=status_publisher,
                 record_commissioning_event=(
                     self._record_commissioning_event
                 ),
@@ -71,7 +81,7 @@ class HostFanReconciliationCoordinator:
             ),
             telemetry_provider=self._safety.telemetry,
             restore_automatic=self._safety.restore_automatic,
-            publish_status=self._safety.publish_status,
+            publish_status=status_publisher,
             record_fan_event=self._record_fan_event,
             record_commissioning_event=(
                 self._record_commissioning_event
