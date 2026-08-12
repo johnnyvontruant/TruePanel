@@ -9,27 +9,36 @@ def source():
     )
 
 
+def bootstrap_source():
+    return Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+
 def test_lcd_runtime_declares_process_boundary():
     text = source()
+    bootstrap = bootstrap_source()
 
-    assert "HostAgentSafetyServices" in text
+    assert "HostAgentSafetyServices" not in text
+    assert "HostAgentSafetyServices" in bootstrap
     assert "HostAgentApplicationHooks" in text
 
 
 def test_safety_services_hold_hardware_policy_hooks():
-    text = source()
+    bootstrap = bootstrap_source()
 
-    start = text.index(
-        "host_agent_safety_services = "
-        "HostAgentSafetyServices("
+    start = bootstrap.index(
+        "    def safety_services("
     )
 
-    end = text.index(
-        "host_agent_application_hooks = ",
+    end = bootstrap.index(
+        "    def record_fan_event(",
         start,
     )
 
-    block = text[start:end]
+    block = bootstrap[start:end]
 
     assert "fan_telemetry_provider" in block
     assert "fan_status_publisher" in block
