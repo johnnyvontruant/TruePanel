@@ -32,7 +32,6 @@ from truepanel.history import (
 )
 from truepanel.host import (
     HostAgentApplicationHooks,
-    HostAgentSafetyServices,
     HostFanReconciliationCoordinator,
     build_host_agent_bootstrap,
     build_host_agent_runtime,
@@ -903,25 +902,12 @@ def main():
         observe_thermal_fan_policy()
         publish_fan_control_status()
 
-        host_agent_safety_services = HostAgentSafetyServices(
-            fan_telemetry_provider=(
-                fan_command_telemetry
-            ),
-            fan_status_publisher=(
-                publish_fan_control_status
-            ),
-            fan_event_recorder=(
-                lambda decision, telemetry, source: (
-                    record_fan_control_event(
-                        decision,
-                        telemetry,
-                        source=source,
-                    )
-                )
-            ),
-            thermal_control_handler=(
-                set_thermal_operator_arm_state
-            ),
+        host_agent_safety_services = (
+            host_bootstrap.safety_services(
+                thermal_control_handler=(
+                    set_thermal_operator_arm_state
+                ),
+            )
         )
 
         host_agent_application_hooks = HostAgentApplicationHooks(

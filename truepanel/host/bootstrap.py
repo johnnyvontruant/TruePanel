@@ -42,6 +42,10 @@ from truepanel.history.thermal_commissioning import (
     commissioning_event,
 )
 
+from .hooks import (
+    HostAgentSafetyServices,
+    ThermalControlHandler,
+)
 from .status import publish_host_fan_status
 from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
@@ -74,6 +78,36 @@ class HostAgentBootstrap:
             thermal_authority=self.thermal_authority,
             status_bridge=self.status_bridge,
             reason=reason,
+        )
+
+    def safety_services(
+        self,
+        *,
+        thermal_control_handler: (
+            ThermalControlHandler | None
+        ) = None,
+    ) -> HostAgentSafetyServices:
+        """Build the privileged service bundle consumed by Host runtime."""
+
+        return HostAgentSafetyServices(
+            fan_telemetry_provider=(
+                self.telemetry.snapshot
+            ),
+            fan_status_publisher=(
+                self.publish_fan_status
+            ),
+            fan_event_recorder=(
+                lambda decision, telemetry, source: (
+                    self.record_fan_event(
+                        decision,
+                        dict(telemetry),
+                        source=source,
+                    )
+                )
+            ),
+            thermal_control_handler=(
+                thermal_control_handler
+            ),
         )
 
     def record_fan_event(

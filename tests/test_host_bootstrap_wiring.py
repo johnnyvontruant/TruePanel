@@ -264,3 +264,25 @@ def test_lcd_uses_host_owned_status_publisher():
     assert "host_bootstrap.publish_fan_status(" in publisher
     assert "fan_control_runtime.status_payload()" not in publisher
     assert "fan_control_status_bridge.publish(" not in publisher
+
+def test_lcd_delegates_host_safety_service_assembly():
+    runtime = source()
+
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert "HostAgentSafetyServices" not in runtime
+    assert "host_bootstrap.safety_services(" in runtime
+    assert "HostAgentSafetyServices" in bootstrap
+    assert "def safety_services(" in bootstrap
+    assert "fan_telemetry_provider=(" in bootstrap
+    assert "fan_status_publisher=(" in bootstrap
+    assert "fan_event_recorder=(" in bootstrap
+    assert (
+        "thermal_control_handler=("
+        "\n                    set_thermal_operator_arm_state"
+        in runtime
+    )
