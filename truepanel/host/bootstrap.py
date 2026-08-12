@@ -360,7 +360,9 @@ def build_host_agent_bootstrap(
         policy_mode=policy_mode,
         thermal_authority=thermal_authority,
         history=thermal_observer_history,
-        runtime_status_provider=fan_runtime.status_payload,
+        runtime_status_provider=(
+            lambda: fan_runtime.status_payload()
+        ),
     )
 
     return HostAgentBootstrap(
