@@ -38,16 +38,6 @@ jobs:
               if field_anchor not in text:
                   raise SystemExit('safety services field anchor not found')
               text = text.replace(field_anchor, field_anchor + field, 1)
-
-          export_anchor = '    "EventRecorder",\n'
-          if '    "FanReconciliationFactory",\n' not in text:
-              if export_anchor not in text:
-                  raise SystemExit('hooks export anchor not found')
-              text = text.replace(
-                  export_anchor,
-                  export_anchor + '    "FanReconciliationFactory",\n',
-                  1,
-              )
           path.write_text(text, encoding='utf-8')
 
           path = Path('truepanel/host/bootstrap.py')
