@@ -1,0 +1,59 @@
+name: Update runtime observation contracts
+
+on:
+  push:
+    branches:
+      - agent/host-runtime-observation-status
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: ${{ !contains(github.event.head_commit.message, '[runtime-observation-tests]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/host-runtime-observation-status
+          fetch-depth: 0
+
+      - name: Update stale telemetry and observer ownership contracts
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('tests/test_fan_command_telemetry.py')
+          text = path.read_text(encoding='utf-8')
+          start = text.index('def test_fan_command_telemetry_uses_shared_hardware_temperature_provider():\n')
+          replacement = '''def test_host_runtime_uses_shared_hardware_temperature_provider():\n    runtime = Path(\n        "lcd-menu.py"\n    ).read_text(encoding="utf-8")\n    bootstrap = Path(\n        "truepanel/host/bootstrap.py"\n    ).read_text(encoding="utf-8")\n    host_runtime = Path(\n        "truepanel/host/runtime.py"\n    ).read_text(encoding="utf-8")\n    hardware_provider = Path(\n        "truepanel/hardware/drive_temperatures.py"\n    ).read_text(encoding="utf-8")\n    host_provider = Path(\n        "truepanel/host/telemetry.py"\n    ).read_text(encoding="utf-8")\n\n    assert "DriveTemperatureProvider" not in runtime\n    assert "HostFanTelemetryProvider" not in runtime\n    assert "def fan_command_telemetry(" not in runtime\n    assert "DriveTemperatureProvider" in bootstrap\n    assert "drive_temperature_provider_factory" in bootstrap\n    assert "telemetry_factory=HostFanTelemetryProvider" in bootstrap\n    assert "temperature_provider=(" in bootstrap\n    assert "class DriveTemperatureProvider" in hardware_provider\n    assert "parse_legacy_smart_temperature" in hardware_provider\n    assert "class HostFanTelemetryProvider" in host_provider\n    assert "def fan_telemetry(" in host_runtime\n    assert "return self._safety.telemetry()" in host_runtime\n    assert "get_state(" not in host_runtime[\n        host_runtime.index("def fan_telemetry("):\n        host_runtime.index("def publish_fan_status(")\n    ]\n'''
+          text = text[:start] + replacement
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_host_bootstrap_wiring.py')
+          text = path.read_text(encoding='utf-8')
+          start = text.index('def test_thermal_observer_is_host_owned():\n')
+          end = text.index('def test_host_bootstrap_owns_history_behavior():\n', start)
+          replacement = '''def test_thermal_observer_is_host_owned():\n    runtime = source()\n    bootstrap = Path(\n        "truepanel/host/bootstrap.py"\n    ).read_text(encoding="utf-8")\n    host_runtime = Path(\n        "truepanel/host/runtime.py"\n    ).read_text(encoding="utf-8")\n    reconciliation = Path(\n        "truepanel/host/reconciliation.py"\n    ).read_text(encoding="utf-8")\n\n    assert "host_agent_runtime.observe_thermal(" in runtime\n    assert ".thermal_observer" not in runtime\n    assert "HostThermalObserver" in bootstrap\n    assert "def observe_thermal(" in host_runtime\n    assert "def observe(" in reconciliation\n    assert "self._thermal_observer.observe(" in reconciliation\n\n    for application_owned in (\n        "ThermalObserverHistory(",\n        "ThermalFanPolicy(",\n        "event_from_recommendation(",\n        "thermal_observer_last_signature",\n        "thermal_observer_previous_profile",\n    ):\n        assert application_owned not in runtime\n\n\n'''
+          text = text[:start] + replacement + text[end:]
+          path.write_text(text, encoding='utf-8')
+
+      - name: Validate updated contracts
+        run: |
+          python -m compileall -q \
+            tests/test_fan_command_telemetry.py \
+            tests/test_host_bootstrap_wiring.py
+          git diff --check
+
+      - name: Commit updated runtime observation contracts
+        run: |
+          rm .github/workflows/update-runtime-observation-contracts.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            tests/test_fan_command_telemetry.py \
+            tests/test_host_bootstrap_wiring.py \
+            .github/workflows/update-runtime-observation-contracts.yml
+          git diff --cached --check
+          git commit -m '[runtime-observation-tests] Update Host runtime ownership contracts'
+          git push origin HEAD:agent/host-runtime-observation-status
