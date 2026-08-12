@@ -1,0 +1,133 @@
+name: Apply Host safety services bootstrap
+
+on:
+  push:
+    branches:
+      - agent/host-safety-services-bootstrap
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ !contains(github.event.head_commit.message, '[host-safety-services]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/host-safety-services-bootstrap
+          fetch-depth: 0
+
+      - name: Move safety service assembly into Host bootstrap
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('truepanel/host/bootstrap.py')
+          text = path.read_text(encoding='utf-8')
+
+          import_anchor = 'from .status import publish_host_fan_status\n'
+          hook_import = '''from .hooks import (\n    HostAgentSafetyServices,\n    ThermalControlHandler,\n)\n'''
+          if hook_import not in text:
+              if import_anchor not in text:
+                  raise SystemExit('bootstrap Host import anchor not found')
+              text = text.replace(
+                  import_anchor,
+                  hook_import + import_anchor,
+                  1,
+              )
+
+          method_anchor = '''    def record_fan_event(\n'''
+          method = '''    def safety_services(\n        self,\n        *,\n        thermal_control_handler: (\n            ThermalControlHandler | None\n        ) = None,\n    ) -> HostAgentSafetyServices:\n        """Build the privileged service bundle consumed by Host runtime."""\n\n        return HostAgentSafetyServices(\n            fan_telemetry_provider=(\n                self.telemetry.snapshot\n            ),\n            fan_status_publisher=(\n                self.publish_fan_status\n            ),\n            fan_event_recorder=(\n                lambda decision, telemetry, source: (\n                    self.record_fan_event(\n                        decision,\n                        dict(telemetry),\n                        source=source,\n                    )\n                )\n            ),\n            thermal_control_handler=(\n                thermal_control_handler\n            ),\n        )\n\n'''
+          if '    def safety_services(\n' not in text:
+              if method_anchor not in text:
+                  raise SystemExit('bootstrap service method anchor not found')
+              text = text.replace(
+                  method_anchor,
+                  method + method_anchor,
+                  1,
+              )
+
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('lcd-menu.py')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              '    HostAgentSafetyServices,\n',
+              '',
+              1,
+          )
+
+          old = '''        host_agent_safety_services = HostAgentSafetyServices(\n            fan_telemetry_provider=(\n                fan_command_telemetry\n            ),\n            fan_status_publisher=(\n                publish_fan_control_status\n            ),\n            fan_event_recorder=(\n                lambda decision, telemetry, source: (\n                    record_fan_control_event(\n                        decision,\n                        telemetry,\n                        source=source,\n                    )\n                )\n            ),\n            thermal_control_handler=(\n                set_thermal_operator_arm_state\n            ),\n        )\n'''
+          new = '''        host_agent_safety_services = (\n            host_bootstrap.safety_services(\n                thermal_control_handler=(\n                    set_thermal_operator_arm_state\n                ),\n            )\n        )\n'''
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit('legacy safety service assembly not found')
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Add safety service ownership contracts
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('tests/test_host_bootstrap.py')
+          text = path.read_text(encoding='utf-8')
+
+          telemetry_anchor = '''        self.fan_status_provider = fan_status_provider\n\n\n'''
+          telemetry_replacement = '''        self.fan_status_provider = fan_status_provider\n\n    def snapshot(self):\n        return {\n            "telemetry_fresh": True,\n        }\n\n\n'''
+          if '    def snapshot(self):\n' not in text:
+              if telemetry_anchor not in text:
+                  raise SystemExit('FakeTelemetry anchor not found')
+              text = text.replace(
+                  telemetry_anchor,
+                  telemetry_replacement,
+                  1,
+              )
+
+          marker = '''def test_bootstrap_starts_thermal_authority_safe():\n'''
+          test = '''def test_bootstrap_builds_host_safety_services():\n    runtime = FakeFanRuntime()\n    thermal_handler = lambda action: {\n        "action": action,\n    }\n\n    bootstrap = build_host_agent_bootstrap(\n        {},\n        fan_runtime_factory=lambda config: runtime,\n        fan_history_factory=FakeHistory,\n        commissioning_history_factory=FakeHistory,\n        thermal_authority_factory=FakeAuthority,\n        telemetry_factory=FakeTelemetry,\n        status_bridge_factory=FakeStatusBridge,\n    )\n\n    services = bootstrap.safety_services(\n        thermal_control_handler=thermal_handler,\n    )\n\n    assert (\n        services.fan_telemetry_provider\n        == bootstrap.telemetry.snapshot\n    )\n    assert (\n        services.fan_status_publisher\n        == bootstrap.publish_fan_status\n    )\n    assert services.fan_event_recorder is not None\n    assert (\n        services.thermal_control_handler\n        is thermal_handler\n    )\n\n\n'''
+          if 'def test_bootstrap_builds_host_safety_services():' not in text:
+              if marker not in text:
+                  raise SystemExit('bootstrap safety test marker not found')
+              text = text.replace(marker, test + marker, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_host_bootstrap_wiring.py')
+          text = path.read_text(encoding='utf-8')
+          addition = '''\n\ndef test_lcd_delegates_host_safety_service_assembly():\n    runtime = source()\n\n    bootstrap = Path(\n        "truepanel/host/bootstrap.py"\n    ).read_text(\n        encoding="utf-8"\n    )\n\n    assert "HostAgentSafetyServices" not in runtime\n    assert "host_bootstrap.safety_services(" in runtime\n    assert "HostAgentSafetyServices" in bootstrap\n    assert "def safety_services(" in bootstrap\n    assert "fan_telemetry_provider=(" in bootstrap\n    assert "fan_status_publisher=(" in bootstrap\n    assert "fan_event_recorder=(" in bootstrap\n    assert (\n        "thermal_control_handler=("\n        "\\n                    set_thermal_operator_arm_state"\n        in runtime\n    )\n'''
+          if 'def test_lcd_delegates_host_safety_service_assembly():' not in text:
+              text = text.rstrip() + addition + '\n'
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Validate migration
+        run: |
+          python -m compileall -q \
+            truepanel \
+            lcd-menu.py \
+            tests/test_host_bootstrap.py \
+            tests/test_host_bootstrap_wiring.py
+          python -m pytest -q \
+            tests/test_host_bootstrap.py \
+            tests/test_host_bootstrap_wiring.py \
+            tests/test_host_agent_factory.py \
+            tests/test_host_safety.py
+          git diff --check
+
+      - name: Commit Host safety service ownership
+        run: |
+          rm .github/workflows/apply-host-safety-services-bootstrap.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            truepanel/host/bootstrap.py \
+            lcd-menu.py \
+            tests/test_host_bootstrap.py \
+            tests/test_host_bootstrap_wiring.py \
+            .github/workflows/apply-host-safety-services-bootstrap.yml
+          git diff --cached --check
+          git commit -m '[host-safety-services] Move safety service assembly into Host bootstrap'
+          git push origin HEAD:agent/host-safety-services-bootstrap
