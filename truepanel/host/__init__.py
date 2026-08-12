@@ -19,6 +19,9 @@ from .hooks import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
 )
+from .reconciliation import (
+    HostFanReconciliationCoordinator,
+)
 from .runtime import HostAgentRuntime
 from .safety import HostAgentSafetyCoordinator
 from .telemetry import HostFanTelemetryProvider
@@ -33,6 +36,7 @@ __all__ = [
     "HostAgentRuntime",
     "HostAgentSafetyCoordinator",
     "HostAgentSafetyServices",
+    "HostFanReconciliationCoordinator",
     "HostThermalAuthority",
     "HostThermalObserver",
     "HostCapability",
