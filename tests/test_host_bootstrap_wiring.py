@@ -26,7 +26,7 @@ def test_lcd_runtime_uses_host_bootstrap():
 
     assert (
         "host_bootstrap.thermal_authority"
-        in text
+        not in text
     )
 
     assert (
