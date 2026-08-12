@@ -59,14 +59,23 @@ def test_lcd_runtime_no_longer_constructs_host_dependencies():
 
 
 def test_thermal_observer_is_host_owned():
-    text = source()
+    runtime = source()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(encoding="utf-8")
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
+    ).read_text(encoding="utf-8")
+    reconciliation = Path(
+        "truepanel/host/reconciliation.py"
+    ).read_text(encoding="utf-8")
 
-    assert (
-        "host_bootstrap"
-        "\n        .thermal_observer"
-        "\n        .observe(telemetry)"
-        in text
-    )
+    assert "host_agent_runtime.observe_thermal(" in runtime
+    assert ".thermal_observer" not in runtime
+    assert "HostThermalObserver" in bootstrap
+    assert "def observe_thermal(" in host_runtime
+    assert "def observe(" in reconciliation
+    assert "self._thermal_observer.observe(" in reconciliation
 
     for application_owned in (
         "ThermalObserverHistory(",
@@ -75,7 +84,7 @@ def test_thermal_observer_is_host_owned():
         "thermal_observer_last_signature",
         "thermal_observer_previous_profile",
     ):
-        assert application_owned not in text
+        assert application_owned not in runtime
 
 
 def test_host_bootstrap_owns_history_behavior():
