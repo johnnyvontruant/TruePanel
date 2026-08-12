@@ -9,7 +9,6 @@ def source():
     )
 
 
-
 def test_lcd_builds_command_telemetry():
     runtime = source()
 
@@ -49,8 +48,15 @@ def test_lcd_builds_command_telemetry():
         in provider
     )
 
-def test_lcd_publishes_observe_only_thermal_policy():
+
+def test_lcd_publishes_host_owned_thermal_policy():
     runtime = source()
+
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
 
     status = Path(
         "truepanel/host/status.py"
@@ -58,9 +64,14 @@ def test_lcd_publishes_observe_only_thermal_policy():
         encoding="utf-8"
     )
 
-    assert "ThermalFanPolicy" in runtime
+    assert "ThermalFanPolicy" not in runtime
+    assert "ThermalFanPolicy" in bootstrap
     assert (
         "def observe_thermal_fan_policy("
+        in runtime
+    )
+    assert (
+        ".thermal_observer"
         in runtime
     )
 
