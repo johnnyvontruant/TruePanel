@@ -241,33 +241,26 @@ def test_lcd_uses_host_owned_telemetry_normalizer():
 def test_lcd_uses_host_owned_status_publisher():
     runtime = source()
 
-    assert (
-        "publish_host_fan_status("
-        in runtime
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
     )
 
-    start = runtime.index(
+    assert "FanControlStatusBridge" not in runtime
+    assert "publish_host_fan_status" not in runtime
+    assert "FanControlStatusBridge" in bootstrap
+    assert "publish_host_fan_status" in bootstrap
+
+    publisher_start = runtime.index(
         "def publish_fan_control_status("
     )
-
-    end = runtime.index(
+    publisher_end = runtime.index(
         "\ndef fan_command_telemetry(",
-        start,
+        publisher_start,
     )
+    publisher = runtime[publisher_start:publisher_end]
 
-    block = runtime[start:end]
-
-    assert (
-        "fan_control_runtime.status_payload()"
-        not in block
-    )
-
-    assert (
-        "thermal_authority.current_recommendation"
-        not in block
-    )
-
-    assert (
-        "fan_control_status_bridge.publish("
-        not in block
-    )
+    assert "host_bootstrap.publish_fan_status(" in publisher
+    assert "fan_control_runtime.status_payload()" not in publisher
+    assert "fan_control_status_bridge.publish(" not in publisher

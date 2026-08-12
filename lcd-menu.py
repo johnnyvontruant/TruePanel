@@ -21,9 +21,6 @@ from truepanel.hardware.bay_led_animation import (
 from truepanel.hardware.bounded_automatic import (
     thermal_safety_fingerprint,
 )
-from truepanel.hardware.fan_status_bridge import (
-    FanControlStatusBridge,
-)
 from truepanel.hardware.lcd_display_status_bridge import (
     LCDDisplayStatusBridge,
 )
@@ -39,9 +36,6 @@ from truepanel.host import (
     HostFanReconciliationCoordinator,
     build_host_agent_bootstrap,
     build_host_agent_runtime,
-)
-from truepanel.host.status import (
-    publish_host_fan_status,
 )
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
@@ -86,7 +80,6 @@ collector = TruePanelCollector()
 mission = MissionControl()
 alert_manager = AlertManager()
 config = load_config()
-fan_control_status_bridge = FanControlStatusBridge()
 host_bootstrap = build_host_agent_bootstrap(
     config
 )
@@ -186,10 +179,7 @@ def publish_fan_control_status(
 ):
     """Compatibility adapter for Host-owned status publication."""
 
-    return publish_host_fan_status(
-        fan_runtime=fan_control_runtime,
-        thermal_authority=thermal_authority,
-        status_bridge=fan_control_status_bridge,
+    return host_bootstrap.publish_fan_status(
         reason=reason,
     )
 
@@ -635,7 +625,7 @@ def show_fan_rpm():
 
 
 def show_fan_control():
-    status = fan_control_status_bridge.read(
+    status = host_bootstrap.status_bridge.read(
         max_age=30.0
     )
 

@@ -22,6 +22,9 @@ from truepanel.hardware.drive_temperatures import (
 from truepanel.hardware.fans import (
     get_status as get_fan_status,
 )
+from truepanel.hardware.fan_status_bridge import (
+    FanControlStatusBridge,
+)
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
 )
@@ -39,6 +42,7 @@ from truepanel.history.thermal_commissioning import (
     commissioning_event,
 )
 
+from .status import publish_host_fan_status
 from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
 from .thermal_observer import HostThermalObserver
@@ -57,6 +61,20 @@ class HostAgentBootstrap:
     fan_control_history: FanControlHistory
     thermal_commissioning_history: ThermalCommissioningHistory
     telemetry: HostFanTelemetryProvider
+    status_bridge: FanControlStatusBridge
+
+    def publish_fan_status(
+        self,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        """Publish one authoritative Host fan/thermal status snapshot."""
+
+        return publish_host_fan_status(
+            fan_runtime=self.fan_runtime,
+            thermal_authority=self.thermal_authority,
+            status_bridge=self.status_bridge,
+            reason=reason,
+        )
 
     def record_fan_event(
         self,
@@ -227,6 +245,7 @@ def build_host_agent_bootstrap(
     drive_temperature_provider_factory=DriveTemperatureProvider,
     fan_status_provider=get_fan_status,
     telemetry_factory=HostFanTelemetryProvider,
+    status_bridge_factory=FanControlStatusBridge,
     thermal_policy_factory=ThermalFanPolicy,
     thermal_authority_factory=HostThermalAuthority,
     thermal_observer_factory=HostThermalObserver,
@@ -385,12 +404,15 @@ def build_host_agent_bootstrap(
         fan_status_provider=fan_status_provider,
     )
 
+    status_bridge = status_bridge_factory()
+
     return HostAgentBootstrap(
         config=config,
         fan_runtime=fan_runtime,
         thermal_authority=thermal_authority,
         thermal_observer=thermal_observer,
         telemetry=telemetry,
+        status_bridge=status_bridge,
         fan_control_history=fan_control_history,
         thermal_commissioning_history=(
             thermal_commissioning_history

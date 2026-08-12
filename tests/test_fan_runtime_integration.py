@@ -210,6 +210,19 @@ def test_lcd_uses_bootstrap_owned_host_telemetry():
     assert "HostFanTelemetryProvider" in bootstrap
 
 
+def test_lcd_uses_bootstrap_owned_status_bridge():
+    runtime = Path("lcd-menu.py").read_text()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
+
+    assert "FanControlStatusBridge" not in runtime
+    assert "publish_host_fan_status" not in runtime
+    assert "host_bootstrap.publish_fan_status(" in runtime
+    assert "host_bootstrap.status_bridge.read(" in runtime
+    assert "FanControlStatusBridge" in bootstrap
+
+
 def test_lcd_wires_fan_control_status_page():
     text = Path("lcd-menu.py").read_text()
 

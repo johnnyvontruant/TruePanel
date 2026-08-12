@@ -37,6 +37,10 @@ class FakeTelemetry:
         self.fan_status_provider = fan_status_provider
 
 
+class FakeStatusBridge:
+    pass
+
+
 def test_bootstrap_owns_host_dependencies():
     runtime = FakeFanRuntime()
 
@@ -80,6 +84,24 @@ def test_bootstrap_owns_production_telemetry():
     assert (
         bootstrap.telemetry.fan_status_provider
         is fan_status_provider
+    )
+
+
+def test_bootstrap_owns_status_bridge():
+    runtime = FakeFanRuntime()
+
+    bootstrap = build_host_agent_bootstrap(
+        {},
+        fan_runtime_factory=lambda config: runtime,
+        fan_history_factory=FakeHistory,
+        commissioning_history_factory=FakeHistory,
+        thermal_authority_factory=FakeAuthority,
+        status_bridge_factory=FakeStatusBridge,
+    )
+
+    assert isinstance(
+        bootstrap.status_bridge,
+        FakeStatusBridge,
     )
 
 
