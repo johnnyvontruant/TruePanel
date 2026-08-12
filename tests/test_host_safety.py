@@ -228,6 +228,49 @@ def test_missing_thermal_handler_fails_closed():
     )
 
 
+def test_thermal_handler_can_bind_after_safety_construction():
+    coordinator = HostAgentSafetyCoordinator(
+        fan_runtime=FakeRuntime(),
+        telemetry_provider=telemetry,
+    )
+    calls = []
+
+    coordinator.bind_thermal_control_handler(
+        lambda action: calls.append(action) or {
+            "ok": True,
+        }
+    )
+
+    result = coordinator.handle_thermal_control(
+        "arm"
+    )
+
+    assert result["ok"] is True
+    assert calls == ["arm"]
+
+
+def test_thermal_handler_binding_is_one_shot():
+    coordinator = HostAgentSafetyCoordinator(
+        fan_runtime=FakeRuntime(),
+        telemetry_provider=telemetry,
+    )
+
+    coordinator.bind_thermal_control_handler(
+        lambda action: {"ok": True}
+    )
+
+    try:
+        coordinator.bind_thermal_control_handler(
+            lambda action: {"ok": True}
+        )
+    except RuntimeError as error:
+        assert "already bound" in str(error)
+    else:
+        raise AssertionError(
+            "second thermal handler binding must fail"
+        )
+
+
 def test_reconcile_runs_guarded_service_tick():
     runtime = FakeRuntime()
 

@@ -112,9 +112,6 @@ def test_bootstrap_owns_status_bridge():
 
 def test_bootstrap_builds_host_safety_services():
     runtime = FakeFanRuntime()
-    thermal_handler = lambda action: {
-        "action": action,
-    }
 
     bootstrap = build_host_agent_bootstrap(
         {},
@@ -126,9 +123,7 @@ def test_bootstrap_builds_host_safety_services():
         status_bridge_factory=FakeStatusBridge,
     )
 
-    services = bootstrap.safety_services(
-        thermal_control_handler=thermal_handler,
-    )
+    services = bootstrap.safety_services()
 
     assert (
         services.fan_telemetry_provider
@@ -140,8 +135,8 @@ def test_bootstrap_builds_host_safety_services():
     )
     assert services.fan_event_recorder is not None
     assert (
-        services.thermal_control_handler
-        is thermal_handler
+        services.thermal_control_handler_factory
+        == bootstrap.build_thermal_control_handler
     )
 
 

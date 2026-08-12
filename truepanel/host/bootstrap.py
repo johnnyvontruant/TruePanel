@@ -44,6 +44,7 @@ from truepanel.history.thermal_commissioning import (
 
 from .hooks import (
     HostAgentSafetyServices,
+    ThermalAutomaticRestorer,
     ThermalControlHandler,
 )
 from .status import publish_host_fan_status
@@ -80,12 +81,33 @@ class HostAgentBootstrap:
             reason=reason,
         )
 
+    def build_thermal_control_handler(
+        self,
+        restore_automatic: ThermalAutomaticRestorer,
+    ) -> ThermalControlHandler:
+        """Bind thermal actions to Host safety restoration after construction."""
+
+        def handle(
+            action: str,
+        ):
+            return self.thermal_authority.handle_action(
+                action,
+                telemetry_provider=(
+                    self.telemetry.snapshot
+                ),
+                runtime_status_provider=(
+                    self.fan_runtime.status_payload
+                ),
+                restore_automatic=restore_automatic,
+                record_commissioning_event=(
+                    self.record_commissioning_event
+                ),
+            )
+
+        return handle
+
     def safety_services(
         self,
-        *,
-        thermal_control_handler: (
-            ThermalControlHandler | None
-        ) = None,
     ) -> HostAgentSafetyServices:
         """Build the privileged service bundle consumed by Host runtime."""
 
@@ -105,8 +127,8 @@ class HostAgentBootstrap:
                     )
                 )
             ),
-            thermal_control_handler=(
-                thermal_control_handler
+            thermal_control_handler_factory=(
+                self.build_thermal_control_handler
             ),
         )
 

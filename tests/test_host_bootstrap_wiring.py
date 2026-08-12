@@ -286,3 +286,19 @@ def test_lcd_delegates_host_safety_service_assembly():
         "\n                    set_thermal_operator_arm_state"
         in runtime
     )
+
+def test_lcd_delegates_thermal_action_binding_to_host():
+    runtime = source()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(encoding="utf-8")
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(encoding="utf-8")
+
+    assert "set_thermal_operator_arm_state" not in runtime
+    assert "host_bootstrap.safety_services()" in runtime
+    assert "build_thermal_control_handler" in bootstrap
+    assert "thermal_control_handler_factory" in factory
+    assert "bind_thermal_control_handler(" in factory
+    assert "safety.restore_automatic" in factory

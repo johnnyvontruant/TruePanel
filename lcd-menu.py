@@ -349,25 +349,6 @@ def reconcile_fan_control():
         publish_status=publish_fan_control_status,
     )
 
-def set_thermal_operator_arm_state(
-    action,
-):
-    """Dispatch thermal authority to the Host-owned state machine."""
-
-    return thermal_authority.handle_action(
-        action,
-        telemetry_provider=fan_command_telemetry,
-        runtime_status_provider=(
-            fan_control_runtime.status_payload
-        ),
-        restore_automatic=(
-            restore_motherboard_fan_control
-        ),
-        record_commissioning_event=(
-            record_thermal_commissioning_event
-        ),
-    )
-
 def lcd_on():
     global lcd_timer
 
@@ -903,11 +884,7 @@ def main():
         publish_fan_control_status()
 
         host_agent_safety_services = (
-            host_bootstrap.safety_services(
-                thermal_control_handler=(
-                    set_thermal_operator_arm_state
-                ),
-            )
+            host_bootstrap.safety_services()
         )
 
         host_agent_application_hooks = HostAgentApplicationHooks(

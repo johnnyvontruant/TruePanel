@@ -124,11 +124,19 @@ def build_host_agent_runtime(
             safety_services
             .fan_event_recorder
         ),
-        thermal_control_handler=(
-            safety_services
-            .thermal_control_handler
-        ),
     )
+
+    thermal_control_handler_factory = (
+        safety_services
+        .thermal_control_handler_factory
+    )
+
+    if thermal_control_handler_factory is not None:
+        safety.bind_thermal_control_handler(
+            thermal_control_handler_factory(
+                safety.restore_automatic
+            )
+        )
 
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,

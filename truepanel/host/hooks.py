@@ -37,6 +37,13 @@ ThermalControlHandler = Callable[
     Mapping[str, Any],
 ]
 
+ThermalAutomaticRestorer = Callable[..., Any]
+
+ThermalControlHandlerFactory = Callable[
+    [ThermalAutomaticRestorer],
+    ThermalControlHandler,
+]
+
 LCDButtonHandler = Callable[
     [int, str],
     bool,
@@ -55,7 +62,9 @@ class HostAgentSafetyServices:
     fan_telemetry_provider: FanTelemetryProvider
     fan_status_publisher: FanStatusPublisher | None = None
     fan_event_recorder: FanEventRecorder | None = None
-    thermal_control_handler: ThermalControlHandler | None = None
+    thermal_control_handler_factory: (
+        ThermalControlHandlerFactory | None
+    ) = None
 
 
 @dataclass(frozen=True)
@@ -76,5 +85,7 @@ __all__ = [
     "HostAgentApplicationHooks",
     "HostAgentSafetyServices",
     "LCDButtonHandler",
+    "ThermalAutomaticRestorer",
     "ThermalControlHandler",
+    "ThermalControlHandlerFactory",
 ]
