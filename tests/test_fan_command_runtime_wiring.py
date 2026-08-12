@@ -88,8 +88,9 @@ def test_lcd_publishes_host_owned_thermal_policy():
         in runtime
     )
 
+    assert "publish_host_fan_status" in bootstrap
     assert (
-        "publish_host_fan_status("
+        "host_bootstrap.publish_fan_status("
         in runtime
     )
 
