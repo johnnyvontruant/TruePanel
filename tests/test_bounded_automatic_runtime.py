@@ -41,7 +41,17 @@ def test_runtime_declares_bounded_automatic_contract():
         encoding="utf-8"
     )
 
-    combined = runtime + authority
+    status = Path(
+        "truepanel/host/status.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    combined = (
+        runtime
+        + authority
+        + status
+    )
 
     required = (
         "automatic_lease_started",

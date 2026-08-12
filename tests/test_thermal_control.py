@@ -1222,11 +1222,14 @@ def test_supervised_handler_declares_deadline_global():
         not in source
     )
 
-    assert (
-        "thermal_authority."
-        "supervised_session_deadline"
-        in source
+    status = Path(
+        "truepanel/host/status.py"
+    ).read_text(
+        encoding="utf-8"
     )
+
+    assert "thermal_authority" in status
+    assert ".supervised_session_deadline" in status
 
 def test_supervised_handler_sets_bounded_deadline():
     authority = Path(

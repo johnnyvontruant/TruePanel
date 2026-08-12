@@ -50,13 +50,31 @@ def test_lcd_builds_command_telemetry():
     )
 
 def test_lcd_publishes_observe_only_thermal_policy():
-    text = source()
+    runtime = source()
 
-    assert "ThermalFanPolicy" in text
-    assert "def observe_thermal_fan_policy(" in text
-    assert '"thermal_policy_mode"' in text
-    assert '"thermal_recommended_profile"' in text
-    assert "observe_thermal_fan_policy()" in text
+    status = Path(
+        "truepanel/host/status.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert "ThermalFanPolicy" in runtime
+    assert (
+        "def observe_thermal_fan_policy("
+        in runtime
+    )
+
+    assert (
+        "publish_host_fan_status("
+        in runtime
+    )
+
+    assert (
+        '"thermal_policy_mode"'
+        in status
+    )
+    assert '"thermal_recommended_profile"' in status
+    assert "observe_thermal_fan_policy()" in runtime
 
 
 def test_observer_does_not_request_profiles():

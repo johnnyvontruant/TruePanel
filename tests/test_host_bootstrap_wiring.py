@@ -216,3 +216,38 @@ def test_lcd_uses_host_owned_telemetry_normalizer():
         "class DriveTemperatureProvider"
         in hardware_provider
     )
+
+
+def test_lcd_uses_host_owned_status_publisher():
+    runtime = source()
+
+    assert (
+        "publish_host_fan_status("
+        in runtime
+    )
+
+    start = runtime.index(
+        "def publish_fan_control_status("
+    )
+
+    end = runtime.index(
+        "\nhost_drive_temperature_provider = (",
+        start,
+    )
+
+    block = runtime[start:end]
+
+    assert (
+        "fan_control_runtime.status_payload()"
+        not in block
+    )
+
+    assert (
+        "thermal_authority.current_recommendation"
+        not in block
+    )
+
+    assert (
+        "fan_control_status_bridge.publish("
+        not in block
+    )
