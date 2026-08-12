@@ -27,21 +27,40 @@ def test_lcd_runtime_builds_fan_control_runtime():
     )
 
 
-def test_lcd_runtime_publishes_runtime_status():
-    source = Path(
+def test_host_thermal_observer_reads_runtime_status():
+    runtime = Path(
         "lcd-menu.py"
     ).read_text()
 
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
+
+    observer = Path(
+        "truepanel/host/thermal_observer.py"
+    ).read_text()
+
+    compact_runtime = runtime.replace(
+        "\n",
+        "",
+    ).replace(
+        " ",
+        "",
+    )
+
     assert (
-        "fan_control_runtime"
-        ".status_payload()"
-        in source.replace(
-            "\n",
-            "",
-        ).replace(
-            " ",
-            "",
-        )
+        "fan_control_runtime.status_payload()"
+        not in compact_runtime
+    )
+
+    assert (
+        "lambda: fan_runtime.status_payload()"
+        in bootstrap.replace("\n", "").replace(" ", "")
+    )
+
+    assert (
+        "self._runtime_status_provider()"
+        in observer
     )
 
 
@@ -54,8 +73,6 @@ def test_lcd_runtime_shuts_down_fan_control():
         "fan_control_runtime.shutdown()"
         in source
     )
-
-
 
 
 def test_fan_history_uses_post_transition_telemetry():
@@ -95,6 +112,7 @@ def test_fan_history_uses_post_transition_telemetry():
         "post_transition_telemetry,"
         in reconcile
     )
+
 
 def test_lcd_classifies_completed_safety_recovery():
     runtime = Path(
@@ -150,6 +168,7 @@ def test_lcd_preserves_timeout_classification():
         in bootstrap
     )
 
+
 def test_lcd_records_reconcile_source_from_classifier():
     runtime = Path(
         "lcd-menu.py"
@@ -204,6 +223,7 @@ def test_lcd_records_reconcile_source_from_classifier():
         "self.record_event("
         in host_reconcile
     )
+
 
 def test_lcd_wires_fan_control_status_page():
     text = Path("lcd-menu.py").read_text()
