@@ -390,6 +390,7 @@ def build_host_agent_bootstrap(
         fan_runtime=fan_runtime,
         thermal_authority=thermal_authority,
         thermal_observer=thermal_observer,
+        telemetry=telemetry,
         fan_control_history=fan_control_history,
         thermal_commissioning_history=(
             thermal_commissioning_history
