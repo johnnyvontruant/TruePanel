@@ -32,7 +32,6 @@ from truepanel.history import (
 )
 from truepanel.host import (
     HostAgentApplicationHooks,
-    HostFanReconciliationCoordinator,
     build_host_agent_bootstrap,
     build_host_agent_runtime,
 )
@@ -85,7 +84,6 @@ host_bootstrap = build_host_agent_bootstrap(
 fan_control_runtime = host_bootstrap.fan_runtime
 
 host_agent_runtime = None
-fan_reconciliation_coordinator = None
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -342,12 +340,10 @@ def end_bounded_automatic_lease(
 def reconcile_fan_control():
     """Compatibility adapter for Host-owned fan reconciliation."""
 
-    if fan_reconciliation_coordinator is None:
+    if host_agent_runtime is None:
         return None
 
-    return fan_reconciliation_coordinator.reconcile(
-        publish_status=publish_fan_control_status,
-    )
+    return host_agent_runtime.reconcile_fans()
 
 def lcd_on():
     global lcd_timer
@@ -850,7 +846,6 @@ def response_handler(command, data):
 def main():
     global lcd, menu_item
     global host_agent_runtime
-    global fan_reconciliation_coordinator
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
@@ -908,26 +903,6 @@ def main():
             application_hooks=(
                 host_agent_application_hooks
             ),
-        )
-
-        fan_reconciliation_coordinator = (
-            HostFanReconciliationCoordinator(
-                fan_runtime=fan_control_runtime,
-                safety=host_agent_runtime.safety,
-                thermal_observer=(
-                    host_bootstrap.thermal_observer
-                ),
-                thermal_authority=thermal_authority,
-                fan_event_source=(
-                    host_bootstrap.fan_event_source
-                ),
-                record_fan_event=(
-                    host_bootstrap.record_fan_event
-                ),
-                record_commissioning_event=(
-                    host_bootstrap.record_commissioning_event
-                ),
-            )
         )
 
         host_agent_runtime.start()

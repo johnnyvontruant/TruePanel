@@ -30,9 +30,11 @@ class HostAgentRuntime:
         safety: Any,
         fan_server_factory: Callable[[], Any | None],
         lcd_server_factory: Callable[[], Any | None],
+        fan_reconciliation: Any | None = None,
     ):
         self._fan_runtime = fan_runtime
         self._safety = safety
+        self._fan_reconciliation = fan_reconciliation
         self._fan_server_factory = fan_server_factory
         self._lcd_server_factory = lcd_server_factory
 
@@ -46,6 +48,14 @@ class HostAgentRuntime:
         """Return the Host Agent safety coordinator."""
 
         return self._safety
+
+    def reconcile_fans(self) -> Any | None:
+        """Run one Host-owned fan/thermal reconciliation cycle."""
+
+        if self._fan_reconciliation is None:
+            return None
+
+        return self._fan_reconciliation.reconcile()
 
     @property
     def started(self) -> bool:

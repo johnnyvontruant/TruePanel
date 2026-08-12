@@ -47,6 +47,9 @@ from .hooks import (
     ThermalAutomaticRestorer,
     ThermalControlHandler,
 )
+from .reconciliation import (
+    HostFanReconciliationCoordinator,
+)
 from .status import publish_host_fan_status
 from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
@@ -106,6 +109,24 @@ class HostAgentBootstrap:
 
         return handle
 
+    def build_fan_reconciliation(
+        self,
+        safety: Any,
+    ) -> HostFanReconciliationCoordinator:
+        """Build Host-owned fan/thermal reconciliation after safety exists."""
+
+        return HostFanReconciliationCoordinator(
+            fan_runtime=self.fan_runtime,
+            safety=safety,
+            thermal_observer=self.thermal_observer,
+            thermal_authority=self.thermal_authority,
+            fan_event_source=self.fan_event_source,
+            record_fan_event=self.record_fan_event,
+            record_commissioning_event=(
+                self.record_commissioning_event
+            ),
+        )
+
     def safety_services(
         self,
     ) -> HostAgentSafetyServices:
@@ -129,6 +150,9 @@ class HostAgentBootstrap:
             ),
             thermal_control_handler_factory=(
                 self.build_thermal_control_handler
+            ),
+            fan_reconciliation_factory=(
+                self.build_fan_reconciliation
             ),
         )
 

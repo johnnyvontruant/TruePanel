@@ -299,3 +299,23 @@ def test_lcd_delegates_thermal_action_binding_to_host():
     assert "thermal_control_handler_factory" in factory
     assert "bind_thermal_control_handler(" in factory
     assert "safety.restore_automatic" in factory
+
+def test_lcd_delegates_reconciliation_construction_to_host():
+    runtime = source()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(encoding="utf-8")
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(encoding="utf-8")
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
+    ).read_text(encoding="utf-8")
+
+    assert "HostFanReconciliationCoordinator" not in runtime
+    assert "fan_reconciliation_coordinator" not in runtime
+    assert "host_agent_runtime.reconcile_fans()" in runtime
+    assert "build_fan_reconciliation" in bootstrap
+    assert "fan_reconciliation_factory" in factory
+    assert "fan_reconciliation=fan_reconciliation" in factory
+    assert "def reconcile_fans(" in host_runtime

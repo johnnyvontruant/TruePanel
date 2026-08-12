@@ -44,6 +44,8 @@ ThermalControlHandlerFactory = Callable[
     ThermalControlHandler,
 ]
 
+FanReconciliationFactory = Callable[[Any], Any]
+
 LCDButtonHandler = Callable[
     [int, str],
     bool,
@@ -64,6 +66,9 @@ class HostAgentSafetyServices:
     fan_event_recorder: FanEventRecorder | None = None
     thermal_control_handler_factory: (
         ThermalControlHandlerFactory | None
+    ) = None
+    fan_reconciliation_factory: (
+        FanReconciliationFactory | None
     ) = None
 
 

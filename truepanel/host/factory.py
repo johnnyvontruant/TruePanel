@@ -138,9 +138,20 @@ def build_host_agent_runtime(
             )
         )
 
+    fan_reconciliation_factory = (
+        safety_services
+        .fan_reconciliation_factory
+    )
+    fan_reconciliation = (
+        fan_reconciliation_factory(safety)
+        if fan_reconciliation_factory is not None
+        else None
+    )
+
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
         safety=safety,
+        fan_reconciliation=fan_reconciliation,
         fan_server_factory=lambda: (
             build_fan_command_server(
                 fan_runtime=fan_runtime,
