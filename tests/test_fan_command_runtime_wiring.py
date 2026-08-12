@@ -109,8 +109,8 @@ def test_observer_does_not_request_profiles():
         "def observe_thermal_fan_policy("
     )
     observer_end = text.index(
-        "def record_fan_control_event(",
-        observer_start,
+        "\ndef ",
+        observer_start + 1,
     )
     observer = text[
         observer_start:observer_end

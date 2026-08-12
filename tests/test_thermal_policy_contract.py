@@ -190,8 +190,8 @@ def test_observer_has_no_actuator_path():
         "def observe_thermal_fan_policy("
     )
     end = source.index(
-        "def record_fan_control_event(",
-        start,
+        "\ndef ",
+        start + 1,
     )
 
     observer = source[start:end]
