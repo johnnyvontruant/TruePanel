@@ -18,9 +18,6 @@ from truepanel.hardware import Buzzer
 from truepanel.hardware.bay_led_animation import (
     build_bay_led_startup_animation,
 )
-from truepanel.hardware.bounded_automatic import (
-    thermal_safety_fingerprint,
-)
 from truepanel.hardware.lcd_display_status_bridge import (
     LCDDisplayStatusBridge,
 )
@@ -118,36 +115,6 @@ if fan_health_watcher is not None:
 mission.register(healthy_watcher)
 
 
-thermal_policy_config = (
-    config.get(
-        "hardware",
-        {},
-    ).get(
-        "thermal_policy",
-        {},
-    )
-)
-
-# Thermal authority is deliberately ephemeral.
-# Every TruePanel process starts disarmed and in dry-run mode.
-thermal_command_cooldown_seconds = float(
-    thermal_policy_config.get(
-        "command_cooldown_seconds",
-        30,
-    )
-)
-
-_current_thermal_safety_fingerprint = (
-    thermal_safety_fingerprint(config)
-)
-
-_commissioned_thermal_safety_fingerprint = str(
-    thermal_policy_config.get(
-        "commissioned_fingerprint",
-        "",
-    )
-    or ""
-).strip().lower()
 
 def publish_lcd_reader_status():
     """Publish a read-only snapshot of the LCD reader thread."""

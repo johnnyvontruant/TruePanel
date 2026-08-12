@@ -346,3 +346,22 @@ def test_lcd_delegates_thermal_lifecycle_to_host_runtime():
     assert "def end_supervised_thermal_session(" in host_runtime
     assert "def end_bounded_automatic_lease(" in host_runtime
     assert "HostThermalLifecycleCoordinator" in lifecycle
+
+def test_lcd_has_no_legacy_thermal_bootstrap_state():
+    runtime = source()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(encoding="utf-8")
+
+    for legacy in (
+        "thermal_policy_config",
+        "thermal_command_cooldown_seconds",
+        "_current_thermal_safety_fingerprint",
+        "_commissioned_thermal_safety_fingerprint",
+        "thermal_safety_fingerprint,",
+    ):
+        assert legacy not in runtime
+
+    assert "thermal_safety_fingerprint" in bootstrap
+    assert "command_cooldown_seconds" in bootstrap
+    assert "commissioned_fingerprint" in bootstrap
