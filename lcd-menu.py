@@ -42,6 +42,7 @@ from truepanel.history import (
 from truepanel.host import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
+    HostFanReconciliationCoordinator,
     HostFanTelemetryProvider,
     build_host_agent_bootstrap,
     build_host_agent_runtime,
@@ -99,6 +100,7 @@ host_bootstrap = build_host_agent_bootstrap(
 fan_control_runtime = host_bootstrap.fan_runtime
 
 host_agent_runtime = None
+fan_reconciliation_coordinator = None
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -375,71 +377,13 @@ def end_bounded_automatic_lease(
 
 
 def reconcile_fan_control():
+    """Compatibility adapter for Host-owned fan reconciliation."""
 
-    if (
-        host_agent_runtime is None
-        or not fan_control_runtime.connected
-    ):
+    if fan_reconciliation_coordinator is None:
         return None
 
-    telemetry = (
-        host_agent_runtime
-        .safety
-        .telemetry()
-    )
-
-    recommendation = (
-        observe_thermal_fan_policy(
-            telemetry
-        )
-    )
-
-    (
-        decision,
-        safety_telemetry,
-    ) = (
-        host_agent_runtime
-        .safety
-        .reconcile(
-            telemetry=telemetry,
-            source_classifier=(
-                fan_control_event_source
-            ),
-        )
-    )
-
-    if decision is not None:
-        thermal_authority.handle_fan_safety_transition(
-            telemetry=safety_telemetry,
-            telemetry_provider=fan_command_telemetry,
-            restore_automatic=(
-                restore_motherboard_fan_control
-            ),
-            publish_status=(
-                publish_fan_control_status
-            ),
-            record_commissioning_event=(
-                record_thermal_commissioning_event
-            ),
-        )
-
-        return decision
-
-    return thermal_authority.reconcile(
-        recommendation,
-        telemetry=telemetry,
-        runtime_status_provider=(
-            fan_control_runtime.status_payload
-        ),
-        telemetry_provider=fan_command_telemetry,
-        restore_automatic=(
-            restore_motherboard_fan_control
-        ),
+    return fan_reconciliation_coordinator.reconcile(
         publish_status=publish_fan_control_status,
-        record_fan_event=record_fan_control_event,
-        record_commissioning_event=(
-            record_thermal_commissioning_event
-        ),
     )
 
 def set_thermal_operator_arm_state(
@@ -962,6 +906,7 @@ def response_handler(command, data):
 def main():
     global lcd, menu_item
     global host_agent_runtime
+    global fan_reconciliation_coordinator
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
@@ -1036,6 +981,26 @@ def main():
             application_hooks=(
                 host_agent_application_hooks
             ),
+        )
+
+        fan_reconciliation_coordinator = (
+            HostFanReconciliationCoordinator(
+                fan_runtime=fan_control_runtime,
+                safety=host_agent_runtime.safety,
+                thermal_observer=(
+                    host_bootstrap.thermal_observer
+                ),
+                thermal_authority=thermal_authority,
+                fan_event_source=(
+                    host_bootstrap.fan_event_source
+                ),
+                record_fan_event=(
+                    host_bootstrap.record_fan_event
+                ),
+                record_commissioning_event=(
+                    host_bootstrap.record_commissioning_event
+                ),
+            )
         )
 
         host_agent_runtime.start()

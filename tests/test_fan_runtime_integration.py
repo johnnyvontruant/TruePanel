@@ -233,6 +233,15 @@ def test_lcd_records_reconcile_source_from_classifier():
     )
 
 
+def test_lcd_delegates_fan_reconciliation_to_host():
+    runtime = Path("lcd-menu.py").read_text()
+
+    assert "HostFanReconciliationCoordinator" in runtime
+    assert "fan_reconciliation_coordinator.reconcile(" in runtime
+    assert "host_agent_runtime.safety.reconcile(" not in runtime
+    assert "thermal_authority.reconcile(" not in runtime
+
+
 def test_lcd_wires_fan_control_status_page():
     text = Path("lcd-menu.py").read_text()
 
