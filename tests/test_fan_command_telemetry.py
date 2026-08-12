@@ -8,6 +8,12 @@ def test_fan_command_telemetry_uses_shared_hardware_temperature_provider():
         encoding="utf-8"
     )
 
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
     hardware_provider = Path(
         "truepanel/hardware/drive_temperatures.py"
     ).read_text(
@@ -22,32 +28,32 @@ def test_fan_command_telemetry_uses_shared_hardware_temperature_provider():
 
     assert (
         "DriveTemperatureProvider"
-        in runtime
+        not in runtime
     )
 
     assert (
-        "host_drive_temperature_provider = ("
-        in runtime
+        "HostFanTelemetryProvider"
+        not in runtime
     )
 
     assert (
-        "DriveTemperatureProvider()"
-        in runtime
+        "DriveTemperatureProvider"
+        in bootstrap
     )
 
     assert (
-        "HostFanTelemetryProvider("
-        in runtime
+        "drive_temperature_provider_factory"
+        in bootstrap
+    )
+
+    assert (
+        "telemetry_factory=HostFanTelemetryProvider"
+        in bootstrap
     )
 
     assert (
         "temperature_provider=("
-        in runtime
-    )
-
-    assert (
-        "host_drive_temperature_provider"
-        in runtime
+        in bootstrap
     )
 
     assert (
@@ -77,7 +83,12 @@ def test_fan_command_telemetry_uses_shared_hardware_temperature_provider():
     block = runtime[start:end]
 
     assert (
-        "host_fan_telemetry_provider"
+        "host_bootstrap"
+        in block
+    )
+
+    assert (
+        ".telemetry"
         in block
     )
 
