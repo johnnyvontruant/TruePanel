@@ -48,6 +48,14 @@ def test_host_thermal_observer_reads_runtime_status():
         "",
     )
 
+    compact_bootstrap = bootstrap.replace(
+        "\n",
+        "",
+    ).replace(
+        " ",
+        "",
+    )
+
     assert (
         "fan_control_runtime.status_payload()"
         not in compact_runtime
@@ -55,7 +63,7 @@ def test_host_thermal_observer_reads_runtime_status():
 
     assert (
         "lambda:fan_runtime.status_payload()"
-        in bootstrap.replace("\n", "").replace(" ", "")
+        in compact_bootstrap
     )
 
     assert (
