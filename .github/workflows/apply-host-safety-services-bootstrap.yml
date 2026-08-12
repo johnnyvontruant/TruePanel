@@ -99,7 +99,7 @@ jobs:
           text = path.read_text(encoding='utf-8')
           addition = '''\n\ndef test_lcd_delegates_host_safety_service_assembly():\n    runtime = source()\n\n    bootstrap = Path(\n        "truepanel/host/bootstrap.py"\n    ).read_text(\n        encoding="utf-8"\n    )\n\n    assert "HostAgentSafetyServices" not in runtime\n    assert "host_bootstrap.safety_services(" in runtime\n    assert "HostAgentSafetyServices" in bootstrap\n    assert "def safety_services(" in bootstrap\n    assert "fan_telemetry_provider=(" in bootstrap\n    assert "fan_status_publisher=(" in bootstrap\n    assert "fan_event_recorder=(" in bootstrap\n    assert (\n        "thermal_control_handler=("\n        "\\n                    set_thermal_operator_arm_state"\n        in runtime\n    )\n'''
           if 'def test_lcd_delegates_host_safety_service_assembly():' not in text:
-              text = text.rstrip() + addition + '\n'
+              text = text.rstrip() + addition.rstrip() + '\n'
 
           path.write_text(text, encoding='utf-8')
 
