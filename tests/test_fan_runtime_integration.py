@@ -198,8 +198,12 @@ def test_lcd_wires_fan_control_status_page():
     assert "fan_control_page" in text
     assert "def show_fan_control():" in text
     assert (
-        "host_bootstrap.status_bridge.read("
+        "host_agent_runtime.read_fan_status("
         in text
+    )
+    assert (
+        "host_bootstrap.status_bridge.read("
+        not in text
     )
 
 
