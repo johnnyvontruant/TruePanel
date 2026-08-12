@@ -1,0 +1,199 @@
+name: Apply Host runtime status read
+
+on:
+  push:
+    branches:
+      - agent/host-runtime-status-read
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ !contains(github.event.head_commit.message, '[host-status-read]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/host-runtime-status-read
+          fetch-depth: 0
+
+      - name: Route fan status reads through Host runtime
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('truepanel/host/hooks.py')
+          text = path.read_text(encoding='utf-8')
+          alias_anchor = 'FanStatusPublisher = Callable[..., Any]\n\n'
+          alias = 'FanStatusReader = Callable[..., Mapping[str, Any] | None]\n\n'
+          if alias not in text:
+              if alias_anchor not in text:
+                  raise SystemExit('status reader alias anchor not found')
+              text = text.replace(alias_anchor, alias_anchor + alias, 1)
+
+          field_anchor = '    fan_status_publisher: FanStatusPublisher | None = None\n'
+          field = '    fan_status_reader: FanStatusReader | None = None\n'
+          if field not in text:
+              if field_anchor not in text:
+                  raise SystemExit('status reader service anchor not found')
+              text = text.replace(field_anchor, field_anchor + field, 1)
+
+          export_anchor = '    "FanStatusPublisher",\n'
+          if '    "FanStatusReader",\n' not in text:
+              if export_anchor not in text:
+                  raise SystemExit('status reader export anchor not found')
+              text = text.replace(
+                  export_anchor,
+                  export_anchor + '    "FanStatusReader",\n',
+                  1,
+              )
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('truepanel/host/bootstrap.py')
+          text = path.read_text(encoding='utf-8')
+          method_anchor = '    def build_thermal_control_handler(\n'
+          method = '''    def read_fan_status(\n        self,\n        *,\n        max_age: float = 30.0,\n    ) -> dict[str, Any] | None:\n        """Read one non-authoritative Host fan/thermal status snapshot."""\n\n        return self.status_bridge.read(\n            max_age=max_age\n        )\n\n'''
+          if '    def read_fan_status(\n' not in text:
+              if method_anchor not in text:
+                  raise SystemExit('bootstrap status reader method anchor not found')
+              text = text.replace(method_anchor, method + method_anchor, 1)
+
+          services_anchor = '''            fan_status_publisher=(\n                self.publish_fan_status\n            ),\n'''
+          services_field = '''            fan_status_reader=(\n                self.read_fan_status\n            ),\n'''
+          if '            fan_status_reader=(\n' not in text:
+              if services_anchor not in text:
+                  raise SystemExit('bootstrap status reader service anchor not found')
+              text = text.replace(
+                  services_anchor,
+                  services_anchor + services_field,
+                  1,
+              )
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('truepanel/host/factory.py')
+          text = path.read_text(encoding='utf-8')
+          field_anchor = '''        safety=safety,\n        fan_reconciliation=fan_reconciliation,\n'''
+          field = '''        safety=safety,\n        fan_status_reader=(\n            safety_services.fan_status_reader\n        ),\n        fan_reconciliation=fan_reconciliation,\n'''
+          if '        fan_status_reader=(\n' not in text:
+              if field_anchor not in text:
+                  raise SystemExit('factory runtime status reader anchor not found')
+              text = text.replace(field_anchor, field, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('truepanel/host/runtime.py')
+          text = path.read_text(encoding='utf-8')
+          signature_anchor = '''        lcd_server_factory: Callable[[], Any | None],\n        fan_reconciliation: Any | None = None,\n'''
+          signature = '''        lcd_server_factory: Callable[[], Any | None],\n        fan_status_reader: Callable[..., Any] | None = None,\n        fan_reconciliation: Any | None = None,\n'''
+          if '        fan_status_reader: Callable[..., Any] | None = None,\n' not in text:
+              if signature_anchor not in text:
+                  raise SystemExit('runtime status reader signature anchor not found')
+              text = text.replace(signature_anchor, signature, 1)
+
+          init_anchor = '''        self._safety = safety\n        self._fan_reconciliation = fan_reconciliation\n'''
+          init = '''        self._safety = safety\n        self._fan_status_reader = fan_status_reader\n        self._fan_reconciliation = fan_reconciliation\n'''
+          if '        self._fan_status_reader = fan_status_reader\n' not in text:
+              if init_anchor not in text:
+                  raise SystemExit('runtime status reader init anchor not found')
+              text = text.replace(init_anchor, init, 1)
+
+          method_anchor = '    def fan_telemetry(self) -> Any:\n'
+          method = '''    def read_fan_status(\n        self,\n        *,\n        max_age: float = 30.0,\n    ) -> Any:\n        """Read the latest Host-published fan/thermal status snapshot."""\n\n        if self._fan_status_reader is None:\n            return None\n\n        return self._fan_status_reader(\n            max_age=max_age\n        )\n\n'''
+          if '    def read_fan_status(\n' not in text:
+              if method_anchor not in text:
+                  raise SystemExit('runtime status reader method anchor not found')
+              text = text.replace(method_anchor, method + method_anchor, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('lcd-menu.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''def show_fan_control():\n    status = host_bootstrap.status_bridge.read(\n        max_age=30.0\n    )\n\n    lcd.clear()\n'''
+          new = '''def show_fan_control():\n    status = (\n        host_agent_runtime.read_fan_status(\n            max_age=30.0\n        )\n        if host_agent_runtime is not None\n        else None\n    )\n\n    lcd.clear()\n'''
+          if old not in text:
+              raise SystemExit('LCD fan status read anchor not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+
+      - name: Update status-read ownership tests
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('tests/test_host_hooks.py')
+          text = path.read_text(encoding='utf-8')
+          anchor = '    assert services.fan_status_publisher is None\n'
+          addition = '    assert services.fan_status_reader is None\n'
+          if addition not in text:
+              if anchor not in text:
+                  raise SystemExit('Host hooks status-reader anchor not found')
+              text = text.replace(anchor, anchor + addition, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_host_bootstrap.py')
+          text = path.read_text(encoding='utf-8')
+          anchor = '''    assert (\n        services.fan_status_publisher\n        == bootstrap.publish_fan_status\n    )\n'''
+          addition = '''    assert (\n        services.fan_status_reader\n        == bootstrap.read_fan_status\n    )\n'''
+          if 'services.fan_status_reader' not in text:
+              if anchor not in text:
+                  raise SystemExit('bootstrap services status-reader anchor not found')
+              text = text.replace(anchor, anchor + addition, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_host_runtime.py')
+          text = path.read_text(encoding='utf-8')
+          addition = '''\n\ndef test_runtime_exposes_read_only_fan_status():\n    events = []\n    reads = []\n\n    def read_status(*, max_age=30.0):\n        reads.append(max_age)\n        return {"active_profile": "automatic"}\n\n    runtime = HostAgentRuntime(\n        fan_runtime=FakeFanRuntime(events),\n        safety=object(),\n        fan_status_reader=read_status,\n        fan_server_factory=lambda: None,\n        lcd_server_factory=lambda: None,\n    )\n\n    assert runtime.read_fan_status(max_age=12.0) == {\n        "active_profile": "automatic"\n    }\n    assert reads == [12.0]\n\n\ndef test_runtime_fan_status_read_fails_closed_without_reader():\n    events = []\n    runtime = HostAgentRuntime(\n        fan_runtime=FakeFanRuntime(events),\n        safety=object(),\n        fan_server_factory=lambda: None,\n        lcd_server_factory=lambda: None,\n    )\n\n    assert runtime.read_fan_status() is None\n'''
+          if 'def test_runtime_exposes_read_only_fan_status():' not in text:
+              text = text.rstrip() + addition.rstrip() + '\n'
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_fan_runtime_integration.py')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              '    assert "host_bootstrap.status_bridge.read(" in runtime\n',
+              '    assert "host_bootstrap.status_bridge.read(" not in runtime\n    assert "host_agent_runtime.read_fan_status(" in runtime\n',
+              2,
+          )
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_host_bootstrap_wiring.py')
+          text = path.read_text(encoding='utf-8')
+          addition = '''\n\ndef test_lcd_reads_fan_status_through_host_runtime():\n    runtime = source()\n    bootstrap = Path(\n        "truepanel/host/bootstrap.py"\n    ).read_text(encoding="utf-8")\n    factory = Path(\n        "truepanel/host/factory.py"\n    ).read_text(encoding="utf-8")\n    host_runtime = Path(\n        "truepanel/host/runtime.py"\n    ).read_text(encoding="utf-8")\n\n    assert "host_bootstrap.status_bridge.read(" not in runtime\n    assert "host_agent_runtime.read_fan_status(" in runtime\n    assert "def read_fan_status(" in bootstrap\n    assert "fan_status_reader=(" in bootstrap\n    assert "safety_services.fan_status_reader" in factory\n    assert "def read_fan_status(" in host_runtime\n'''
+          if 'def test_lcd_reads_fan_status_through_host_runtime():' not in text:
+              text = text.rstrip() + addition.rstrip() + '\n'
+          path.write_text(text, encoding='utf-8')
+
+      - name: Validate migration
+        run: |
+          python -m compileall -q \
+            truepanel/host/hooks.py \
+            truepanel/host/bootstrap.py \
+            truepanel/host/factory.py \
+            truepanel/host/runtime.py \
+            lcd-menu.py \
+            tests/test_host_hooks.py \
+            tests/test_host_bootstrap.py \
+            tests/test_host_runtime.py \
+            tests/test_fan_runtime_integration.py \
+            tests/test_host_bootstrap_wiring.py
+          git diff --check
+
+      - name: Commit Host runtime status-read ownership
+        run: |
+          rm .github/workflows/apply-host-runtime-status-read.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            truepanel/host/hooks.py \
+            truepanel/host/bootstrap.py \
+            truepanel/host/factory.py \
+            truepanel/host/runtime.py \
+            lcd-menu.py \
+            tests/test_host_hooks.py \
+            tests/test_host_bootstrap.py \
+            tests/test_host_runtime.py \
+            tests/test_fan_runtime_integration.py \
+            tests/test_host_bootstrap_wiring.py \
+            .github/workflows/apply-host-runtime-status-read.yml
+          git diff --cached --check
+          git commit -m '[host-status-read] Route fan status reads through Host runtime'
+          git push origin HEAD:agent/host-runtime-status-read
