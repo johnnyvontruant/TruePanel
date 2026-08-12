@@ -23,6 +23,7 @@ from .runtime import HostAgentRuntime
 from .safety import HostAgentSafetyCoordinator
 from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
+from .thermal_observer import HostThermalObserver
 
 __all__ = [
     "build_host_agent_bootstrap",
@@ -33,9 +34,9 @@ __all__ = [
     "HostAgentSafetyCoordinator",
     "HostAgentSafetyServices",
     "HostThermalAuthority",
+    "HostThermalObserver",
     "HostCapability",
     "build_host_agent_runtime",
     "capabilities_from_compatibility",
     "HostFanTelemetryProvider",
 ]
-
