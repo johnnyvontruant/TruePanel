@@ -36,13 +36,8 @@ from truepanel.hardware.lcd_display_status_bridge import (
 from truepanel.hardware.lcd_reader_status_bridge import (
     LCDReaderStatusBridge,
 )
-from truepanel.hardware.thermal_fan_policy import (
-    ThermalFanPolicy,
-)
 from truepanel.history import (
     TelemetryRecorder,
-    ThermalObserverHistory,
-    event_from_recommendation,
 )
 from truepanel.host import (
     HostAgentApplicationHooks,
@@ -116,30 +111,6 @@ thermal_commissioning_history = (
     host_bootstrap.thermal_commissioning_history
 )
 
-thermal_observer_history = ThermalObserverHistory(
-    config.get(
-        "history",
-        {},
-    ).get(
-        "thermal_observer_path",
-        (
-            "/var/lib/truepanel/history/"
-            "thermal-observer.jsonl"
-        ),
-    ),
-    enabled=bool(
-        config.get(
-            "history",
-            {},
-        ).get(
-            "enabled",
-            True,
-        )
-    ),
-)
-
-thermal_observer_last_signature = None
-
 buzzer = Buzzer(config.get("buzzer", {}))
 bay_led_startup_animation = (
     build_bay_led_startup_animation(
@@ -172,58 +143,6 @@ thermal_policy_config = (
     )
 )
 
-thermal_policy_mode = str(
-    thermal_policy_config.get(
-        "mode",
-        "observe_only",
-    )
-).strip().lower()
-
-if thermal_policy_mode not in {
-    "disabled",
-    "observe_only",
-    "automatic_control",
-}:
-    LOGGER.warning(
-        "Unknown thermal policy mode %r; "
-        "using observe_only.",
-        thermal_policy_mode,
-    )
-    thermal_policy_mode = "observe_only"
-
-thermal_fan_policy = ThermalFanPolicy(
-    balanced_temperature_c=float(
-        thermal_policy_config.get(
-            "balanced_temperature_c",
-            42,
-        )
-    ),
-    cooling_boost_temperature_c=float(
-        thermal_policy_config.get(
-            "cooling_boost_temperature_c",
-            50,
-        )
-    ),
-    afterburners_temperature_c=float(
-        thermal_policy_config.get(
-            "afterburners_temperature_c",
-            60,
-        )
-    ),
-    hysteresis_c=float(
-        thermal_policy_config.get(
-            "hysteresis_c",
-            3,
-        )
-    ),
-    minimum_dwell_seconds=float(
-        thermal_policy_config.get(
-            "minimum_dwell_seconds",
-            30,
-        )
-    ),
-)
-
 # Thermal authority is deliberately ephemeral.
 # Every TruePanel process starts disarmed and in dry-run mode.
 thermal_command_cooldown_seconds = float(
@@ -248,8 +167,6 @@ _commissioned_thermal_safety_fingerprint = str(
 thermal_authority = (
     host_bootstrap.thermal_authority
 )
-
-thermal_observer_previous_profile = "automatic"
 
 
 def publish_lcd_reader_status():
@@ -321,94 +238,14 @@ def observe_thermal_fan_policy(
     not request profiles, invoke the command socket, or write fan hardware.
     """
 
-    global thermal_observer_last_signature
-    global thermal_observer_previous_profile
-
     if telemetry is None:
         telemetry = fan_command_telemetry()
 
-    if thermal_policy_mode == "disabled":
-        recommendation = (
-            thermal_fan_policy.evaluate(
-                (),
-                telemetry_fresh=False,
-            )
-        )
-    else:
-        recommendation = (
-            thermal_fan_policy.evaluate(
-                telemetry.get(
-                    "temperatures_c",
-                    (),
-                ),
-                telemetry_fresh=bool(
-                    telemetry.get(
-                        "telemetry_fresh",
-                        False,
-                    )
-                ),
-            )
-        )
-
-    thermal_authority.current_recommendation = recommendation
-
-    signature = (
-        recommendation
-        .recommended_profile
-        .value,
-        bool(
-            recommendation.telemetry_valid
-        ),
+    return (
+        host_bootstrap
+        .thermal_observer
+        .observe(telemetry)
     )
-
-    if (
-        signature
-        != thermal_observer_last_signature
-    ):
-        runtime_status = (
-            fan_control_runtime
-            .status_payload()
-        )
-
-        try:
-            thermal_observer_history.append(
-                event_from_recommendation(
-                    recommendation,
-                    active_profile=(
-                        runtime_status.get(
-                            "active_profile",
-                            "automatic",
-                        )
-                    ),
-                    control_authority=(
-                        runtime_status.get(
-                            "control_authority",
-                            "automatic",
-                        )
-                    ),
-                    policy_mode=thermal_policy_mode,
-                    previous_recommended_profile=(
-                        thermal_observer_previous_profile
-                    ),
-                )
-            )
-        except Exception:
-            LOGGER.exception(
-                "Could not append thermal "
-                "observer history"
-            )
-
-        thermal_observer_last_signature = (
-            signature
-        )
-        thermal_observer_previous_profile = (
-            recommendation
-            .recommended_profile
-            .value
-        )
-
-    return recommendation
-
 
 
 def record_thermal_commissioning_event(
@@ -897,7 +734,6 @@ def show_fan_pwm():
     lcd.clear()
     lcd.write(0, fan_pwm_page())
 
-
 def cached_display_state():
     """
     Return the latest collector snapshot without refreshing hardware.
@@ -1020,7 +856,6 @@ def next_alert_history():
 def show_alert_transition(frame):
     lcd.clear()
     lcd.write(0, frame.lines)
-
 def request_shutdown(signum=None, frame=None):
     global shutdown_requested
     shutdown_requested = True
