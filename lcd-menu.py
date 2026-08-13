@@ -24,11 +24,13 @@ from truepanel.hardware.lcd_display_status_bridge import (
 from truepanel.hardware.lcd_reader_status_bridge import (
     LCDReaderStatusBridge,
 )
+from truepanel.hardware.lcd_service import (
+    build_lcd_command_server,
+)
 from truepanel.history import (
     TelemetryRecorder,
 )
 from truepanel.host import (
-    HostAgentApplicationHooks,
     HostAgentStatusClient,
     build_host_agent_bootstrap,
     build_host_agent_runtime_from_bootstrap,
@@ -80,6 +82,7 @@ host_bootstrap = build_host_agent_bootstrap(
     config
 )
 host_agent_runtime = None
+lcd_command_server = None
 host_status_client = HostAgentStatusClient()
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
@@ -717,6 +720,7 @@ def response_handler(command, data):
 def main():
     global lcd, menu_item
     global host_agent_runtime
+    global lcd_command_server
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
@@ -746,8 +750,20 @@ def main():
     lcd.clear()
 
     try:
-        host_agent_application_hooks = HostAgentApplicationHooks(
-            lcd_button_handler=(
+        host_agent_runtime = (
+            build_host_agent_runtime_from_bootstrap(
+                bootstrap=host_bootstrap,
+            )
+        )
+
+        host_agent_runtime.service_cycle(
+            reconcile=False
+        )
+
+        host_agent_runtime.start()
+
+        lcd_command_server = build_lcd_command_server(
+            submit_button=(
                 lambda button_mask, source: (
                     lcd.submit_button_event(
                         button_mask,
@@ -758,21 +774,8 @@ def main():
                 else False
             ),
         )
-
-        host_agent_runtime = (
-            build_host_agent_runtime_from_bootstrap(
-                bootstrap=host_bootstrap,
-                application_hooks=(
-                    host_agent_application_hooks
-                ),
-            )
-        )
-
-        host_agent_runtime.service_cycle(
-            reconcile=False
-        )
-
-        host_agent_runtime.start()
+        if lcd_command_server is not None:
+            lcd_command_server.start()
 
         if bay_led_startup_animation is not None:
             bay_led_startup_animation.run()
@@ -802,6 +805,16 @@ def main():
                     menu_item + 1
                 ) % len(menu)
     finally:
+        if lcd_command_server is not None:
+            try:
+                lcd_command_server.stop()
+            except Exception:
+                LOGGER.exception(
+                    "LCD command server shutdown failed"
+                )
+            finally:
+                lcd_command_server = None
+
         if host_agent_runtime is not None:
             try:
                 host_agent_runtime.shutdown()
