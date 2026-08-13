@@ -57,8 +57,7 @@ def test_application_hooks_hold_only_lcd_dispatch():
     )
 
     end = text.index(
-        "host_agent_runtime = "
-        "build_host_agent_runtime(",
+        "host_agent_runtime = (",
         start,
     )
 
@@ -73,26 +72,17 @@ def test_application_hooks_hold_only_lcd_dispatch():
 
 def test_factory_receives_explicit_boundaries():
     text = source()
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(encoding="utf-8")
 
-    assert (
-        "safety_services=("
-        in text
-    )
-
-    assert (
-        "host_agent_safety_services"
-        in text
-    )
-
-    assert (
-        "application_hooks=("
-        in text
-    )
-
-    assert (
-        "host_agent_application_hooks"
-        in text
-    )
+    assert "safety_services=(" not in text
+    assert "host_agent_safety_services" not in text
+    assert "application_hooks=(" in text
+    assert "host_agent_application_hooks" in text
+    assert "bootstrap=host_bootstrap" in text
+    assert "fan_runtime=bootstrap.fan_runtime" in factory
+    assert "safety_services=bootstrap.safety_services()" in factory
 
 
 def test_lcd_runtime_has_no_command_implementation_classes():

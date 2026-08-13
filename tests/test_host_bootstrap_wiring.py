@@ -197,15 +197,16 @@ def test_lcd_uses_host_owned_status_publisher():
 
 def test_lcd_delegates_host_safety_service_assembly():
     runtime = source()
-
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    ).read_text(encoding="utf-8")
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(encoding="utf-8")
 
     assert "HostAgentSafetyServices" not in runtime
-    assert "host_bootstrap.safety_services(" in runtime
+    assert "host_bootstrap.safety_services(" not in runtime
+    assert "bootstrap.safety_services()" in factory
     assert "HostAgentSafetyServices" in bootstrap
     assert "def safety_services(" in bootstrap
     assert "fan_telemetry_provider=(" in bootstrap
@@ -224,7 +225,8 @@ def test_lcd_delegates_thermal_action_binding_to_host():
     ).read_text(encoding="utf-8")
 
     assert "set_thermal_operator_arm_state" not in runtime
-    assert "host_bootstrap.safety_services()" in runtime
+    assert "host_bootstrap.safety_services()" not in runtime
+    assert "bootstrap.safety_services()" in factory
     assert "build_thermal_control_handler" in bootstrap
     assert "thermal_control_handler_factory" in factory
     assert "bind_thermal_control_handler(" in factory
