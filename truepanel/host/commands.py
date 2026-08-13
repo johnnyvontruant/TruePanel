@@ -15,6 +15,10 @@ from typing import Any
 from truepanel.compatibility import collect_compatibility
 from truepanel.config.loader import load_config
 
+from .acceptance import (
+    build_host_acceptance_report,
+    format_host_acceptance_report,
+)
 from .capabilities import (
     HostAgentCapabilities,
     capabilities_from_compatibility,
@@ -109,6 +113,40 @@ def add_host_subcommands(subcommands) -> None:
         "--config",
         default="truepanel.yaml",
         dest="host_fan_safety_config",
+        help=(
+            "TruePanel configuration path; "
+            "defaults to truepanel.yaml"
+        ),
+    )
+
+    acceptance = host_commands.add_parser(
+        "acceptance",
+        help=(
+            "Aggregate passive Host readiness and "
+            "motherboard fan-safety checks"
+        ),
+    )
+
+    acceptance.add_argument(
+        "--json",
+        action="store_true",
+        dest="host_acceptance_json",
+        help="Output machine-readable JSON",
+    )
+
+    acceptance.add_argument(
+        "--root",
+        dest="host_acceptance_root",
+        help=(
+            "Filesystem root containing deployed service state; "
+            "defaults to the running host"
+        ),
+    )
+
+    acceptance.add_argument(
+        "--config",
+        default="truepanel.yaml",
+        dest="host_acceptance_config",
         help=(
             "TruePanel configuration path; "
             "defaults to truepanel.yaml"
@@ -296,6 +334,46 @@ def run_host_fan_safety(
     return 0 if report.safe else 1
 
 
+def run_host_acceptance(
+    *,
+    json_output: bool = False,
+    root: str | Path = "/",
+    config_path: str | Path = "truepanel.yaml",
+) -> int:
+    """Aggregate passive Host checks used by clean-install acceptance."""
+
+    readiness = collect_host_readiness(
+        root=root
+    )
+    config = load_config(
+        config_path
+    )
+    fan_safety = collect_host_fan_safety(
+        config
+    )
+    report = build_host_acceptance_report(
+        readiness,
+        fan_safety,
+    )
+
+    if json_output:
+        print(
+            json.dumps(
+                report.to_dict(),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(
+            format_host_acceptance_report(
+                report
+            )
+        )
+
+    return 0 if report.accepted else 1
+
+
 def run_host_cutover_plan(
     *,
     json_output: bool = False,
@@ -405,6 +483,36 @@ def handle_host_command(args) -> int | None:
 
     if (
         getattr(args, "host_command", None)
+        == "acceptance"
+    ):
+        root = getattr(
+            args,
+            "host_acceptance_root",
+            None,
+        )
+
+        return run_host_acceptance(
+            json_output=bool(
+                getattr(
+                    args,
+                    "host_acceptance_json",
+                    False,
+                )
+            ),
+            root=(
+                Path(root).resolve()
+                if root
+                else Path("/")
+            ),
+            config_path=getattr(
+                args,
+                "host_acceptance_config",
+                "truepanel.yaml",
+            ),
+        )
+
+    if (
+        getattr(args, "host_command", None)
         == "cutover-plan"
     ):
         root = getattr(
@@ -435,6 +543,7 @@ __all__ = [
     "add_host_subcommands",
     "handle_host_command",
     "print_host_capabilities",
+    "run_host_acceptance",
     "run_host_capabilities",
     "run_host_cutover_plan",
     "run_host_fan_safety",
