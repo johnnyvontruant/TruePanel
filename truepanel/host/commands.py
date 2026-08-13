@@ -1,8 +1,8 @@
 """
 CLI commands for the TruePanel host-agent boundary.
 
-Host capability commands are passive. They describe interfaces discovered by
-the compatibility survey and never grant hardware-control authority.
+Host inspection commands are passive. They describe discovered capabilities or
+standalone deployment readiness and never grant hardware-control authority.
 """
 
 from __future__ import annotations
@@ -17,6 +17,10 @@ from .capabilities import (
     HostAgentCapabilities,
     capabilities_from_compatibility,
 )
+from .readiness import (
+    collect_host_readiness,
+    format_host_readiness,
+)
 
 
 def add_host_subcommands(subcommands) -> None:
@@ -24,7 +28,7 @@ def add_host_subcommands(subcommands) -> None:
 
     host = subcommands.add_parser(
         "host",
-        help="Inspect TruePanel host-agent capabilities",
+        help="Inspect TruePanel host-agent state",
     )
 
     host_commands = host.add_subparsers(
@@ -48,6 +52,30 @@ def add_host_subcommands(subcommands) -> None:
         dest="host_capabilities_root",
         help=(
             "Root filesystem to inspect; "
+            "defaults to the running host"
+        ),
+    )
+
+    readiness = host_commands.add_parser(
+        "readiness",
+        help=(
+            "Report passive standalone Host Agent "
+            "deployment readiness"
+        ),
+    )
+
+    readiness.add_argument(
+        "--json",
+        action="store_true",
+        dest="host_readiness_json",
+        help="Output machine-readable JSON",
+    )
+
+    readiness.add_argument(
+        "--root",
+        dest="host_readiness_root",
+        help=(
+            "Filesystem root containing deployed service state; "
             "defaults to the running host"
         ),
     )
@@ -148,6 +176,35 @@ def run_host_capabilities(
     return 0
 
 
+def run_host_readiness(
+    *,
+    json_output: bool = False,
+    root: str | Path = "/",
+) -> int:
+    """Report passive standalone Host Agent deployment readiness."""
+
+    report = collect_host_readiness(
+        root=root
+    )
+
+    if json_output:
+        print(
+            json.dumps(
+                report.to_dict(),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(
+            format_host_readiness(
+                report
+            )
+        )
+
+    return 0 if report.prepared_safely else 1
+
+
 def handle_host_command(args) -> int | None:
     """Dispatch host-agent CLI commands."""
 
@@ -179,6 +236,31 @@ def handle_host_command(args) -> int | None:
             ),
         )
 
+    if (
+        getattr(args, "host_command", None)
+        == "readiness"
+    ):
+        root = getattr(
+            args,
+            "host_readiness_root",
+            None,
+        )
+
+        return run_host_readiness(
+            json_output=bool(
+                getattr(
+                    args,
+                    "host_readiness_json",
+                    False,
+                )
+            ),
+            root=(
+                Path(root).resolve()
+                if root
+                else Path("/")
+            ),
+        )
+
     return 0
 
 
@@ -187,4 +269,5 @@ __all__ = [
     "handle_host_command",
     "print_host_capabilities",
     "run_host_capabilities",
+    "run_host_readiness",
 ]
