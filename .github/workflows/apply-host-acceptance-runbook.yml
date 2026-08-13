@@ -19,50 +19,7 @@ jobs:
           ref: docs/host-acceptance-runbook
 
       - name: Update clean-install acceptance checkpoints
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          doc = Path("docs/CLEAN_INSTALL_VALIDATION.md")
-          text = doc.read_text(encoding="utf-8")
-
-          fan = '''sudo ./bin/truepanel host fan-safety \\\n  --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml\n'''
-          acceptance = '''sudo ./bin/truepanel host acceptance \\\n  --root / \\\n  --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml\n'''
-
-          assert text.count(fan) >= 3
-          text = text.replace(
-              fan,
-              fan + acceptance,
-              3,
-          )
-
-          old = '''- `host fan-safety` confirms motherboard Automatic mode when fan control is enabled;\n- `host cutover-plan` reports `Cutover execution: DISABLED`.\n'''
-          new = '''- `host fan-safety` confirms motherboard Automatic mode when fan control is enabled;\n- `host acceptance` reports `Host acceptance: PASS`;\n- `host cutover-plan` reports `Cutover execution: DISABLED`.\n'''
-          assert text.count(old) == 1
-          text = text.replace(old, new, 1)
-
-          old = '''- Host readiness result;\n- fan-safety result;\n'''
-          new = '''- Host readiness result;\n- fan-safety result;\n- Host acceptance result;\n'''
-          assert text.count(old) == 1
-          text = text.replace(old, new, 1)
-
-          doc.write_text(text, encoding="utf-8")
-          PY
-
-      - name: Strengthen documentation contract
-        run: |
-          cat >> tests/test_clean_install_documentation.py <<'PY'
-
-
-def test_clean_install_runbook_uses_host_acceptance_gate():
-    text = Path(
-        "docs/CLEAN_INSTALL_VALIDATION.md"
-    ).read_text(encoding="utf-8")
-
-    assert text.count("host acceptance") >= 4
-    assert "Host acceptance: PASS" in text
-    assert "Host acceptance result" in text
-PY
+        run: python3 .github/update_host_acceptance_runbook.py
 
       - name: Validate documentation update
         run: |
@@ -75,6 +32,7 @@ PY
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/CLEAN_INSTALL_VALIDATION.md tests/test_clean_install_documentation.py
           git commit -m "Use Host acceptance in clean-install validation"
+          git rm .github/update_host_acceptance_runbook.py
           git rm .github/workflows/apply-host-acceptance-runbook.yml
-          git commit -m "Remove Host acceptance runbook helper"
+          git commit -m "Remove Host acceptance runbook helpers"
           git push origin HEAD:docs/host-acceptance-runbook
