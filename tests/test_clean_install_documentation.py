@@ -150,3 +150,30 @@ def test_clean_install_runbook_uses_host_acceptance_gate():
     assert text.count("host acceptance") >= 4
     assert "Host acceptance: PASS" in text
     assert "Host acceptance result" in text
+
+
+def test_runbook_rehearses_uninstall_and_install_before_mutation():
+    text = read(RUNBOOK)
+
+    phase_2 = text.index("## Phase 2: Clean uninstall")
+    phase_3 = text.index("## Phase 3: Prove known residue is gone")
+    uninstall = text[phase_2:phase_3]
+
+    phase_4 = text.index("## Phase 4: Fresh install")
+    phase_5 = text.index("## Phase 5: Immediate post-install verification")
+    install = text[phase_4:phase_5]
+
+    assert "bash uninstall.sh" in uninstall
+    assert "--dry-run" in uninstall
+    assert uninstall.index("--dry-run") < uninstall.index("sudo bash uninstall.sh")
+    assert "no services were stopped" in uninstall
+    assert "no fan state changed" in uninstall
+    assert "no files were removed" in uninstall
+
+    assert "bash install.sh" in install
+    assert "--dry-run" in install
+    assert install.index("--dry-run") < install.index("sudo bash install.sh")
+    assert "no directories were created" in install
+    assert "no files were copied or written" in install
+    assert "no dependencies were installed" in install
+    assert "no services were changed" in install

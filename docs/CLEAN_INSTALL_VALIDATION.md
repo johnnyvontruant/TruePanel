@@ -101,7 +101,17 @@ python3 truepanel.py compatibility \
 
 ## Phase 2: Clean uninstall
 
-Run uninstall from the external source checkout, not from the installed tree:
+Run the uninstall preview first from the external source checkout, not from the installed tree:
+
+```bash
+bash uninstall.sh \
+  --dry-run \
+  --root /mnt/POOL/DATASET/TruePanel
+```
+
+Inspect the complete plan and confirm the install root, services, Host ownership gate, fan Automatic verification gate, runtime files, and install tree are the intended targets. The preview must report that no services were stopped, no fan state changed, and no files were removed.
+
+Then run the real uninstall with the same root:
 
 ```bash
 sudo bash uninstall.sh \
@@ -154,12 +164,22 @@ sudo systemctl cat truepanel-host-agent.service || true
 
 ## Phase 4: Fresh install from the recorded main commit
 
-From the clean external source checkout:
+From the clean external source checkout, rehearse the install before writing anything:
 
 ```bash
 git status --short
 git rev-parse HEAD
 python3 truepanel.py compatibility
+bash install.sh \
+  --dry-run \
+  --root /mnt/POOL/DATASET/TruePanel
+```
+
+Inspect the plan and confirm the source tree, persistent install root, configuration behavior, Python runtime setup, CLI wrapper, all three service units, Mission Control environment, systemd reload, and Doctor step are expected. The preview must report that no directories were created, no files were copied or written, no dependencies were installed, and no services were changed.
+
+Then run the real installer with the same root:
+
+```bash
 sudo bash install.sh \
   --root /mnt/POOL/DATASET/TruePanel
 ```
