@@ -34,8 +34,9 @@ Install root:
 
 Actions a real install would perform:
   Validate prerequisites: python3, rsync, systemctl
-  Create/preserve install root and synchronize the source tree
-  Create truepanel.yaml only when it does not already exist
+  Create/preserve install root and synchronize only managed source files
+  Exclude source-local config, secrets, virtualenvs, caches, history, and plugin state
+  Preserve an existing target truepanel.yaml; create the safe default only when target config is absent
   Create a Python virtual environment when supported and install requirements
   Create CLI wrapper: $bin_file
   Install LCD service: $SERVICE_FILE
@@ -147,9 +148,21 @@ mkdir -p "$INSTALL_DIR"
 echo "Copying files..."
 rsync -a --delete \
   --exclude ".git" \
+  --exclude ".env" \
+  --exclude ".venv" \
+  --exclude "venv" \
+  --exclude ".quality-venv" \
+  --exclude ".pytest_cache" \
+  --exclude ".ruff_cache" \
   --exclude "__pycache__" \
   --exclude "*.pyc" \
+  --exclude "*.egg-info" \
+  --exclude "truepanel.yaml" \
   --exclude "truepanel.backup-*" \
+  --exclude "var/history" \
+  --exclude "development/logs" \
+  --exclude "development/backups" \
+  --exclude "plugins/.truepanel-plugin-state.json" \
   "$SOURCE_ROOT/" "$INSTALL_DIR/"
 
 echo "Creating default configuration if needed..."
