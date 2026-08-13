@@ -23,7 +23,7 @@ def config(*, enabled=True, channels=None):
 
 def controller(tmp_path, modes):
     base = tmp_path / "device"
-    base.mkdir()
+    base.mkdir(parents=True)
 
     for channel, mode in modes.items():
         (base / f"pwm{channel}_enable").write_text(
