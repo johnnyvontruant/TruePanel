@@ -17,7 +17,6 @@ from truepanel.config.loader import load_config
 
 from .bootstrap import build_host_agent_bootstrap
 from .factory import build_host_agent_runtime_from_bootstrap
-from .hooks import HostAgentApplicationHooks
 
 RuntimeFactory = Callable[[], Any]
 DEFAULT_SERVICE_INTERVAL_SECONDS = 5.0
@@ -125,9 +124,6 @@ def build_production_runtime() -> Any:
 
     return build_host_agent_runtime_from_bootstrap(
         bootstrap=bootstrap,
-        application_hooks=(
-            HostAgentApplicationHooks()
-        ),
         owner_name="standalone-host-agent",
     )
 
