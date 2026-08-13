@@ -2,13 +2,13 @@
 
 ## Scope
 
-The native installer deploys TruePanel to an operator-selected persistent dataset path under `/mnt/`. The examples in this guide use `/mnt/POOL/DATASET/TruePanel`. The installer creates the CLI wrapper inside that installation root and installs `truepanel.service`.
+The native installer deploys TruePanel to an operator-selected persistent dataset path under `/mnt/`. The examples in this guide use `/mnt/POOL/DATASET/TruePanel`. The installer creates the CLI wrapper inside that installation root, installs the primary LCD and Mission Control service units, and lays down the dormant marker-gated standalone Host Agent unit without starting it.
 
 The reference platform is TrueNAS SCALE on a QNAP TVS-671. The installer may also work on compatible Debian-based systems, but physical hardware support must be verified separately.
 
 ## TrueNAS support boundary
 
-TrueNAS warns that configuration changes should be made through its Web UI, CLI, or API. TruePanel creates a systemd unit and writes under `/opt`, so it may fall outside the operating system's officially supported configuration path.
+TrueNAS warns that configuration changes should be made through its Web UI, CLI, or API. TruePanel therefore remains outside the operating system's officially supported application path. Persistent application state belongs under the explicitly selected `/mnt/...` installation root. System integration uses `/etc/systemd/system`, `/etc/default`, `/run/truepanel`, `/usr/local/bin`, and, for the reference POSTINIT deployment, transient `/opt` state.
 
 Use TruePanel with a current configuration backup and expect major TrueNAS upgrades to require service verification or reinstallation.
 
@@ -72,21 +72,32 @@ The installer:
 3. falls back to system Python when the TrueNAS Python environment cannot create a usable venv;
 4. verifies required imports;
 5. creates the CLI wrapper;
-6. creates the systemd service;
-7. runs `truepanel doctor`.
+6. creates the primary LCD and Mission Control service units;
+7. creates the dormant standalone Host Agent unit with its cutover-marker condition and no `[Install]` section;
+8. leaves all services stopped so activation remains an explicit operator action;
+9. runs `truepanel doctor`.
 
 ## Service management
 
+The installer does not start services automatically. Enable and start the two application services explicitly when the installation is ready to become active:
+
 ```bash
-sudo systemctl enable truepanel
-sudo systemctl start truepanel
-sudo systemctl restart truepanel
-sudo systemctl stop truepanel
-sudo systemctl status truepanel
-sudo journalctl -u truepanel -f
+sudo systemctl enable --now truepanel.service
+sudo systemctl enable --now truepanel-mission-control.service
 ```
 
-The service executes:
+Primary LCD service operations remain available individually:
+
+```bash
+sudo systemctl restart truepanel.service
+sudo systemctl stop truepanel.service
+sudo systemctl status truepanel.service
+sudo journalctl -u truepanel.service -f
+```
+
+`truepanel-host-agent.service` is installed only as a dormant future process boundary. Do not enable or start it during normal embedded operation. Its service unit requires `/run/truepanel/standalone-host-agent.enabled`, and standalone production activation remains separately locked in Python.
+
+The primary LCD service executes:
 
 ```text
 /mnt/POOL/DATASET/TruePanel/bin/truepanel run
@@ -144,8 +155,12 @@ See [Upgrade and rollback](UPGRADING.md) for the complete procedure and required
 sudo /bin/python3 -m compileall -q /mnt/POOL/DATASET/TruePanel/truepanel
 sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel version
 sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel doctor
-systemctl is-active truepanel
-sudo journalctl -u truepanel -n 80 --no-pager
+sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel host readiness
+sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel host fan-safety \
+  --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
+sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel host cutover-plan
+systemctl is-active truepanel.service
+sudo journalctl -u truepanel.service -n 80 --no-pager
 ```
 
 On the TVS-671 reference system, also verify:
@@ -162,9 +177,13 @@ sudo bash uninstall.sh \
   --root /mnt/POOL/DATASET/TruePanel
 ```
 
-The uninstaller stops and disables the service, removes the systemd unit, removes both current and legacy CLI wrapper paths, reloads systemd, and deletes `/mnt/POOL/DATASET/TruePanel`.
+The uninstaller stops the standalone Host Agent, primary LCD service, and Mission Control before cleanup. It refuses destructive cleanup while a managed service remains active or while the cross-process Host ownership lease is still held. After ownership is released, it runs the passive `host fan-safety` verifier and requires every configured controlled fan channel to be confirmed in motherboard Automatic mode before removing service files, runtime state, CLI wrappers, or the installation tree.
 
-Local repository clones, external firmware archives, and Git history are not removed.
+If fan restoration cannot be verified, uninstall fails closed and leaves the installation in place for diagnosis. Do not bypass that gate with manual file removal.
+
+After a successful safety check, uninstall removes all three TruePanel service units, the Mission Control environment file, known `/run/truepanel` marker/lock/socket/status artifacts, both current and legacy CLI wrapper paths, reloads systemd, and deletes `/mnt/POOL/DATASET/TruePanel`. Local repository clones, external firmware archives, and Git history are not removed.
+
+For the full clean-room uninstall/reinstall and reboot validation procedure, see [Clean-install validation](CLEAN_INSTALL_VALIDATION.md).
 
 ## Docker
 
@@ -249,14 +268,14 @@ Keep write mode disabled unless remote configuration is specifically required. T
 
 ### Service separation
 
-The two production services are independent:
+The two application services are independent:
 
 ```bash
-sudo systemctl status truepanel
-sudo systemctl status truepanel-mission-control
+sudo systemctl status truepanel.service
+sudo systemctl status truepanel-mission-control.service
 ```
 
-Restarting Mission Control does not restart the LCD True service. Restarting the LCD True service does not require restarting Mission Control.
+Restarting Mission Control does not restart the primary LCD service. Restarting the primary LCD service does not require restarting Mission Control. The separately installed `truepanel-host-agent.service` remains dormant while embedded Host ownership is in use.
 
 ## TVS-671 reference POSTINIT deployment
 
@@ -292,10 +311,13 @@ A value of `2` indicates motherboard automatic control.
 
 ### Reference services
 
-The POSTINIT script creates transient services:
+The POSTINIT script creates the two active application service units plus the dormant standalone Host Agent unit:
 
     truepanel.service
     truepanel-mission-control.service
+    truepanel-host-agent.service
+
+The standalone Host Agent unit remains marker-gated and inactive during the embedded reference deployment.
 
 Confirm their active runtime paths:
 
