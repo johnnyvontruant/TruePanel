@@ -1,0 +1,176 @@
+name: Apply installer source isolation
+
+on:
+  push:
+    branches:
+      - install/isolate-source-local-state
+    paths:
+      - .github/workflows/apply-installer-source-isolation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: install/isolate-source-local-state
+
+      - name: Isolate source-local state from installed tree
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("install.sh")
+          text = path.read_text(encoding="utf-8")
+
+          old = """  Create/preserve install root and synchronize the source tree\n  Create truepanel.yaml only when it does not already exist\n"""
+          new = """  Create/preserve install root and synchronize only managed source files\n  Exclude source-local config, secrets, virtualenvs, caches, history, and plugin state\n  Preserve an existing target truepanel.yaml; create the safe default only when target config is absent\n"""
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+
+          old = '''rsync -a --delete \\\n  --exclude ".git" \\\n  --exclude "__pycache__" \\\n  --exclude "*.pyc" \\\n  --exclude "truepanel.backup-*" \\\n  "$SOURCE_ROOT/" "$INSTALL_DIR/"\n'''
+          new = '''rsync -a --delete \\\n  --exclude ".git" \\\n  --exclude ".env" \\\n  --exclude ".venv" \\\n  --exclude "venv" \\\n  --exclude ".quality-venv" \\\n  --exclude ".pytest_cache" \\\n  --exclude ".ruff_cache" \\\n  --exclude "__pycache__" \\\n  --exclude "*.pyc" \\\n  --exclude "*.egg-info" \\\n  --exclude "truepanel.yaml" \\\n  --exclude "truepanel.backup-*" \\\n  --exclude "var/history" \\\n  --exclude "development/logs" \\\n  --exclude "development/backups" \\\n  --exclude "plugins/.truepanel-plugin-state.json" \\\n  "$SOURCE_ROOT/" "$INSTALL_DIR/"\n'''
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+
+          docs = Path("docs/CLEAN_INSTALL_VALIDATION.md")
+          body = docs.read_text(encoding="utf-8")
+          anchor = """Inspect the plan and confirm the source tree, persistent install root, configuration behavior, Python runtime setup, CLI wrapper, all three service units, Mission Control environment, systemd reload, and Doctor step are expected. The preview must report that no directories were created, no files were copied or written, no dependencies were installed, and no services were changed.\n\nThen run the real installer with the same root:\n"""
+          replacement = """Inspect the plan and confirm the source tree, persistent install root, configuration behavior, Python runtime setup, CLI wrapper, all three service units, Mission Control environment, systemd reload, and Doctor step are expected. The preview must report that no directories were created, no files were copied or written, no dependencies were installed, and no services were changed.\n\nFor a genuinely fresh target, the installer must **not** import `truepanel.yaml`, `.env`, virtual environments, caches, local history, or plugin state from the source checkout. Source-local state is excluded from synchronization. Because Phase 3 proved the target config is absent, the installer must create its generic safe `truepanel.yaml` rather than copying machine-specific source configuration.\n\nThen run the real installer with the same root:\n"""
+          assert body.count(anchor) == 1
+          body = body.replace(anchor, replacement, 1)
+          docs.write_text(body, encoding="utf-8")
+          PY
+
+      - name: Add source-isolation contracts
+        run: |
+          cat > tests/test_installer_source_isolation.py <<'PY'
+          from pathlib import Path
+
+
+          ROOT = Path(__file__).resolve().parents[1]
+          INSTALL = ROOT / "install.sh"
+          RUNBOOK = ROOT / "docs" / "CLEAN_INSTALL_VALIDATION.md"
+
+
+          def source():
+              return INSTALL.read_text(encoding="utf-8")
+
+
+          def rsync_block():
+              text = source()
+              start = text.index("rsync -a --delete")
+              end_marker = '  "$SOURCE_ROOT/" "$INSTALL_DIR/"'
+              end = text.index(end_marker, start) + len(end_marker)
+              return text[start:end]
+
+
+          def default_config_block():
+              text = source()
+              marker = 'cat > "$INSTALL_DIR/truepanel.yaml" <<\'YAML\'\n'
+              start = text.index(marker) + len(marker)
+              end = text.index("\nYAML\n", start)
+              return text[start:end]
+
+
+          def test_installer_never_syncs_source_local_or_machine_state():
+              block = rsync_block()
+
+              for excluded in (
+                  ".git",
+                  ".env",
+                  ".venv",
+                  "venv",
+                  ".quality-venv",
+                  ".pytest_cache",
+                  ".ruff_cache",
+                  "__pycache__",
+                  "*.pyc",
+                  "*.egg-info",
+                  "truepanel.yaml",
+                  "truepanel.backup-*",
+                  "var/history",
+                  "development/logs",
+                  "development/backups",
+                  "plugins/.truepanel-plugin-state.json",
+              ):
+                  assert f'--exclude "{excluded}"' in block
+
+
+          def test_installer_preserves_target_config_before_defaulting():
+              text = source()
+              sync = text.index("rsync -a --delete")
+              exclusion = text.index(
+                  '--exclude "truepanel.yaml"',
+                  sync,
+              )
+              default = text.index(
+                  'if [ ! -f "$INSTALL_DIR/truepanel.yaml" ]'
+              )
+
+              assert sync < exclusion < default
+
+
+          def test_installer_generated_default_has_no_hardware_authority():
+              block = default_config_block()
+
+              for forbidden in (
+                  "fan_control:",
+                  "storage_topology:",
+                  "thermal_policy:",
+                  "controlled_channels:",
+                  "/sys/class/hwmon/",
+                  "serial:",
+              ):
+                  assert forbidden not in block
+
+              assert "theme_pack: default" in block
+              assert "flightdeck:" in block
+
+
+          def test_install_preview_explains_source_state_isolation():
+              text = source()
+              start = text.index("print_install_plan()")
+              end = text.index("\n}\n", start)
+              block = text[start:end]
+
+              assert "synchronize only managed source files" in block
+              assert "Exclude source-local config" in block
+              assert "Preserve an existing target truepanel.yaml" in block
+              assert "safe default" in block
+
+
+          def test_clean_install_runbook_requires_generic_fresh_config():
+              text = RUNBOOK.read_text(encoding="utf-8")
+              phase_4 = text.index("## Phase 4: Fresh install")
+              phase_5 = text.index(
+                  "## Phase 5: Immediate post-install verification"
+              )
+              block = text[phase_4:phase_5]
+
+              assert "must **not** import `truepanel.yaml`" in block
+              assert "Source-local state is excluded" in block
+              assert "generic safe `truepanel.yaml`" in block
+              assert "machine-specific source configuration" in block
+          PY
+
+      - name: Validate migration
+        run: |
+          bash -n install.sh
+          python3 -m compileall -q tests/test_installer_source_isolation.py
+          git diff --check
+
+      - name: Commit installer isolation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add install.sh docs/CLEAN_INSTALL_VALIDATION.md tests/test_installer_source_isolation.py
+          git commit -m "Isolate fresh install from source-local state"
+          git rm .github/workflows/apply-installer-source-isolation.yml
+          git commit -m "Remove installer source-isolation migration helper"
+          git push origin HEAD:install/isolate-source-local-state
