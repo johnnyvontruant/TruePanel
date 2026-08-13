@@ -177,8 +177,8 @@ DEFAULT_CONFIG = {
         },
     },
     "buzzer": {
-        "enabled": True,
-        "backend": "serial_opcode",
+        "enabled": False,
+        "backend": "pcspkr",
         "port": "/dev/ttyS1",
         "speed": 1200,
         "startup": "long",
