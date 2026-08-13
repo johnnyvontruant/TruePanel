@@ -126,53 +126,33 @@ jobs:
 
           path = Path("tests/test_host_bootstrap_wiring.py")
           text = path.read_text(encoding="utf-8")
-
-          old = '''def test_lcd_reads_fan_status_through_host_runtime():
-              runtime = source()
-              bootstrap = Path(
-                  "truepanel/host/bootstrap.py"
-              ).read_text(encoding="utf-8")
-              factory = Path(
-                  "truepanel/host/factory.py"
-              ).read_text(encoding="utf-8")
-              host_runtime = Path(
-                  "truepanel/host/runtime.py"
-              ).read_text(encoding="utf-8")
-
-              assert "host_bootstrap.status_bridge.read(" not in runtime
-              assert "host_agent_runtime.read_fan_status(" in runtime
-              assert "def read_fan_status(" in bootstrap
-              assert "fan_status_reader=(" in bootstrap
-              assert "safety_services.fan_status_reader" in factory
-              assert "def read_fan_status(" in host_runtime
-'''
-
-          new = '''def test_lcd_reads_fan_status_through_read_only_host_client():
-              runtime = source()
-              client = Path(
-                  "truepanel/host/client.py"
-              ).read_text(encoding="utf-8")
-              bootstrap = Path(
-                  "truepanel/host/bootstrap.py"
-              ).read_text(encoding="utf-8")
-
-              assert "host_bootstrap.status_bridge.read(" not in runtime
-              assert "HostAgentStatusClient" in runtime
-              assert "host_status_client.read_fan_status(" in runtime
-              assert "class HostAgentStatusClient" in client
-              assert "FanControlStatusBridge(" in client
-              assert "def read_fan_status(" in client
-              assert "def read_fan_status(" in bootstrap
-'''
-
-          count = text.count(old)
-          if count != 1:
-              raise SystemExit(
-                  f"expected one fan-status ownership contract, found {count}"
-              )
-
+          start = text.index(
+              "def test_lcd_reads_fan_status_through_host_runtime():"
+          )
+          end = text.index("\ndef ", start + 1)
+          replacement = "\n".join(
+              [
+                  "def test_lcd_reads_fan_status_through_read_only_host_client():",
+                  "    runtime = source()",
+                  "    client = Path(",
+                  "        \"truepanel/host/client.py\"",
+                  "    ).read_text(encoding=\"utf-8\")",
+                  "    bootstrap = Path(",
+                  "        \"truepanel/host/bootstrap.py\"",
+                  "    ).read_text(encoding=\"utf-8\")",
+                  "",
+                  "    assert \"host_bootstrap.status_bridge.read(\" not in runtime",
+                  "    assert \"HostAgentStatusClient\" in runtime",
+                  "    assert \"host_status_client.read_fan_status(\" in runtime",
+                  "    assert \"class HostAgentStatusClient\" in client",
+                  "    assert \"FanControlStatusBridge(\" in client",
+                  "    assert \"def read_fan_status(\" in client",
+                  "    assert \"def read_fan_status(\" in bootstrap",
+                  "",
+              ]
+          )
           path.write_text(
-              text.replace(old, new, 1),
+              text[:start] + replacement + text[end:],
               encoding="utf-8",
           )
           PY
