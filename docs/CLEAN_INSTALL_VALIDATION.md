@@ -201,6 +201,22 @@ sudo systemctl cat truepanel-mission-control.service || true
 sudo systemctl cat truepanel-host-agent.service || true
 ```
 
+TruePanel historical telemetry and control-event history are durable user data under `/var/lib/truepanel`; uninstall intentionally does not delete them. For this graduation test, quarantine that durable state rather than destroying it so the fresh install starts with no inherited TruePanel history:
+
+```bash
+if [ -e /var/lib/truepanel ]; then
+  test ! -e \
+    "$TRUEPANEL_VALIDATION_ARTIFACTS/var-lib-truepanel.before-clean-install"
+  sudo mv \
+    /var/lib/truepanel \
+    "$TRUEPANEL_VALIDATION_ARTIFACTS/var-lib-truepanel.before-clean-install"
+fi
+
+test ! -e /var/lib/truepanel
+```
+
+Do not delete the quarantined history and do not restore it during fresh-install acceptance. The newly installed runtime may create a new `/var/lib/truepanel` as it records fresh telemetry. Keep the old history with the validation artifacts until the graduation result has been reviewed and a deliberate retention/restore decision is made.
+
 ## Phase 4: Fresh install from the recorded main commit
 
 From the clean external source checkout, rehearse the install before writing anything:
