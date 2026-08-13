@@ -1,14 +1,4 @@
-"""
-Explicit process-boundary contracts for the TruePanel Host Agent.
-
-Safety services describe behavior that belongs on the privileged Host Agent
-side of the architecture.
-
-Application hooks describe behavior that belongs outside the privileged Host
-Agent and may eventually cross an IPC boundary.
-
-These contracts define ownership. They do not grant hardware authority.
-"""
+"""Privileged process-boundary contracts for the TruePanel Host Agent."""
 
 from __future__ import annotations
 
@@ -48,20 +38,10 @@ ThermalControlHandlerFactory = Callable[
 
 FanReconciliationFactory = Callable[[Any], Any]
 
-LCDButtonHandler = Callable[
-    [int, str],
-    bool,
-]
-
 
 @dataclass(frozen=True)
 class HostAgentSafetyServices:
-    """
-    Safety-related services consumed by the privileged Host Agent.
-
-    Some services are still supplied by the legacy LCD runtime during the
-    migration. Their presence here defines their intended ownership boundary.
-    """
+    """Safety-related services consumed by the privileged Host Agent."""
 
     fan_telemetry_provider: FanTelemetryProvider
     fan_status_publisher: FanStatusPublisher | None = None
@@ -76,25 +56,12 @@ class HostAgentSafetyServices:
     thermal_lifecycle_factory: Callable[[Any], Any] | None = None
 
 
-@dataclass(frozen=True)
-class HostAgentApplicationHooks:
-    """
-    Non-privileged application behavior exposed to the Host Agent.
-
-    These hooks must not be treated as hardware authorization.
-    """
-
-    lcd_button_handler: LCDButtonHandler | None = None
-
-
 __all__ = [
     "FanEventRecorder",
     "FanStatusPublisher",
     "FanStatusReader",
     "FanTelemetryProvider",
-    "HostAgentApplicationHooks",
     "HostAgentSafetyServices",
-    "LCDButtonHandler",
     "ThermalAutomaticRestorer",
     "ThermalControlHandler",
     "ThermalControlHandlerFactory",
