@@ -98,6 +98,11 @@ def test_lcd_runtime_shuts_down_fan_control():
 
     assert (
         "host_bootstrap.fan_runtime.shutdown()"
+        not in source
+    )
+
+    assert (
+        "skipping fan-runtime shutdown without ownership"
         in source
     )
 

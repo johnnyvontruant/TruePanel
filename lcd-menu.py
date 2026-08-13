@@ -819,10 +819,10 @@ def main():
             finally:
                 host_agent_runtime = None
         else:
-            try:
-                host_bootstrap.fan_runtime.shutdown()
-            except Exception:
-                pass
+            LOGGER.warning(
+                "Host Agent runtime was not constructed; "
+                "skipping fan-runtime shutdown without ownership."
+            )
 
         try:
             publish_fan_control_status(
