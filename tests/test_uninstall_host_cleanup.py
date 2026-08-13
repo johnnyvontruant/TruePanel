@@ -72,6 +72,65 @@ def test_uninstall_requires_host_ownership_release_before_runtime_cleanup():
     )
 
 
+def test_uninstall_verifies_fan_automatic_before_destructive_cleanup():
+    text = source()
+
+    ownership = text.index(
+        "assert_host_ownership_released",
+        text.index("== TruePanel Uninstaller =="),
+    )
+    verify = text.index(
+        "verify_fan_safety",
+        ownership,
+    )
+    disable = text.index(
+        'echo "Disabling installed services..."'
+    )
+    cleanup = text.index(
+        'echo "Removing runtime state..."'
+    )
+
+    assert ownership < verify < disable < cleanup
+    assert 'CONFIG_FILE="$INSTALL_DIR/truepanel.yaml"' in text
+    assert (
+        '"$BIN_FILE" host fan-safety \\\n    --config "$CONFIG_FILE"'
+        in text
+    )
+
+
+def test_uninstall_refuses_fan_verification_without_config_or_cli():
+    text = source()
+
+    assert '[[ ! -f "$CONFIG_FILE" ]]' in text
+    assert '[[ ! -x "$BIN_FILE" ]]' in text
+    assert (
+        "Refusing uninstall because fan restoration cannot be verified."
+        in text
+    )
+
+
+def test_uninstall_preserves_install_for_diagnosis_when_fan_safety_fails():
+    text = source()
+
+    verify_start = text.index(
+        "verify_fan_safety()"
+    )
+    verify_end = text.index(
+        "\n}\n",
+        verify_start,
+    )
+    block = text[verify_start:verify_end]
+
+    assert "Motherboard Automatic fan control was not confirmed." in block
+    assert (
+        "Refusing destructive uninstall cleanup; "
+        "installation remains in place."
+        in block
+    )
+    assert "exit 1" in block
+    assert 'rm -rf "$INSTALL_DIR"' not in block
+
+
 def test_uninstall_removes_all_installed_service_scaffolding():
     text = source()
 
