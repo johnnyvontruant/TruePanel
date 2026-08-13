@@ -2,7 +2,53 @@
 
 All notable TruePanel changes are recorded here.
 
-TruePanel follows semantic versioning. Release tags use the form `vMAJOR.MINOR.PATCH`.
+TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.MINOR.PATCH`; release-candidate tags use `vMAJOR.MINOR.PATCH-rcN`.
+
+## [1.2.0-rc1] - 2026-08-13
+
+TruePanel 1.2.0 RC1 graduates the hardened native lifecycle,
+compatibility survey, Host ownership boundary, and clean-install path.
+
+### Added
+
+- Guarded install, uninstall, upgrade, repair, verify, rollback,
+  cleanup, and promotion lifecycle contracts.
+- Passive compatibility survey, storage classification, and
+  privacy-safe support bundles.
+- Dormant privileged Host Agent deployment with single-owner
+  enforcement, readiness, fan-safety, acceptance, and cutover checks.
+- Clean-install Run 3 regression and release evidence.
+
+### Changed
+
+- Fresh-install synchronization excludes source-local configuration,
+  secrets, virtual environments, caches, history, and plugin state.
+- Clean-install state can be quarantined outside the managed target.
+- Support evidence is retained outside the managed installation root.
+- Isolated TrueNAS virtual-environment bootstrap supports systems
+  without `ensurepip`.
+- Fresh buzzer defaults are safe and use the supported `pcspkr`
+  backend while disabled.
+
+### Validated
+
+Clean-install Run 3 on the reference QNAP TVS-671 passed:
+
+- genuine blank-target installation;
+- first LCD hardware startup;
+- Mission Control activation;
+- automatic Flight Deck rotation;
+- physical front-panel button navigation;
+- controlled LCD-service restart;
+- full TrueNAS reboot;
+- native installed verification;
+- motherboard fan control remaining Automatic;
+- Host acceptance remaining PASS;
+- standalone Host Agent remaining dormant and marker-gated.
+
+Unsupported fresh-buzzer warnings fell from five pre-fix occurrences
+to zero on corrected fresh startup, controlled restart, full reboot,
+and final post-reboot physical validation.
 
 ## [1.1.0] - 2026-07-30
 

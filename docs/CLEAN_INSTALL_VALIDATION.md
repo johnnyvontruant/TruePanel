@@ -241,6 +241,11 @@ sudo bash install.sh \
   --root /mnt/POOL/DATASET/TruePanel
 ```
 
+
+The canonical successful installer banner is exactly
+`TruePanel Install Complete`. Validation harnesses should match that
+literal wording.
+
 A successful fresh install lays down:
 
 - the persistent TruePanel tree and installed CLI wrapper;
@@ -258,6 +263,14 @@ sudo systemctl enable --now truepanel-mission-control.service
 Do not enable or start `truepanel-host-agent.service` during this validation.
 
 ## Phase 5: Immediate post-install verification
+
+The native `truepanel verify` command is an **operational verifier**.
+It expects the LCD service and Mission Control to be active, the
+Mission Control API to respond, and LCD transport to be healthy.
+
+Run it only after the explicit application-service activation commands
+in Phase 4. Running it while those services are intentionally dormant
+is expected to report failures.
 
 Run the installed lifecycle and Host checks:
 
@@ -328,6 +341,11 @@ Confirm on physical hardware:
 - front-panel buttons respond;
 - fan telemetry pages render expected RPM/status data;
 - shutdown/restart does not leave stale LCD command or status behavior.
+
+When reading `/run/truepanel/lcd-reader-status.json`, reader fields are
+nested beneath the `reader` mapping. For example,
+`payload["reader"]["connected"]` and
+`payload["reader"]["button_reports"]` are valid reader-state paths.
 
 Review the service log for unexpected hardware or ownership errors:
 

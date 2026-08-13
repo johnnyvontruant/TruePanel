@@ -34,6 +34,7 @@ The Git history is the archive for retired implementations. The current tree is 
 
 - [Upgrade and rollback](UPGRADING.md)
 - [Release process](RELEASE.md)
+- [Clean-install Run 3 results](CLEAN_INSTALL_RUN3_RESULTS.md)
 - [Changelog](../CHANGELOG.md)
 - [Security policy](../SECURITY.md)
 - [Contributing](../CONTRIBUTING.md)

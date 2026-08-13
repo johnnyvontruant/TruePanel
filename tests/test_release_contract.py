@@ -17,10 +17,24 @@ def dependency_name(requirement):
     return re.split(r"[<>=!~\[]", requirement, maxsplit=1)[0].strip().lower()
 
 
-def test_stable_product_version():
-    assert truepanel.__version__ == "1.1.0"
-    assert re.fullmatch(r"\d+\.\d+\.\d+", truepanel.__version__)
+def test_release_candidate_product_version():
+    assert truepanel.__version__ == "1.2.0rc1"
+    assert re.fullmatch(
+        r"\d+\.\d+\.\d+rc\d+",
+        truepanel.__version__,
+    )
     assert truepanel.__version__ == MISSION_CONTROL_VERSION
+
+
+def test_release_policy_documents_candidate_and_stable_versions():
+    release = (ROOT / "docs" / "RELEASE.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "X.Y.ZrcN" in release
+    assert "vX.Y.Z-rcN" in release
+    assert "vX.Y.Z" in release
+    assert "no prerelease suffix" in release
 
 
 def test_project_metadata_uses_authoritative_version():
