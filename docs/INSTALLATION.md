@@ -21,6 +21,7 @@ Use TruePanel with a current configuration backup and expect major TrueNAS upgra
 - `smartctl` for SMART telemetry
 - ZFS command-line tools
 - Access to the relevant serial, SMBus, and sysfs hardware paths
+- Network access to PyPI while the installer prepares the isolated Python runtime
 
 ## Compatibility check before installation
 
@@ -68,14 +69,15 @@ sudo bash install.sh \
 The installer:
 
 1. copies the repository to `/mnt/POOL/DATASET/TruePanel`;
-2. attempts to create a Python virtual environment;
-3. falls back to system Python when the TrueNAS Python environment cannot create a usable venv;
-4. verifies required imports;
-5. creates the CLI wrapper;
-6. creates the primary LCD and Mission Control service units;
-7. creates the dormant standalone Host Agent unit with its cutover-marker condition and no `[Install]` section;
-8. leaves all services stopped so activation remains an explicit operator action;
-9. runs `truepanel doctor`.
+2. creates an isolated Python virtual environment;
+3. when TrueNAS lacks `ensurepip`, creates the venv with `--without-pip`, downloads a pinned, hash-verified pip wheel from PyPI, and runs pip from that wheel inside the venv;
+4. installs `requirements.txt` inside the isolated venv and verifies `pyserial`, `psutil`, and `PyYAML`;
+5. does not install TruePanel dependencies into system Python;
+6. creates the CLI wrapper;
+7. creates the primary LCD and Mission Control service units;
+8. creates the dormant standalone Host Agent unit with its cutover-marker condition and no `[Install]` section;
+9. leaves all services stopped so activation remains an explicit operator action;
+10. runs `truepanel doctor`.
 
 ## Service management
 
