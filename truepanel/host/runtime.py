@@ -56,6 +56,17 @@ class HostAgentRuntime:
 
         return self._safety
 
+    def _require_hardware_ownership(self) -> None:
+        """Refuse actuating Host work unless this runtime owns hardware."""
+
+        if (
+            self._ownership_guard is not None
+            and not self._ownership_acquired
+        ):
+            raise RuntimeError(
+                "HostAgentRuntime does not own Host hardware"
+            )
+
     def read_fan_status(
         self,
         *,
@@ -101,10 +112,49 @@ class HostAgentRuntime:
     def reconcile_fans(self) -> Any | None:
         """Run one Host-owned fan/thermal reconciliation cycle."""
 
+        self._require_hardware_ownership()
+
         if self._fan_reconciliation is None:
             return None
 
         return self._fan_reconciliation.reconcile()
+
+    def service_cycle(
+        self,
+        *,
+        reconcile: bool = True,
+        publish_reason: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Run one Host service cycle while preserving legacy loop semantics.
+
+        Reconciliation is privileged and therefore requires Host ownership.
+        Observation and status publication remain safe for pre-start priming.
+        Reconciliation failures are isolated so guidance and status still
+        refresh, matching the existing LCD runtime behavior.
+        """
+
+        reconciliation = None
+
+        if reconcile:
+            self._require_hardware_ownership()
+            try:
+                reconciliation = self.reconcile_fans()
+            except Exception:
+                LOGGER.exception(
+                    "Fan-control reconciliation failed"
+                )
+
+        recommendation = self.observe_thermal()
+        status = self.publish_fan_status(
+            reason=publish_reason
+        )
+
+        return {
+            "reconciliation": reconciliation,
+            "recommendation": recommendation,
+            "status": status,
+        }
 
     def end_supervised_thermal_session(
         self,
@@ -114,6 +164,8 @@ class HostAgentRuntime:
         telemetry: Any = None,
     ) -> Any:
         """End one Host-owned supervised thermal session."""
+
+        self._require_hardware_ownership()
 
         if self._thermal_lifecycle is None:
             return None
@@ -144,6 +196,8 @@ class HostAgentRuntime:
         restore: bool = True,
     ) -> Any:
         """End one Host-owned bounded automatic-control lease."""
+
+        self._require_hardware_ownership()
 
         if self._thermal_lifecycle is None:
             return None

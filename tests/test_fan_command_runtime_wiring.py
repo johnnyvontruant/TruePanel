@@ -54,11 +54,12 @@ def test_lcd_routes_thermal_observation_and_status_through_runtime():
     assert "def observe(" in reconciliation
     assert "def observe_thermal(" in host_runtime
     assert "def publish_fan_status(" in host_runtime
+    assert "def service_cycle(" in host_runtime
     assert "host_agent_runtime.publish_fan_status(" in runtime
+    assert "host_agent_runtime.service_cycle(" in runtime
     assert "publish_host_fan_status" in bootstrap
     assert '"thermal_policy_mode"' in status
     assert '"thermal_recommended_profile"' in status
-    assert "observe_thermal_fan_policy()" in runtime
 
 
 def test_observer_does_not_request_profiles():
