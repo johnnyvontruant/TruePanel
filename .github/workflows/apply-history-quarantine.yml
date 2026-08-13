@@ -1,0 +1,53 @@
+name: Apply clean-install history quarantine
+
+on:
+  push:
+    branches:
+      - docs/quarantine-clean-install-history
+    paths:
+      - .github/workflows/apply-history-quarantine.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/quarantine-clean-install-history
+
+      - name: Quarantine persistent TruePanel history for graduation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          docs = Path("docs/CLEAN_INSTALL_VALIDATION.md")
+          text = docs.read_text(encoding="utf-8")
+
+          anchor = '''Reloaded systemd should no longer have TruePanel unit files to display:\n\n```bash\nsudo systemctl daemon-reload\nsudo systemctl cat truepanel.service || true\nsudo systemctl cat truepanel-mission-control.service || true\nsudo systemctl cat truepanel-host-agent.service || true\n```\n\n## Phase 4: Fresh install from the recorded main commit\n'''
+          replacement = '''Reloaded systemd should no longer have TruePanel unit files to display:\n\n```bash\nsudo systemctl daemon-reload\nsudo systemctl cat truepanel.service || true\nsudo systemctl cat truepanel-mission-control.service || true\nsudo systemctl cat truepanel-host-agent.service || true\n```\n\nTruePanel historical telemetry and control-event history are durable user data under `/var/lib/truepanel`; uninstall intentionally does not delete them. For this graduation test, quarantine that durable state rather than destroying it so the fresh install starts with no inherited TruePanel history:\n\n```bash\nif [ -e /var/lib/truepanel ]; then\n  test ! -e \\\n    \"$TRUEPANEL_VALIDATION_ARTIFACTS/var-lib-truepanel.before-clean-install\"\n  sudo mv \\\n    /var/lib/truepanel \\\n    \"$TRUEPANEL_VALIDATION_ARTIFACTS/var-lib-truepanel.before-clean-install\"\nfi\n\ntest ! -e /var/lib/truepanel\n```\n\nDo not delete the quarantined history and do not restore it during fresh-install acceptance. The newly installed runtime may create a new `/var/lib/truepanel` as it records fresh telemetry. Keep the old history with the validation artifacts until the graduation result has been reviewed and a deliberate retention/restore decision is made.\n\n## Phase 4: Fresh install from the recorded main commit\n'''
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, replacement, 1)
+          docs.write_text(text, encoding="utf-8")
+
+          tests = Path("tests/test_clean_install_documentation.py")
+          body = tests.read_text(encoding="utf-8").rstrip() + '''\n\n\ndef test_runbook_quarantines_durable_history_without_deleting_it():\n    text = read(RUNBOOK)\n\n    phase_3 = text.index(\n        "## Phase 3: Prove known residue is gone"\n    )\n    phase_4 = text.index(\n        "## Phase 4: Fresh install"\n    )\n    block = text[phase_3:phase_4]\n\n    assert "/var/lib/truepanel" in block\n    assert (\n        "$TRUEPANEL_VALIDATION_ARTIFACTS/"\n        "var-lib-truepanel.before-clean-install"\n        in block\n    )\n    assert "sudo mv" in block\n    assert "test ! -e /var/lib/truepanel" in block\n    assert "rm -rf /var/lib/truepanel" not in text\n    assert "uninstall intentionally does not delete them" in block\n\n\ndef test_runbook_keeps_old_history_out_of_fresh_acceptance():\n    text = read(RUNBOOK)\n\n    phase_4 = text.index(\n        "## Phase 4: Fresh install"\n    )\n    phase_7 = text.index(\n        "## Phase 7: Reboot validation"\n    )\n    fresh = text[phase_4:phase_7]\n\n    assert "var-lib-truepanel.before-clean-install" not in fresh\n    assert (\n        "do not restore it during fresh-install acceptance"\n        in text\n    )\n    assert (\n        "new `/var/lib/truepanel`"\n        in text\n    )\n'''.rstrip() + "\n"
+          tests.write_text(body, encoding="utf-8")
+          PY
+
+      - name: Validate history quarantine contracts
+        run: |
+          python3 -m compileall -q tests/test_clean_install_documentation.py
+          git diff --check
+
+      - name: Commit history quarantine guardrail
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/CLEAN_INSTALL_VALIDATION.md tests/test_clean_install_documentation.py
+          git commit -m "Quarantine durable history for clean install"
+          git rm .github/workflows/apply-history-quarantine.yml
+          git commit -m "Remove history-quarantine migration helper"
+          git push origin HEAD:docs/quarantine-clean-install-history
