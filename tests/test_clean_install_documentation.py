@@ -277,3 +277,48 @@ def test_post_clean_support_bundle_is_captured_after_acceptance():
 
     assert "Host acceptance: PASS" in block
     assert "truepanel-post-clean-install.json" in block
+
+
+def test_runbook_quarantines_durable_history_without_deleting_it():
+    text = read(RUNBOOK)
+
+    phase_3 = text.index(
+        "## Phase 3: Prove known residue is gone"
+    )
+    phase_4 = text.index(
+        "## Phase 4: Fresh install"
+    )
+    block = text[phase_3:phase_4]
+
+    assert "/var/lib/truepanel" in block
+    assert (
+        "$TRUEPANEL_VALIDATION_ARTIFACTS/"
+        "var-lib-truepanel.before-clean-install"
+        in block
+    )
+    assert "sudo mv" in block
+    assert "test ! -e /var/lib/truepanel" in block
+    assert "rm -rf /var/lib/truepanel" not in text
+    assert "uninstall intentionally does not delete them" in block
+
+
+def test_runbook_keeps_old_history_out_of_fresh_acceptance():
+    text = read(RUNBOOK)
+
+    phase_4 = text.index(
+        "## Phase 4: Fresh install"
+    )
+    phase_7 = text.index(
+        "## Phase 7: Reboot validation"
+    )
+    fresh = text[phase_4:phase_7]
+
+    assert "var-lib-truepanel.before-clean-install" not in fresh
+    assert (
+        "do not restore it during fresh-install acceptance"
+        in text
+    )
+    assert (
+        "new `/var/lib/truepanel`"
+        in text
+    )
