@@ -1,9 +1,9 @@
 """
 Construction helpers for the TruePanel Host Agent.
 
-This module assembles existing guarded command processors and Unix-socket
-servers. Application-specific telemetry, status, history, thermal policy, and
-LCD behavior remain injected callbacks.
+This module assembles the guarded fan command processor and Unix-socket server.
+Application-owned LCD command handling lives outside the privileged Host
+runtime.
 """
 
 from __future__ import annotations
@@ -14,10 +14,6 @@ from typing import Any
 from truepanel.hardware.fan_command import (
     FanCommandProcessor,
     FanCommandServer,
-)
-from truepanel.hardware.lcd_command import (
-    LCDCommandProcessor,
-    LCDCommandServer,
 )
 
 from .hooks import (
@@ -76,44 +72,22 @@ def build_fan_command_server(
     )
 
 
-def build_lcd_command_server(
-    *,
-    submit_button: Callable[
-        [int, str],
-        bool,
-    ] | None,
-) -> LCDCommandServer | None:
-    """
-    Build the guarded LCD command server.
-
-    Hosts without an LCD submission callback expose no LCD command socket.
-    """
-
-    if submit_button is None:
-        return None
-
-    processor = LCDCommandProcessor(
-        submit_button
-    )
-
-    return LCDCommandServer(
-        processor
-    )
-
-
 def build_host_agent_runtime(
     *,
     fan_runtime: Any,
     safety_services: HostAgentSafetyServices,
-    application_hooks: HostAgentApplicationHooks,
+    application_hooks: HostAgentApplicationHooks | None = None,
     ownership_guard: Any | None = None,
 ) -> HostAgentRuntime:
     """
     Assemble the current TruePanel Host Agent runtime.
 
-    Safety behavior is grouped behind HostAgentSafetyCoordinator while
-    application behavior remains an explicit non-privileged hook surface.
+    `application_hooks` is accepted temporarily for compatibility while LCD
+    command ownership migrates fully to the application process. Host runtime
+    construction deliberately does not consume it.
     """
+
+    del application_hooks
 
     safety = HostAgentSafetyCoordinator(
         fan_runtime=fan_runtime,
@@ -163,7 +137,7 @@ def build_host_agent_runtime(
         else None
     )
 
-    runtime = HostAgentRuntime(
+    return HostAgentRuntime(
         fan_runtime=fan_runtime,
         safety=safety,
         ownership_guard=ownership_guard,
@@ -193,23 +167,13 @@ def build_host_agent_runtime(
                 ),
             )
         ),
-        lcd_server_factory=lambda: (
-            build_lcd_command_server(
-                submit_button=(
-                    application_hooks
-                    .lcd_button_handler
-                ),
-            )
-        ),
     )
-
-    return runtime
 
 
 def build_host_agent_runtime_from_bootstrap(
     *,
     bootstrap: Any,
-    application_hooks: HostAgentApplicationHooks,
+    application_hooks: HostAgentApplicationHooks | None = None,
     owner_name: str = "embedded-lcd",
     ownership_path: Any = DEFAULT_HOST_OWNERSHIP_PATH,
 ) -> HostAgentRuntime:
@@ -230,5 +194,4 @@ __all__ = [
     "build_fan_command_server",
     "build_host_agent_runtime",
     "build_host_agent_runtime_from_bootstrap",
-    "build_lcd_command_server",
 ]
