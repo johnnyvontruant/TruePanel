@@ -227,13 +227,30 @@ def check_service_units(
         )
 
         expected_root = str(root)
+        lines = {
+            line.strip()
+            for line in text.splitlines()
+            if line.strip()
+        }
+
+        wrapper_exec = (
+            f"ExecStart={expected_root}/bin/truepanel run"
+            in lines
+        )
+        direct_python_exec = any(
+            line.startswith("ExecStart=")
+            and line.endswith(
+                f" {expected_root}/truepanel.py run"
+            )
+            for line in lines
+        )
 
         if (
             f"WorkingDirectory={expected_root}"
-            in text
+            in lines
             and (
-                f"{expected_root}/truepanel.py run"
-                in text
+                wrapper_exec
+                or direct_python_exec
             )
         ):
             results.append(
