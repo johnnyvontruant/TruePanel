@@ -143,3 +143,10 @@ def test_installation_guide_links_clean_install_runbook():
     assert "CLEAN_INSTALL_VALIDATION.md" in text
     assert "host fan-safety" in text
     assert "host cutover-plan" in text
+
+def test_clean_install_runbook_uses_host_acceptance_gate():
+    text = read(RUNBOOK)
+
+    assert text.count("host acceptance") >= 4
+    assert "Host acceptance: PASS" in text
+    assert "Host acceptance result" in text
