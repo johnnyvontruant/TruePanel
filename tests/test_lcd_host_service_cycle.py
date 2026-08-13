@@ -22,6 +22,7 @@ def test_lcd_main_loop_delegates_periodic_host_work_to_runtime():
     loop_end = main.index("delay = 5", loop_start)
     loop = main[loop_start:loop_end]
 
+    assert "if host_agent_runtime is not None:" in loop
     assert "host_agent_runtime.service_cycle()" in loop
     assert "reconcile_fan_control()" not in loop
     assert "observe_thermal_fan_policy()" not in loop

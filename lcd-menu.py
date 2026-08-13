@@ -35,6 +35,10 @@ from truepanel.host import (
     build_host_agent_bootstrap,
     build_host_agent_runtime_from_bootstrap,
 )
+from truepanel.host.mode import (
+    HostRuntimeMode,
+    resolve_host_runtime_mode,
+)
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
@@ -78,8 +82,11 @@ collector = TruePanelCollector()
 mission = MissionControl()
 alert_manager = AlertManager()
 config = load_config()
-host_bootstrap = build_host_agent_bootstrap(
-    config
+host_runtime_mode = resolve_host_runtime_mode()
+host_bootstrap = (
+    build_host_agent_bootstrap(config)
+    if host_runtime_mode is HostRuntimeMode.EMBEDDED
+    else None
 )
 host_agent_runtime = None
 lcd_command_server = None
@@ -136,6 +143,9 @@ def publish_fan_control_status(
     """Compatibility adapter for Host-owned status publication."""
 
     if host_agent_runtime is None:
+        if host_bootstrap is None:
+            return None
+
         return host_bootstrap.publish_fan_status(
             reason=reason,
         )
@@ -750,17 +760,23 @@ def main():
     lcd.clear()
 
     try:
-        host_agent_runtime = (
-            build_host_agent_runtime_from_bootstrap(
-                bootstrap=host_bootstrap,
+        if host_bootstrap is not None:
+            host_agent_runtime = (
+                build_host_agent_runtime_from_bootstrap(
+                    bootstrap=host_bootstrap,
+                )
             )
-        )
 
-        host_agent_runtime.service_cycle(
-            reconcile=False
-        )
+            host_agent_runtime.service_cycle(
+                reconcile=False
+            )
 
-        host_agent_runtime.start()
+            host_agent_runtime.start()
+        else:
+            LOGGER.info(
+                "External Host runtime mode active; "
+                "embedded Host construction skipped."
+            )
 
         lcd_command_server = build_lcd_command_server(
             submit_button=(
@@ -785,7 +801,9 @@ def main():
         publish_lcd_reader_status()
 
         while not shutdown_requested:
-            host_agent_runtime.service_cycle()
+            if host_agent_runtime is not None:
+                host_agent_runtime.service_cycle()
+
             publish_lcd_reader_status()
             add_ips_to_menu()
 
@@ -822,10 +840,15 @@ def main():
                 pass
             finally:
                 host_agent_runtime = None
-        else:
+        elif host_runtime_mode is HostRuntimeMode.EMBEDDED:
             LOGGER.warning(
                 "Host Agent runtime was not constructed; "
                 "skipping fan-runtime shutdown without ownership."
+            )
+        else:
+            LOGGER.info(
+                "External Host runtime mode active; "
+                "embedded shutdown skipped."
             )
 
         try:
