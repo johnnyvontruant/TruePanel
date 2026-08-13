@@ -1,0 +1,121 @@
+name: Apply guarded shutdown fallback
+
+on:
+  push:
+    branches:
+      - agent/guarded-shutdown-fallback
+    paths:
+      - .github/workflows/apply-guarded-shutdown-fallback.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/guarded-shutdown-fallback
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install development tools
+        run: python -m pip install -e ".[development]"
+
+      - name: Remove unowned LCD shutdown fallback
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(
+                      f"{path}: expected one anchor, found {count}\n{old}"
+                  )
+              p.write_text(
+                  text.replace(old, new, 1),
+                  encoding="utf-8",
+              )
+
+          replace_once(
+              "lcd-menu.py",
+              """        else:\n            try:\n                host_bootstrap.fan_runtime.shutdown()\n            except Exception:\n                pass\n""",
+              """        else:\n            LOGGER.warning(\n                \"Host Agent runtime was not constructed; \"\n                \"skipping fan-runtime shutdown without ownership.\"\n            )\n""",
+          )
+
+          replace_once(
+              "tests/test_fan_runtime_integration.py",
+              """    assert (\n        \"host_bootstrap.fan_runtime.shutdown()\"\n        in source\n    )\n""",
+              """    assert (\n        \"host_bootstrap.fan_runtime.shutdown()\"\n        not in source\n    )\n\n    assert (\n        \"skipping fan-runtime shutdown without ownership\"\n        in source\n    )\n""",
+          )
+          PY
+
+          cat > tests/test_host_shutdown_ownership_contract.py <<'PY'
+          from pathlib import Path
+
+
+          def test_lcd_shutdown_never_bypasses_host_ownership():
+              source = Path(
+                  "lcd-menu.py"
+              ).read_text(encoding="utf-8")
+
+              assert "host_agent_runtime.shutdown()" in source
+              assert "host_bootstrap.fan_runtime.shutdown()" not in source
+              assert (
+                  "skipping fan-runtime shutdown without ownership"
+                  in source
+              )
+
+
+          def test_bootstrap_construction_is_non_actuating():
+              bootstrap = Path(
+                  "truepanel/host/bootstrap.py"
+              ).read_text(encoding="utf-8")
+              executor = Path(
+                  "truepanel/hardware/fan_executor.py"
+              ).read_text(encoding="utf-8")
+
+              build_start = bootstrap.index(
+                  "def build_host_agent_bootstrap("
+              )
+              build_block = bootstrap[build_start:]
+
+              assert "fan_runtime_factory(" in build_block
+              assert "Construction never grants hardware authority" in build_block
+
+              init_start = executor.index("    def __init__(")
+              init_end = executor.index("    @staticmethod", init_start)
+              init_block = executor[init_start:init_end]
+
+              assert "self._validate_surface()" in init_block
+              assert "self._capture_original_state()" in init_block
+              assert "self.writer(" not in init_block
+          PY
+
+      - name: Validate guarded shutdown migration
+        run: |
+          python -m compileall -q truepanel lcd-menu.py tests/test_host_shutdown_ownership_contract.py
+          python -m pytest -q \
+            tests/test_fan_runtime_integration.py \
+            tests/test_host_shutdown_ownership_contract.py \
+            tests/test_host_runtime_ownership.py
+          git diff --check
+
+      - name: Commit guarded shutdown fallback
+        shell: bash
+        run: |
+          rm .github/workflows/apply-guarded-shutdown-fallback.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "[host-ownership] Remove unowned fan shutdown fallback"
+          git push origin HEAD:agent/guarded-shutdown-fallback
