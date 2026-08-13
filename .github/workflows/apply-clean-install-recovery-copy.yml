@@ -1,0 +1,59 @@
+name: Apply clean-install recovery copy
+
+on:
+  push:
+    branches:
+      - docs/preserve-clean-install-recovery
+    paths:
+      - .github/workflows/apply-clean-install-recovery-copy.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/preserve-clean-install-recovery
+
+      - name: Preserve known-good configuration in runbook
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/CLEAN_INSTALL_VALIDATION.md")
+          text = path.read_text(encoding="utf-8")
+
+          anchor = """Replace that path with the actual persistent installation root.\n\n## Safety invariants\n"""
+          replacement = """Replace that path with the actual persistent installation root.\n\nChoose a persistent validation-artifact directory **outside** the TruePanel installation root. It must survive uninstall and reboot. For example:\n\n```bash\nexport TRUEPANEL_VALIDATION_ARTIFACTS=/mnt/POOL/DATASET/TruePanel-clean-install-artifacts\nsudo mkdir -p \"$TRUEPANEL_VALIDATION_ARTIFACTS\"\n```\n\nDo not place this directory inside `/mnt/POOL/DATASET/TruePanel`; uninstall intentionally deletes that tree.\n\n## Safety invariants\n"""
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, replacement, 1)
+
+          anchor = """## Phase 1: Capture the known-good baseline\n\nFrom the currently installed TruePanel tree:\n"""
+          replacement = """## Phase 1: Capture the known-good baseline\n\nBefore any destructive step, preserve the working configuration outside the installation root. These copies are recovery evidence only. **Do not restore them during the fresh-install acceptance phases**, because doing so would hide installer or default-configuration defects.\n\n```bash\ntest -n \"${TRUEPANEL_VALIDATION_ARTIFACTS:-}\"\ntest \"$TRUEPANEL_VALIDATION_ARTIFACTS\" != /mnt/POOL/DATASET/TruePanel\n\nsudo cp -a \\\n  /mnt/POOL/DATASET/TruePanel/truepanel.yaml \\\n  \"$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel.yaml.before-clean-install\"\n\nif [ -f /etc/default/truepanel-mission-control ]; then\n  sudo cp -a \\\n    /etc/default/truepanel-mission-control \\\n    \"$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel-mission-control.env.before-clean-install\"\nfi\n```\n\nConfirm the preserved configuration exists before continuing:\n\n```bash\nsudo test -f \\\n  \"$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel.yaml.before-clean-install\"\n```\n\nIf the clean-install test later exposes a defect, stop and fix the repository or documentation first. Use the preserved files only when deliberately returning the NAS to its previous known-good configuration after diagnosis; never copy them into the fresh installation merely to make acceptance pass.\n\nFrom the currently installed TruePanel tree:\n"""
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, replacement, 1)
+
+          path.write_text(text, encoding="utf-8")
+
+          tests = Path("tests/test_clean_install_documentation.py")
+          body = tests.read_text(encoding="utf-8").rstrip() + """\n\n\ndef test_runbook_preserves_known_good_config_outside_install_root():\n    text = read(RUNBOOK)\n\n    baseline = text.index(\n        \"## Phase 1: Capture the known-good baseline\"\n    )\n    uninstall = text.index(\n        \"## Phase 2: Clean uninstall\"\n    )\n    block = text[baseline:uninstall]\n\n    assert \"TRUEPANEL_VALIDATION_ARTIFACTS\" in text\n    assert \"TruePanel-clean-install-artifacts\" in text\n    assert (\n        \"truepanel.yaml.before-clean-install\"\n        in block\n    )\n    assert (\n        \"truepanel-mission-control.env.before-clean-install\"\n        in block\n    )\n    assert \"sudo cp -a\" in block\n    assert (\n        'test \"$TRUEPANEL_VALIDATION_ARTIFACTS\" != '\n        '/mnt/POOL/DATASET/TruePanel'\n        in block\n    )\n\n\ndef test_runbook_does_not_use_preserved_config_to_mask_fresh_install():\n    text = read(RUNBOOK)\n\n    assert (\n        \"Do not restore them during the fresh-install acceptance phases\"\n        in text\n    )\n    assert (\n        \"never copy them into the fresh installation merely to make \"\n        \"acceptance pass\"\n        in text\n    )\n\n    phase_4 = text.index(\n        \"## Phase 4: Fresh install\"\n    )\n    phase_7 = text.index(\n        \"## Phase 7: Reboot validation\"\n    )\n    fresh_acceptance = text[phase_4:phase_7]\n\n    assert \"truepanel.yaml.before-clean-install\" not in fresh_acceptance\n""" + "\n"
+          tests.write_text(body, encoding="utf-8")
+          PY
+
+      - name: Validate documentation contracts
+        run: |
+          python3 -m compileall -q tests/test_clean_install_documentation.py
+          git diff --check
+
+      - name: Commit recovery-copy guardrail
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/CLEAN_INSTALL_VALIDATION.md tests/test_clean_install_documentation.py
+          git commit -m "Preserve clean-install recovery configuration"
+          git rm .github/workflows/apply-clean-install-recovery-copy.yml
+          git commit -m "Remove clean-install recovery migration helper"
+          git push origin HEAD:docs/preserve-clean-install-recovery
