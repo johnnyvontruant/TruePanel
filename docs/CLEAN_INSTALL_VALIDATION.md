@@ -212,6 +212,8 @@ bash install.sh \
 
 Inspect the plan and confirm the source tree, persistent install root, configuration behavior, Python runtime setup, CLI wrapper, all three service units, Mission Control environment, systemd reload, and Doctor step are expected. The preview must report that no directories were created, no files were copied or written, no dependencies were installed, and no services were changed.
 
+For a genuinely fresh target, the installer must **not** import `truepanel.yaml`, `.env`, virtual environments, caches, local history, or plugin state from the source checkout. Source-local state is excluded from synchronization. Because Phase 3 proved the target config is absent, the installer must create its generic safe `truepanel.yaml` rather than copying machine-specific source configuration.
+
 Then run the real installer with the same root:
 
 ```bash
