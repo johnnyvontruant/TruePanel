@@ -107,6 +107,7 @@ def build_production_runtime() -> Any:
         application_hooks=(
             HostAgentApplicationHooks()
         ),
+        owner_name="standalone-host-agent",
     )
 
 
