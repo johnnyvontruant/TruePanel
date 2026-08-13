@@ -382,11 +382,14 @@ sudo ./bin/truepanel verify \
 sudo ./bin/truepanel host readiness
 sudo ./bin/truepanel host fan-safety \
   --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
+sudo ./bin/truepanel host acceptance \
+  --root / \
+  --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
 
 test ! -e /run/truepanel/standalone-host-agent.enabled
 ```
 
-Also re-check the physical LCD, front-panel buttons, Mission Control status API, and recent service logs.
+Post-reboot `host acceptance` must report `Host acceptance: PASS`. Also re-check the physical LCD, front-panel buttons, Mission Control status API, and recent service logs.
 
 The standalone Host Agent must still be dormant after reboot.
 

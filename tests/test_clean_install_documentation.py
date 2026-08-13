@@ -322,3 +322,25 @@ def test_runbook_keeps_old_history_out_of_fresh_acceptance():
         "new `/var/lib/truepanel`"
         in text
     )
+
+
+def test_runbook_requires_aggregate_host_acceptance_after_reboot():
+    text = read(RUNBOOK)
+
+    phase_7 = text.index(
+        "## Phase 7: Reboot validation"
+    )
+    phase_8 = text.index(
+        "## Phase 8: Record the result"
+    )
+    block = text[phase_7:phase_8]
+
+    assert "./bin/truepanel host readiness" in block
+    assert "./bin/truepanel host fan-safety" in block
+    assert "./bin/truepanel host acceptance" in block
+    assert "Host acceptance: PASS" in block
+    assert (
+        block.index("./bin/truepanel host readiness")
+        < block.index("./bin/truepanel host fan-safety")
+        < block.index("./bin/truepanel host acceptance")
+    )
