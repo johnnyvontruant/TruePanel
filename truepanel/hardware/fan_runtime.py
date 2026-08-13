@@ -127,9 +127,11 @@ class FanControlRuntime:
             self.service = None
 
 
-def _normalize_channels(
+def normalize_fan_control_channels(
     raw_channels: Any,
 ) -> tuple[int, ...]:
+    """Normalize configured fan-control channels to the supported set."""
+
     if not isinstance(
         raw_channels,
         (
@@ -342,7 +344,7 @@ def build_fan_control_runtime(
             enabled=False,
         )
 
-    channels = _normalize_channels(
+    channels = normalize_fan_control_channels(
         settings.get(
             "controlled_channels",
             (
@@ -490,4 +492,5 @@ def build_fan_control_runtime(
 __all__ = [
     "FanControlRuntime",
     "build_fan_control_runtime",
+    "normalize_fan_control_channels",
 ]
