@@ -29,6 +29,7 @@ class HostAgentRuntime:
         fan_runtime: Any,
         safety: Any,
         fan_server_factory: Callable[[], Any | None],
+        ownership_guard: Any | None = None,
         lcd_server_factory: Callable[[], Any | None],
         fan_status_reader: Callable[..., Any] | None = None,
         fan_reconciliation: Any | None = None,
@@ -36,6 +37,8 @@ class HostAgentRuntime:
     ):
         self._fan_runtime = fan_runtime
         self._safety = safety
+        self._ownership_guard = ownership_guard
+        self._ownership_acquired = False
         self._fan_status_reader = fan_status_reader
         self._fan_reconciliation = fan_reconciliation
         self._thermal_lifecycle = thermal_lifecycle
@@ -184,6 +187,10 @@ class HostAgentRuntime:
                 "HostAgentRuntime cannot restart after shutdown"
             )
 
+        if self._ownership_guard is not None:
+            self._ownership_guard.acquire()
+            self._ownership_acquired = True
+
         try:
             self._fan_server = (
                 self._fan_server_factory()
@@ -241,12 +248,26 @@ class HostAgentRuntime:
             finally:
                 self._fan_server = None
 
-        try:
-            self._fan_runtime.shutdown()
-        except Exception:
-            LOGGER.exception(
-                "Fan-control runtime shutdown failed"
-            )
+        if (
+            self._ownership_guard is None
+            or self._ownership_acquired
+        ):
+            try:
+                self._fan_runtime.shutdown()
+            except Exception:
+                LOGGER.exception(
+                    "Fan-control runtime shutdown failed"
+                )
+
+        if self._ownership_acquired:
+            try:
+                self._ownership_guard.release()
+            except Exception:
+                LOGGER.exception(
+                    "Host ownership release failed"
+                )
+            finally:
+                self._ownership_acquired = False
 
         self._started = False
 
