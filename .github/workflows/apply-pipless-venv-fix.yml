@@ -1,0 +1,51 @@
+name: Apply isolated runtime migration
+
+on:
+  push:
+    branches:
+      - install/bootstrap-pipless-venv
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: install/bootstrap-pipless-venv
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Apply migration
+        run: python development/apply_pipless_venv_fix.py
+
+      - name: Validate migration
+        run: |
+          bash -n install.sh
+          python -m compileall -q tests/test_install_host_agent_service.py
+          python -m pip install -q pytest
+          python -m pytest -q \
+            tests/test_install_host_agent_service.py \
+            tests/test_installer_source_isolation.py \
+            tests/test_lifecycle_install_root_safety.py
+          git diff --check
+
+      - name: Commit functional change
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add install.sh docs/INSTALLATION.md tests/test_install_host_agent_service.py
+          git commit -m "Bootstrap isolated runtime without ensurepip"
+          git push
+
+      - name: Remove migration helpers
+        run: |
+          git rm development/apply_pipless_venv_fix.py
+          git rm .github/workflows/apply-pipless-venv-fix.yml
+          git commit -m "Remove isolated runtime migration helper"
+          git push
