@@ -67,6 +67,8 @@ def test_runbook_proves_known_runtime_residue_is_removed():
     ):
         assert f"test ! -e {path}" in text
 
+    assert "Unexpected installed systemd unit remains" in text
+
 
 def test_runbook_starts_only_application_services_after_install():
     text = read(RUNBOOK)
@@ -115,7 +117,7 @@ def test_runbook_requires_post_install_and_post_reboot_safety_checks():
         assert command in after_reboot
 
     assert (
-        "truepanel-host-agent.service remains inactive"
+        "`truepanel-host-agent.service` remains inactive"
         in text
     )
 
@@ -134,3 +136,5 @@ def test_installation_guide_links_clean_install_runbook():
     text = read(INSTALLATION)
 
     assert "CLEAN_INSTALL_VALIDATION.md" in text
+    assert "host fan-safety" in text
+    assert "host cutover-plan" in text
