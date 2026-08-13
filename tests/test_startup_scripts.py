@@ -11,7 +11,19 @@ def script_source(name):
     )
 
 
-def test_start_script_restores_both_services():
+def service_heredoc(source, variable):
+    marker = (
+        f'cat > "${variable}" <<SERVICE\n'
+    )
+    start = source.index(marker) + len(marker)
+    end = source.index(
+        "\nSERVICE\n",
+        start,
+    )
+    return source[start:end]
+
+
+def test_start_script_restores_active_services():
     source = script_source(
         "start-truepanel.sh"
     )
@@ -25,6 +37,87 @@ def test_start_script_restores_both_services():
     assert "systemctl" in source
     assert "enable" in source
     assert "restart" in source
+
+
+def test_start_script_installs_dormant_host_agent_service():
+    source = script_source(
+        "start-truepanel.sh"
+    )
+    unit = service_heredoc(
+        source,
+        "HOST_AGENT_SERVICE_FILE",
+    )
+
+    assert (
+        'HOST_AGENT_SERVICE_FILE=' 
+        '"$SYSTEMD_DIR/truepanel-host-agent.service"'
+        in source
+    )
+    assert (
+        "Description=TruePanel Privileged Host Agent "
+        "(standalone activation locked)"
+        in unit
+    )
+    assert (
+        "ConditionPathExists=/run/truepanel/"
+        "standalone-host-agent.enabled"
+        in unit
+    )
+    assert (
+        "ExecStart=$PYTHON_BIN -m truepanel.host.agent"
+        in unit
+    )
+    assert "[Install]" not in unit
+    assert (
+        "Standalone Host Agent activation remains locked; "
+        "unit was not enabled or started."
+        in source
+    )
+
+
+def test_start_script_never_enables_or_restarts_host_agent():
+    source = script_source(
+        "start-truepanel.sh"
+    )
+
+    enable_start = source.index(
+        '"$SYSTEMCTL_BIN" enable'
+    )
+    restart_start = source.index(
+        '"$SYSTEMCTL_BIN" restart',
+        enable_start,
+    )
+    final_message = source.index(
+        "printf 'TruePanel services restored and started.",
+        restart_start,
+    )
+
+    enable_block = source[
+        enable_start:restart_start
+    ]
+    restart_block = source[
+        restart_start:final_message
+    ]
+
+    assert "truepanel.service" in enable_block
+    assert (
+        "truepanel-mission-control.service"
+        in enable_block
+    )
+    assert (
+        "truepanel-host-agent.service"
+        not in enable_block
+    )
+
+    assert "truepanel.service" in restart_block
+    assert (
+        "truepanel-mission-control.service"
+        in restart_block
+    )
+    assert (
+        "truepanel-host-agent.service"
+        not in restart_block
+    )
 
 
 def test_start_script_uses_its_own_install_root():
