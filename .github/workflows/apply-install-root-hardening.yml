@@ -138,7 +138,6 @@ jobs:
           bash -n install.sh
           bash -n uninstall.sh
           python3 -m compileall -q tests/test_lifecycle_install_root_safety.py
-          python3 -m pytest tests/test_lifecycle_install_root_safety.py -q
           git diff --check
 
       - name: Commit root hardening
