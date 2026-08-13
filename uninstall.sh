@@ -3,6 +3,7 @@
 set -euo pipefail
 
 INSTALL_DIR="${TRUEPANEL_INSTALL_ROOT:-}"
+DRY_RUN=0
 SERVICE_NAME="truepanel.service"
 MISSION_SERVICE_NAME="truepanel-mission-control.service"
 HOST_AGENT_SERVICE_NAME="truepanel-host-agent.service"
@@ -21,8 +22,51 @@ LCD_READER_STATUS_FILE="/run/truepanel/lcd-reader-status.json"
 LCD_DISPLAY_STATUS_FILE="/run/truepanel/lcd-display-status.json"
 
 usage() {
-  printf 'Usage: %s --root /mnt/POOL/DATASET/TruePanel\n' "$0"
-  printf '       TRUEPANEL_INSTALL_ROOT=/mnt/POOL/DATASET/TruePanel %s\n' "$0"
+  printf 'Usage: %s [--dry-run] --root /mnt/POOL/DATASET/TruePanel\n' "$0"
+  printf '       TRUEPANEL_INSTALL_ROOT=/mnt/POOL/DATASET/TruePanel %s [--dry-run]\n' "$0"
+}
+
+print_uninstall_plan() {
+  cat <<EOF
+== TruePanel Uninstall Dry Run ==
+
+Install root:
+  $INSTALL_DIR
+
+Services that would be stopped and verified inactive:
+  $HOST_AGENT_SERVICE_NAME
+  $SERVICE_NAME
+  $MISSION_SERVICE_NAME
+
+Safety gates required before destructive cleanup:
+  Host ownership lease must be released: $HOST_OWNERSHIP_FILE
+  Motherboard fan control must verify Automatic using: $CONFIG_FILE
+
+Service scaffolding that would be removed:
+  $SERVICE_FILE
+  $MISSION_SERVICE_FILE
+  $HOST_AGENT_SERVICE_FILE
+  $MISSION_ENV_FILE
+
+Runtime state that would be removed:
+  $CUTOVER_MARKER_FILE
+  $FAN_SOCKET_FILE
+  $FAN_STATUS_FILE
+  $LCD_COMMAND_SOCKET_FILE
+  $LCD_READER_STATUS_FILE
+  $LCD_DISPLAY_STATUS_FILE
+  $HOST_OWNERSHIP_FILE
+  $RUNTIME_DIR (when empty)
+
+CLI/install paths that would be removed:
+  $BIN_FILE
+  $LEGACY_BIN_FILE
+  $INSTALL_DIR
+
+Systemd daemon state would be reloaded after service-file removal.
+
+DRY RUN ONLY: no services were stopped, no fan state changed, no files were removed.
+EOF
 }
 
 stop_service() {
@@ -122,6 +166,10 @@ do
       INSTALL_DIR="$2"
       shift 2
       ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -133,12 +181,6 @@ do
       ;;
   esac
 done
-
-if [[ $EUID -ne 0 ]]
-then
-  echo "Please run as root: sudo ./uninstall.sh"
-  exit 1
-fi
 
 if [[ -z "$INSTALL_DIR" ]]
 then
@@ -173,6 +215,18 @@ esac
 
 BIN_FILE="$INSTALL_DIR/bin/truepanel"
 CONFIG_FILE="$INSTALL_DIR/truepanel.yaml"
+
+if [[ "$DRY_RUN" -eq 1 ]]
+then
+  print_uninstall_plan
+  exit 0
+fi
+
+if [[ $EUID -ne 0 ]]
+then
+  echo "Please run as root: sudo ./uninstall.sh"
+  exit 1
+fi
 
 echo "== TruePanel Uninstaller =="
 
