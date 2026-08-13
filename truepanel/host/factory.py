@@ -24,6 +24,10 @@ from .hooks import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
 )
+from .ownership import (
+    DEFAULT_HOST_OWNERSHIP_PATH,
+    HostOwnershipGuard,
+)
 from .runtime import HostAgentRuntime
 from .safety import HostAgentSafetyCoordinator
 
@@ -102,6 +106,7 @@ def build_host_agent_runtime(
     fan_runtime: Any,
     safety_services: HostAgentSafetyServices,
     application_hooks: HostAgentApplicationHooks,
+    ownership_guard: Any | None = None,
 ) -> HostAgentRuntime:
     """
     Assemble the current TruePanel Host Agent runtime.
@@ -161,6 +166,7 @@ def build_host_agent_runtime(
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
         safety=safety,
+        ownership_guard=ownership_guard,
         fan_status_reader=(
             safety_services.fan_status_reader
         ),
@@ -204,13 +210,19 @@ def build_host_agent_runtime_from_bootstrap(
     *,
     bootstrap: Any,
     application_hooks: HostAgentApplicationHooks,
+    owner_name: str = "embedded-lcd",
+    ownership_path: Any = DEFAULT_HOST_OWNERSHIP_PATH,
 ) -> HostAgentRuntime:
-    """Assemble Host runtime from one privileged bootstrap boundary."""
+    """Assemble Host runtime behind one cross-process ownership lease."""
 
     return build_host_agent_runtime(
         fan_runtime=bootstrap.fan_runtime,
         safety_services=bootstrap.safety_services(),
         application_hooks=application_hooks,
+        ownership_guard=HostOwnershipGuard(
+            owner_name,
+            path=ownership_path,
+        ),
     )
 
 
