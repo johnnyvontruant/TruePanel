@@ -118,6 +118,7 @@ uptime, and platform status.
   <img src="docs/images/lcd/mission-ready.png"
        alt="TruePanel mission ready screen" width="420">
 </p>
+
 ## Mission Control
 
 Mission Control is TruePanel's browser-based companion dashboard.
