@@ -9,6 +9,7 @@ SOURCE_ROOT="$(
 
 INSTALL_DIR="${TRUEPANEL_INSTALL_ROOT:-}"
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
+HOST_AGENT_SERVICE_FILE="/etc/systemd/system/truepanel-host-agent.service"
 MISSION_CONTROL_SERVICE_FILE="/etc/systemd/system/truepanel-mission-control.service"
 MISSION_CONTROL_ENV_FILE="/etc/default/truepanel-mission-control"
 PYTHON_BIN=""
@@ -239,6 +240,26 @@ else
   echo "Preserving existing Mission Control environment:"
   echo "  $MISSION_CONTROL_ENV_FILE"
 fi
+
+echo "Installing dormant Host Agent service..."
+cat > "$HOST_AGENT_SERVICE_FILE" <<SERVICE
+[Unit]
+Description=TruePanel Privileged Host Agent (standalone activation locked)
+After=local-fs.target
+ConditionPathExists=/run/truepanel/standalone-host-agent.enabled
+
+[Service]
+Type=simple
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$PYTHON_BIN -m truepanel.host.agent
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0027
+SERVICE
+
+chmod 0644 "$HOST_AGENT_SERVICE_FILE"
+echo "Standalone Host Agent activation remains locked; unit was not enabled or started."
 
 echo "Creating systemd service..."
 cat > "$SERVICE_FILE" <<SERVICE
