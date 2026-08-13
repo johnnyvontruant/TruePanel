@@ -14,7 +14,10 @@ from .capabilities import (
     HostCapability,
     capabilities_from_compatibility,
 )
-from .factory import build_host_agent_runtime
+from .factory import (
+    build_host_agent_runtime,
+    build_host_agent_runtime_from_bootstrap,
+)
 from .hooks import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
@@ -41,6 +44,7 @@ __all__ = [
     "HostThermalObserver",
     "HostCapability",
     "build_host_agent_runtime",
+    "build_host_agent_runtime_from_bootstrap",
     "capabilities_from_compatibility",
     "HostFanTelemetryProvider",
 ]

@@ -30,7 +30,7 @@ from truepanel.history import (
 from truepanel.host import (
     HostAgentApplicationHooks,
     build_host_agent_bootstrap,
-    build_host_agent_runtime,
+    build_host_agent_runtime_from_bootstrap,
 )
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
@@ -78,8 +78,6 @@ config = load_config()
 host_bootstrap = build_host_agent_bootstrap(
     config
 )
-fan_control_runtime = host_bootstrap.fan_runtime
-
 host_agent_runtime = None
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
@@ -750,10 +748,6 @@ def main():
     lcd.clear()
 
     try:
-        host_agent_safety_services = (
-            host_bootstrap.safety_services()
-        )
-
         host_agent_application_hooks = HostAgentApplicationHooks(
             lcd_button_handler=(
                 lambda button_mask, source: (
@@ -767,14 +761,13 @@ def main():
             ),
         )
 
-        host_agent_runtime = build_host_agent_runtime(
-            fan_runtime=fan_control_runtime,
-            safety_services=(
-                host_agent_safety_services
-            ),
-            application_hooks=(
-                host_agent_application_hooks
-            ),
+        host_agent_runtime = (
+            build_host_agent_runtime_from_bootstrap(
+                bootstrap=host_bootstrap,
+                application_hooks=(
+                    host_agent_application_hooks
+                ),
+            )
         )
 
         observe_thermal_fan_policy()
@@ -827,7 +820,7 @@ def main():
                 host_agent_runtime = None
         else:
             try:
-                fan_control_runtime.shutdown()
+                host_bootstrap.fan_runtime.shutdown()
             except Exception:
                 pass
 

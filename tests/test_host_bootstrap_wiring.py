@@ -21,6 +21,11 @@ def test_lcd_runtime_uses_host_bootstrap():
     assert (
         "fan_control_runtime = "
         "host_bootstrap.fan_runtime"
+        not in text
+    )
+
+    assert (
+        "build_host_agent_runtime_from_bootstrap("
         in text
     )
 
@@ -309,3 +314,16 @@ def test_lcd_reads_fan_status_through_host_runtime():
     assert "fan_status_reader=(" in bootstrap
     assert "safety_services.fan_status_reader" in factory
     assert "def read_fan_status(" in host_runtime
+
+def test_lcd_delegates_privileged_bootstrap_unwrapping_to_host_factory():
+    runtime = source()
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(encoding="utf-8")
+
+    assert "host_bootstrap.safety_services()" not in runtime
+    assert "fan_control_runtime = host_bootstrap.fan_runtime" not in runtime
+    assert "build_host_agent_runtime_from_bootstrap(" in runtime
+    assert "fan_runtime=bootstrap.fan_runtime" in factory
+    assert "safety_services=bootstrap.safety_services()" in factory
+    assert "application_hooks=application_hooks" in factory

@@ -244,3 +244,38 @@ def test_factory_does_not_start_runtime(
 
     assert runtime.started is False
     assert called == []
+
+class FakeBootstrap:
+    def __init__(self, fan_runtime, safety_services):
+        self.fan_runtime = fan_runtime
+        self._safety_services = safety_services
+        self.safety_service_calls = 0
+
+    def safety_services(self):
+        self.safety_service_calls += 1
+        return self._safety_services
+
+
+def test_bootstrap_factory_unwraps_privileged_dependencies():
+    fan_runtime = FakeFanRuntime()
+    services = HostAgentSafetyServices(
+        fan_telemetry_provider=telemetry,
+    )
+    bootstrap = FakeBootstrap(
+        fan_runtime,
+        services,
+    )
+
+    runtime = (
+        factory.build_host_agent_runtime_from_bootstrap(
+            bootstrap=bootstrap,
+            application_hooks=(
+                HostAgentApplicationHooks()
+            ),
+        )
+    )
+
+    assert runtime._fan_runtime is fan_runtime
+    assert runtime.safety.telemetry() == telemetry()
+    assert bootstrap.safety_service_calls == 1
+    assert runtime.started is False

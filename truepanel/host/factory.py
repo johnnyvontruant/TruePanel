@@ -200,8 +200,23 @@ def build_host_agent_runtime(
     return runtime
 
 
+def build_host_agent_runtime_from_bootstrap(
+    *,
+    bootstrap: Any,
+    application_hooks: HostAgentApplicationHooks,
+) -> HostAgentRuntime:
+    """Assemble Host runtime from one privileged bootstrap boundary."""
+
+    return build_host_agent_runtime(
+        fan_runtime=bootstrap.fan_runtime,
+        safety_services=bootstrap.safety_services(),
+        application_hooks=application_hooks,
+    )
+
+
 __all__ = [
     "build_fan_command_server",
     "build_host_agent_runtime",
+    "build_host_agent_runtime_from_bootstrap",
     "build_lcd_command_server",
 ]

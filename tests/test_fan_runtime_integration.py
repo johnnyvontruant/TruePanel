@@ -18,7 +18,21 @@ def test_lcd_runtime_builds_fan_control_runtime():
     assert (
         "fan_control_runtime = "
         "host_bootstrap.fan_runtime"
+        not in runtime
+    )
+
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text()
+
+    assert (
+        "build_host_agent_runtime_from_bootstrap("
         in runtime
+    )
+
+    assert (
+        "fan_runtime=bootstrap.fan_runtime"
+        in factory
     )
 
     assert (
@@ -79,6 +93,11 @@ def test_lcd_runtime_shuts_down_fan_control():
 
     assert (
         "fan_control_runtime.shutdown()"
+        not in source
+    )
+
+    assert (
+        "host_bootstrap.fan_runtime.shutdown()"
         in source
     )
 
