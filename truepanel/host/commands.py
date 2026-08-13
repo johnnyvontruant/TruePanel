@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from truepanel.compatibility import collect_compatibility
+from truepanel.config.loader import load_config
 
 from .capabilities import (
     HostAgentCapabilities,
@@ -21,6 +22,10 @@ from .capabilities import (
 from .cutover import (
     build_host_cutover_plan,
     format_host_cutover_plan,
+)
+from .fan_safety import (
+    collect_host_fan_safety,
+    format_host_fan_safety,
 )
 from .readiness import (
     collect_host_readiness,
@@ -82,6 +87,31 @@ def add_host_subcommands(subcommands) -> None:
         help=(
             "Filesystem root containing deployed service state; "
             "defaults to the running host"
+        ),
+    )
+
+    fan_safety = host_commands.add_parser(
+        "fan-safety",
+        help=(
+            "Passively verify configured fan channels "
+            "are in motherboard Automatic mode"
+        ),
+    )
+
+    fan_safety.add_argument(
+        "--json",
+        action="store_true",
+        dest="host_fan_safety_json",
+        help="Output machine-readable JSON",
+    )
+
+    fan_safety.add_argument(
+        "--config",
+        default="truepanel.yaml",
+        dest="host_fan_safety_config",
+        help=(
+            "TruePanel configuration path; "
+            "defaults to truepanel.yaml"
         ),
     )
 
@@ -234,6 +264,38 @@ def run_host_readiness(
     return 0 if report.prepared_safely else 1
 
 
+def run_host_fan_safety(
+    *,
+    json_output: bool = False,
+    config_path: str | Path = "truepanel.yaml",
+) -> int:
+    """Passively verify motherboard Automatic fan-control mode."""
+
+    config = load_config(
+        config_path
+    )
+    report = collect_host_fan_safety(
+        config
+    )
+
+    if json_output:
+        print(
+            json.dumps(
+                report.to_dict(),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(
+            format_host_fan_safety(
+                report
+            )
+        )
+
+    return 0 if report.safe else 1
+
+
 def run_host_cutover_plan(
     *,
     json_output: bool = False,
@@ -324,6 +386,25 @@ def handle_host_command(args) -> int | None:
 
     if (
         getattr(args, "host_command", None)
+        == "fan-safety"
+    ):
+        return run_host_fan_safety(
+            json_output=bool(
+                getattr(
+                    args,
+                    "host_fan_safety_json",
+                    False,
+                )
+            ),
+            config_path=getattr(
+                args,
+                "host_fan_safety_config",
+                "truepanel.yaml",
+            ),
+        )
+
+    if (
+        getattr(args, "host_command", None)
         == "cutover-plan"
     ):
         root = getattr(
@@ -356,5 +437,6 @@ __all__ = [
     "print_host_capabilities",
     "run_host_capabilities",
     "run_host_cutover_plan",
+    "run_host_fan_safety",
     "run_host_readiness",
 ]
