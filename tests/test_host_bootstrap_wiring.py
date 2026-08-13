@@ -326,4 +326,4 @@ def test_lcd_delegates_privileged_bootstrap_unwrapping_to_host_factory():
     assert "build_host_agent_runtime_from_bootstrap(" in runtime
     assert "fan_runtime=bootstrap.fan_runtime" in factory
     assert "safety_services=bootstrap.safety_services()" in factory
-    assert "application_hooks=application_hooks" in factory
+    assert "application_hooks" not in factory
