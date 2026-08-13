@@ -67,7 +67,12 @@ def test_runbook_proves_known_runtime_residue_is_removed():
     ):
         assert f"test ! -e {path}" in text
 
-    assert "Unexpected installed systemd unit remains" in text
+    for unit in (
+        "truepanel.service",
+        "truepanel-mission-control.service",
+        "truepanel-host-agent.service",
+    ):
+        assert f"systemctl cat {unit}" in text
 
 
 def test_runbook_starts_only_application_services_after_install():
