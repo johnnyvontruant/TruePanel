@@ -24,7 +24,7 @@ def test_fresh_install_lays_down_dormant_host_agent_unit():
     )
 
     assert (
-        'HOST_AGENT_SERVICE_FILE=' 
+        'HOST_AGENT_SERVICE_FILE='
         '"/etc/systemd/system/truepanel-host-agent.service"'
         in install
     )
