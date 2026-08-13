@@ -74,7 +74,6 @@ def build_runtime(events, *, fail_reconcile=False):
         ),
         thermal_lifecycle=FakeLifecycle(events),
         fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
     )
 
 

@@ -8,7 +8,7 @@ def test_standalone_construction_is_ready_but_activation_is_locked():
 
     assert "build_host_agent_bootstrap(" in agent
     assert "build_host_agent_runtime_from_bootstrap(" in agent
-    assert "HostAgentApplicationHooks()" in agent
+    assert "HostAgentApplicationHooks" not in agent
     assert "STANDALONE_PRODUCTION_ACTIVATED = False" in agent
     assert "require_standalone_activation()" in agent
 

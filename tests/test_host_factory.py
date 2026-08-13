@@ -114,59 +114,21 @@ def test_fan_callbacks_reach_processor():
     )
 
 
-def test_missing_lcd_handler_builds_no_server():
-    server = (
-        factory.build_lcd_command_server(
-            submit_button=None
-        )
-    )
-
-    assert server is None
-
-
-def test_lcd_handler_reaches_processor():
-    server = (
-        factory.build_lcd_command_server(
-            submit_button=submit_button
-        )
-    )
-
-    assert server is not None
-
-    assert (
-        server.processor.submit_button
-        is submit_button
-    )
-
-
-def test_host_runtime_receives_command_factories(
+def test_host_runtime_receives_only_fan_command_factory(
     monkeypatch,
 ):
     fan_runtime = FakeFanRuntime()
     fan_server = object()
-    lcd_server = object()
-
     captured_fan = {}
-    captured_lcd = {}
 
     def build_fan(**kwargs):
         captured_fan.update(kwargs)
         return fan_server
 
-    def build_lcd(**kwargs):
-        captured_lcd.update(kwargs)
-        return lcd_server
-
     monkeypatch.setattr(
         factory,
         "build_fan_command_server",
         build_fan,
-    )
-
-    monkeypatch.setattr(
-        factory,
-        "build_lcd_command_server",
-        build_lcd,
     )
 
     runtime = (
@@ -176,25 +138,20 @@ def test_host_runtime_receives_command_factories(
                 fan_telemetry_provider=telemetry,
             ),
             application_hooks=HostAgentApplicationHooks(
-                lcd_button_handler=(
-                    submit_button
-                ),
+                lcd_button_handler=submit_button,
             ),
         )
     )
 
     assert runtime.fan_server is None
-    assert runtime.lcd_server is None
+    assert not hasattr(runtime, "lcd_server")
+    assert not hasattr(runtime, "_lcd_server_factory")
 
     built_fan = (
         runtime._fan_server_factory()
     )
-    built_lcd = (
-        runtime._lcd_server_factory()
-    )
 
     assert built_fan is fan_server
-    assert built_lcd is lcd_server
 
     assert (
         captured_fan["fan_runtime"]
@@ -213,10 +170,22 @@ def test_host_runtime_receives_command_factories(
         == telemetry()
     )
 
-    assert (
-        captured_lcd["submit_button"]
-        is submit_button
+
+def test_factory_accepts_but_does_not_consume_application_hooks():
+    runtime = factory.build_host_agent_runtime(
+        fan_runtime=FakeFanRuntime(
+            enabled=False
+        ),
+        safety_services=HostAgentSafetyServices(
+            fan_telemetry_provider=telemetry,
+        ),
+        application_hooks=HostAgentApplicationHooks(
+            lcd_button_handler=submit_button,
+        ),
     )
+
+    assert not hasattr(runtime, "lcd_server")
+    assert not hasattr(runtime, "_lcd_server_factory")
 
 
 def test_factory_does_not_start_runtime(
@@ -238,12 +207,12 @@ def test_factory_does_not_start_runtime(
             safety_services=HostAgentSafetyServices(
                 fan_telemetry_provider=telemetry
             ),
-            application_hooks=HostAgentApplicationHooks(),
         )
     )
 
     assert runtime.started is False
     assert called == []
+
 
 class FakeBootstrap:
     def __init__(self, fan_runtime, safety_services):
@@ -269,9 +238,6 @@ def test_bootstrap_factory_unwraps_privileged_dependencies():
     runtime = (
         factory.build_host_agent_runtime_from_bootstrap(
             bootstrap=bootstrap,
-            application_hooks=(
-                HostAgentApplicationHooks()
-            ),
         )
     )
 

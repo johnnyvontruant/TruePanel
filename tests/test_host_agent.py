@@ -249,12 +249,7 @@ def test_production_bootstrap_constructs_safe_runtime(
     assert captured["config"] is config
     assert captured["bootstrap"] is bootstrap
     assert captured["owner_name"] == "standalone-host-agent"
-    hooks = captured["application_hooks"]
-    assert isinstance(
-        hooks,
-        agent.HostAgentApplicationHooks,
-    )
-    assert hooks.lcd_button_handler is None
+    assert "application_hooks" not in captured
 
 
 def test_standalone_activation_fails_closed():

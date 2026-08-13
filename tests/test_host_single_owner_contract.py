@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-def test_host_runtime_acquires_owner_before_command_servers():
+def test_host_runtime_acquires_owner_before_privileged_fan_server():
     source = Path(
         "truepanel/host/runtime.py"
     ).read_text(encoding="utf-8")
@@ -12,9 +12,10 @@ def test_host_runtime_acquires_owner_before_command_servers():
 
     acquire = block.index("self._ownership_guard.acquire()")
     fan_factory = block.index("self._fan_server_factory()")
-    lcd_factory = block.index("self._lcd_server_factory()")
 
-    assert acquire < fan_factory < lcd_factory
+    assert acquire < fan_factory
+    assert "lcd_server" not in block
+    assert "lcd_command" not in block
 
 
 def test_host_runtime_restores_before_releasing_owner():

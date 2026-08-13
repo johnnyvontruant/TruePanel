@@ -40,7 +40,7 @@ class FakeFanRuntime:
         self.events.append("fan_runtime.shutdown")
 
 
-def make_runtime(events, guard, *, fail_lcd=False):
+def make_runtime(events, guard, *, fail_fan=False):
     return HostAgentRuntime(
         fan_runtime=FakeFanRuntime(events),
         safety=object(),
@@ -48,11 +48,7 @@ def make_runtime(events, guard, *, fail_lcd=False):
         fan_server_factory=lambda: FakeServer(
             "fan_server",
             events,
-        ),
-        lcd_server_factory=lambda: FakeServer(
-            "lcd_server",
-            events,
-            fail_start=fail_lcd,
+            fail_start=fail_fan,
         ),
     )
 
@@ -70,8 +66,6 @@ def test_runtime_holds_ownership_for_privileged_lifetime():
     assert events == [
         "ownership.acquire",
         "fan_server.start",
-        "lcd_server.start",
-        "lcd_server.stop",
         "fan_server.stop",
         "fan_runtime.shutdown",
         "ownership.release",
@@ -103,20 +97,18 @@ def test_start_failure_restores_before_releasing_ownership():
     runtime = make_runtime(
         events,
         FakeGuard(events),
-        fail_lcd=True,
+        fail_fan=True,
     )
 
     with pytest.raises(
         RuntimeError,
-        match="lcd_server failed",
+        match="fan_server failed",
     ):
         runtime.start()
 
     assert events == [
         "ownership.acquire",
         "fan_server.start",
-        "lcd_server.start",
-        "lcd_server.stop",
         "fan_server.stop",
         "fan_runtime.shutdown",
         "ownership.release",

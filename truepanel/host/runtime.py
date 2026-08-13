@@ -1,9 +1,9 @@
 """
 Lifecycle ownership for TruePanel privileged host services.
 
-HostAgentRuntime groups the local command servers and fan-control runtime behind
-one lifecycle boundary. It does not change command protocols, hardware policy,
-or authorization rules.
+HostAgentRuntime groups the privileged fan command service and fan-control
+runtime behind one lifecycle boundary. LCD application command handling lives
+outside this hardware-ownership boundary.
 """
 
 from __future__ import annotations
@@ -16,12 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class HostAgentRuntime:
-    """
-    Own the lifecycle of TruePanel's privileged local host services.
-
-    Server factories remain outside this class for now so existing hardware
-    construction and command wiring can be migrated independently.
-    """
+    """Own the lifecycle of TruePanel's privileged local host services."""
 
     def __init__(
         self,
@@ -30,7 +25,6 @@ class HostAgentRuntime:
         safety: Any,
         fan_server_factory: Callable[[], Any | None],
         ownership_guard: Any | None = None,
-        lcd_server_factory: Callable[[], Any | None],
         fan_status_reader: Callable[..., Any] | None = None,
         fan_reconciliation: Any | None = None,
         thermal_lifecycle: Any | None = None,
@@ -43,10 +37,8 @@ class HostAgentRuntime:
         self._fan_reconciliation = fan_reconciliation
         self._thermal_lifecycle = thermal_lifecycle
         self._fan_server_factory = fan_server_factory
-        self._lcd_server_factory = lcd_server_factory
 
         self._fan_server = None
-        self._lcd_server = None
         self._started = False
         self._shutdown = False
 
@@ -220,17 +212,12 @@ class HostAgentRuntime:
     def fan_server(self) -> Any | None:
         return self._fan_server
 
-    @property
-    def lcd_server(self) -> Any | None:
-        return self._lcd_server
-
     def start(self) -> None:
         """
-        Start host command services.
+        Start privileged Host command services.
 
-        Starting twice is harmless. If startup fails part-way through, all
-        resources already acquired by this runtime are released before the
-        original exception is re-raised.
+        Starting twice is harmless. If startup fails, all resources already
+        acquired by this runtime are released before the exception is raised.
         """
 
         if self._started:
@@ -253,13 +240,6 @@ class HostAgentRuntime:
             if self._fan_server is not None:
                 self._fan_server.start()
 
-            self._lcd_server = (
-                self._lcd_server_factory()
-            )
-
-            if self._lcd_server is not None:
-                self._lcd_server.start()
-
             self._started = True
         except Exception:
             LOGGER.exception(
@@ -271,26 +251,16 @@ class HostAgentRuntime:
 
     def shutdown(self) -> None:
         """
-        Stop command services and restore the fan runtime.
+        Stop privileged command services and restore the fan runtime.
 
-        Socket services are stopped before fan-control shutdown so no new
-        commands can enter while automatic fan restoration is occurring.
+        The fan command socket is stopped before automatic restoration so no
+        new hardware commands can enter while restoration is occurring.
         """
 
         if self._shutdown:
             return
 
         self._shutdown = True
-
-        if self._lcd_server is not None:
-            try:
-                self._lcd_server.stop()
-            except Exception:
-                LOGGER.exception(
-                    "LCD command server shutdown failed"
-                )
-            finally:
-                self._lcd_server = None
 
         if self._fan_server is not None:
             try:

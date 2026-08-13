@@ -65,122 +65,103 @@ class FakeFanRuntime:
             )
 
 
-def test_runtime_starts_fan_then_lcd_server():
+def build_runtime(
+    events,
+    *,
+    fan_server=None,
+    fan_runtime=None,
+    safety=None,
+    **kwargs,
+):
+    return HostAgentRuntime(
+        fan_runtime=(
+            fan_runtime
+            if fan_runtime is not None
+            else FakeFanRuntime(events)
+        ),
+        safety=(
+            safety
+            if safety is not None
+            else object()
+        ),
+        fan_server_factory=lambda: fan_server,
+        **kwargs,
+    )
+
+
+def test_runtime_starts_fan_server_only():
     events = []
-    fan_runtime = FakeFanRuntime(events)
     fan_server = FakeServer(
         "fan_server",
         events,
     )
-    lcd_server = FakeServer(
-        "lcd_server",
+    runtime = build_runtime(
         events,
-    )
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
-        fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: fan_server,
-        lcd_server_factory=lambda: lcd_server,
+        fan_server=fan_server,
     )
 
     runtime.start()
 
     assert events == [
         "fan_server.start",
-        "lcd_server.start",
     ]
     assert runtime.started is True
     assert runtime.fan_server is fan_server
-    assert runtime.lcd_server is lcd_server
+    assert not hasattr(runtime, "lcd_server")
+    assert not hasattr(runtime, "_lcd_server_factory")
 
 
-def test_runtime_allows_missing_servers():
+def test_runtime_allows_missing_fan_server():
     events = []
-    fan_runtime = FakeFanRuntime(events)
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
-        fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
-    )
+    runtime = build_runtime(events)
 
     runtime.start()
 
     assert runtime.started is True
     assert runtime.fan_server is None
-    assert runtime.lcd_server is None
     assert events == []
 
 
 def test_runtime_start_is_idempotent():
     events = []
-    fan_runtime = FakeFanRuntime(events)
     fan_server = FakeServer(
         "fan_server",
         events,
     )
-    lcd_server = FakeServer(
-        "lcd_server",
+    runtime = build_runtime(
         events,
-    )
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
-        fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: fan_server,
-        lcd_server_factory=lambda: lcd_server,
+        fan_server=fan_server,
     )
 
     runtime.start()
     runtime.start()
 
     assert fan_server.start_calls == 1
-    assert lcd_server.start_calls == 1
 
 
-def test_shutdown_stops_lcd_then_fan_then_runtime():
+def test_shutdown_stops_fan_then_runtime():
     events = []
     fan_runtime = FakeFanRuntime(events)
     fan_server = FakeServer(
         "fan_server",
         events,
     )
-    lcd_server = FakeServer(
-        "lcd_server",
+    runtime = build_runtime(
         events,
-    )
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
+        fan_server=fan_server,
         fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: fan_server,
-        lcd_server_factory=lambda: lcd_server,
     )
 
     runtime.start()
     events.clear()
-
     runtime.shutdown()
 
     assert events == [
-        "lcd_server.stop",
         "fan_server.stop",
         "fan_runtime.shutdown",
     ]
-
     assert runtime.started is False
     assert runtime.fan_server is None
-    assert runtime.lcd_server is None
 
 
 def test_shutdown_is_idempotent():
@@ -190,88 +171,32 @@ def test_shutdown_is_idempotent():
         "fan_server",
         events,
     )
-    lcd_server = FakeServer(
-        "lcd_server",
+    runtime = build_runtime(
         events,
-    )
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
+        fan_server=fan_server,
         fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: fan_server,
-        lcd_server_factory=lambda: lcd_server,
     )
 
     runtime.start()
-
     runtime.shutdown()
     runtime.shutdown()
 
-    assert lcd_server.stop_calls == 1
     assert fan_server.stop_calls == 1
     assert fan_runtime.shutdown_calls == 1
-
-
-def test_lcd_start_failure_rolls_back_host_runtime():
-    events = []
-    fan_runtime = FakeFanRuntime(events)
-
-    fan_server = FakeServer(
-        "fan_server",
-        events,
-    )
-
-    lcd_server = FakeServer(
-        "lcd_server",
-        events,
-        fail_start=True,
-    )
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
-        fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: fan_server,
-        lcd_server_factory=lambda: lcd_server,
-    )
-
-    with pytest.raises(
-        RuntimeError,
-        match="lcd_server start failure",
-    ):
-        runtime.start()
-
-    assert events == [
-        "fan_server.start",
-        "lcd_server.start",
-        "lcd_server.stop",
-        "fan_server.stop",
-        "fan_runtime.shutdown",
-    ]
-
-    assert runtime.started is False
 
 
 def test_fan_start_failure_restores_runtime():
     events = []
     fan_runtime = FakeFanRuntime(events)
-
     fan_server = FakeServer(
         "fan_server",
         events,
         fail_start=True,
     )
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
+    runtime = build_runtime(
+        events,
+        fan_server=fan_server,
         fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: fan_server,
-        lcd_server_factory=lambda: None,
     )
 
     with pytest.raises(
@@ -285,43 +210,31 @@ def test_fan_start_failure_restores_runtime():
         "fan_server.stop",
         "fan_runtime.shutdown",
     ]
+    assert runtime.started is False
 
 
 def test_shutdown_continues_after_server_failure():
     events = []
     fan_runtime = FakeFanRuntime(events)
-
     fan_server = FakeServer(
         "fan_server",
         events,
-    )
-
-    lcd_server = FakeServer(
-        "lcd_server",
-        events,
         fail_stop=True,
     )
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
+    runtime = build_runtime(
+        events,
+        fan_server=fan_server,
         fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: fan_server,
-        lcd_server_factory=lambda: lcd_server,
     )
 
     runtime.start()
     events.clear()
-
     runtime.shutdown()
 
     assert events == [
-        "lcd_server.stop",
         "fan_server.stop",
         "fan_runtime.shutdown",
     ]
-
     assert fan_runtime.shutdown_calls == 1
 
 
@@ -331,14 +244,9 @@ def test_shutdown_tolerates_fan_runtime_failure():
         events,
         fail_shutdown=True,
     )
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
+    runtime = build_runtime(
+        events,
         fan_runtime=fan_runtime,
-        safety=safety,
-        fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
     )
 
     runtime.start()
@@ -352,15 +260,7 @@ def test_shutdown_tolerates_fan_runtime_failure():
 
 def test_runtime_cannot_restart_after_shutdown():
     events = []
-
-    safety = object()
-
-    runtime = HostAgentRuntime(
-        fan_runtime=FakeFanRuntime(events),
-        safety=safety,
-        fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
-    )
+    runtime = build_runtime(events)
 
     runtime.start()
     runtime.shutdown()
@@ -374,17 +274,14 @@ def test_runtime_cannot_restart_after_shutdown():
 
 def test_runtime_owns_safety_coordinator():
     events = []
-    fan_runtime = FakeFanRuntime(events)
     safety = object()
-
-    runtime = HostAgentRuntime(
-        fan_runtime=fan_runtime,
+    runtime = build_runtime(
+        events,
         safety=safety,
-        fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
     )
 
     assert runtime.safety is safety
+
 
 class FakeSafetySurface:
     def __init__(self):
@@ -415,11 +312,9 @@ class FakeReconciliationSurface:
 def test_runtime_exposes_host_telemetry_and_status():
     events = []
     safety = FakeSafetySurface()
-    runtime = HostAgentRuntime(
-        fan_runtime=FakeFanRuntime(events),
+    runtime = build_runtime(
+        events,
         safety=safety,
-        fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
     )
 
     assert runtime.fan_telemetry() == {"telemetry_fresh": True}
@@ -432,12 +327,10 @@ def test_runtime_exposes_non_actuating_thermal_observation():
     events = []
     safety = FakeSafetySurface()
     reconciliation = FakeReconciliationSurface()
-    runtime = HostAgentRuntime(
-        fan_runtime=FakeFanRuntime(events),
+    runtime = build_runtime(
+        events,
         safety=safety,
         fan_reconciliation=reconciliation,
-        fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
     )
 
     telemetry = {"sample": 1}
@@ -445,6 +338,7 @@ def test_runtime_exposes_non_actuating_thermal_observation():
         "recommended_profile": "automatic"
     }
     assert reconciliation.observe_calls == [telemetry]
+
 
 def test_runtime_exposes_read_only_fan_status():
     events = []
@@ -454,12 +348,9 @@ def test_runtime_exposes_read_only_fan_status():
         reads.append(max_age)
         return {"active_profile": "automatic"}
 
-    runtime = HostAgentRuntime(
-        fan_runtime=FakeFanRuntime(events),
-        safety=object(),
+    runtime = build_runtime(
+        events,
         fan_status_reader=read_status,
-        fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
     )
 
     assert runtime.read_fan_status(max_age=12.0) == {
@@ -470,11 +361,6 @@ def test_runtime_exposes_read_only_fan_status():
 
 def test_runtime_fan_status_read_fails_closed_without_reader():
     events = []
-    runtime = HostAgentRuntime(
-        fan_runtime=FakeFanRuntime(events),
-        safety=object(),
-        fan_server_factory=lambda: None,
-        lcd_server_factory=lambda: None,
-    )
+    runtime = build_runtime(events)
 
     assert runtime.read_fan_status() is None
