@@ -26,6 +26,35 @@ usage() {
   printf '       TRUEPANEL_INSTALL_ROOT=/mnt/POOL/DATASET/TruePanel %s [--dry-run]\n' "$0"
 }
 
+
+normalize_install_root() {
+  python3 - "$1" <<'PYROOT'
+from pathlib import Path
+import sys
+
+raw = sys.argv[1]
+resolved = Path(raw).expanduser().resolve(strict=False)
+parts = resolved.parts
+
+# Require at least /mnt/<pool>/<managed-directory>. Never permit a pool
+# mount itself, /mnt, or a textual /mnt path that resolves elsewhere.
+if (
+    len(parts) < 4
+    or parts[0] != "/"
+    or parts[1] != "mnt"
+):
+    print(
+        "Installation root must resolve below "
+        "/mnt/<pool>/ and may not be the pool root: "
+        f"{resolved}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+print(resolved)
+PYROOT
+}
+
 print_uninstall_plan() {
   cat <<EOF
 == TruePanel Uninstall Dry Run ==
@@ -203,15 +232,10 @@ then
   exit 1
 fi
 
-case "$INSTALL_DIR" in
-  /mnt/*)
-    ;;
-  *)
-    printf 'Installation root must be under /mnt/: %s\n' \
-      "$INSTALL_DIR" >&2
-    exit 1
-    ;;
-esac
+if ! INSTALL_DIR="$(normalize_install_root "$INSTALL_DIR")"
+then
+  exit 1
+fi
 
 BIN_FILE="$INSTALL_DIR/bin/truepanel"
 CONFIG_FILE="$INSTALL_DIR/truepanel.yaml"
