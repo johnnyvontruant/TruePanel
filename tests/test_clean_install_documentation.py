@@ -177,3 +177,56 @@ def test_runbook_rehearses_uninstall_and_install_before_mutation():
     assert "no files were copied or written" in install
     assert "no dependencies were installed" in install
     assert "no services were changed" in install
+
+
+def test_runbook_preserves_known_good_config_outside_install_root():
+    text = read(RUNBOOK)
+
+    baseline = text.index(
+        "## Phase 1: Capture the known-good baseline"
+    )
+    uninstall = text.index(
+        "## Phase 2: Clean uninstall"
+    )
+    block = text[baseline:uninstall]
+
+    assert "TRUEPANEL_VALIDATION_ARTIFACTS" in text
+    assert "TruePanel-clean-install-artifacts" in text
+    assert (
+        "truepanel.yaml.before-clean-install"
+        in block
+    )
+    assert (
+        "truepanel-mission-control.env.before-clean-install"
+        in block
+    )
+    assert "sudo cp -a" in block
+    assert (
+        'test "$TRUEPANEL_VALIDATION_ARTIFACTS" != '
+        '/mnt/POOL/DATASET/TruePanel'
+        in block
+    )
+
+
+def test_runbook_does_not_use_preserved_config_to_mask_fresh_install():
+    text = read(RUNBOOK)
+
+    assert (
+        "Do not restore them during the fresh-install acceptance phases"
+        in text
+    )
+    assert (
+        "never copy them into the fresh installation merely to make "
+        "acceptance pass"
+        in text
+    )
+
+    phase_4 = text.index(
+        "## Phase 4: Fresh install"
+    )
+    phase_7 = text.index(
+        "## Phase 7: Reboot validation"
+    )
+    fresh_acceptance = text[phase_4:phase_7]
+
+    assert "truepanel.yaml.before-clean-install" not in fresh_acceptance
