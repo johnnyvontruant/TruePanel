@@ -13,6 +13,7 @@ SYSTEMCTL_BIN="${TRUEPANEL_SYSTEMCTL_BIN:-systemctl}"
 SKIP_SYSTEMCTL="${TRUEPANEL_SKIP_SYSTEMCTL:-false}"
 
 LCD_SERVICE_FILE="$SYSTEMD_DIR/truepanel.service"
+HOST_AGENT_SERVICE_FILE="$SYSTEMD_DIR/truepanel-host-agent.service"
 MISSION_SERVICE_FILE="$SYSTEMD_DIR/truepanel-mission-control.service"
 MISSION_ENV_FILE="$ENV_DIR/truepanel-mission-control"
 
@@ -84,6 +85,22 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICE
 
+cat > "$HOST_AGENT_SERVICE_FILE" <<SERVICE
+[Unit]
+Description=TruePanel Privileged Host Agent (standalone activation locked)
+After=local-fs.target
+ConditionPathExists=/run/truepanel/standalone-host-agent.enabled
+
+[Service]
+Type=simple
+WorkingDirectory=$ROOT_DIR
+ExecStart=$PYTHON_BIN -m truepanel.host.agent
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0027
+SERVICE
+
 cat > "$MISSION_SERVICE_FILE" <<SERVICE
 [Unit]
 Description=TruePanel Mission Control Web Dashboard
@@ -113,12 +130,17 @@ SERVICE
 
 chmod 0644 \
   "$LCD_SERVICE_FILE" \
+  "$HOST_AGENT_SERVICE_FILE" \
   "$MISSION_SERVICE_FILE"
 
 printf 'Installed service unit: %s\n' \
   "$LCD_SERVICE_FILE"
+printf 'Installed dormant service unit: %s\n' \
+  "$HOST_AGENT_SERVICE_FILE"
 printf 'Installed service unit: %s\n' \
   "$MISSION_SERVICE_FILE"
+printf '%s\n' \
+  'Standalone Host Agent activation remains locked; unit was not enabled or started.'
 
 if [[ "$SKIP_SYSTEMCTL" == "true" ]]
 then
