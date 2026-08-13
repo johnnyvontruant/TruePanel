@@ -1,17 +1,26 @@
 from pathlib import Path
 
 
-def test_lcd_primes_host_cycle_without_reconciliation_before_start():
+def test_lcd_primes_embedded_host_cycle_before_start():
     source = Path("lcd-menu.py").read_text(encoding="utf-8")
     main = source[source.index("def main():"):]
 
-    prime = main.index(
-        "host_agent_runtime.service_cycle(\n"
-        "            reconcile=False"
+    guard = main.index("if host_bootstrap is not None:")
+    lcd_server = main.index(
+        "lcd_command_server = build_lcd_command_server("
     )
-    start = main.index("host_agent_runtime.start()")
+    embedded = main[guard:lcd_server]
 
-    assert prime < start
+    prime = embedded.index(
+        "host_agent_runtime.service_cycle("
+    )
+    reconcile_false = embedded.index(
+        "reconcile=False",
+        prime,
+    )
+    start = embedded.index("host_agent_runtime.start()")
+
+    assert prime < reconcile_false < start
 
 
 def test_lcd_main_loop_delegates_periodic_host_work_to_runtime():
@@ -22,6 +31,7 @@ def test_lcd_main_loop_delegates_periodic_host_work_to_runtime():
     loop_end = main.index("delay = 5", loop_start)
     loop = main[loop_start:loop_end]
 
+    assert "if host_agent_runtime is not None:" in loop
     assert "host_agent_runtime.service_cycle()" in loop
     assert "reconcile_fan_control()" not in loop
     assert "observe_thermal_fan_policy()" not in loop
