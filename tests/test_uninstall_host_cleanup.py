@@ -178,3 +178,88 @@ def test_uninstall_never_starts_or_arms_standalone_host_agent():
         "ENGAGE_AFTERBURNERS",
     ):
         assert forbidden not in text
+
+
+def test_uninstall_dry_run_is_available_without_root_or_installed_files():
+    result = subprocess.run(
+        [
+            "bash",
+            str(UNINSTALL),
+            "--dry-run",
+            "--root",
+            "/mnt/TestPool/TruePanel",
+        ],
+        check=False,
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0
+    assert "== TruePanel Uninstall Dry Run ==" in result.stdout
+    assert "Install root:" in result.stdout
+    assert "/mnt/TestPool/TruePanel" in result.stdout
+    assert "truepanel-host-agent.service" in result.stdout
+    assert "Host ownership lease must be released" in result.stdout
+    assert "Motherboard fan control must verify Automatic" in result.stdout
+    assert (
+        "DRY RUN ONLY: no services were stopped, "
+        "no fan state changed, no files were removed."
+        in result.stdout
+    )
+
+
+def test_uninstall_dry_run_exits_before_any_mutating_path():
+    text = source()
+
+    dry_run = text.index('if [[ "$DRY_RUN" -eq 1 ]]')
+    dry_run_exit = text.index("exit 0", dry_run)
+    root_gate = text.index('if [[ $EUID -ne 0 ]]')
+    uninstaller = text.index('echo "== TruePanel Uninstaller =="')
+    first_stop = text.index(
+        'stop_service "$HOST_AGENT_SERVICE_NAME"',
+        uninstaller,
+    )
+    ownership = text.index(
+        "assert_host_ownership_released",
+        uninstaller,
+    )
+    fan_safety = text.index(
+        "verify_fan_safety",
+        uninstaller,
+    )
+    first_remove = text.index("rm -f", uninstaller)
+
+    assert dry_run < dry_run_exit < root_gate
+    assert dry_run_exit < uninstaller
+    assert dry_run_exit < first_stop
+    assert dry_run_exit < ownership
+    assert dry_run_exit < fan_safety
+    assert dry_run_exit < first_remove
+
+
+def test_uninstall_dry_run_plan_contains_no_mutating_commands():
+    text = source()
+    start = text.index("print_uninstall_plan()")
+    end = text.index("\n}\n", start)
+    block = text[start:end]
+
+    for forbidden in (
+        "systemctl stop",
+        "systemctl disable",
+        "systemctl daemon-reload",
+        "rm -f",
+        "rm -rf",
+        "rmdir ",
+        "verify_fan_safety",
+        "assert_host_ownership_released",
+        "flock",
+    ):
+        assert forbidden not in block
+
+
+def test_uninstall_usage_documents_dry_run():
+    text = source()
+
+    assert "[--dry-run]" in text
+    assert "--dry-run)" in text
