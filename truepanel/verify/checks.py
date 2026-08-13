@@ -362,6 +362,52 @@ def check_service_state(
     )
 
 
+def check_service_inactive(
+    service: str,
+    *,
+    runner: Callable[..., Any] = run_command,
+) -> dict[str, str]:
+    """Require a service to be explicitly inactive."""
+
+    try:
+        response = runner(
+            [
+                "systemctl",
+                "is-active",
+                service,
+            ],
+            timeout=5.0,
+        )
+    except (
+        OSError,
+        subprocess.SubprocessError,
+    ) as error:
+        return failed(
+            service,
+            str(error),
+        )
+
+    state = (
+        response.stdout.strip()
+        or response.stderr.strip()
+        or "unknown"
+    )
+
+    if state == "inactive":
+        return passed(
+            service,
+            state,
+        )
+
+    return failed(
+        service,
+        (
+            "Expected inactive; "
+            f"observed {state}"
+        ),
+    )
+
+
 def check_postinit(
     root: Path,
     *,
@@ -582,6 +628,12 @@ def run_checks(
     results.append(
         check_service_state(
             "truepanel-mission-control.service",
+            runner=runner,
+        )
+    )
+    results.append(
+        check_service_inactive(
+            "truepanel-host-agent.service",
             runner=runner,
         )
     )

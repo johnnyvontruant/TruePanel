@@ -8,6 +8,7 @@ from truepanel.verify.checks import (
     check_installation_files,
     check_lcd_transport,
     check_postinit,
+    check_service_inactive,
     check_service_state,
     run_verify,
 )
@@ -114,6 +115,50 @@ def test_service_state_fails_for_inactive_service():
 
     assert result["status"] == FAIL
     assert result["detail"] == "inactive"
+
+
+def test_expected_inactive_service_passes_only_when_inactive():
+    result = check_service_inactive(
+        "truepanel-host-agent.service",
+        runner=lambda *args, **kwargs: (
+            CommandResult(
+                returncode=3,
+                stdout="inactive\n",
+            )
+        ),
+    )
+
+    assert result["status"] == PASS
+    assert result["detail"] == "inactive"
+
+
+def test_expected_inactive_service_fails_when_active():
+    result = check_service_inactive(
+        "truepanel-host-agent.service",
+        runner=lambda *args, **kwargs: (
+            CommandResult(
+                returncode=0,
+                stdout="active\n",
+            )
+        ),
+    )
+
+    assert result["status"] == FAIL
+    assert "Expected inactive" in result["detail"]
+    assert "active" in result["detail"]
+
+
+def test_verify_checks_standalone_host_agent_is_dormant():
+    source = Path(
+        "truepanel/verify/checks.py"
+    ).read_text(encoding="utf-8")
+
+    start = source.index("def run_checks(")
+    end = source.index("\ndef ", start + 1)
+    block = source[start:end]
+
+    assert "check_service_inactive(" in block
+    assert '"truepanel-host-agent.service"' in block
 
 
 def test_postinit_accepts_enabled_startup_task(
