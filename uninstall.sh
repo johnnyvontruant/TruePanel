@@ -109,7 +109,7 @@ fi
 if [[ -z "$INSTALL_DIR" ]]
 then
   INSTALL_DIR="$(
-    systemctl show "$SERVICE_NAME" \
+    systemctl show truepanel.service \
       --property=WorkingDirectory \
       --value \
       --no-pager \
