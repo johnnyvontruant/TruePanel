@@ -13,6 +13,12 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
+from truepanel.config.loader import load_config
+
+from .bootstrap import build_host_agent_bootstrap
+from .factory import build_host_agent_runtime_from_bootstrap
+from .hooks import HostAgentApplicationHooks
+
 RuntimeFactory = Callable[[], Any]
 
 
@@ -85,21 +91,40 @@ def install_signal_handlers(
     )
 
 
-def build_production_runtime() -> Any:
-    """
-    Production standalone bootstrap placeholder.
+STANDALONE_PRODUCTION_ACTIVATED = False
 
-    Real hardware construction remains intentionally unavailable until
-    Phase 4B.2 extracts it from the legacy LCD runtime.
-    """
+
+def build_production_runtime() -> Any:
+    """Construct the production Host runtime without starting it."""
+
+    config = load_config()
+    bootstrap = build_host_agent_bootstrap(
+        config
+    )
+
+    return build_host_agent_runtime_from_bootstrap(
+        bootstrap=bootstrap,
+        application_hooks=(
+            HostAgentApplicationHooks()
+        ),
+    )
+
+
+def require_standalone_activation() -> None:
+    """Fail closed until standalone Host ownership is explicitly activated."""
+
+    if STANDALONE_PRODUCTION_ACTIVATED:
+        return
 
     raise RuntimeError(
-        "Standalone Host Agent hardware bootstrap is not enabled yet."
+        "Standalone Host Agent activation is not enabled yet."
     )
 
 
 def main() -> None:
-    """Run the standalone Host Agent process."""
+    """Run the standalone Host Agent process only after explicit activation."""
+
+    require_standalone_activation()
 
     process = HostAgentProcess(
         build_production_runtime
@@ -119,4 +144,6 @@ __all__ = [
     "build_production_runtime",
     "install_signal_handlers",
     "main",
+    "require_standalone_activation",
+    "STANDALONE_PRODUCTION_ACTIVATED",
 ]
