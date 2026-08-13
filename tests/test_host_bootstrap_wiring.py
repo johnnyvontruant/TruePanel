@@ -298,24 +298,22 @@ def test_lcd_has_no_legacy_thermal_bootstrap_state():
     assert "command_cooldown_seconds" in bootstrap
     assert "commissioned_fingerprint" in bootstrap
 
-def test_lcd_reads_fan_status_through_host_runtime():
+def test_lcd_reads_fan_status_through_read_only_host_client():
     runtime = source()
+    client = Path(
+        "truepanel/host/client.py"
+    ).read_text(encoding="utf-8")
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
     ).read_text(encoding="utf-8")
-    factory = Path(
-        "truepanel/host/factory.py"
-    ).read_text(encoding="utf-8")
-    host_runtime = Path(
-        "truepanel/host/runtime.py"
-    ).read_text(encoding="utf-8")
 
     assert "host_bootstrap.status_bridge.read(" not in runtime
-    assert "host_agent_runtime.read_fan_status(" in runtime
+    assert "HostAgentStatusClient" in runtime
+    assert "host_status_client.read_fan_status(" in runtime
+    assert "class HostAgentStatusClient" in client
+    assert "FanControlStatusBridge(" in client
+    assert "def read_fan_status(" in client
     assert "def read_fan_status(" in bootstrap
-    assert "fan_status_reader=(" in bootstrap
-    assert "safety_services.fan_status_reader" in factory
-    assert "def read_fan_status(" in host_runtime
 
 def test_lcd_delegates_privileged_bootstrap_unwrapping_to_host_factory():
     runtime = source()

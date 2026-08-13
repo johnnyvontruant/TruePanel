@@ -29,6 +29,7 @@ from truepanel.history import (
 )
 from truepanel.host import (
     HostAgentApplicationHooks,
+    HostAgentStatusClient,
     build_host_agent_bootstrap,
     build_host_agent_runtime_from_bootstrap,
 )
@@ -79,6 +80,7 @@ host_bootstrap = build_host_agent_bootstrap(
     config
 )
 host_agent_runtime = None
+host_status_client = HostAgentStatusClient()
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
@@ -470,12 +472,8 @@ def show_fan_rpm():
 
 
 def show_fan_control():
-    status = (
-        host_agent_runtime.read_fan_status(
-            max_age=30.0
-        )
-        if host_agent_runtime is not None
-        else None
+    status = host_status_client.read_fan_status(
+        max_age=30.0
     )
 
     lcd.clear()
