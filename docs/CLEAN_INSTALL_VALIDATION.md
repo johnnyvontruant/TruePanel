@@ -16,6 +16,15 @@ Examples use:
 
 Replace that path with the actual persistent installation root.
 
+Choose a persistent validation-artifact directory **outside** the TruePanel installation root. It must survive uninstall and reboot. For example:
+
+```bash
+export TRUEPANEL_VALIDATION_ARTIFACTS=/mnt/POOL/DATASET/TruePanel-clean-install-artifacts
+sudo mkdir -p "$TRUEPANEL_VALIDATION_ARTIFACTS"
+```
+
+Do not place this directory inside `/mnt/POOL/DATASET/TruePanel`; uninstall intentionally deletes that tree.
+
 ## Safety invariants
 
 The validation must preserve all of these conditions:
@@ -43,6 +52,32 @@ git rev-parse HEAD
 For the graduation run, use a clean checkout of the intended `main` commit. Record the commit SHA with the test results.
 
 ## Phase 1: Capture the known-good baseline
+
+Before any destructive step, preserve the working configuration outside the installation root. These copies are recovery evidence only. **Do not restore them during the fresh-install acceptance phases**, because doing so would hide installer or default-configuration defects.
+
+```bash
+test -n "${TRUEPANEL_VALIDATION_ARTIFACTS:-}"
+test "$TRUEPANEL_VALIDATION_ARTIFACTS" != /mnt/POOL/DATASET/TruePanel
+
+sudo cp -a \
+  /mnt/POOL/DATASET/TruePanel/truepanel.yaml \
+  "$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel.yaml.before-clean-install"
+
+if [ -f /etc/default/truepanel-mission-control ]; then
+  sudo cp -a \
+    /etc/default/truepanel-mission-control \
+    "$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel-mission-control.env.before-clean-install"
+fi
+```
+
+Confirm the preserved configuration exists before continuing:
+
+```bash
+sudo test -f \
+  "$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel.yaml.before-clean-install"
+```
+
+If the clean-install test later exposes a defect, stop and fix the repository or documentation first. Use the preserved files only when deliberately returning the NAS to its previous known-good configuration after diagnosis; never copy them into the fresh installation merely to make acceptance pass.
 
 From the currently installed TruePanel tree:
 
