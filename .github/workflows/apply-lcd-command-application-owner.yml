@@ -1,0 +1,301 @@
+name: Apply LCD command application ownership
+
+on:
+  push:
+    branches:
+      - agent/lcd-command-application-owner
+    paths:
+      - .github/workflows/apply-lcd-command-application-owner.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/lcd-command-application-owner
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install development tools
+        run: python -m pip install -e ".[development]"
+
+      - name: Move LCD command lifecycle into LCD application
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("lcd-menu.py")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = (
+              (
+                  "from truepanel.hardware.lcd_reader_status_bridge import (\n"
+                  "    LCDReaderStatusBridge,\n"
+                  ")\n",
+                  "from truepanel.hardware.lcd_reader_status_bridge import (\n"
+                  "    LCDReaderStatusBridge,\n"
+                  ")\n"
+                  "from truepanel.hardware.lcd_service import (\n"
+                  "    build_lcd_command_server,\n"
+                  ")\n",
+              ),
+              (
+                  "from truepanel.host import (\n"
+                  "    HostAgentApplicationHooks,\n"
+                  "    HostAgentStatusClient,\n",
+                  "from truepanel.host import (\n"
+                  "    HostAgentStatusClient,\n",
+              ),
+              (
+                  "host_agent_runtime = None\n"
+                  "host_status_client = HostAgentStatusClient()\n",
+                  "host_agent_runtime = None\n"
+                  "lcd_command_server = None\n"
+                  "host_status_client = HostAgentStatusClient()\n",
+              ),
+              (
+                  "def main():\n"
+                  "    global lcd, menu_item\n"
+                  "    global host_agent_runtime\n",
+                  "def main():\n"
+                  "    global lcd, menu_item\n"
+                  "    global host_agent_runtime\n"
+                  "    global lcd_command_server\n",
+              ),
+              (
+                  "    try:\n"
+                  "        host_agent_application_hooks = HostAgentApplicationHooks(\n"
+                  "            lcd_button_handler=(\n"
+                  "                lambda button_mask, source: (\n"
+                  "                    lcd.submit_button_event(\n"
+                  "                        button_mask,\n"
+                  "                        source=source,\n"
+                  "                    )\n"
+                  "                )\n"
+                  "                if lcd is not None\n"
+                  "                else False\n"
+                  "            ),\n"
+                  "        )\n"
+                  "\n"
+                  "        host_agent_runtime = (\n"
+                  "            build_host_agent_runtime_from_bootstrap(\n"
+                  "                bootstrap=host_bootstrap,\n"
+                  "                application_hooks=(\n"
+                  "                    host_agent_application_hooks\n"
+                  "                ),\n"
+                  "            )\n"
+                  "        )\n",
+                  "    try:\n"
+                  "        host_agent_runtime = (\n"
+                  "            build_host_agent_runtime_from_bootstrap(\n"
+                  "                bootstrap=host_bootstrap,\n"
+                  "            )\n"
+                  "        )\n",
+              ),
+              (
+                  "        host_agent_runtime.start()\n"
+                  "\n"
+                  "        if bay_led_startup_animation is not None:\n",
+                  "        host_agent_runtime.start()\n"
+                  "\n"
+                  "        lcd_command_server = build_lcd_command_server(\n"
+                  "            submit_button=(\n"
+                  "                lambda button_mask, source: (\n"
+                  "                    lcd.submit_button_event(\n"
+                  "                        button_mask,\n"
+                  "                        source=source,\n"
+                  "                    )\n"
+                  "                )\n"
+                  "                if lcd is not None\n"
+                  "                else False\n"
+                  "            ),\n"
+                  "        )\n"
+                  "        if lcd_command_server is not None:\n"
+                  "            lcd_command_server.start()\n"
+                  "\n"
+                  "        if bay_led_startup_animation is not None:\n",
+              ),
+              (
+                  "    finally:\n"
+                  "        if host_agent_runtime is not None:\n",
+                  "    finally:\n"
+                  "        if lcd_command_server is not None:\n"
+                  "            try:\n"
+                  "                lcd_command_server.stop()\n"
+                  "            except Exception:\n"
+                  "                LOGGER.exception(\n"
+                  "                    \"LCD command server shutdown failed\"\n"
+                  "                )\n"
+                  "            finally:\n"
+                  "                lcd_command_server = None\n"
+                  "\n"
+                  "        if host_agent_runtime is not None:\n",
+              ),
+          )
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(
+                      f"expected one LCD ownership anchor, found {count}"
+                  )
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Update compatibility tests for fan-only Host runtime
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          for path in Path("tests").glob("test_*.py"):
+              text = path.read_text(encoding="utf-8")
+              text = text.replace(
+                  "        lcd_server_factory=lambda: None,\n",
+                  "",
+              )
+              path.write_text(text, encoding="utf-8")
+
+          path = Path("tests/test_host_agent.py")
+          text = path.read_text(encoding="utf-8")
+          old = (
+              "    assert captured[\"owner_name\"] == \"standalone-host-agent\"\n"
+              "    hooks = captured[\"application_hooks\"]\n"
+              "    assert isinstance(\n"
+              "        hooks,\n"
+              "        agent.HostAgentApplicationHooks,\n"
+              "    )\n"
+              "    assert hooks.lcd_button_handler is None\n"
+          )
+          new = (
+              "    assert captured[\"owner_name\"] == \"standalone-host-agent\"\n"
+              "    assert \"application_hooks\" not in captured\n"
+          )
+          if text.count(old) != 1:
+              raise SystemExit("host agent hook assertion anchor changed")
+          path.write_text(
+              text.replace(old, new, 1),
+              encoding="utf-8",
+          )
+
+          path = Path("tests/test_host_standalone_bootstrap_contract.py")
+          text = path.read_text(encoding="utf-8")
+          old = '    assert "HostAgentApplicationHooks()" in agent\n'
+          new = '    assert "HostAgentApplicationHooks" not in agent\n'
+          if text.count(old) != 1:
+              raise SystemExit("standalone hook contract anchor changed")
+          path.write_text(
+              text.replace(old, new, 1),
+              encoding="utf-8",
+          )
+          PY
+
+          cat > tests/test_lcd_command_application_owner.py <<'PY'
+          from pathlib import Path
+
+          from truepanel.hardware.lcd_service import (
+              build_lcd_command_server,
+          )
+
+
+          def test_lcd_service_builder_owns_virtual_button_server():
+              calls = []
+
+              def submit(mask, source):
+                  calls.append((mask, source))
+                  return True
+
+              server = build_lcd_command_server(
+                  submit_button=submit
+              )
+
+              assert server is not None
+              assert server.processor.submit_button is submit
+
+
+          def test_lcd_service_builder_fails_closed_without_handler():
+              assert build_lcd_command_server(
+                  submit_button=None
+              ) is None
+
+
+          def test_lcd_runtime_owns_lcd_command_server_lifecycle():
+              source = Path(
+                  "lcd-menu.py"
+              ).read_text(encoding="utf-8")
+              host_runtime = Path(
+                  "truepanel/host/runtime.py"
+              ).read_text(encoding="utf-8")
+              host_factory = Path(
+                  "truepanel/host/factory.py"
+              ).read_text(encoding="utf-8")
+
+              assert "build_lcd_command_server" in source
+              assert "lcd_command_server.start()" in source
+              assert "lcd_command_server.stop()" in source
+              assert "lcd.submit_button_event(" in source
+
+              assert "lcd_server_factory" not in host_runtime
+              assert "_lcd_server" not in host_runtime
+              assert "LCDCommandServer" not in host_factory
+              assert "LCDCommandProcessor" not in host_factory
+
+
+          def test_lcd_command_server_stops_before_host_hardware_shutdown():
+              source = Path(
+                  "lcd-menu.py"
+              ).read_text(encoding="utf-8")
+              finally_start = source.index("    finally:")
+              block = source[finally_start:]
+
+              lcd_stop = block.index("lcd_command_server.stop()")
+              host_stop = block.index("host_agent_runtime.shutdown()")
+
+              assert lcd_stop < host_stop
+
+
+          def test_standalone_host_has_no_lcd_command_application_hook():
+              agent = Path(
+                  "truepanel/host/agent.py"
+              ).read_text(encoding="utf-8")
+
+              assert "HostAgentApplicationHooks" not in agent
+              assert "lcd_button_handler" not in agent
+          PY
+
+      - name: Validate LCD command ownership migration
+        run: |
+          python -m compileall -q \
+            truepanel \
+            lcd-menu.py \
+            tests/test_lcd_command_application_owner.py
+          python -m pytest -q \
+            tests/test_lcd_command_application_owner.py \
+            tests/test_host_runtime.py \
+            tests/test_host_runtime_ownership.py \
+            tests/test_host_factory.py \
+            tests/test_host_agent.py \
+            tests/test_host_standalone_bootstrap_contract.py \
+            tests/test_host_service_cycle.py
+          git diff --check
+
+      - name: Commit LCD command ownership migration
+        shell: bash
+        run: |
+          rm .github/workflows/apply-lcd-command-application-owner.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "[lcd-command] Move virtual button server to LCD application"
+          git push origin HEAD:agent/lcd-command-application-owner
