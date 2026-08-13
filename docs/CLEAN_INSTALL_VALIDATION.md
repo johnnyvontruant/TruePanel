@@ -126,12 +126,16 @@ if [ -d /run/truepanel ]; then
 fi
 ```
 
-Optional but recommended before destructive testing:
+Capture a privacy-safe compatibility support bundle outside the installation root so the baseline survives uninstall:
 
 ```bash
-python3 truepanel.py compatibility \
+sudo ./bin/truepanel compatibility \
   --support-bundle \
-  --output truepanel-pre-clean-install.json
+  --output \
+  "$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel-pre-clean-install.json"
+
+sudo test -f \
+  "$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel-pre-clean-install.json"
 ```
 
 ## Phase 2: Clean uninstall
@@ -282,6 +286,20 @@ Verify the marker directly:
 ```bash
 test ! -e /run/truepanel/standalone-host-agent.enabled
 ```
+
+Capture the fresh-install compatibility state beside the preserved baseline:
+
+```bash
+sudo ./bin/truepanel compatibility \
+  --support-bundle \
+  --output \
+  "$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel-post-clean-install.json"
+
+sudo test -f \
+  "$TRUEPANEL_VALIDATION_ARTIFACTS/truepanel-post-clean-install.json"
+```
+
+Keep both support bundles with the recorded `main` SHA and validation notes. Do not place either bundle inside the managed TruePanel tree.
 
 ## Phase 6: Functional application checks
 
