@@ -770,8 +770,9 @@ def main():
             )
         )
 
-        observe_thermal_fan_policy()
-        publish_fan_control_status()
+        host_agent_runtime.service_cycle(
+            reconcile=False
+        )
 
         host_agent_runtime.start()
 
@@ -783,15 +784,7 @@ def main():
         publish_lcd_reader_status()
 
         while not shutdown_requested:
-            try:
-                reconcile_fan_control()
-            except Exception:
-                LOGGER.exception(
-                    "Fan-control reconciliation failed"
-                )
-
-            observe_thermal_fan_policy()
-            publish_fan_control_status()
+            host_agent_runtime.service_cycle()
             publish_lcd_reader_status()
             add_ips_to_menu()
 
