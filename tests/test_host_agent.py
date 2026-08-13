@@ -12,10 +12,12 @@ class FakeRuntime:
         events,
         *,
         fail_start=False,
+        fail_cycle=False,
         fail_shutdown=False,
     ):
         self.events = events
         self.fail_start = fail_start
+        self.fail_cycle = fail_cycle
         self.fail_shutdown = fail_shutdown
 
     def start(self):
@@ -24,6 +26,14 @@ class FakeRuntime:
         if self.fail_start:
             raise RuntimeError(
                 "runtime start failure"
+            )
+
+    def service_cycle(self):
+        self.events.append("runtime.service_cycle")
+
+        if self.fail_cycle:
+            raise RuntimeError(
+                "runtime service failure"
             )
 
     def shutdown(self):
@@ -40,8 +50,9 @@ class ImmediateStopEvent:
         self.events = events
         self.set_calls = 0
 
-    def wait(self):
-        self.events.append("wait")
+    def wait(self, timeout=None):
+        self.events.append(("wait", timeout))
+        return True
 
     def set(self):
         self.set_calls += 1
@@ -64,7 +75,11 @@ def test_process_starts_waits_then_shuts_down():
 
     assert events == [
         "runtime.start",
-        "wait",
+        "runtime.service_cycle",
+        (
+            "wait",
+            agent.DEFAULT_SERVICE_INTERVAL_SECONDS,
+        ),
         "runtime.shutdown",
     ]
 
@@ -93,6 +108,59 @@ def test_process_shuts_down_when_start_fails():
         "runtime.start",
         "runtime.shutdown",
     ]
+
+
+def test_process_shuts_down_when_service_cycle_fails():
+    events = []
+    runtime = FakeRuntime(
+        events,
+        fail_cycle=True,
+    )
+
+    process = agent.HostAgentProcess(
+        lambda: runtime,
+        stop_event=ImmediateStopEvent(events),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="runtime service failure",
+    ):
+        process.run()
+
+    assert events == [
+        "runtime.start",
+        "runtime.service_cycle",
+        "runtime.shutdown",
+    ]
+
+
+def test_process_uses_configured_service_interval():
+    events = []
+    runtime = FakeRuntime(events)
+    stop_event = ImmediateStopEvent(events)
+
+    process = agent.HostAgentProcess(
+        lambda: runtime,
+        stop_event=stop_event,
+        service_interval_seconds=2.5,
+    )
+
+    process.run()
+
+    assert process.service_interval_seconds == 2.5
+    assert ("wait", 2.5) in events
+
+
+def test_process_rejects_nonpositive_service_interval():
+    with pytest.raises(
+        ValueError,
+        match="service interval must be positive",
+    ):
+        agent.HostAgentProcess(
+            lambda: object(),
+            service_interval_seconds=0,
+        )
 
 
 def test_shutdown_request_sets_stop_event():
@@ -180,6 +248,7 @@ def test_production_bootstrap_constructs_safe_runtime(
     assert result is runtime
     assert captured["config"] is config
     assert captured["bootstrap"] is bootstrap
+    assert captured["owner_name"] == "standalone-host-agent"
     hooks = captured["application_hooks"]
     assert isinstance(
         hooks,
@@ -209,8 +278,8 @@ def test_main_refuses_standalone_activation_before_process_construction(
     monkeypatch.setattr(
         agent,
         "HostAgentProcess",
-        lambda runtime_factory: constructed.append(
-            runtime_factory
+        lambda runtime_factory, **kwargs: constructed.append(
+            (runtime_factory, kwargs)
         ),
     )
 
@@ -229,9 +298,19 @@ def test_main_installs_signals_before_run_when_gate_is_open(
     events = []
 
     class FakeProcess:
-        def __init__(self, runtime_factory):
+        def __init__(
+            self,
+            runtime_factory,
+            *,
+            service_interval_seconds,
+        ):
             del runtime_factory
-            events.append("construct")
+            events.append(
+                (
+                    "construct",
+                    service_interval_seconds,
+                )
+            )
 
         def run(self):
             events.append("run")
@@ -260,7 +339,10 @@ def test_main_installs_signals_before_run_when_gate_is_open(
 
     assert events == [
         "gate",
-        "construct",
+        (
+            "construct",
+            agent.DEFAULT_SERVICE_INTERVAL_SECONDS,
+        ),
         "signals",
         "run",
     ]
