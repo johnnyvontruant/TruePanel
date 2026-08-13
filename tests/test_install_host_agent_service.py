@@ -94,3 +94,82 @@ def test_fresh_install_never_enables_or_starts_host_agent():
         "systemctl restart truepanel-host-agent"
         not in install
     )
+
+
+def test_install_dry_run_is_available_without_root_or_target_tree():
+    import subprocess
+
+    install = ROOT / "install.sh"
+    result = subprocess.run(
+        [
+            "bash",
+            str(install),
+            "--dry-run",
+            "--root",
+            "/mnt/TestPool/TruePanel",
+        ],
+        check=False,
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0
+    assert "== TruePanel Install Dry Run ==" in result.stdout
+    assert "/mnt/TestPool/TruePanel" in result.stdout
+    assert "truepanel-host-agent.service" in result.stdout
+    assert "Keep standalone Host Agent activation locked" in result.stdout
+    assert "does not start or enable TruePanel services" in result.stdout
+    assert (
+        "DRY RUN ONLY: no directories were created, "
+        "no files were copied or written, no dependencies were installed, "
+        "no services were changed."
+        in result.stdout
+    )
+
+
+def test_install_dry_run_exits_before_root_and_mutating_actions():
+    text = source("install.sh")
+
+    dry_run = text.index('if [[ "$DRY_RUN" -eq 1 ]]')
+    dry_run_exit = text.index("exit 0", dry_run)
+    root_gate = text.index('if [[ "$(id -u)" -ne 0 ]]')
+    first_mkdir = text.index('mkdir -p -- "$INSTALL_DIR"')
+    first_rsync = text.index("rsync -a --delete")
+    first_service_write = text.index(
+        'cat > "$MISSION_CONTROL_SERVICE_FILE"'
+    )
+    daemon_reload = text.index("systemctl daemon-reload")
+
+    assert dry_run < dry_run_exit < root_gate
+    assert dry_run_exit < first_mkdir
+    assert dry_run_exit < first_rsync
+    assert dry_run_exit < first_service_write
+    assert dry_run_exit < daemon_reload
+
+
+def test_install_dry_run_plan_contains_no_mutating_commands():
+    text = source("install.sh")
+    start = text.index("print_install_plan()")
+    end = text.index("\n}\n", start)
+    block = text[start:end]
+
+    for forbidden in (
+        "mkdir ",
+        "rsync ",
+        "pip install",
+        "cat >",
+        "chmod ",
+        "systemctl daemon-reload",
+        "systemctl start",
+        "systemctl enable",
+        "rm ",
+    ):
+        assert forbidden not in block
+
+
+def test_install_usage_documents_dry_run():
+    text = source("install.sh")
+
+    assert "[--dry-run]" in text
+    assert "--dry-run)" in text

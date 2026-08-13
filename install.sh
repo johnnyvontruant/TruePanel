@@ -8,6 +8,7 @@ SOURCE_ROOT="$(
 )"
 
 INSTALL_DIR="${TRUEPANEL_INSTALL_ROOT:-}"
+DRY_RUN=0
 SERVICE_FILE="/etc/systemd/system/truepanel.service"
 HOST_AGENT_SERVICE_FILE="/etc/systemd/system/truepanel-host-agent.service"
 MISSION_CONTROL_SERVICE_FILE="/etc/systemd/system/truepanel-mission-control.service"
@@ -15,8 +16,40 @@ MISSION_CONTROL_ENV_FILE="/etc/default/truepanel-mission-control"
 PYTHON_BIN=""
 
 usage() {
-  printf 'Usage: %s --root /mnt/POOL/DATASET/TruePanel\n' "$0"
-  printf '       TRUEPANEL_INSTALL_ROOT=/mnt/POOL/DATASET/TruePanel %s\n' "$0"
+  printf 'Usage: %s [--dry-run] --root /mnt/POOL/DATASET/TruePanel\n' "$0"
+  printf '       TRUEPANEL_INSTALL_ROOT=/mnt/POOL/DATASET/TruePanel %s [--dry-run]\n' "$0"
+}
+
+print_install_plan() {
+  local bin_file="$INSTALL_DIR/bin/truepanel"
+
+  cat <<EOF
+== TruePanel Install Dry Run ==
+
+Source tree:
+  $SOURCE_ROOT
+
+Install root:
+  $INSTALL_DIR
+
+Actions a real install would perform:
+  Validate prerequisites: python3, rsync, systemctl
+  Create/preserve install root and synchronize the source tree
+  Create truepanel.yaml only when it does not already exist
+  Create a Python virtual environment when supported and install requirements
+  Create CLI wrapper: $bin_file
+  Install LCD service: $SERVICE_FILE
+  Install Mission Control service: $MISSION_CONTROL_SERVICE_FILE
+  Create/preserve Mission Control environment: $MISSION_CONTROL_ENV_FILE
+  Install dormant Host Agent service: $HOST_AGENT_SERVICE_FILE
+  Keep standalone Host Agent activation locked and do not start it
+  Reload systemd daemon state
+  Run TruePanel Doctor from the installed tree
+
+The installer does not start or enable TruePanel services automatically.
+
+DRY RUN ONLY: no directories were created, no files were copied or written, no dependencies were installed, no services were changed.
+EOF
 }
 
 while [[ $# -gt 0 ]]
@@ -32,6 +65,10 @@ do
 
       INSTALL_DIR="$2"
       shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
       ;;
     -h|--help)
       usage
@@ -66,6 +103,12 @@ case "$INSTALL_DIR" in
     exit 1
     ;;
 esac
+
+if [[ "$DRY_RUN" -eq 1 ]]
+then
+  print_install_plan
+  exit 0
+fi
 
 if [[ "$(id -u)" -ne 0 ]]
 then
