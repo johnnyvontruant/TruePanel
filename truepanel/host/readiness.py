@@ -122,13 +122,26 @@ def collect_host_readiness(
         )
 
     service_available = service_error is None
-    expected_exec = (
-        "ExecStart=$PYTHON_BIN -m truepanel.host.agent"
+    service_lines = [
+        line.strip()
+        for line in service_text.splitlines()
+    ]
+    exec_target_ok = any(
+        line.startswith("ExecStart=")
+        and " -m truepanel.host.agent" in line
+        for line in service_lines
     )
     expected_condition = (
         "ConditionPathExists=/run/truepanel/"
         "standalone-host-agent.enabled"
     )
+    condition_ok = (
+        expected_condition in service_lines
+    )
+    install_section_absent = (
+        "[Install]" not in service_lines
+    )
+    marker_present = marker_path.exists()
 
     checks = (
         HostReadinessCheck(
@@ -145,25 +158,22 @@ def collect_host_readiness(
         ),
         HostReadinessCheck(
             "service_exec_target",
-            (
-                service_available
-                and expected_exec in service_text
-            ),
+            service_available and exec_target_ok,
             (
                 "Service ExecStart targets truepanel.host.agent."
-                if service_available and expected_exec in service_text
-                else "Service ExecStart does not match the guarded Host Agent entry point."
+                if service_available and exec_target_ok
+                else (
+                    "Service ExecStart does not match the guarded "
+                    "Host Agent entry point."
+                )
             ),
         ),
         HostReadinessCheck(
             "systemd_condition_gate",
-            (
-                service_available
-                and expected_condition in service_text
-            ),
+            service_available and condition_ok,
             (
                 "Ephemeral systemd cutover condition is present."
-                if service_available and expected_condition in service_text
+                if service_available and condition_ok
                 else "Ephemeral systemd cutover condition is missing."
             ),
         ),
@@ -171,12 +181,15 @@ def collect_host_readiness(
             "service_not_enableable",
             (
                 service_available
-                and "[Install]" not in service_text
+                and install_section_absent
             ),
             (
                 "Service has no [Install] section and remains dormant."
-                if service_available and "[Install]" not in service_text
-                else "Service contains an [Install] section or is unavailable."
+                if service_available and install_section_absent
+                else (
+                    "Service contains an [Install] section or is "
+                    "unavailable."
+                )
             ),
         ),
         HostReadinessCheck(
@@ -190,10 +203,10 @@ def collect_host_readiness(
         ),
         HostReadinessCheck(
             "cutover_marker_absent",
-            not marker_path.exists(),
+            not marker_present,
             (
                 "Ephemeral cutover marker is absent."
-                if not marker_path.exists()
+                if not marker_present
                 else "Ephemeral cutover marker is present."
             ),
         ),
