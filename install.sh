@@ -230,6 +230,10 @@ theme:
   critical_prefix: "!!"
   info_prefix: "i "
   healthy_prefix: "OK"
+
+buzzer:
+  enabled: false
+  backend: pcspkr
 YAML
 fi
 

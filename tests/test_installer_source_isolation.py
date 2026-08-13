@@ -105,3 +105,13 @@ def test_clean_install_runbook_requires_generic_fresh_config():
     assert "Source-local state is excluded" in block
     assert "generic safe `truepanel.yaml`" in block
     assert "machine-specific source configuration" in block
+
+
+def test_installer_generated_default_disables_buzzer():
+    block = default_config_block()
+
+    assert (
+        "buzzer:\n"
+        "  enabled: false\n"
+        "  backend: pcspkr"
+    ) in block
