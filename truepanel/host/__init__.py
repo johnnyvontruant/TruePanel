@@ -19,10 +19,7 @@ from .factory import (
     build_host_agent_runtime,
     build_host_agent_runtime_from_bootstrap,
 )
-from .hooks import (
-    HostAgentApplicationHooks,
-    HostAgentSafetyServices,
-)
+from .hooks import HostAgentSafetyServices
 from .ownership import (
     DEFAULT_HOST_OWNERSHIP_PATH,
     HostOwnershipError,
@@ -41,7 +38,6 @@ __all__ = [
     "build_host_agent_bootstrap",
     "HostAgentBootstrap",
     "HostAgentCapabilities",
-    "HostAgentApplicationHooks",
     "HostAgentRuntime",
     "HostAgentSafetyCoordinator",
     "HostAgentSafetyServices",
