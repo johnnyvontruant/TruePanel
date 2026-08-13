@@ -502,3 +502,69 @@ def test_rejected_confirmation_invokes_nothing(
 
     assert result == 2
     assert calls == []
+
+
+def test_promotion_rejects_unsafe_backup_before_copy(
+    tmp_path,
+):
+    from truepanel.upgrade.promotion import (
+        run_promotion,
+    )
+
+    deployed = tmp_path / "TruePanel"
+    stage = tmp_path / "stage"
+
+    create_install(
+        deployed,
+        marker="old",
+        config="theme_pack: tactical\n",
+    )
+    create_install(
+        stage,
+        marker="new",
+        config="theme_pack: default\n",
+    )
+    write_manifest(
+        stage,
+        deployed,
+    )
+
+    invalid_backups = (
+        tmp_path / "TruePanel-unsafe-backup",
+        (
+            tmp_path
+            / "outside"
+            / ".truepanel-backup-test"
+        ),
+    )
+
+    for backup in invalid_backups:
+        calls = []
+
+        def forbidden_runner(
+            *args,
+            **kwargs,
+        ):
+            calls.append("runner")
+            raise AssertionError(
+                "backup copy must not begin"
+            )
+
+        result = run_promotion(
+            stage_root=stage,
+            deploy_root=deployed,
+            backup_root=backup,
+            confirmation="PROMOTE_TRUEPANEL",
+            runner=forbidden_runner,
+            restarter=lambda root: 0,
+            verifier=lambda root: 0,
+        )
+
+        assert result == 1
+        assert calls == []
+        assert not backup.exists()
+        assert (
+            deployed
+            / "truepanel"
+            / "marker.txt"
+        ).read_text() == "old"

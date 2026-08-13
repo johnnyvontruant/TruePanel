@@ -103,3 +103,19 @@ def test_upgrade_guide_does_not_teach_legacy_reinstall():
     assert "git switch --detach v1.0.0" not in text
     assert "git switch --detach v0.9.0" not in text
     assert "bash install.sh" not in text
+
+
+def test_upgrade_guide_documents_safe_backup_root():
+    text = read(UPGRADING)
+
+    assert "sibling of the deployment root" in text
+    assert "`.truepanel-backup-`" in text
+    assert (
+        "/mnt/POOL/DATASET/"
+        ".truepanel-backup-TruePanel-before-v1.2.0-rc1"
+        in text
+    )
+    assert (
+        "before any deployment files are copied"
+        in text
+    )

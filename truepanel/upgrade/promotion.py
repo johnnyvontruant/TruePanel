@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from .backup_receipt import (
+    BACKUP_PREFIX,
     BACKUP_RECEIPT_NAME,
     write_backup_receipt,
 )
@@ -198,6 +199,22 @@ def build_promotion_plan(
             deploy_root
         )
     )
+
+    if (
+        selected_backup.parent
+        != deploy_root.parent
+    ):
+        raise ValueError(
+            "Backup must be a sibling of "
+            "the deployment"
+        )
+
+    if not selected_backup.name.startswith(
+        BACKUP_PREFIX
+    ):
+        raise ValueError(
+            "Backup name is unsafe"
+        )
 
     if selected_backup in (
         stage_root,

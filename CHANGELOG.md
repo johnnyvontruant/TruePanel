@@ -6,6 +6,8 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [1.2.0-rc1] - 2026-08-13
 
+- Harden guarded upgrade promotion so invalid backup paths are rejected before any backup copy begins; document the required sibling `.truepanel-backup-` naming contract.
+
 TruePanel 1.2.0 RC1 graduates the hardened native lifecycle,
 compatibility survey, Host ownership boundary, and clean-install path.
 
