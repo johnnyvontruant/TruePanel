@@ -45,4 +45,4 @@ test = Path("tests/test_clean_install_documentation.py")
 test_text = test.read_text(encoding="utf-8")
 addition = '''\n\ndef test_clean_install_runbook_uses_host_acceptance_gate():\n    text = read(RUNBOOK)\n\n    assert text.count("host acceptance") >= 4\n    assert "Host acceptance: PASS" in text\n    assert "Host acceptance result" in text\n'''
 assert "def test_clean_install_runbook_uses_host_acceptance_gate():" not in test_text
-test.write_text(test_text.rstrip() + addition + "\n", encoding="utf-8")
+test.write_text(test_text.rstrip() + addition, encoding="utf-8")
