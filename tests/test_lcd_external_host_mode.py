@@ -62,8 +62,5 @@ def test_external_mode_shutdown_is_non_privileged():
         "elif host_runtime_mode is HostRuntimeMode.EMBEDDED:"
         in shutdown
     )
-    assert (
-        "External Host runtime mode active; "
-        "embedded shutdown skipped."
-        in shutdown
-    )
+    assert "External Host runtime mode active;" in shutdown
+    assert "embedded shutdown skipped." in shutdown
