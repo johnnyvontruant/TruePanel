@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_CLI="$SCRIPT_DIR/truepanel.py"
+
 INSTALL_DIR="${TRUEPANEL_INSTALL_ROOT:-}"
 DRY_RUN=0
 SERVICE_NAME="truepanel.service"
@@ -158,10 +161,23 @@ verify_fan_safety() {
     exit 1
   fi
 
-  if [[ ! -x "$BIN_FILE" ]]
+  local verifier=()
+
+  if [[ -x "$BIN_FILE" ]]
   then
+    verifier=("$BIN_FILE")
+  elif [[ -x "$VENV_PYTHON" && -f "$SOURCE_CLI" ]]
+  then
+    printf '%s\n' \
+      'Installed CLI wrapper unavailable; using current source CLI with installed runtime.'
+    verifier=("$VENV_PYTHON" "$SOURCE_CLI")
+  else
     printf 'TruePanel CLI wrapper is unavailable: %s\n' \
       "$BIN_FILE" >&2
+    printf 'Legacy Python runtime is unavailable: %s\n' \
+      "$VENV_PYTHON" >&2
+    printf 'Current source CLI is unavailable: %s\n' \
+      "$SOURCE_CLI" >&2
     printf '%s\n' \
       'Refusing uninstall because fan restoration cannot be verified.' \
       >&2
@@ -170,7 +186,7 @@ verify_fan_safety() {
 
   echo "Verifying motherboard fan-control restoration..."
 
-  if ! "$BIN_FILE" host fan-safety \
+  if ! "${verifier[@]}" host fan-safety \
     --config "$CONFIG_FILE"
   then
     printf '%s\n' \
@@ -238,6 +254,7 @@ then
 fi
 
 BIN_FILE="$INSTALL_DIR/bin/truepanel"
+VENV_PYTHON="$INSTALL_DIR/.venv/bin/python"
 CONFIG_FILE="$INSTALL_DIR/truepanel.yaml"
 
 if [[ "$DRY_RUN" -eq 1 ]]

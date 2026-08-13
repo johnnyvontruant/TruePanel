@@ -92,15 +92,38 @@ def test_uninstall_verifies_fan_automatic_before_destructive_cleanup():
 
     assert ownership < verify < disable < cleanup
     assert 'CONFIG_FILE="$INSTALL_DIR/truepanel.yaml"' in text
-    assert '"$BIN_FILE" host fan-safety' in text
+    assert '"${verifier[@]}" host fan-safety' in text
     assert '--config "$CONFIG_FILE"' in text
 
 
-def test_uninstall_refuses_fan_verification_without_config_or_cli():
+def test_uninstall_supports_legacy_fan_safety_without_installed_wrapper():
+    text = source()
+
+    assert 'SOURCE_CLI="$SCRIPT_DIR/truepanel.py"' in text
+    assert 'VENV_PYTHON="$INSTALL_DIR/.venv/bin/python"' in text
+    assert '[[ -x "$BIN_FILE" ]]' in text
+    assert (
+        '[[ -x "$VENV_PYTHON" && -f "$SOURCE_CLI" ]]'
+        in text
+    )
+    assert 'verifier=("$BIN_FILE")' in text
+    assert (
+        'verifier=("$VENV_PYTHON" "$SOURCE_CLI")'
+        in text
+    )
+    assert (
+        "Installed CLI wrapper unavailable; using current source CLI "
+        "with installed runtime."
+        in text
+    )
+
+
+def test_uninstall_refuses_fan_verification_without_config_or_any_cli_path():
     text = source()
 
     assert '[[ ! -f "$CONFIG_FILE" ]]' in text
-    assert '[[ ! -x "$BIN_FILE" ]]' in text
+    assert 'Legacy Python runtime is unavailable: %s\\n' in text
+    assert 'Current source CLI is unavailable: %s\\n' in text
     assert (
         "Refusing uninstall because fan restoration cannot be verified."
         in text
