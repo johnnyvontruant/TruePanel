@@ -230,3 +230,50 @@ def test_runbook_does_not_use_preserved_config_to_mask_fresh_install():
     fresh_acceptance = text[phase_4:phase_7]
 
     assert "truepanel.yaml.before-clean-install" not in fresh_acceptance
+
+
+def test_runbook_persists_before_and_after_support_bundles():
+    text = read(RUNBOOK)
+
+    assert (
+        '$TRUEPANEL_VALIDATION_ARTIFACTS/'
+        'truepanel-pre-clean-install.json'
+        in text
+    )
+    assert (
+        '$TRUEPANEL_VALIDATION_ARTIFACTS/'
+        'truepanel-post-clean-install.json'
+        in text
+    )
+    assert text.count("--support-bundle") >= 2
+    assert text.count("sudo test -f") >= 3
+    assert (
+        "Do not place either bundle inside the managed TruePanel tree."
+        in text
+    )
+
+
+def test_pre_clean_support_bundle_is_captured_before_uninstall():
+    text = read(RUNBOOK)
+    baseline = text.index(
+        "truepanel-pre-clean-install.json"
+    )
+    uninstall = text.index(
+        "## Phase 2: Clean uninstall"
+    )
+
+    assert baseline < uninstall
+
+
+def test_post_clean_support_bundle_is_captured_after_acceptance():
+    text = read(RUNBOOK)
+    phase_5 = text.index(
+        "## Phase 5: Immediate post-install verification"
+    )
+    phase_6 = text.index(
+        "## Phase 6: Functional application checks"
+    )
+    block = text[phase_5:phase_6]
+
+    assert "Host acceptance: PASS" in block
+    assert "truepanel-post-clean-install.json" in block
