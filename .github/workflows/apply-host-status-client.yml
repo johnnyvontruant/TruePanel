@@ -128,8 +128,9 @@ jobs:
           python -m pytest -q \
             tests/test_host_status_client.py \
             tests/test_lcd_host_status_client.py \
-            tests/test_fan_control_page.py \
-            tests/test_host_runtime_status_read.py
+            tests/test_host_runtime.py \
+            tests/test_fan_runtime_integration.py \
+            tests/test_host_bootstrap_wiring.py
           git diff --check
 
       - name: Commit Host status client migration
