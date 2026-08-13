@@ -1,0 +1,47 @@
+name: Fix uninstall service lookup contract
+
+on:
+  push:
+    branches:
+      - agent/clean-host-uninstall
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/clean-host-uninstall
+          fetch-depth: 0
+
+      - name: Restore portable root lookup contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("uninstall.sh")
+          text = path.read_text(encoding="utf-8")
+          old = 'systemctl show "$SERVICE_NAME" \\\n'
+          new = 'systemctl show truepanel.service \\\n'
+          if text.count(old) != 1:
+              raise SystemExit("uninstall service lookup anchor mismatch")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
+      - name: Validate fix
+        run: |
+          bash -n uninstall.sh
+          git diff --check
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/fix-uninstall-service-lookup.yml
+          git add uninstall.sh
+          git commit -m "Preserve uninstall root lookup contract"
+          git push origin HEAD:agent/clean-host-uninstall
