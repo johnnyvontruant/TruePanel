@@ -1,0 +1,53 @@
+name: Update clean uninstall documentation
+
+on:
+  push:
+    branches:
+      - agent/clean-host-uninstall
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/clean-host-uninstall
+          fetch-depth: 0
+
+      - name: Update uninstall documentation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/INSTALLATION.md")
+          text = path.read_text(encoding="utf-8")
+          old = """The uninstaller stops and disables the service, removes the systemd unit, removes both current and legacy CLI wrapper paths, reloads systemd, and deletes `/mnt/POOL/DATASET/TruePanel`.
+
+Local repository clones, external firmware archives, and Git history are not removed.
+"""
+          new = """The uninstaller stops the standalone Host Agent, primary LCD service, and Mission Control before removing runtime state. It refuses cleanup if a managed service remains active or if the cross-process Host hardware ownership lease is still held.
+
+After ownership is released, the uninstaller removes all three TruePanel systemd units, the Mission Control environment file, the ephemeral standalone cutover marker, known `/run/truepanel` sockets and status files, both current and legacy CLI wrapper paths, and the installation tree. It then reloads systemd. Normal Host runtime shutdown remains responsible for returning controlled fan channels to motherboard Automatic before ownership is released.
+
+Local repository clones, external firmware archives, and Git history are not removed.
+"""
+          if text.count(old) != 1:
+              raise SystemExit("uninstall documentation anchor mismatch")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
+      - name: Validate documentation update
+        run: git diff --check
+
+      - name: Commit documentation update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/update-clean-uninstall-docs.yml
+          git add docs/INSTALLATION.md
+          git commit -m "Document clean Host uninstall lifecycle"
+          git push origin HEAD:agent/clean-host-uninstall
