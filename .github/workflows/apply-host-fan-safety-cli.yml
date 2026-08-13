@@ -1,0 +1,209 @@
+name: Apply Host fan safety CLI
+
+on:
+  push:
+    branches:
+      - agent/host-fan-safety
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/host-fan-safety
+          fetch-depth: 0
+
+      - name: Wire passive fan safety command
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("truepanel/host/commands.py")
+          text = path.read_text(encoding="utf-8")
+
+          old = "from truepanel.compatibility import collect_compatibility\n"
+          new = (
+              "from truepanel.compatibility import collect_compatibility\n"
+              "from truepanel.config.loader import load_config\n"
+          )
+          if text.count(old) != 1:
+              raise SystemExit("config import anchor mismatch")
+          text = text.replace(old, new, 1)
+
+          old = '''from .cutover import (
+              build_host_cutover_plan,
+              format_host_cutover_plan,
+          )
+          from .readiness import (
+          '''
+          new = '''from .cutover import (
+              build_host_cutover_plan,
+              format_host_cutover_plan,
+          )
+          from .fan_safety import (
+              collect_host_fan_safety,
+              format_host_fan_safety,
+          )
+          from .readiness import (
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("fan safety import anchor mismatch")
+          text = text.replace(old, new, 1)
+
+          old = '''    cutover = host_commands.add_parser(
+              "cutover-plan",
+          '''
+          new = '''    fan_safety = host_commands.add_parser(
+              "fan-safety",
+              help=(
+                  "Passively verify configured fan channels "
+                  "are in motherboard Automatic mode"
+              ),
+          )
+
+          fan_safety.add_argument(
+              "--json",
+              action="store_true",
+              dest="host_fan_safety_json",
+              help="Output machine-readable JSON",
+          )
+
+          fan_safety.add_argument(
+              "--config",
+              default="truepanel.yaml",
+              dest="host_fan_safety_config",
+              help=(
+                  "TruePanel configuration path; "
+                  "defaults to truepanel.yaml"
+              ),
+          )
+
+          cutover = host_commands.add_parser(
+              "cutover-plan",
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("fan safety parser anchor mismatch")
+          text = text.replace(old, new, 1)
+
+          old = '''def run_host_cutover_plan(
+              *,
+          '''
+          new = '''def run_host_fan_safety(
+              *,
+              json_output: bool = False,
+              config_path: str | Path = "truepanel.yaml",
+          ) -> int:
+              """Passively verify motherboard Automatic fan-control mode."""
+
+              config = load_config(
+                  config_path
+              )
+              report = collect_host_fan_safety(
+                  config
+              )
+
+              if json_output:
+                  print(
+                      json.dumps(
+                          report.to_dict(),
+                          indent=2,
+                          sort_keys=True,
+                      )
+                  )
+              else:
+                  print(
+                      format_host_fan_safety(
+                          report
+                      )
+                  )
+
+              return 0 if report.safe else 1
+
+
+          def run_host_cutover_plan(
+              *,
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("fan safety runner anchor mismatch")
+          text = text.replace(old, new, 1)
+
+          old = '''    if (
+              getattr(args, "host_command", None)
+              == "cutover-plan"
+          ):
+          '''
+          new = '''    if (
+              getattr(args, "host_command", None)
+              == "fan-safety"
+          ):
+              return run_host_fan_safety(
+                  json_output=bool(
+                      getattr(
+                          args,
+                          "host_fan_safety_json",
+                          False,
+                      )
+                  ),
+                  config_path=getattr(
+                      args,
+                      "host_fan_safety_config",
+                      "truepanel.yaml",
+                  ),
+              )
+
+              
+          if (
+              getattr(args, "host_command", None)
+              == "cutover-plan"
+          ):
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("fan safety dispatch anchor mismatch")
+          text = text.replace(old, new, 1)
+
+          old = '''    "run_host_cutover_plan",
+              "run_host_readiness",
+          ]
+          '''
+          new = '''    "run_host_cutover_plan",
+              "run_host_fan_safety",
+              "run_host_readiness",
+          ]
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("fan safety export anchor mismatch")
+          text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Validate CLI migration
+        run: |
+          python -m py_compile \
+            truepanel/host/commands.py \
+            truepanel/host/fan_safety.py \
+            truepanel/hardware/fan_runtime.py \
+            tests/test_fan_control_channels.py \
+            tests/test_host_fan_safety.py \
+            tests/test_host_fan_safety_commands.py
+          git diff --check
+
+      - name: Commit CLI migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-host-fan-safety-cli.yml
+          git add \
+            truepanel/host/commands.py \
+            truepanel/host/fan_safety.py \
+            truepanel/hardware/fan_runtime.py \
+            tests/test_fan_control_channels.py \
+            tests/test_host_fan_safety.py \
+            tests/test_host_fan_safety_commands.py
+          git commit -m "Add passive Host fan Automatic verifier"
+          git push origin HEAD:agent/host-fan-safety
