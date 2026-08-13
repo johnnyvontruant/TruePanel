@@ -1,0 +1,76 @@
+name: Apply dormant Host Agent verify check
+
+on:
+  push:
+    branches:
+      - verify/dormant-host-agent
+    paths:
+      - .github/workflows/apply-dormant-host-agent-verify.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: verify/dormant-host-agent
+
+      - name: Add expected-inactive service check
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("truepanel/verify/checks.py")
+          text = path.read_text(encoding="utf-8")
+
+          anchor = '''def check_postinit(\n'''
+          block = '''def check_service_inactive(\n    service: str,\n    *,\n    runner: Callable[..., Any] = run_command,\n) -> dict[str, str]:\n    """Require a service to be explicitly inactive."""\n\n    try:\n        response = runner(\n            [\n                "systemctl",\n                "is-active",\n                service,\n            ],\n            timeout=5.0,\n        )\n    except (\n        OSError,\n        subprocess.SubprocessError,\n    ) as error:\n        return failed(\n            service,\n            str(error),\n        )\n\n    state = (\n        response.stdout.strip()\n        or response.stderr.strip()\n        or "unknown"\n    )\n\n    if state == "inactive":\n        return passed(\n            service,\n            state,\n        )\n\n    return failed(\n        service,\n        (\n            "Expected inactive; "\n            f"observed {state}"\n        ),\n    )\n\n\n'''
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, block + anchor, 1)
+
+          anchor = '''    results.append(\n        check_service_state(\n            "truepanel-mission-control.service",\n            runner=runner,\n        )\n    )\n'''
+          addition = anchor + '''    results.append(\n        check_service_inactive(\n            "truepanel-host-agent.service",\n            runner=runner,\n        )\n    )\n'''
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, addition, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Add verify contracts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("tests/test_verify.py")
+          text = path.read_text(encoding="utf-8")
+
+          old = '''    check_postinit,\n    check_service_state,\n'''
+          new = '''    check_postinit,\n    check_service_inactive,\n    check_service_state,\n'''
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+
+          anchor = '''def test_postinit_accepts_enabled_startup_task(\n'''
+          block = '''def test_expected_inactive_service_passes_only_when_inactive():\n    result = check_service_inactive(\n        "truepanel-host-agent.service",\n        runner=lambda *args, **kwargs: (\n            CommandResult(\n                returncode=3,\n                stdout="inactive\\n",\n            )\n        ),\n    )\n\n    assert result["status"] == PASS\n    assert result["detail"] == "inactive"\n\n\ndef test_expected_inactive_service_fails_when_active():\n    result = check_service_inactive(\n        "truepanel-host-agent.service",\n        runner=lambda *args, **kwargs: (\n            CommandResult(\n                returncode=0,\n                stdout="active\\n",\n            )\n        ),\n    )\n\n    assert result["status"] == FAIL\n    assert "Expected inactive" in result["detail"]\n    assert "active" in result["detail"]\n\n\ndef test_verify_checks_standalone_host_agent_is_dormant():\n    source = Path(\n        "truepanel/verify/checks.py"\n    ).read_text(encoding="utf-8")\n\n    start = source.index("def run_checks(")\n    end = source.index("\\ndef ", start + 1)\n    block = source[start:end]\n\n    assert "check_service_inactive(" in block\n    assert '"truepanel-host-agent.service"' in block\n\n\n'''
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, block + anchor, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Validate migration
+        run: |
+          python3 -m compileall -q truepanel/verify tests/test_verify.py
+          git diff --check
+
+      - name: Commit verify check
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add truepanel/verify/checks.py tests/test_verify.py
+          git commit -m "Verify standalone Host Agent remains dormant"
+          git rm .github/workflows/apply-dormant-host-agent-verify.yml
+          git commit -m "Remove dormant Host verify migration helper"
+          git push origin HEAD:verify/dormant-host-agent
