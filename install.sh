@@ -14,6 +14,9 @@ HOST_AGENT_SERVICE_FILE="/etc/systemd/system/truepanel-host-agent.service"
 MISSION_CONTROL_SERVICE_FILE="/etc/systemd/system/truepanel-mission-control.service"
 MISSION_CONTROL_ENV_FILE="/etc/default/truepanel-mission-control"
 PYTHON_BIN=""
+PIP_BOOTSTRAP_VERSION="26.2.1"
+PIP_BOOTSTRAP_URL="https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl"
+PIP_BOOTSTRAP_SHA256="71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e"
 
 usage() {
   printf 'Usage: %s [--dry-run] --root /mnt/POOL/DATASET/TruePanel\n' "$0"
@@ -66,7 +69,8 @@ Actions a real install would perform:
   Create/preserve install root and synchronize only managed source files
   Exclude source-local config, secrets, virtualenvs, caches, history, and plugin state
   Preserve an existing target truepanel.yaml; create the safe default only when target config is absent
-  Create a Python virtual environment when supported and install requirements
+  Create an isolated Python virtual environment and install requirements
+  Use a pinned, hash-verified pip bootstrap wheel inside the venv when ensurepip is unavailable
   Create CLI wrapper: $bin_file
   Install LCD service: $SERVICE_FILE
   Install Mission Control service: $MISSION_CONTROL_SERVICE_FILE
@@ -230,39 +234,98 @@ YAML
 fi
 
 echo "Preparing Python runtime..."
-if python3 -m venv "$INSTALL_DIR/.venv" >/tmp/truepanel-venv.log 2>&1; then
-  PYTHON_BIN="$INSTALL_DIR/.venv/bin/python"
+VENV_DIR="$INSTALL_DIR/.venv"
+VENV_LOG="/tmp/truepanel-venv.log"
+PIP_BOOTSTRAP_WHEEL="/tmp/truepanel-pip-$PIP_BOOTSTRAP_VERSION.whl"
+PIP_RUNNER=()
 
-  echo "Installing Python dependencies into virtual environment..."
-  "$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
-  "$INSTALL_DIR/.venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+if python3 -m ensurepip --version >/tmp/truepanel-ensurepip.log 2>&1
+then
+  echo "Creating isolated virtual environment with ensurepip..."
+  if ! python3 -m venv "$VENV_DIR" >"$VENV_LOG" 2>&1
+  then
+    echo "Could not create the isolated TruePanel Python runtime." >&2
+    cat "$VENV_LOG" >&2
+    exit 1
+  fi
+
+  PYTHON_BIN="$VENV_DIR/bin/python"
+  PIP_RUNNER=("$PYTHON_BIN" -m pip)
 else
-  echo "Virtual environment unavailable."
-  echo "Using system Python instead."
-  echo
-  echo "Reason:"
-  cat /tmp/truepanel-venv.log
-  echo
+  echo "ensurepip is unavailable; creating an isolated pipless virtual environment..."
+  if ! python3 -m venv --without-pip "$VENV_DIR" >"$VENV_LOG" 2>&1
+  then
+    echo "Could not create the isolated TruePanel Python runtime." >&2
+    cat "$VENV_LOG" >&2
+    exit 1
+  fi
 
-  PYTHON_BIN="$(command -v python3)"
-fi
+  PYTHON_BIN="$VENV_DIR/bin/python"
 
-echo "Checking Python imports..."
-"$PYTHON_BIN" - <<'PY'
-missing = []
+  echo "Downloading pinned pip bootstrap wheel..."
+  "$PYTHON_BIN" -     "$PIP_BOOTSTRAP_URL"     "$PIP_BOOTSTRAP_SHA256"     "$PIP_BOOTSTRAP_WHEEL" <<'PYPIP'
+from pathlib import Path
+import hashlib
+import sys
+import urllib.request
 
-for module in ["yaml"]:
-    try:
-        __import__(module)
-    except Exception:
-        missing.append(module)
+url, expected_sha256, destination = sys.argv[1:]
 
-if missing:
-    print("Missing Python modules: " + ", ".join(missing))
-    print("Install dependencies or run TruePanel from an environment that provides them.")
+try:
+    with urllib.request.urlopen(url, timeout=60) as response:
+        payload = response.read()
+except Exception as exc:
+    print(
+        f"Could not download pinned pip bootstrap wheel: {exc}",
+        file=sys.stderr,
+    )
     raise SystemExit(1)
 
-print("Python imports OK")
+actual_sha256 = hashlib.sha256(payload).hexdigest()
+if actual_sha256 != expected_sha256:
+    print(
+        "Pinned pip bootstrap wheel failed SHA256 verification: "
+        f"expected {expected_sha256}, got {actual_sha256}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+Path(destination).write_bytes(payload)
+print(f"Pinned pip bootstrap wheel verified: {actual_sha256}")
+PYPIP
+
+  if ! PYTHONPATH="$PIP_BOOTSTRAP_WHEEL"     "$PYTHON_BIN" -m pip --version >/dev/null
+  then
+    echo "Pinned pip bootstrap wheel could not run inside the isolated venv." >&2
+    exit 1
+  fi
+
+  PIP_RUNNER=(env "PYTHONPATH=$PIP_BOOTSTRAP_WHEEL" "$PYTHON_BIN" -m pip)
+fi
+
+echo "Installing Python dependencies into isolated virtual environment..."
+"${PIP_RUNNER[@]}" install -r "$INSTALL_DIR/requirements.txt"
+
+echo "Checking Python runtime imports..."
+"$PYTHON_BIN" - <<'PY'
+required = {
+    "serial": "pyserial",
+    "psutil": "psutil",
+    "yaml": "PyYAML",
+}
+missing = []
+
+for module, package in required.items():
+    try:
+        __import__(module)
+    except Exception as exc:
+        missing.append(f"{package} ({module}: {exc})")
+
+if missing:
+    print("Missing Python runtime dependencies: " + ", ".join(missing))
+    raise SystemExit(1)
+
+print("Python runtime imports OK")
 PY
 
 echo "Creating CLI directory..."

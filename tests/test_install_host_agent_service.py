@@ -173,3 +173,44 @@ def test_install_usage_documents_dry_run():
 
     assert "[--dry-run]" in text
     assert "--dry-run)" in text
+
+
+def test_install_bootstraps_pipless_venv_without_system_runtime_fallback():
+    text = source("install.sh")
+
+    assert 'PIP_BOOTSTRAP_VERSION="26.2.1"' in text
+    assert (
+        'PIP_BOOTSTRAP_SHA256="'
+        '71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e"'
+        in text
+    )
+    assert "python3 -m venv --without-pip" in text
+    assert "urllib.request.urlopen(url, timeout=60)" in text
+    assert "hashlib.sha256(payload).hexdigest()" in text
+    assert 'PYTHONPATH="$PIP_BOOTSTRAP_WHEEL"' in text
+    assert 'PIP_RUNNER=(env "PYTHONPATH=$PIP_BOOTSTRAP_WHEEL"' in text
+    assert "Using system Python instead." not in text
+    assert 'PYTHON_BIN="$(command -v python3)"' not in text
+
+
+def test_install_checks_all_runtime_dependencies_before_service_writes():
+    text = source("install.sh")
+
+    check = text.index("required = {")
+    cli_write = text.index('echo "Creating CLI directory..."')
+    mission_write = text.index(
+        'cat > "$MISSION_CONTROL_SERVICE_FILE"'
+    )
+    runtime_check = text[check:cli_write]
+
+    assert '"serial": "pyserial"' in runtime_check
+    assert '"psutil": "psutil"' in runtime_check
+    assert '"yaml": "PyYAML"' in runtime_check
+    assert check < cli_write < mission_write
+
+
+def test_install_docs_keep_dependencies_out_of_system_python():
+    text = source("docs/INSTALLATION.md")
+
+    assert "pinned, hash-verified pip wheel" in text
+    assert "does not install TruePanel dependencies into system Python" in text
