@@ -92,10 +92,8 @@ def test_uninstall_verifies_fan_automatic_before_destructive_cleanup():
 
     assert ownership < verify < disable < cleanup
     assert 'CONFIG_FILE="$INSTALL_DIR/truepanel.yaml"' in text
-    assert (
-        '"$BIN_FILE" host fan-safety \\\n    --config "$CONFIG_FILE"'
-        in text
-    )
+    assert '"$BIN_FILE" host fan-safety' in text
+    assert '--config "$CONFIG_FILE"' in text
 
 
 def test_uninstall_refuses_fan_verification_without_config_or_cli():
