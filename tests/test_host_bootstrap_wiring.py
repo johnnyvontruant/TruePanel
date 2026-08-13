@@ -12,9 +12,11 @@ def source():
 def test_lcd_runtime_uses_host_bootstrap():
     text = source()
 
+    assert "host_runtime_mode = resolve_host_runtime_mode()" in text
+    assert "host_bootstrap = (" in text
+    assert "build_host_agent_bootstrap(config)" in text
     assert (
-        "host_bootstrap = "
-        "build_host_agent_bootstrap("
+        "if host_runtime_mode is HostRuntimeMode.EMBEDDED"
         in text
     )
 
