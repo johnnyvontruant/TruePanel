@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -6,6 +7,14 @@ UNINSTALL = ROOT / "uninstall.sh"
 
 def source():
     return UNINSTALL.read_text(encoding="utf-8")
+
+
+def test_uninstall_shell_syntax_is_valid():
+    subprocess.run(
+        ["bash", "-n", str(UNINSTALL)],
+        check=True,
+        cwd=ROOT,
+    )
 
 
 def test_uninstall_stops_every_truepanel_service_before_runtime_cleanup():
