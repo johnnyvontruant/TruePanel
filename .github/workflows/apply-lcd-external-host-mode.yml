@@ -1,0 +1,108 @@
+name: Apply LCD external Host mode
+
+on:
+  push:
+    branches:
+      - agent/lcd-external-host-mode
+    paths:
+      - .github/workflows/apply-lcd-external-host-mode.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/lcd-external-host-mode
+
+      - name: Make embedded Host construction conditional
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("lcd-menu.py")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              (
+                  '''from truepanel.host import (\n    HostAgentStatusClient,\n    build_host_agent_bootstrap,\n    build_host_agent_runtime_from_bootstrap,\n)\n''',
+                  '''from truepanel.host import (\n    HostAgentStatusClient,\n    build_host_agent_bootstrap,\n    build_host_agent_runtime_from_bootstrap,\n)\nfrom truepanel.host.mode import (\n    HostRuntimeMode,\n    resolve_host_runtime_mode,\n)\n''',
+                  "Host mode import",
+              ),
+              (
+                  '''config = load_config()\nhost_bootstrap = build_host_agent_bootstrap(\n    config\n)\nhost_agent_runtime = None\n''',
+                  '''config = load_config()\nhost_runtime_mode = resolve_host_runtime_mode()\nhost_bootstrap = (\n    build_host_agent_bootstrap(config)\n    if host_runtime_mode is HostRuntimeMode.EMBEDDED\n    else None\n)\nhost_agent_runtime = None\n''',
+                  "bootstrap startup snapshot",
+              ),
+              (
+                  '''    if host_agent_runtime is None:\n        return host_bootstrap.publish_fan_status(\n            reason=reason,\n        )\n\n    return host_agent_runtime.publish_fan_status(\n''',
+                  '''    if host_agent_runtime is None:\n        if host_bootstrap is None:\n            return None\n\n        return host_bootstrap.publish_fan_status(\n            reason=reason,\n        )\n\n    return host_agent_runtime.publish_fan_status(\n''',
+                  "external status no-op",
+              ),
+              (
+                  '''        host_agent_runtime = (\n            build_host_agent_runtime_from_bootstrap(\n                bootstrap=host_bootstrap,\n            )\n        )\n\n        host_agent_runtime.service_cycle(\n            reconcile=False\n        )\n\n        host_agent_runtime.start()\n\n        lcd_command_server = build_lcd_command_server(\n''',
+                  '''        if host_bootstrap is not None:\n            host_agent_runtime = (\n                build_host_agent_runtime_from_bootstrap(\n                    bootstrap=host_bootstrap,\n                )\n            )\n\n            host_agent_runtime.service_cycle(\n                reconcile=False\n            )\n\n            host_agent_runtime.start()\n        else:\n            LOGGER.info(\n                "External Host runtime mode active; "\n                "embedded Host construction skipped."\n            )\n\n        lcd_command_server = build_lcd_command_server(\n''',
+                  "conditional Host construction",
+              ),
+              (
+                  '''        while not shutdown_requested:\n            host_agent_runtime.service_cycle()\n            publish_lcd_reader_status()\n''',
+                  '''        while not shutdown_requested:\n            if host_agent_runtime is not None:\n                host_agent_runtime.service_cycle()\n\n            publish_lcd_reader_status()\n''',
+                  "conditional Host service cycle",
+              ),
+              (
+                  '''        else:\n            LOGGER.warning(\n                "Host Agent runtime was not constructed; "\n                "skipping fan-runtime shutdown without ownership."\n            )\n\n        try:\n            publish_fan_control_status(\n''',
+                  '''        elif host_runtime_mode is HostRuntimeMode.EMBEDDED:\n            LOGGER.warning(\n                "Host Agent runtime was not constructed; "\n                "skipping fan-runtime shutdown without ownership."\n            )\n        else:\n            LOGGER.info(\n                "External Host runtime mode active; "\n                "embedded shutdown skipped."\n            )\n\n        try:\n            publish_fan_control_status(\n''',
+                  "external shutdown path",
+              ),
+          ]
+
+          for old, new, label in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(
+                      f"{label}: expected one anchor, found {count}"
+                  )
+              text = text.replace(old, new)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Update embedded service-cycle contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("tests/test_lcd_host_service_cycle.py")
+          text = path.read_text(encoding="utf-8")
+
+          old = '''    loop = main[loop_start:loop_end]\n\n    assert "host_agent_runtime.service_cycle()" in loop\n    assert "reconcile_fan_control()" not in loop\n'''
+          new = '''    loop = main[loop_start:loop_end]\n\n    assert "if host_agent_runtime is not None:" in loop\n    assert "host_agent_runtime.service_cycle()" in loop\n    assert "reconcile_fan_control()" not in loop\n'''
+
+          if text.count(old) != 1:
+              raise SystemExit("unexpected service-cycle contract anchor")
+
+          path.write_text(
+              text.replace(old, new),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Validate migration
+        run: |
+          python3 -m compileall -q truepanel tests lcd-menu.py
+          git diff --check
+          grep -Fq 'host_runtime_mode = resolve_host_runtime_mode()' lcd-menu.py
+          grep -Fq 'if host_bootstrap is not None:' lcd-menu.py
+          grep -Fq 'if host_agent_runtime is not None:' lcd-menu.py
+
+      - name: Commit external Host mode wiring
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-lcd-external-host-mode.yml
+          git add lcd-menu.py tests/test_lcd_host_service_cycle.py
+          git commit -m "Let LCD defer to external Host ownership"
+          git push origin HEAD:agent/lcd-external-host-mode
