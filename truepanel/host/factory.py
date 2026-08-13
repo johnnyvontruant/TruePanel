@@ -16,10 +16,7 @@ from truepanel.hardware.fan_command import (
     FanCommandServer,
 )
 
-from .hooks import (
-    HostAgentApplicationHooks,
-    HostAgentSafetyServices,
-)
+from .hooks import HostAgentSafetyServices
 from .ownership import (
     DEFAULT_HOST_OWNERSHIP_PATH,
     HostOwnershipGuard,
@@ -76,18 +73,9 @@ def build_host_agent_runtime(
     *,
     fan_runtime: Any,
     safety_services: HostAgentSafetyServices,
-    application_hooks: HostAgentApplicationHooks | None = None,
     ownership_guard: Any | None = None,
 ) -> HostAgentRuntime:
-    """
-    Assemble the current TruePanel Host Agent runtime.
-
-    `application_hooks` is accepted temporarily for compatibility while LCD
-    command ownership migrates fully to the application process. Host runtime
-    construction deliberately does not consume it.
-    """
-
-    del application_hooks
+    """Assemble the privileged TruePanel Host Agent runtime."""
 
     safety = HostAgentSafetyCoordinator(
         fan_runtime=fan_runtime,
@@ -173,7 +161,6 @@ def build_host_agent_runtime(
 def build_host_agent_runtime_from_bootstrap(
     *,
     bootstrap: Any,
-    application_hooks: HostAgentApplicationHooks | None = None,
     owner_name: str = "embedded-lcd",
     ownership_path: Any = DEFAULT_HOST_OWNERSHIP_PATH,
 ) -> HostAgentRuntime:
@@ -182,7 +169,6 @@ def build_host_agent_runtime_from_bootstrap(
     return build_host_agent_runtime(
         fan_runtime=bootstrap.fan_runtime,
         safety_services=bootstrap.safety_services(),
-        application_hooks=application_hooks,
         ownership_guard=HostOwnershipGuard(
             owner_name,
             path=ownership_path,
