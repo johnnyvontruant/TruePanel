@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,6 +36,10 @@ PROMOTION_EXCLUDES = (
     *RSYNC_EXCLUDES,
     MANIFEST_NAME,
     BACKUP_RECEIPT_NAME,
+)
+
+PROMOTION_DEPLOY_EXCLUDES = (
+    "bin/",
 )
 
 
@@ -242,6 +247,8 @@ def build_promotion_plan(
 def sync_command(
     source: Path,
     destination: Path,
+    *,
+    extra_excludes: tuple[str, ...] = (),
 ) -> list[str]:
     command = [
         "rsync",
@@ -250,7 +257,8 @@ def sync_command(
     ]
 
     for exclusion in (
-        PROMOTION_EXCLUDES
+        *PROMOTION_EXCLUDES,
+        *extra_excludes,
     ):
         command.append(
             f"--exclude={exclusion}"
@@ -271,6 +279,7 @@ def sync_tree(
     destination: Path,
     *,
     runner: Callable[..., Any],
+    extra_excludes: tuple[str, ...] = (),
 ) -> tuple[bool, str]:
     destination.mkdir(
         parents=True,
@@ -281,6 +290,7 @@ def sync_tree(
         sync_command(
             source,
             destination,
+            extra_excludes=extra_excludes,
         ),
         timeout=120.0,
     )
@@ -381,6 +391,9 @@ def promote_with_rollback(
             plan.stage_root,
             plan.deploy_root,
             runner=runner,
+            extra_excludes=(
+                PROMOTION_DEPLOY_EXCLUDES
+            ),
         )
     )
 
@@ -545,16 +558,135 @@ def restart_truepanel(
 
 def verify_truepanel(
     deploy_root: Path,
+    *,
+    runner: Callable[..., Any] = run_command,
+    sleeper: Callable[[float], None] = time.sleep,
+    attempts: int = 8,
+    retry_delay: float = 1.0,
 ) -> int:
-    from truepanel.verify.checks import (
-        run_verify,
+    """
+    Verify with the deployed generation's own Python/runtime.
+
+    Service startup can briefly race Mission Control or LCD readiness, so
+    retry only when every reported failure is one of those transient checks.
+    """
+
+    deploy_root = deploy_root.resolve()
+
+    python_path = (
+        deploy_root
+        / ".venv"
+        / "bin"
+        / "python"
+    )
+    launcher = (
+        deploy_root
+        / "truepanel.py"
     )
 
-    return int(
-        run_verify(
-            root=deploy_root,
+    if not python_path.is_file():
+        print(
+            "Missing deployed Python runtime: "
+            f"{python_path}"
         )
-    )
+        return 1
+
+    if not launcher.is_file():
+        print(
+            "Missing deployed launcher: "
+            f"{launcher}"
+        )
+        return 1
+
+    if attempts < 1:
+        raise ValueError(
+            "Verification attempts must be positive"
+        )
+
+    command = [
+        str(python_path),
+        str(launcher),
+        "verify",
+        "--root",
+        str(deploy_root),
+    ]
+
+    for attempt in range(
+        1,
+        attempts + 1,
+    ):
+        response = runner(
+            command,
+            timeout=120.0,
+        )
+
+        stdout = str(
+            getattr(
+                response,
+                "stdout",
+                "",
+            )
+            or ""
+        )
+        stderr = str(
+            getattr(
+                response,
+                "stderr",
+                "",
+            )
+            or ""
+        )
+
+        if stdout:
+            print(
+                stdout.rstrip()
+            )
+
+        if response.returncode == 0:
+            return 0
+
+        failure_lines = [
+            line
+            for line in stdout.splitlines()
+            if line.startswith("FAIL  ")
+        ]
+
+        transient_only = bool(
+            failure_lines
+        ) and all(
+            (
+                line.startswith(
+                    "FAIL  Mission Control API"
+                )
+                or line.startswith(
+                    "FAIL  LCD transport"
+                )
+            )
+            for line in failure_lines
+        )
+
+        if (
+            not transient_only
+            or attempt >= attempts
+        ):
+            if stderr:
+                print(
+                    stderr.rstrip()
+                )
+            return int(
+                response.returncode
+            )
+
+        print(
+            "Deployment verification not ready "
+            f"(attempt {attempt}/{attempts}); "
+            "retrying."
+        )
+        sleeper(
+            retry_delay
+        )
+
+    return 1
 
 
 def run_promotion(

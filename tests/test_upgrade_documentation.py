@@ -119,3 +119,24 @@ def test_upgrade_guide_documents_safe_backup_root():
         "before any deployment files are copied"
         in text
     )
+
+def test_upgrade_guide_documents_promotion_runtime_ownership():
+    text = read(UPGRADING)
+
+    assert "Installer-owned `bin/` artifacts" in text
+    assert "`bin/truepanel`" in text
+    assert (
+        "Backup creation and rollback continue to copy "
+        "these artifacts"
+        in text
+    )
+    assert (
+        "deployed generation's own `.venv/bin/python` "
+        "and `truepanel.py`"
+        in text
+    )
+    assert (
+        "Only transient Mission Control or LCD "
+        "readiness failures are retried"
+        in text
+    )

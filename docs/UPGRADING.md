@@ -86,6 +86,10 @@ python3 truepanel.py upgrade \
 
 Promotion creates a deployment backup, installs the validated stage, restarts the required runtime, and verifies the promoted deployment.
 
+Installer-owned `bin/` artifacts, including `bin/truepanel`, are preserved during stage-to-deployment synchronization. Backup creation and rollback continue to copy these artifacts so a retained generation can restore the managed wrapper.
+
+Lifecycle verification runs with the deployed generation's own `.venv/bin/python` and `truepanel.py`. Only transient Mission Control or LCD readiness failures are retried after a restart; other verification failures return immediately.
+
 If promotion verification fails, TruePanel automatically attempts to restore the pre-upgrade deployment and verifies that rollback before returning control to the operator.
 
 An automatic rollback during failed promotion is not the same operation as an operator-requested rollback described later in this guide.
