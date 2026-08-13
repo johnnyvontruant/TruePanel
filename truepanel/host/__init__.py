@@ -14,6 +14,7 @@ from .capabilities import (
     HostCapability,
     capabilities_from_compatibility,
 )
+from .client import HostAgentStatusClient
 from .factory import (
     build_host_agent_runtime,
     build_host_agent_runtime_from_bootstrap,
@@ -44,6 +45,7 @@ __all__ = [
     "HostAgentRuntime",
     "HostAgentSafetyCoordinator",
     "HostAgentSafetyServices",
+    "HostAgentStatusClient",
     "HostFanReconciliationCoordinator",
     "HostOwnershipError",
     "HostOwnershipGuard",
