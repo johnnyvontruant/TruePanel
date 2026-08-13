@@ -1,8 +1,9 @@
 """
 CLI commands for the TruePanel host-agent boundary.
 
-Host inspection commands are passive. They describe discovered capabilities or
-standalone deployment readiness and never grant hardware-control authority.
+Host inspection commands are passive. They describe discovered capabilities,
+standalone deployment readiness, or a future ownership cutover plan and never
+grant hardware-control authority.
 """
 
 from __future__ import annotations
@@ -16,6 +17,10 @@ from truepanel.compatibility import collect_compatibility
 from .capabilities import (
     HostAgentCapabilities,
     capabilities_from_compatibility,
+)
+from .cutover import (
+    build_host_cutover_plan,
+    format_host_cutover_plan,
 )
 from .readiness import (
     collect_host_readiness,
@@ -74,6 +79,30 @@ def add_host_subcommands(subcommands) -> None:
     readiness.add_argument(
         "--root",
         dest="host_readiness_root",
+        help=(
+            "Filesystem root containing deployed service state; "
+            "defaults to the running host"
+        ),
+    )
+
+    cutover = host_commands.add_parser(
+        "cutover-plan",
+        help=(
+            "Show the passive standalone Host Agent "
+            "cutover and rollback plan"
+        ),
+    )
+
+    cutover.add_argument(
+        "--json",
+        action="store_true",
+        dest="host_cutover_json",
+        help="Output machine-readable JSON",
+    )
+
+    cutover.add_argument(
+        "--root",
+        dest="host_cutover_root",
         help=(
             "Filesystem root containing deployed service state; "
             "defaults to the running host"
@@ -205,6 +234,38 @@ def run_host_readiness(
     return 0 if report.prepared_safely else 1
 
 
+def run_host_cutover_plan(
+    *,
+    json_output: bool = False,
+    root: str | Path = "/",
+) -> int:
+    """Show the passive Host ownership cutover plan."""
+
+    readiness = collect_host_readiness(
+        root=root
+    )
+    plan = build_host_cutover_plan(
+        readiness
+    )
+
+    if json_output:
+        print(
+            json.dumps(
+                plan.to_dict(),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(
+            format_host_cutover_plan(
+                plan
+            )
+        )
+
+    return 0 if plan.prepared_safely else 1
+
+
 def handle_host_command(args) -> int | None:
     """Dispatch host-agent CLI commands."""
 
@@ -261,6 +322,31 @@ def handle_host_command(args) -> int | None:
             ),
         )
 
+    if (
+        getattr(args, "host_command", None)
+        == "cutover-plan"
+    ):
+        root = getattr(
+            args,
+            "host_cutover_root",
+            None,
+        )
+
+        return run_host_cutover_plan(
+            json_output=bool(
+                getattr(
+                    args,
+                    "host_cutover_json",
+                    False,
+                )
+            ),
+            root=(
+                Path(root).resolve()
+                if root
+                else Path("/")
+            ),
+        )
+
     return 0
 
 
@@ -269,5 +355,6 @@ __all__ = [
     "handle_host_command",
     "print_host_capabilities",
     "run_host_capabilities",
+    "run_host_cutover_plan",
     "run_host_readiness",
 ]
