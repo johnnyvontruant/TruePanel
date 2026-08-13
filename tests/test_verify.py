@@ -10,6 +10,7 @@ from truepanel.verify.checks import (
     check_postinit,
     check_service_inactive,
     check_service_state,
+    check_service_units,
     run_verify,
 )
 
@@ -85,6 +86,142 @@ def test_installation_files_report_missing(
         item["status"] == FAIL
         for item in results
     )
+
+
+def _write_valid_service_scaffolding(
+    root: Path,
+    units: Path,
+    env: Path,
+    *,
+    lcd_exec: str,
+):
+    units.mkdir()
+    env.mkdir()
+
+    (units / "truepanel.service").write_text(
+        (
+            "[Service]\n"
+            f"WorkingDirectory={root}\n"
+            f"ExecStart={lcd_exec}\n"
+        ),
+        encoding="utf-8",
+    )
+
+    (
+        units
+        / "truepanel-mission-control.service"
+    ).write_text(
+        (
+            "[Service]\n"
+            f"WorkingDirectory={root}\n"
+            "ExecStart=/usr/bin/python3 "
+            "-m truepanel.web.service\n"
+        ),
+        encoding="utf-8",
+    )
+
+    (
+        env
+        / "truepanel-mission-control"
+    ).write_text(
+        "",
+        encoding="utf-8",
+    )
+
+
+def test_service_units_accept_installer_cli_wrapper(
+    tmp_path,
+):
+    root = tmp_path / "install"
+    units = tmp_path / "systemd"
+    env = tmp_path / "default"
+    root.mkdir()
+
+    _write_valid_service_scaffolding(
+        root,
+        units,
+        env,
+        lcd_exec=(
+            f"{root}/bin/truepanel run"
+        ),
+    )
+
+    results = check_service_units(
+        root,
+        units,
+        env,
+    )
+
+    assert [
+        item["status"]
+        for item in results
+    ] == [
+        PASS,
+        PASS,
+        PASS,
+    ]
+
+
+def test_service_units_accept_postinit_python_launcher(
+    tmp_path,
+):
+    root = tmp_path / "install"
+    units = tmp_path / "systemd"
+    env = tmp_path / "default"
+    root.mkdir()
+
+    _write_valid_service_scaffolding(
+        root,
+        units,
+        env,
+        lcd_exec=(
+            f"{root}/.venv/bin/python "
+            f"{root}/truepanel.py run"
+        ),
+    )
+
+    results = check_service_units(
+        root,
+        units,
+        env,
+    )
+
+    assert [
+        item["status"]
+        for item in results
+    ] == [
+        PASS,
+        PASS,
+        PASS,
+    ]
+
+
+def test_service_units_reject_unrelated_lcd_launcher(
+    tmp_path,
+):
+    root = tmp_path / "install"
+    units = tmp_path / "systemd"
+    env = tmp_path / "default"
+    root.mkdir()
+
+    _write_valid_service_scaffolding(
+        root,
+        units,
+        env,
+        lcd_exec=(
+            "/tmp/OtherTruePanel/bin/truepanel run"
+        ),
+    )
+
+    results = check_service_units(
+        root,
+        units,
+        env,
+    )
+
+    assert results[0]["status"] == FAIL
+    assert results[1]["status"] == PASS
+    assert results[2]["status"] == PASS
 
 
 def test_service_state_passes_for_active_service():
