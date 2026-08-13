@@ -2,10 +2,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from truepanel.host.hooks import (
-    HostAgentApplicationHooks,
-    HostAgentSafetyServices,
-)
+from truepanel.host.hooks import HostAgentSafetyServices
 
 
 def telemetry():
@@ -40,13 +37,7 @@ def test_optional_safety_services_default_none():
     assert services.thermal_lifecycle_factory is None
 
 
-def test_application_hooks_default_none():
-    hooks = HostAgentApplicationHooks()
-
-    assert hooks.lcd_button_handler is None
-
-
-def test_safety_and_application_contracts_are_separate():
+def test_safety_contract_contains_no_application_fields():
     safety_fields = {
         field.name
         for field in (
@@ -56,31 +47,14 @@ def test_safety_and_application_contracts_are_separate():
         )
     }
 
-    application_fields = {
-        field.name
-        for field in (
-            HostAgentApplicationHooks
-            .__dataclass_fields__
-            .values()
-        )
-    }
-
     assert "lcd_button_handler" not in safety_fields
-
-    assert application_fields == {
-        "lcd_button_handler"
-    }
+    assert "application_hooks" not in safety_fields
 
 
-def test_contracts_are_frozen():
+def test_safety_contract_is_frozen():
     services = HostAgentSafetyServices(
         fan_telemetry_provider=telemetry
     )
 
-    hooks = HostAgentApplicationHooks()
-
     with pytest.raises(FrozenInstanceError):
         services.fan_status_publisher = lambda: None
-
-    with pytest.raises(FrozenInstanceError):
-        hooks.lcd_button_handler = lambda mask, source: True
