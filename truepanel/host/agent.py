@@ -20,6 +20,7 @@ from .factory import build_host_agent_runtime_from_bootstrap
 from .hooks import HostAgentApplicationHooks
 
 RuntimeFactory = Callable[[], Any]
+DEFAULT_SERVICE_INTERVAL_SECONDS = 5.0
 
 
 class HostAgentProcess:
@@ -30,13 +31,21 @@ class HostAgentProcess:
         runtime_factory: RuntimeFactory,
         *,
         stop_event: threading.Event | None = None,
+        service_interval_seconds: float = DEFAULT_SERVICE_INTERVAL_SECONDS,
     ):
+        interval = float(service_interval_seconds)
+        if interval <= 0:
+            raise ValueError(
+                "Host Agent service interval must be positive"
+            )
+
         self._runtime_factory = runtime_factory
         self._stop_event = (
             stop_event
             if stop_event is not None
             else threading.Event()
         )
+        self._service_interval_seconds = interval
         self._runtime = None
 
     @property
@@ -46,6 +55,10 @@ class HostAgentProcess:
     @property
     def stop_event(self) -> threading.Event:
         return self._stop_event
+
+    @property
+    def service_interval_seconds(self) -> float:
+        return self._service_interval_seconds
 
     def request_shutdown(
         self,
@@ -60,10 +73,11 @@ class HostAgentProcess:
 
     def run(self) -> None:
         """
-        Start the Host Agent and block until shutdown is requested.
+        Start the Host Agent and service it until shutdown is requested.
 
-        Runtime shutdown is guaranteed after a successful construction,
-        including when startup or the blocking wait raises.
+        The first service cycle runs immediately after runtime startup. Later
+        cycles are separated by an interruptible stop-event wait. Runtime
+        shutdown is guaranteed if startup or any service cycle raises.
         """
 
         runtime = self._runtime_factory()
@@ -71,7 +85,14 @@ class HostAgentProcess:
 
         try:
             runtime.start()
-            self._stop_event.wait()
+
+            while not self._stop_event.is_set():
+                runtime.service_cycle()
+
+                if self._stop_event.wait(
+                    self._service_interval_seconds
+                ):
+                    break
         finally:
             runtime.shutdown()
 
@@ -128,7 +149,10 @@ def main() -> None:
     require_standalone_activation()
 
     process = HostAgentProcess(
-        build_production_runtime
+        build_production_runtime,
+        service_interval_seconds=(
+            DEFAULT_SERVICE_INTERVAL_SECONDS
+        ),
     )
 
     install_signal_handlers(process)
@@ -140,6 +164,7 @@ if __name__ == "__main__":
 
 
 __all__ = [
+    "DEFAULT_SERVICE_INTERVAL_SECONDS",
     "HostAgentProcess",
     "RuntimeFactory",
     "build_production_runtime",
