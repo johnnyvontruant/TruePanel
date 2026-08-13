@@ -74,6 +74,40 @@ PY
   fi
 }
 
+verify_fan_safety() {
+  if [[ ! -f "$CONFIG_FILE" ]]
+  then
+    printf 'TruePanel configuration is unavailable: %s\n' \
+      "$CONFIG_FILE" >&2
+    printf '%s\n' \
+      'Refusing uninstall because fan restoration cannot be verified.' \
+      >&2
+    exit 1
+  fi
+
+  if [[ ! -x "$BIN_FILE" ]]
+  then
+    printf 'TruePanel CLI wrapper is unavailable: %s\n' \
+      "$BIN_FILE" >&2
+    printf '%s\n' \
+      'Refusing uninstall because fan restoration cannot be verified.' \
+      >&2
+    exit 1
+  fi
+
+  echo "Verifying motherboard fan-control restoration..."
+
+  if ! "$BIN_FILE" host fan-safety \
+    --config "$CONFIG_FILE"
+  then
+    printf '%s\n' \
+      'Motherboard Automatic fan control was not confirmed.' \
+      'Refusing destructive uninstall cleanup; installation remains in place.' \
+      >&2
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]
 do
   case "$1" in
@@ -138,6 +172,7 @@ case "$INSTALL_DIR" in
 esac
 
 BIN_FILE="$INSTALL_DIR/bin/truepanel"
+CONFIG_FILE="$INSTALL_DIR/truepanel.yaml"
 
 echo "== TruePanel Uninstaller =="
 
@@ -150,6 +185,11 @@ stop_service "$MISSION_SERVICE_NAME"
 # A manually launched Host Agent may exist outside systemd. Refuse cleanup if
 # any process still owns the cross-process hardware lease.
 assert_host_ownership_released
+
+# Host shutdown requests motherboard Automatic restoration. Prove the
+# configured channels actually returned to Automatic before deleting the
+# installed runtime needed for diagnosis or recovery.
+verify_fan_safety
 
 echo "Disabling installed services..."
 systemctl disable "$SERVICE_NAME" 2>/dev/null || true
