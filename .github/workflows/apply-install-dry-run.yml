@@ -18,120 +18,8 @@ jobs:
         with:
           ref: install/dry-run
 
-      - name: Add non-destructive install preview
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path("install.sh")
-          text = path.read_text(encoding="utf-8")
-
-          old = 'INSTALL_DIR="${TRUEPANEL_INSTALL_ROOT:-}"\n'
-          new = old + 'DRY_RUN=0\n'
-          assert text.count(old) == 1
-          text = text.replace(old, new, 1)
-
-          old = '''usage() {\n  printf 'Usage: %s --root /mnt/POOL/DATASET/TruePanel\\n' "$0"\n  printf '       TRUEPANEL_INSTALL_ROOT=/mnt/POOL/DATASET/TruePanel %s\\n' "$0"\n}\n'''
-          new = '''usage() {\n  printf 'Usage: %s [--dry-run] --root /mnt/POOL/DATASET/TruePanel\\n' "$0"\n  printf '       TRUEPANEL_INSTALL_ROOT=/mnt/POOL/DATASET/TruePanel %s [--dry-run]\\n' "$0"\n}\n\nprint_install_plan() {\n  local bin_file="$INSTALL_DIR/bin/truepanel"\n\n  cat <<EOF\n== TruePanel Install Dry Run ==\n\nSource tree:\n  $SOURCE_ROOT\n\nInstall root:\n  $INSTALL_DIR\n\nActions a real install would perform:\n  Validate prerequisites: python3, rsync, systemctl\n  Create/preserve install root and synchronize the source tree\n  Create truepanel.yaml only when it does not already exist\n  Create a Python virtual environment when supported and install requirements\n  Create CLI wrapper: $bin_file\n  Install LCD service: $SERVICE_FILE\n  Install Mission Control service: $MISSION_CONTROL_SERVICE_FILE\n  Create/preserve Mission Control environment: $MISSION_CONTROL_ENV_FILE\n  Install dormant Host Agent service: $HOST_AGENT_SERVICE_FILE\n  Keep standalone Host Agent activation locked and do not start it\n  Reload systemd daemon state\n  Run TruePanel Doctor from the installed tree\n\nThe installer does not start or enable TruePanel services automatically.\n\nDRY RUN ONLY: no directories were created, no files were copied or written, no dependencies were installed, no services were changed.\nEOF\n}\n'''
-          assert text.count(old) == 1
-          text = text.replace(old, new, 1)
-
-          old = '''    -h|--help)\n      usage\n      exit 0\n      ;;\n'''
-          new = '''    --dry-run)\n      DRY_RUN=1\n      shift\n      ;;\n    -h|--help)\n      usage\n      exit 0\n      ;;\n'''
-          assert text.count(old) == 1
-          text = text.replace(old, new, 1)
-
-          anchor = '''if [[ "$(id -u)" -ne 0 ]]\nthen\n'''
-          block = '''if [[ "$DRY_RUN" -eq 1 ]]\nthen\n  print_install_plan\n  exit 0\nfi\n\n'''
-          assert text.count(anchor) == 1
-          text = text.replace(anchor, block + anchor, 1)
-
-          path.write_text(text, encoding="utf-8")
-          PY
-
-      - name: Add installer dry-run contracts
-        run: |
-          cat >> tests/test_install_host_agent_service.py <<'PY'
-
-
-def test_install_dry_run_is_available_without_root_or_target_tree():
-    import subprocess
-
-    install = ROOT / "install.sh"
-    result = subprocess.run(
-        [
-            "bash",
-            str(install),
-            "--dry-run",
-            "--root",
-            "/mnt/TestPool/TruePanel",
-        ],
-        check=False,
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-    )
-
-    assert result.returncode == 0
-    assert "== TruePanel Install Dry Run ==" in result.stdout
-    assert "/mnt/TestPool/TruePanel" in result.stdout
-    assert "truepanel-host-agent.service" in result.stdout
-    assert "Keep standalone Host Agent activation locked" in result.stdout
-    assert "does not start or enable TruePanel services" in result.stdout
-    assert (
-        "DRY RUN ONLY: no directories were created, "
-        "no files were copied or written, no dependencies were installed, "
-        "no services were changed."
-        in result.stdout
-    )
-
-
-def test_install_dry_run_exits_before_root_and_mutating_actions():
-    text = source("install.sh")
-
-    dry_run = text.index('if [[ "$DRY_RUN" -eq 1 ]]')
-    dry_run_exit = text.index("exit 0", dry_run)
-    root_gate = text.index('if [[ "$(id -u)" -ne 0 ]]')
-    first_mkdir = text.index('mkdir -p -- "$INSTALL_DIR"')
-    first_rsync = text.index("rsync -a --delete")
-    first_service_write = text.index(
-        'cat > "$MISSION_CONTROL_SERVICE_FILE"'
-    )
-    daemon_reload = text.index("systemctl daemon-reload")
-
-    assert dry_run < dry_run_exit < root_gate
-    assert dry_run_exit < first_mkdir
-    assert dry_run_exit < first_rsync
-    assert dry_run_exit < first_service_write
-    assert dry_run_exit < daemon_reload
-
-
-def test_install_dry_run_plan_contains_no_mutating_commands():
-    text = source("install.sh")
-    start = text.index("print_install_plan()")
-    end = text.index("\n}\n", start)
-    block = text[start:end]
-
-    for forbidden in (
-        "mkdir ",
-        "rsync ",
-        "pip install",
-        "cat >",
-        "chmod ",
-        "systemctl daemon-reload",
-        "systemctl start",
-        "systemctl enable",
-        "rm ",
-    ):
-        assert forbidden not in block
-
-
-def test_install_usage_documents_dry_run():
-    text = source("install.sh")
-
-    assert "[--dry-run]" in text
-    assert "--dry-run)" in text
-PY
+      - name: Apply installer preview
+        run: python3 .github/apply_install_dry_run.py
 
       - name: Validate migration
         run: |
@@ -145,6 +33,7 @@ PY
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add install.sh tests/test_install_host_agent_service.py
           git commit -m "Add non-destructive install dry run"
+          git rm .github/apply_install_dry_run.py
           git rm .github/workflows/apply-install-dry-run.yml
-          git commit -m "Remove install dry-run migration helper"
+          git commit -m "Remove install dry-run migration helpers"
           git push origin HEAD:install/dry-run
