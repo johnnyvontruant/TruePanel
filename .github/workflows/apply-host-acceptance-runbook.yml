@@ -1,5 +1,6 @@
 name: Apply Host acceptance runbook update
 
+# One-shot documentation migration; deletes itself after success.
 on:
   push:
     branches:
