@@ -1,8 +1,7 @@
+import inspect
+
 from truepanel.host import factory
-from truepanel.host.hooks import (
-    HostAgentApplicationHooks,
-    HostAgentSafetyServices,
-)
+from truepanel.host.hooks import HostAgentSafetyServices
 
 
 class FakeFanRuntime:
@@ -23,15 +22,6 @@ def telemetry():
         "temperatures_c": (),
         "telemetry_fresh": True,
     }
-
-
-def submit_button(
-    button_mask,
-    source,
-):
-    del button_mask
-    del source
-    return True
 
 
 def test_disabled_fan_runtime_builds_no_server():
@@ -137,9 +127,6 @@ def test_host_runtime_receives_only_fan_command_factory(
             safety_services=HostAgentSafetyServices(
                 fan_telemetry_provider=telemetry,
             ),
-            application_hooks=HostAgentApplicationHooks(
-                lcd_button_handler=submit_button,
-            ),
         )
     )
 
@@ -171,21 +158,16 @@ def test_host_runtime_receives_only_fan_command_factory(
     )
 
 
-def test_factory_accepts_but_does_not_consume_application_hooks():
-    runtime = factory.build_host_agent_runtime(
-        fan_runtime=FakeFanRuntime(
-            enabled=False
-        ),
-        safety_services=HostAgentSafetyServices(
-            fan_telemetry_provider=telemetry,
-        ),
-        application_hooks=HostAgentApplicationHooks(
-            lcd_button_handler=submit_button,
-        ),
-    )
+def test_host_factory_has_no_application_hook_boundary():
+    runtime_parameters = inspect.signature(
+        factory.build_host_agent_runtime
+    ).parameters
+    bootstrap_parameters = inspect.signature(
+        factory.build_host_agent_runtime_from_bootstrap
+    ).parameters
 
-    assert not hasattr(runtime, "lcd_server")
-    assert not hasattr(runtime, "_lcd_server_factory")
+    assert "application_hooks" not in runtime_parameters
+    assert "application_hooks" not in bootstrap_parameters
 
 
 def test_factory_does_not_start_runtime(
