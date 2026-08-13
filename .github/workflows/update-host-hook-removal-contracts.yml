@@ -1,0 +1,70 @@
+name: Update Host hook removal contracts
+
+on:
+  push:
+    branches:
+      - agent/remove-host-application-hooks-parameter
+    paths:
+      - .github/workflows/update-host-hook-removal-contracts.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remove-host-application-hooks-parameter
+
+      - name: Remove stale application-hook test contracts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          ownership = Path("tests/test_host_factory_ownership.py")
+          text = ownership.read_text()
+          old_import = '''from truepanel.host.hooks import (
+              HostAgentApplicationHooks,
+              HostAgentSafetyServices,
+          )'''
+          new_import = 'from truepanel.host.hooks import HostAgentSafetyServices'
+          if text.count(old_import) != 1:
+              raise SystemExit("unexpected ownership hook import count")
+          text = text.replace(old_import, new_import)
+
+          hook_arg = '        application_hooks=HostAgentApplicationHooks(),\n'
+          if text.count(hook_arg) != 2:
+              raise SystemExit("unexpected ownership hook argument count")
+          text = text.replace(hook_arg, '')
+          ownership.write_text(text)
+
+          wiring = Path("tests/test_host_bootstrap_wiring.py")
+          text = wiring.read_text()
+          old = '    assert "application_hooks=application_hooks" in factory\n'
+          new = '    assert "application_hooks" not in factory\n'
+          if text.count(old) != 1:
+              raise SystemExit("unexpected bootstrap hook assertion count")
+          wiring.write_text(text.replace(old, new))
+          PY
+
+      - name: Validate focused contracts
+        run: |
+          python3 -m compileall -q truepanel tests
+          python3 -m pytest -q \
+            tests/test_host_factory.py \
+            tests/test_host_factory_ownership.py \
+            tests/test_host_bootstrap_wiring.py
+          git diff --check
+
+      - name: Commit contract cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/update-host-hook-removal-contracts.yml
+          git add \
+            tests/test_host_factory_ownership.py \
+            tests/test_host_bootstrap_wiring.py
+          git commit -m "Update Host factory hook removal contracts"
+          git push origin HEAD:agent/remove-host-application-hooks-parameter
