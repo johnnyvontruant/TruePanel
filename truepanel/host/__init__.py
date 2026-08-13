@@ -22,6 +22,11 @@ from .hooks import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
 )
+from .ownership import (
+    DEFAULT_HOST_OWNERSHIP_PATH,
+    HostOwnershipError,
+    HostOwnershipGuard,
+)
 from .reconciliation import (
     HostFanReconciliationCoordinator,
 )
@@ -40,6 +45,9 @@ __all__ = [
     "HostAgentSafetyCoordinator",
     "HostAgentSafetyServices",
     "HostFanReconciliationCoordinator",
+    "HostOwnershipError",
+    "HostOwnershipGuard",
+    "DEFAULT_HOST_OWNERSHIP_PATH",
     "HostThermalAuthority",
     "HostThermalObserver",
     "HostCapability",
