@@ -1,4 +1,5 @@
 name: Apply Host status client LCD migration
+# Focused validation includes the migrated client ownership contracts.
 
 on:
   push:
