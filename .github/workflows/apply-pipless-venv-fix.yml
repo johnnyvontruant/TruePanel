@@ -24,6 +24,17 @@ jobs:
       - name: Apply migration
         run: python development/apply_pipless_venv_fix.py
 
+      - name: Normalize generated text
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("tests/test_install_host_agent_service.py")
+          path.write_text(
+              path.read_text(encoding="utf-8").rstrip() + "\n",
+              encoding="utf-8",
+          )
+          PY
+
       - name: Validate migration
         run: |
           bash -n install.sh
