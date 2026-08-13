@@ -1,0 +1,157 @@
+name: Apply Host runtime from bootstrap
+
+on:
+  push:
+    branches:
+      - agent/host-runtime-from-bootstrap
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ !contains(github.event.head_commit.message, '[host-runtime-bootstrap]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/host-runtime-from-bootstrap
+          fetch-depth: 0
+
+      - name: Move privileged bootstrap unwrapping into Host factory
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('truepanel/host/factory.py')
+          text = path.read_text(encoding='utf-8')
+          export_anchor = '''    return runtime\n\n\n__all__ = [\n'''
+          helper = '''    return runtime\n\n\ndef build_host_agent_runtime_from_bootstrap(\n    *,\n    bootstrap: Any,\n    application_hooks: HostAgentApplicationHooks,\n) -> HostAgentRuntime:\n    """Assemble Host runtime from one privileged bootstrap boundary."""\n\n    return build_host_agent_runtime(\n        fan_runtime=bootstrap.fan_runtime,\n        safety_services=bootstrap.safety_services(),\n        application_hooks=application_hooks,\n    )\n\n\n__all__ = [\n'''
+          if 'def build_host_agent_runtime_from_bootstrap(\n' not in text:
+              if export_anchor not in text:
+                  raise SystemExit('Host factory export anchor not found')
+              text = text.replace(export_anchor, helper, 1)
+
+          all_anchor = '    "build_host_agent_runtime",\n'
+          all_entry = '    "build_host_agent_runtime_from_bootstrap",\n'
+          if all_entry not in text:
+              if all_anchor not in text:
+                  raise SystemExit('Host factory __all__ anchor not found')
+              text = text.replace(all_anchor, all_anchor + all_entry, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('truepanel/host/__init__.py')
+          text = path.read_text(encoding='utf-8')
+          old_import = 'from .factory import build_host_agent_runtime\n'
+          new_import = '''from .factory import (\n    build_host_agent_runtime,\n    build_host_agent_runtime_from_bootstrap,\n)\n'''
+          if 'build_host_agent_runtime_from_bootstrap' not in text:
+              if old_import not in text:
+                  raise SystemExit('Host package factory import anchor not found')
+              text = text.replace(old_import, new_import, 1)
+
+          all_anchor = '    "build_host_agent_runtime",\n'
+          all_entry = '    "build_host_agent_runtime_from_bootstrap",\n'
+          if all_entry not in text:
+              if all_anchor not in text:
+                  raise SystemExit('Host package __all__ anchor not found')
+              text = text.replace(all_anchor, all_anchor + all_entry, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('lcd-menu.py')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              '    build_host_agent_runtime,\n',
+              '    build_host_agent_runtime_from_bootstrap,\n',
+              1,
+          )
+
+          alias = 'fan_control_runtime = host_bootstrap.fan_runtime\n\n'
+          if alias not in text:
+              raise SystemExit('LCD fan runtime alias not found')
+          text = text.replace(alias, '', 1)
+
+          services = '''        host_agent_safety_services = (\n            host_bootstrap.safety_services()\n        )\n\n'''
+          if services not in text:
+              raise SystemExit('LCD Host safety services assembly not found')
+          text = text.replace(services, '', 1)
+
+          old_runtime = '''        host_agent_runtime = build_host_agent_runtime(\n            fan_runtime=fan_control_runtime,\n            safety_services=(\n                host_agent_safety_services\n            ),\n            application_hooks=(\n                host_agent_application_hooks\n            ),\n        )\n'''
+          new_runtime = '''        host_agent_runtime = (\n            build_host_agent_runtime_from_bootstrap(\n                bootstrap=host_bootstrap,\n                application_hooks=(\n                    host_agent_application_hooks\n                ),\n            )\n        )\n'''
+          if old_runtime not in text:
+              raise SystemExit('LCD Host runtime assembly anchor not found')
+          text = text.replace(old_runtime, new_runtime, 1)
+
+          old_shutdown = '''        else:\n            try:\n                fan_control_runtime.shutdown()\n            except Exception:\n                pass\n'''
+          new_shutdown = '''        else:\n            try:\n                host_bootstrap.fan_runtime.shutdown()\n            except Exception:\n                pass\n'''
+          if old_shutdown not in text:
+              raise SystemExit('LCD fan runtime fallback shutdown anchor not found')
+          text = text.replace(old_shutdown, new_shutdown, 1)
+          path.write_text(text, encoding='utf-8')
+
+      - name: Update factory and ownership tests
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('tests/test_host_factory.py')
+          text = path.read_text(encoding='utf-8')
+          addition = '''\n\nclass FakeBootstrap:\n    def __init__(self, fan_runtime, safety_services):\n        self.fan_runtime = fan_runtime\n        self._safety_services = safety_services\n        self.safety_service_calls = 0\n\n    def safety_services(self):\n        self.safety_service_calls += 1\n        return self._safety_services\n\n\ndef test_bootstrap_factory_unwraps_privileged_dependencies():\n    fan_runtime = FakeFanRuntime()\n    services = HostAgentSafetyServices(\n        fan_telemetry_provider=telemetry,\n    )\n    bootstrap = FakeBootstrap(\n        fan_runtime,\n        services,\n    )\n\n    runtime = (\n        factory.build_host_agent_runtime_from_bootstrap(\n            bootstrap=bootstrap,\n            application_hooks=(\n                HostAgentApplicationHooks()\n            ),\n        )\n    )\n\n    assert runtime._fan_runtime is fan_runtime\n    assert runtime.safety.telemetry() == telemetry()\n    assert bootstrap.safety_service_calls == 1\n    assert runtime.started is False\n'''
+          if 'def test_bootstrap_factory_unwraps_privileged_dependencies():' not in text:
+              text = text.rstrip() + addition.rstrip() + '\n'
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_fan_runtime_integration.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''    assert (\n        "fan_control_runtime = "\n        "host_bootstrap.fan_runtime"\n        in runtime\n    )\n\n'''
+          new = '''    assert (\n        "fan_control_runtime = "\n        "host_bootstrap.fan_runtime"\n        not in runtime\n    )\n\n    factory = Path(\n        "truepanel/host/factory.py"\n    ).read_text()\n\n    assert (\n        "build_host_agent_runtime_from_bootstrap("\n        in runtime\n    )\n\n    assert (\n        "fan_runtime=bootstrap.fan_runtime"\n        in factory\n    )\n\n'''
+          if old not in text:
+              raise SystemExit('fan runtime integration ownership anchor not found')
+          text = text.replace(old, new, 1)
+
+          old = '''    assert (\n        "fan_control_runtime.shutdown()"\n        in source\n    )\n'''
+          new = '''    assert (\n        "fan_control_runtime.shutdown()"\n        not in source\n    )\n\n    assert (\n        "host_bootstrap.fan_runtime.shutdown()"\n        in source\n    )\n'''
+          if old not in text:
+              raise SystemExit('fan runtime shutdown ownership anchor not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('tests/test_host_bootstrap_wiring.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''    assert (\n        "fan_control_runtime = "\n        "host_bootstrap.fan_runtime"\n        in text\n    )\n'''
+          new = '''    assert (\n        "fan_control_runtime = "\n        "host_bootstrap.fan_runtime"\n        not in text\n    )\n\n    assert (\n        "build_host_agent_runtime_from_bootstrap("\n        in text\n    )\n'''
+          if old not in text:
+              raise SystemExit('Host bootstrap wiring fan runtime anchor not found')
+          text = text.replace(old, new, 1)
+
+          addition = '''\n\ndef test_lcd_delegates_privileged_bootstrap_unwrapping_to_host_factory():\n    runtime = source()\n    factory = Path(\n        "truepanel/host/factory.py"\n    ).read_text(encoding="utf-8")\n\n    assert "host_bootstrap.safety_services()" not in runtime\n    assert "fan_control_runtime = host_bootstrap.fan_runtime" not in runtime\n    assert "build_host_agent_runtime_from_bootstrap(" in runtime\n    assert "fan_runtime=bootstrap.fan_runtime" in factory\n    assert "safety_services=bootstrap.safety_services()" in factory\n    assert "application_hooks=application_hooks" in factory\n'''
+          if 'def test_lcd_delegates_privileged_bootstrap_unwrapping_to_host_factory():' not in text:
+              text = text.rstrip() + addition.rstrip() + '\n'
+          path.write_text(text, encoding='utf-8')
+
+      - name: Validate migration
+        run: |
+          python -m compileall -q \
+            truepanel/host/factory.py \
+            truepanel/host/__init__.py \
+            lcd-menu.py \
+            tests/test_host_factory.py \
+            tests/test_fan_runtime_integration.py \
+            tests/test_host_bootstrap_wiring.py
+          git diff --check
+
+      - name: Commit Host runtime bootstrap factory ownership
+        run: |
+          rm .github/workflows/apply-host-runtime-from-bootstrap.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            truepanel/host/factory.py \
+            truepanel/host/__init__.py \
+            lcd-menu.py \
+            tests/test_host_factory.py \
+            tests/test_fan_runtime_integration.py \
+            tests/test_host_bootstrap_wiring.py \
+            .github/workflows/apply-host-runtime-from-bootstrap.yml
+          git diff --cached --check
+          git commit -m '[host-runtime-bootstrap] Build Host runtime directly from bootstrap'
+          git push origin HEAD:agent/host-runtime-from-bootstrap
