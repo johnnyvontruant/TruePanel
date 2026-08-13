@@ -18,7 +18,21 @@ def test_lcd_runtime_builds_fan_control_runtime():
     assert (
         "fan_control_runtime = "
         "host_bootstrap.fan_runtime"
+        not in runtime
+    )
+
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text()
+
+    assert (
+        "build_host_agent_runtime_from_bootstrap("
         in runtime
+    )
+
+    assert (
+        "fan_runtime=bootstrap.fan_runtime"
+        in factory
     )
 
     assert (
@@ -79,6 +93,16 @@ def test_lcd_runtime_shuts_down_fan_control():
 
     assert (
         "fan_control_runtime.shutdown()"
+        not in source
+    )
+
+    assert (
+        "host_bootstrap.fan_runtime.shutdown()"
+        not in source
+    )
+
+    assert (
+        "skipping fan-runtime shutdown without ownership"
         in source
     )
 
@@ -122,115 +146,74 @@ def test_fan_history_uses_post_transition_telemetry():
     )
 
 
-def test_lcd_classifies_completed_safety_recovery():
-    runtime = Path(
-        "lcd-menu.py"
+def test_host_classifies_completed_safety_recovery():
+    runtime = Path("lcd-menu.py").read_text()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text()
+    reconciliation = Path(
+        "truepanel/host/reconciliation.py"
     ).read_text()
 
+    assert "def fan_control_event_source(" not in runtime
+    assert '"safety recovery confirmed"' in bootstrap
+    assert 'return "recovery"' in bootstrap
+    assert "fan_event_source=self.fan_event_source" in bootstrap
+    assert "source_classifier=self._fan_event_source" in reconciliation
+
+
+def test_host_preserves_timeout_classification():
+    runtime = Path("lcd-menu.py").read_text()
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
     ).read_text()
 
-    assert (
-        "def fan_control_event_source("
-        in runtime
-    )
-
-    assert (
-        "host_bootstrap.fan_event_source("
-        in runtime
-    )
-
-    assert (
-        '"safety recovery confirmed"'
-        in bootstrap
-    )
-
-    assert (
-        'return "recovery"'
-        in bootstrap
-    )
+    assert "host_bootstrap.fan_event_source(" not in runtime
+    assert 'and "expired" in reason_lower' in bootstrap
+    assert 'return "timeout"' in bootstrap
 
 
-def test_lcd_preserves_timeout_classification():
-    runtime = Path(
-        "lcd-menu.py"
+def test_lcd_delegates_fan_reconciliation_to_host():
+    runtime = Path("lcd-menu.py").read_text()
+    host_runtime = Path(
+        "truepanel/host/runtime.py"
     ).read_text()
 
+    assert "HostFanReconciliationCoordinator" not in runtime
+    assert "fan_reconciliation_coordinator" not in runtime
+    assert "host_agent_runtime.reconcile_fans()" in runtime
+    assert "def reconcile_fans(" in host_runtime
+    assert "host_agent_runtime.safety.reconcile(" not in runtime
+    assert "thermal_authority.reconcile(" not in runtime
+
+
+def test_lcd_uses_bootstrap_owned_host_telemetry():
+    runtime = Path("lcd-menu.py").read_text()
     bootstrap = Path(
         "truepanel/host/bootstrap.py"
     ).read_text()
 
-    assert (
-        "host_bootstrap.fan_event_source("
-        in runtime
-    )
-
-    assert (
-        'and "expired" in reason_lower'
-        in bootstrap
-    )
-
-    assert (
-        'return "timeout"'
-        in bootstrap
-    )
+    assert "DriveTemperatureProvider" not in runtime
+    assert "HostFanTelemetryProvider" not in runtime
+    assert "get_fan_status" not in runtime
+    assert "host_bootstrap\n        .telemetry" not in runtime
+    assert "host_agent_runtime.observe_thermal(" in runtime
+    assert "DriveTemperatureProvider" in bootstrap
+    assert "HostFanTelemetryProvider" in bootstrap
 
 
-def test_lcd_records_reconcile_source_from_classifier():
-    runtime = Path(
-        "lcd-menu.py"
+def test_lcd_uses_bootstrap_owned_status_bridge():
+    runtime = Path("lcd-menu.py").read_text()
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
     ).read_text()
 
-    safety = Path(
-        "truepanel/host/safety.py"
-    ).read_text()
-
-    reconcile_start = runtime.index(
-        "def reconcile_fan_control():"
-    )
-
-    reconcile_end = runtime.index(
-        "\ndef ",
-        reconcile_start,
-    )
-
-    reconcile = runtime[
-        reconcile_start:reconcile_end
-    ]
-
-    assert (
-        "source_classifier=("
-        in reconcile
-    )
-
-    assert (
-        "fan_control_event_source"
-        in reconcile
-    )
-
-    assert (
-        "record_fan_control_event("
-        not in reconcile
-    )
-
-    safety_start = safety.index(
-        "    def reconcile("
-    )
-
-    safety_end = safety.index(
-        "    def restore_automatic(",
-        safety_start,
-    )
-
-    host_reconcile = safety[
-        safety_start:safety_end
-    ]
-
-    assert (
-        "self.record_event("
-        in host_reconcile
-    )
+    assert "FanControlStatusBridge" not in runtime
+    assert "publish_host_fan_status" not in runtime
+    assert "host_agent_runtime.publish_fan_status(" in runtime
+    assert "host_bootstrap.status_bridge.read(" not in runtime
+    assert "host_agent_runtime.read_fan_status(" in runtime
+    assert "FanControlStatusBridge" in bootstrap
 
 
 def test_lcd_wires_fan_control_status_page():
@@ -239,8 +222,12 @@ def test_lcd_wires_fan_control_status_page():
     assert "fan_control_page" in text
     assert "def show_fan_control():" in text
     assert (
-        "fan_control_status_bridge.read("
+        "host_agent_runtime.read_fan_status("
         in text
+    )
+    assert (
+        "host_bootstrap.status_bridge.read("
+        not in text
     )
 
 

@@ -18,18 +18,6 @@ from truepanel.hardware import Buzzer
 from truepanel.hardware.bay_led_animation import (
     build_bay_led_startup_animation,
 )
-from truepanel.hardware.bounded_automatic import (
-    thermal_safety_fingerprint,
-)
-from truepanel.hardware.drive_temperatures import (
-    DriveTemperatureProvider,
-)
-from truepanel.hardware.fan_status_bridge import (
-    FanControlStatusBridge,
-)
-from truepanel.hardware.fans import (
-    get_status as get_fan_status,
-)
 from truepanel.hardware.lcd_display_status_bridge import (
     LCDDisplayStatusBridge,
 )
@@ -41,13 +29,8 @@ from truepanel.history import (
 )
 from truepanel.host import (
     HostAgentApplicationHooks,
-    HostAgentSafetyServices,
-    HostFanTelemetryProvider,
     build_host_agent_bootstrap,
-    build_host_agent_runtime,
-)
-from truepanel.host.status import (
-    publish_host_fan_status,
+    build_host_agent_runtime_from_bootstrap,
 )
 from truepanel.mission_control import MissionControl
 from truepanel.mission_control.alert_manager import AlertManager
@@ -92,24 +75,15 @@ collector = TruePanelCollector()
 mission = MissionControl()
 alert_manager = AlertManager()
 config = load_config()
-fan_control_status_bridge = FanControlStatusBridge()
 host_bootstrap = build_host_agent_bootstrap(
     config
 )
-fan_control_runtime = host_bootstrap.fan_runtime
-
 host_agent_runtime = None
 storage_health_watcher = build_storage_health_watcher(config)
 fan_health_watcher = build_fan_health_watcher(config)
 display_manager = DisplayManager(mission, alert_manager, config=config)
 autopilot = AutoPilot(display_manager, config=config)
 history_recorder = TelemetryRecorder(config.get("history", {}))
-fan_control_history = (
-    host_bootstrap.fan_control_history
-)
-thermal_commissioning_history = (
-    host_bootstrap.thermal_commissioning_history
-)
 
 buzzer = Buzzer(config.get("buzzer", {}))
 bay_led_startup_animation = (
@@ -132,41 +106,6 @@ if fan_health_watcher is not None:
 
 mission.register(healthy_watcher)
 
-
-thermal_policy_config = (
-    config.get(
-        "hardware",
-        {},
-    ).get(
-        "thermal_policy",
-        {},
-    )
-)
-
-# Thermal authority is deliberately ephemeral.
-# Every TruePanel process starts disarmed and in dry-run mode.
-thermal_command_cooldown_seconds = float(
-    thermal_policy_config.get(
-        "command_cooldown_seconds",
-        30,
-    )
-)
-
-_current_thermal_safety_fingerprint = (
-    thermal_safety_fingerprint(config)
-)
-
-_commissioned_thermal_safety_fingerprint = str(
-    thermal_policy_config.get(
-        "commissioned_fingerprint",
-        "",
-    )
-    or ""
-).strip().lower()
-
-thermal_authority = (
-    host_bootstrap.thermal_authority
-)
 
 
 def publish_lcd_reader_status():
@@ -191,40 +130,13 @@ def publish_fan_control_status(
 ):
     """Compatibility adapter for Host-owned status publication."""
 
-    return publish_host_fan_status(
-        fan_runtime=fan_control_runtime,
-        thermal_authority=thermal_authority,
-        status_bridge=fan_control_status_bridge,
+    if host_agent_runtime is None:
+        return host_bootstrap.publish_fan_status(
+            reason=reason,
+        )
+
+    return host_agent_runtime.publish_fan_status(
         reason=reason,
-    )
-
-
-host_drive_temperature_provider = (
-    DriveTemperatureProvider()
-)
-
-host_fan_telemetry_provider = (
-    HostFanTelemetryProvider(
-        temperature_provider=(
-            host_drive_temperature_provider
-        ),
-        fan_status_provider=(
-            get_fan_status
-        ),
-    )
-)
-
-host_bootstrap.telemetry = (
-    host_fan_telemetry_provider
-)
-
-
-def fan_command_telemetry():
-    """Compatibility adapter for Host-owned safety telemetry."""
-
-    return (
-        host_fan_telemetry_provider
-        .snapshot()
     )
 
 
@@ -238,86 +150,13 @@ def observe_thermal_fan_policy(
     not request profiles, invoke the command socket, or write fan hardware.
     """
 
-    if telemetry is None:
-        telemetry = fan_command_telemetry()
-
-    return (
-        host_bootstrap
-        .thermal_observer
-        .observe(telemetry)
-    )
-
-
-def record_thermal_commissioning_event(
-    lifecycle_action,
-    reason,
-    *,
-    lease_remaining=None,
-):
-    """Compatibility adapter for Host-owned commissioning history."""
-
-    return host_bootstrap.record_commissioning_event(
-        lifecycle_action,
-        reason,
-        lease_remaining=lease_remaining,
-    )
-
-
-def record_fan_control_event(
-    decision,
-    telemetry,
-    *,
-    source,
-):
-    """Compatibility adapter for Host-owned fan history."""
-
-    return host_bootstrap.record_fan_event(
-        decision,
-        telemetry,
-        source=source,
-    )
-
-
-def fan_control_event_source(
-    decision,
-):
-    """Compatibility adapter for Host-owned event classification."""
-
-    return host_bootstrap.fan_event_source(
-        decision
-    )
-
-
-def restore_motherboard_fan_control(
-    reason,
-    *,
-    telemetry=None,
-):
-    """Restore Automatic only through the Host Agent safety boundary."""
-
-    if (
-        host_agent_runtime is None
-        or getattr(
-            host_agent_runtime,
-            "safety",
-            None,
-        )
-        is None
-    ):
-        LOGGER.warning(
-            "Host Agent safety coordinator unavailable; "
-            "Automatic restoration request ignored."
-        )
+    if host_agent_runtime is None:
         return None
 
-    return (
-        host_agent_runtime
-        .safety
-        .restore_automatic(
-            reason,
-            telemetry=telemetry,
-        )
+    return host_agent_runtime.observe_thermal(
+        telemetry
     )
+
 
 def end_supervised_thermal_session(
     reason,
@@ -325,27 +164,25 @@ def end_supervised_thermal_session(
     lifecycle_action,
     telemetry=None,
 ):
-    """Compatibility adapter for Host-owned thermal authority."""
+    """Compatibility adapter for Host-owned thermal lifecycle."""
 
-    return thermal_authority.end_supervised_session(
+    if host_agent_runtime is None:
+        return None
+
+    return host_agent_runtime.end_supervised_thermal_session(
         reason,
         lifecycle_action=lifecycle_action,
         telemetry=telemetry,
-        telemetry_provider=fan_command_telemetry,
-        restore_automatic=(
-            restore_motherboard_fan_control
-        ),
-        publish_status=publish_fan_control_status,
-        record_commissioning_event=(
-            record_thermal_commissioning_event
-        ),
     )
 
 
 def supervised_thermal_session_active():
+    if host_agent_runtime is None:
+        return False
+
     return (
-        thermal_authority
-        .supervised_session_active()
+        host_agent_runtime
+        .supervised_thermal_session_active()
     )
 
 
@@ -356,110 +193,26 @@ def end_bounded_automatic_lease(
     telemetry=None,
     restore=True,
 ):
-    """Compatibility adapter for Host-owned thermal authority."""
+    """Compatibility adapter for Host-owned thermal lifecycle."""
 
-    return thermal_authority.end_automatic_lease(
+    if host_agent_runtime is None:
+        return None
+
+    return host_agent_runtime.end_bounded_automatic_lease(
         reason,
         lifecycle_action=lifecycle_action,
         telemetry=telemetry,
-        telemetry_provider=fan_command_telemetry,
-        restore_automatic=(
-            restore_motherboard_fan_control
-        ),
-        publish_status=publish_fan_control_status,
-        record_commissioning_event=(
-            record_thermal_commissioning_event
-        ),
         restore=restore,
     )
 
 
 def reconcile_fan_control():
+    """Compatibility adapter for Host-owned fan reconciliation."""
 
-    if (
-        host_agent_runtime is None
-        or not fan_control_runtime.connected
-    ):
+    if host_agent_runtime is None:
         return None
 
-    telemetry = (
-        host_agent_runtime
-        .safety
-        .telemetry()
-    )
-
-    recommendation = (
-        observe_thermal_fan_policy(
-            telemetry
-        )
-    )
-
-    (
-        decision,
-        safety_telemetry,
-    ) = (
-        host_agent_runtime
-        .safety
-        .reconcile(
-            telemetry=telemetry,
-            source_classifier=(
-                fan_control_event_source
-            ),
-        )
-    )
-
-    if decision is not None:
-        thermal_authority.handle_fan_safety_transition(
-            telemetry=safety_telemetry,
-            telemetry_provider=fan_command_telemetry,
-            restore_automatic=(
-                restore_motherboard_fan_control
-            ),
-            publish_status=(
-                publish_fan_control_status
-            ),
-            record_commissioning_event=(
-                record_thermal_commissioning_event
-            ),
-        )
-
-        return decision
-
-    return thermal_authority.reconcile(
-        recommendation,
-        telemetry=telemetry,
-        runtime_status_provider=(
-            fan_control_runtime.status_payload
-        ),
-        telemetry_provider=fan_command_telemetry,
-        restore_automatic=(
-            restore_motherboard_fan_control
-        ),
-        publish_status=publish_fan_control_status,
-        record_fan_event=record_fan_control_event,
-        record_commissioning_event=(
-            record_thermal_commissioning_event
-        ),
-    )
-
-def set_thermal_operator_arm_state(
-    action,
-):
-    """Dispatch thermal authority to the Host-owned state machine."""
-
-    return thermal_authority.handle_action(
-        action,
-        telemetry_provider=fan_command_telemetry,
-        runtime_status_provider=(
-            fan_control_runtime.status_payload
-        ),
-        restore_automatic=(
-            restore_motherboard_fan_control
-        ),
-        record_commissioning_event=(
-            record_thermal_commissioning_event
-        ),
-    )
+    return host_agent_runtime.reconcile_fans()
 
 def lcd_on():
     global lcd_timer
@@ -717,8 +470,12 @@ def show_fan_rpm():
 
 
 def show_fan_control():
-    status = fan_control_status_bridge.read(
-        max_age=30.0
+    status = (
+        host_agent_runtime.read_fan_status(
+            max_age=30.0
+        )
+        if host_agent_runtime is not None
+        else None
     )
 
     lcd.clear()
@@ -991,30 +748,6 @@ def main():
     lcd.clear()
 
     try:
-        observe_thermal_fan_policy()
-        publish_fan_control_status()
-
-        host_agent_safety_services = HostAgentSafetyServices(
-            fan_telemetry_provider=(
-                fan_command_telemetry
-            ),
-            fan_status_publisher=(
-                publish_fan_control_status
-            ),
-            fan_event_recorder=(
-                lambda decision, telemetry, source: (
-                    record_fan_control_event(
-                        decision,
-                        telemetry,
-                        source=source,
-                    )
-                )
-            ),
-            thermal_control_handler=(
-                set_thermal_operator_arm_state
-            ),
-        )
-
         host_agent_application_hooks = HostAgentApplicationHooks(
             lcd_button_handler=(
                 lambda button_mask, source: (
@@ -1028,15 +761,17 @@ def main():
             ),
         )
 
-        host_agent_runtime = build_host_agent_runtime(
-            fan_runtime=fan_control_runtime,
-            safety_services=(
-                host_agent_safety_services
-            ),
-            application_hooks=(
-                host_agent_application_hooks
-            ),
+        host_agent_runtime = (
+            build_host_agent_runtime_from_bootstrap(
+                bootstrap=host_bootstrap,
+                application_hooks=(
+                    host_agent_application_hooks
+                ),
+            )
         )
+
+        observe_thermal_fan_policy()
+        publish_fan_control_status()
 
         host_agent_runtime.start()
 
@@ -1084,10 +819,10 @@ def main():
             finally:
                 host_agent_runtime = None
         else:
-            try:
-                fan_control_runtime.shutdown()
-            except Exception:
-                pass
+            LOGGER.warning(
+                "Host Agent runtime was not constructed; "
+                "skipping fan-runtime shutdown without ownership."
+            )
 
         try:
             publish_fan_control_status(

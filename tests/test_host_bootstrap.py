@@ -26,6 +26,26 @@ class FakeAuthority:
         self.dry_run = True
 
 
+class FakeTelemetry:
+    def __init__(
+        self,
+        *,
+        temperature_provider,
+        fan_status_provider,
+    ):
+        self.temperature_provider = temperature_provider
+        self.fan_status_provider = fan_status_provider
+
+    def snapshot(self):
+        return {
+            "telemetry_fresh": True,
+        }
+
+
+class FakeStatusBridge:
+    pass
+
+
 def test_bootstrap_owns_host_dependencies():
     runtime = FakeFanRuntime()
 
@@ -41,6 +61,87 @@ def test_bootstrap_owns_host_dependencies():
     assert bootstrap.thermal_authority is not None
     assert bootstrap.fan_control_history is not None
     assert bootstrap.thermal_commissioning_history is not None
+
+
+def test_bootstrap_owns_production_telemetry():
+    runtime = FakeFanRuntime()
+    temperature_provider = object()
+    fan_status_provider = lambda: {}
+
+    bootstrap = build_host_agent_bootstrap(
+        {},
+        fan_runtime_factory=lambda config: runtime,
+        fan_history_factory=FakeHistory,
+        commissioning_history_factory=FakeHistory,
+        thermal_authority_factory=FakeAuthority,
+        drive_temperature_provider_factory=(
+            lambda: temperature_provider
+        ),
+        fan_status_provider=fan_status_provider,
+        telemetry_factory=FakeTelemetry,
+    )
+
+    assert isinstance(bootstrap.telemetry, FakeTelemetry)
+    assert (
+        bootstrap.telemetry.temperature_provider
+        is temperature_provider
+    )
+    assert (
+        bootstrap.telemetry.fan_status_provider
+        is fan_status_provider
+    )
+
+
+def test_bootstrap_owns_status_bridge():
+    runtime = FakeFanRuntime()
+
+    bootstrap = build_host_agent_bootstrap(
+        {},
+        fan_runtime_factory=lambda config: runtime,
+        fan_history_factory=FakeHistory,
+        commissioning_history_factory=FakeHistory,
+        thermal_authority_factory=FakeAuthority,
+        status_bridge_factory=FakeStatusBridge,
+    )
+
+    assert isinstance(
+        bootstrap.status_bridge,
+        FakeStatusBridge,
+    )
+
+
+def test_bootstrap_builds_host_safety_services():
+    runtime = FakeFanRuntime()
+
+    bootstrap = build_host_agent_bootstrap(
+        {},
+        fan_runtime_factory=lambda config: runtime,
+        fan_history_factory=FakeHistory,
+        commissioning_history_factory=FakeHistory,
+        thermal_authority_factory=FakeAuthority,
+        telemetry_factory=FakeTelemetry,
+        status_bridge_factory=FakeStatusBridge,
+    )
+
+    services = bootstrap.safety_services()
+
+    assert (
+        services.fan_telemetry_provider
+        == bootstrap.telemetry.snapshot
+    )
+    assert (
+        services.fan_status_publisher
+        == bootstrap.publish_fan_status
+    )
+    assert (
+        services.fan_status_reader
+        == bootstrap.read_fan_status
+    )
+    assert services.fan_event_recorder is not None
+    assert (
+        services.thermal_control_handler_factory
+        == bootstrap.build_thermal_control_handler
+    )
 
 
 def test_bootstrap_starts_thermal_authority_safe():

@@ -24,6 +24,10 @@ from .hooks import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
 )
+from .ownership import (
+    DEFAULT_HOST_OWNERSHIP_PATH,
+    HostOwnershipGuard,
+)
 from .runtime import HostAgentRuntime
 from .safety import HostAgentSafetyCoordinator
 
@@ -102,6 +106,7 @@ def build_host_agent_runtime(
     fan_runtime: Any,
     safety_services: HostAgentSafetyServices,
     application_hooks: HostAgentApplicationHooks,
+    ownership_guard: Any | None = None,
 ) -> HostAgentRuntime:
     """
     Assemble the current TruePanel Host Agent runtime.
@@ -124,15 +129,49 @@ def build_host_agent_runtime(
             safety_services
             .fan_event_recorder
         ),
-        thermal_control_handler=(
-            safety_services
-            .thermal_control_handler
-        ),
+    )
+
+    thermal_control_handler_factory = (
+        safety_services
+        .thermal_control_handler_factory
+    )
+
+    if thermal_control_handler_factory is not None:
+        safety.bind_thermal_control_handler(
+            thermal_control_handler_factory(
+                safety.restore_automatic
+            )
+        )
+
+    fan_reconciliation_factory = (
+        safety_services
+        .fan_reconciliation_factory
+    )
+    fan_reconciliation = (
+        fan_reconciliation_factory(safety)
+        if fan_reconciliation_factory is not None
+        else None
+    )
+
+    thermal_lifecycle_factory = (
+        safety_services
+        .thermal_lifecycle_factory
+    )
+    thermal_lifecycle = (
+        thermal_lifecycle_factory(safety)
+        if thermal_lifecycle_factory is not None
+        else None
     )
 
     runtime = HostAgentRuntime(
         fan_runtime=fan_runtime,
         safety=safety,
+        ownership_guard=ownership_guard,
+        fan_status_reader=(
+            safety_services.fan_status_reader
+        ),
+        fan_reconciliation=fan_reconciliation,
+        thermal_lifecycle=thermal_lifecycle,
         fan_server_factory=lambda: (
             build_fan_command_server(
                 fan_runtime=fan_runtime,
@@ -167,8 +206,29 @@ def build_host_agent_runtime(
     return runtime
 
 
+def build_host_agent_runtime_from_bootstrap(
+    *,
+    bootstrap: Any,
+    application_hooks: HostAgentApplicationHooks,
+    owner_name: str = "embedded-lcd",
+    ownership_path: Any = DEFAULT_HOST_OWNERSHIP_PATH,
+) -> HostAgentRuntime:
+    """Assemble Host runtime behind one cross-process ownership lease."""
+
+    return build_host_agent_runtime(
+        fan_runtime=bootstrap.fan_runtime,
+        safety_services=bootstrap.safety_services(),
+        application_hooks=application_hooks,
+        ownership_guard=HostOwnershipGuard(
+            owner_name,
+            path=ownership_path,
+        ),
+    )
+
+
 __all__ = [
     "build_fan_command_server",
     "build_host_agent_runtime",
+    "build_host_agent_runtime_from_bootstrap",
     "build_lcd_command_server",
 ]

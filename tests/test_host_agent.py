@@ -142,18 +142,88 @@ def test_signal_handlers_route_to_process(
     ] == process.request_shutdown
 
 
-def test_production_bootstrap_fails_closed():
+def test_production_bootstrap_constructs_safe_runtime(
+    monkeypatch,
+):
+    config = {"example": True}
+    bootstrap = object()
+    runtime = object()
+    captured = {}
+
+    monkeypatch.setattr(
+        agent,
+        "load_config",
+        lambda: config,
+    )
+
+    def build_bootstrap(value):
+        captured["config"] = value
+        return bootstrap
+
+    def build_runtime(**kwargs):
+        captured.update(kwargs)
+        return runtime
+
+    monkeypatch.setattr(
+        agent,
+        "build_host_agent_bootstrap",
+        build_bootstrap,
+    )
+    monkeypatch.setattr(
+        agent,
+        "build_host_agent_runtime_from_bootstrap",
+        build_runtime,
+    )
+
+    result = agent.build_production_runtime()
+
+    assert result is runtime
+    assert captured["config"] is config
+    assert captured["bootstrap"] is bootstrap
+    hooks = captured["application_hooks"]
+    assert isinstance(
+        hooks,
+        agent.HostAgentApplicationHooks,
+    )
+    assert hooks.lcd_button_handler is None
+
+
+def test_standalone_activation_fails_closed():
+    assert agent.STANDALONE_PRODUCTION_ACTIVATED is False
+
     with pytest.raises(
         RuntimeError,
         match=(
-            "Standalone Host Agent hardware "
-            "bootstrap is not enabled yet"
+            "Standalone Host Agent activation "
+            "is not enabled yet"
         ),
     ):
-        agent.build_production_runtime()
+        agent.require_standalone_activation()
 
 
-def test_main_installs_signals_before_run(
+def test_main_refuses_standalone_activation_before_process_construction(
+    monkeypatch,
+):
+    constructed = []
+
+    monkeypatch.setattr(
+        agent,
+        "HostAgentProcess",
+        lambda runtime_factory: constructed.append(
+            runtime_factory
+        ),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="activation is not enabled yet",
+    ):
+        agent.main()
+
+    assert constructed == []
+
+
+def test_main_installs_signals_before_run_when_gate_is_open(
     monkeypatch,
 ):
     events = []
@@ -172,10 +242,14 @@ def test_main_installs_signals_before_run(
 
     monkeypatch.setattr(
         agent,
+        "require_standalone_activation",
+        lambda: events.append("gate"),
+    )
+    monkeypatch.setattr(
+        agent,
         "HostAgentProcess",
         FakeProcess,
     )
-
     monkeypatch.setattr(
         agent,
         "install_signal_handlers",
@@ -185,6 +259,7 @@ def test_main_installs_signals_before_run(
     agent.main()
 
     assert events == [
+        "gate",
         "construct",
         "signals",
         "run",

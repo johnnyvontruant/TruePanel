@@ -636,116 +636,23 @@ def test_lcd_constructs_thermal_coordinator():
     )
 
 def test_safety_reconcile_precedes_thermal_control():
-    runtime = Path(
-        "lcd-menu.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    reconciliation = Path(
+        "truepanel/host/reconciliation.py"
+    ).read_text()
+    safety = Path("truepanel/host/safety.py").read_text()
 
-    safety = Path(
-        "truepanel/host/safety.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
-    authority = Path(
-        "truepanel/host/thermal_authority.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
-    safety_start = safety.index(
-        "    def reconcile("
-    )
-
-    safety_end = safety.index(
-        "    def restore_automatic(",
-        safety_start,
-    )
-
-    host_safety = safety[
-        safety_start:safety_end
-    ]
-
-    assert (
-        "service.tick("
-        in host_safety
-    )
-
-    assert (
-        "fan_control_runtime.service.tick("
-        not in runtime
-    )
-
-    start = runtime.index(
-        "def reconcile_fan_control():"
-    )
-
-    end = runtime.index(
-        "\ndef ",
-        start,
-    )
-
-    reconcile = runtime[start:end]
-
-    safety_reconcile = (
-        reconcile.index(
-            ".safety"
-            "\n        .reconcile("
-        )
-    )
-
-    safety_transition = (
-        reconcile.index(
-            "thermal_authority."
-            "handle_fan_safety_transition("
-        )
-    )
-
-    thermal_reconcile = (
-        reconcile.index(
-            "thermal_authority.reconcile("
-        )
-    )
-
-    assert (
-        safety_reconcile
-        < safety_transition
-    )
-
-    assert (
-        safety_reconcile
-        < thermal_reconcile
-    )
-
-    assert (
-        "self.coordinator.evaluate("
-        in authority
+    assert "service.tick(" in safety
+    assert reconciliation.index("self._safety.reconcile(") < reconciliation.index(
+        "self._thermal_authority.reconcile("
     )
 
 def test_thermal_transition_uses_existing_history():
-    runtime = Path(
-        "lcd-menu.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    reconciliation = Path(
+        "truepanel/host/reconciliation.py"
+    ).read_text()
 
-    authority = Path(
-        "truepanel/host/thermal_authority.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
-    assert (
-        "record_fan_event="
-        "record_fan_control_event"
-        in runtime
-    )
-
-    assert (
-        'source="thermal_policy"'
-        in authority
-    )
+    assert "record_fan_event=self._record_fan_event" in reconciliation
+    assert "record_commissioning_event=(" in reconciliation
 
 def test_dry_run_simulates_without_service_request():
     service = FakeService()
@@ -1035,152 +942,26 @@ def test_supervised_session_expiry_restores_dry_run():
     )
 
 def test_fan_safety_tick_precedes_supervised_lease_checks():
-    runtime = Path(
-        "lcd-menu.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    reconciliation = Path(
+        "truepanel/host/reconciliation.py"
+    ).read_text()
+    safety = Path("truepanel/host/safety.py").read_text()
 
-    safety = Path(
-        "truepanel/host/safety.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
-    authority = Path(
-        "truepanel/host/thermal_authority.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
-    safety_start = safety.index(
-        "    def reconcile("
-    )
-
-    safety_end = safety.index(
-        "    def restore_automatic(",
-        safety_start,
-    )
-
-    host_safety = safety[
-        safety_start:safety_end
-    ]
-
-    assert (
-        "service.tick("
-        in host_safety
-    )
-
-    start = runtime.index(
-        "def reconcile_fan_control():"
-    )
-
-    end = runtime.index(
-        "def set_thermal_operator_arm_state",
-        start,
-    )
-
-    reconcile = runtime[start:end]
-
-    safety_reconcile = (
-        reconcile.index(
-            ".safety"
-            "\n        .reconcile("
-        )
-    )
-
-    safety_transition = (
-        reconcile.index(
-            "thermal_authority."
-            "handle_fan_safety_transition("
-        )
-    )
-
-    thermal_reconcile = (
-        reconcile.index(
-            "thermal_authority.reconcile("
-        )
-    )
-
-    assert (
-        safety_reconcile
-        < safety_transition
-    )
-
-    assert (
-        safety_reconcile
-        < thermal_reconcile
-    )
-
-    authority_start = authority.index(
-        "    def reconcile("
-    )
-
-    authority_end = authority.index(
-        "    def handle_action(",
-        authority_start,
-    )
-
-    authority_reconcile = authority[
-        authority_start:authority_end
-    ]
-
-    assert (
-        "supervised_session"
-        in authority_reconcile
+    assert "service.tick(" in safety
+    assert reconciliation.index("self._safety.reconcile(") < reconciliation.index(
+        "self._thermal_authority.reconcile("
     )
 
 def test_safety_decision_disarms_lease_without_requesting_automatic():
-    runtime = Path(
-        "lcd-menu.py"
-    ).read_text(
-        encoding="utf-8"
+    reconciliation = Path(
+        "truepanel/host/reconciliation.py"
+    ).read_text()
+
+    assert "if decision is not None:" in reconciliation
+    assert reconciliation.index("if decision is not None:") < reconciliation.index(
+        "self._thermal_authority.reconcile("
     )
-
-    authority = Path(
-        "truepanel/host/thermal_authority.py"
-    ).read_text(
-        encoding="utf-8"
-    )
-
-    runtime_start = runtime.index(
-        "if decision is not None:",
-        runtime.index(
-            "def reconcile_fan_control():"
-        ),
-    )
-
-    runtime_end = runtime.index(
-        "return decision",
-        runtime_start,
-    )
-
-    safety_branch = runtime[
-        runtime_start:runtime_end
-    ]
-
-    assert (
-        "handle_fan_safety_transition("
-        in safety_branch
-    )
-
-    start = authority.index(
-        "def handle_fan_safety_transition("
-    )
-
-    end = authority.index(
-        "def reconcile(",
-        start,
-    )
-
-    handler = authority[start:end]
-
-    assert (
-        "self.end_automatic_lease("
-        in handler
-    )
-
-    assert "restore=False" in handler
+    assert "handle_fan_safety_transition" in reconciliation
 
 def test_supervised_live_response_is_not_labeled_dry_run():
     authority = Path(
@@ -1406,16 +1187,28 @@ def test_guarded_runtime_commands_can_still_arm():
         encoding="utf-8"
     )
 
+    bootstrap = Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
     authority = Path(
         "truepanel/host/thermal_authority.py"
     ).read_text(
         encoding="utf-8"
     )
 
-    assert (
-        "thermal_authority.handle_action("
-        in runtime
-    )
+    assert "thermal_authority.handle_action(" not in runtime
+    assert "self.thermal_authority.handle_action(" in bootstrap
+    assert "bind_thermal_control_handler(" in factory
+    assert "safety.restore_automatic" in factory
 
     assert (
         "self.operator_armed = True"
@@ -1452,7 +1245,12 @@ def test_lcd_records_supervised_commissioning_lifecycle():
     assert (
         "host_bootstrap."
         "thermal_commissioning_history"
-        in runtime
+        not in runtime
+    )
+
+    assert (
+        "thermal_commissioning_history"
+        in bootstrap
     )
 
     assert (

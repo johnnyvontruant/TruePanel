@@ -9,27 +9,36 @@ def source():
     )
 
 
+def bootstrap_source():
+    return Path(
+        "truepanel/host/bootstrap.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+
 def test_lcd_runtime_declares_process_boundary():
     text = source()
+    bootstrap = bootstrap_source()
 
-    assert "HostAgentSafetyServices" in text
+    assert "HostAgentSafetyServices" not in text
+    assert "HostAgentSafetyServices" in bootstrap
     assert "HostAgentApplicationHooks" in text
 
 
 def test_safety_services_hold_hardware_policy_hooks():
-    text = source()
+    bootstrap = bootstrap_source()
 
-    start = text.index(
-        "host_agent_safety_services = "
-        "HostAgentSafetyServices("
+    start = bootstrap.index(
+        "    def safety_services("
     )
 
-    end = text.index(
-        "host_agent_application_hooks = ",
+    end = bootstrap.index(
+        "    def record_fan_event(",
         start,
     )
 
-    block = text[start:end]
+    block = bootstrap[start:end]
 
     assert "fan_telemetry_provider" in block
     assert "fan_status_publisher" in block
@@ -48,8 +57,7 @@ def test_application_hooks_hold_only_lcd_dispatch():
     )
 
     end = text.index(
-        "host_agent_runtime = "
-        "build_host_agent_runtime(",
+        "host_agent_runtime = (",
         start,
     )
 
@@ -64,26 +72,17 @@ def test_application_hooks_hold_only_lcd_dispatch():
 
 def test_factory_receives_explicit_boundaries():
     text = source()
+    factory = Path(
+        "truepanel/host/factory.py"
+    ).read_text(encoding="utf-8")
 
-    assert (
-        "safety_services=("
-        in text
-    )
-
-    assert (
-        "host_agent_safety_services"
-        in text
-    )
-
-    assert (
-        "application_hooks=("
-        in text
-    )
-
-    assert (
-        "host_agent_application_hooks"
-        in text
-    )
+    assert "safety_services=(" not in text
+    assert "host_agent_safety_services" not in text
+    assert "application_hooks=(" in text
+    assert "host_agent_application_hooks" in text
+    assert "bootstrap=host_bootstrap" in text
+    assert "fan_runtime=bootstrap.fan_runtime" in factory
+    assert "safety_services=bootstrap.safety_services()" in factory
 
 
 def test_lcd_runtime_has_no_command_implementation_classes():

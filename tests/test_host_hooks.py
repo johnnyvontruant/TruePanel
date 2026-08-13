@@ -33,8 +33,11 @@ def test_optional_safety_services_default_none():
     )
 
     assert services.fan_status_publisher is None
+    assert services.fan_status_reader is None
     assert services.fan_event_recorder is None
-    assert services.thermal_control_handler is None
+    assert services.thermal_control_handler_factory is None
+    assert services.fan_reconciliation_factory is None
+    assert services.thermal_lifecycle_factory is None
 
 
 def test_application_hooks_default_none():

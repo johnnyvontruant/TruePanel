@@ -14,10 +14,21 @@ from .capabilities import (
     HostCapability,
     capabilities_from_compatibility,
 )
-from .factory import build_host_agent_runtime
+from .factory import (
+    build_host_agent_runtime,
+    build_host_agent_runtime_from_bootstrap,
+)
 from .hooks import (
     HostAgentApplicationHooks,
     HostAgentSafetyServices,
+)
+from .ownership import (
+    DEFAULT_HOST_OWNERSHIP_PATH,
+    HostOwnershipError,
+    HostOwnershipGuard,
+)
+from .reconciliation import (
+    HostFanReconciliationCoordinator,
 )
 from .runtime import HostAgentRuntime
 from .safety import HostAgentSafetyCoordinator
@@ -33,10 +44,15 @@ __all__ = [
     "HostAgentRuntime",
     "HostAgentSafetyCoordinator",
     "HostAgentSafetyServices",
+    "HostFanReconciliationCoordinator",
+    "HostOwnershipError",
+    "HostOwnershipGuard",
+    "DEFAULT_HOST_OWNERSHIP_PATH",
     "HostThermalAuthority",
     "HostThermalObserver",
     "HostCapability",
     "build_host_agent_runtime",
+    "build_host_agent_runtime_from_bootstrap",
     "capabilities_from_compatibility",
     "HostFanTelemetryProvider",
 ]

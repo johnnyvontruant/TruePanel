@@ -96,6 +96,22 @@ class HostAgentSafetyCoordinator:
             source,
         )
 
+    def bind_thermal_control_handler(
+        self,
+        handler: Callable[
+            [str],
+            Mapping[str, Any],
+        ],
+    ) -> None:
+        """Bind thermal action dispatch exactly once after safety exists."""
+
+        if self._thermal_control_handler is not None:
+            raise RuntimeError(
+                "Thermal control handler is already bound"
+            )
+
+        self._thermal_control_handler = handler
+
     def handle_thermal_control(
         self,
         action: str,

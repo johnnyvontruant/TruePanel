@@ -16,6 +16,15 @@ from truepanel.hardware.bounded_automatic import (
     AUTOMATIC_LEASE_SECONDS,
     thermal_safety_fingerprint,
 )
+from truepanel.hardware.drive_temperatures import (
+    DriveTemperatureProvider,
+)
+from truepanel.hardware.fans import (
+    get_status as get_fan_status,
+)
+from truepanel.hardware.fan_status_bridge import (
+    FanControlStatusBridge,
+)
 from truepanel.hardware.fan_runtime import (
     build_fan_control_runtime,
 )
@@ -33,8 +42,20 @@ from truepanel.history.thermal_commissioning import (
     commissioning_event,
 )
 
+from .hooks import (
+    HostAgentSafetyServices,
+    ThermalAutomaticRestorer,
+    ThermalControlHandler,
+)
+from .reconciliation import (
+    HostFanReconciliationCoordinator,
+)
+from .status import publish_host_fan_status
 from .telemetry import HostFanTelemetryProvider
 from .thermal_authority import HostThermalAuthority
+from .thermal_lifecycle import (
+    HostThermalLifecycleCoordinator,
+)
 from .thermal_observer import HostThermalObserver
 
 LOGGER = logging.getLogger(__name__)
@@ -50,7 +71,124 @@ class HostAgentBootstrap:
     thermal_observer: HostThermalObserver
     fan_control_history: FanControlHistory
     thermal_commissioning_history: ThermalCommissioningHistory
-    telemetry: HostFanTelemetryProvider | None = None
+    telemetry: HostFanTelemetryProvider
+    status_bridge: FanControlStatusBridge
+
+    def publish_fan_status(
+        self,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        """Publish one authoritative Host fan/thermal status snapshot."""
+
+        return publish_host_fan_status(
+            fan_runtime=self.fan_runtime,
+            thermal_authority=self.thermal_authority,
+            status_bridge=self.status_bridge,
+            reason=reason,
+        )
+
+    def read_fan_status(
+        self,
+        *,
+        max_age: float = 30.0,
+    ) -> dict[str, Any] | None:
+        """Read one non-authoritative Host fan/thermal status snapshot."""
+
+        return self.status_bridge.read(
+            max_age=max_age
+        )
+
+    def build_thermal_control_handler(
+        self,
+        restore_automatic: ThermalAutomaticRestorer,
+    ) -> ThermalControlHandler:
+        """Bind thermal actions to Host safety restoration after construction."""
+
+        def handle(
+            action: str,
+        ):
+            return self.thermal_authority.handle_action(
+                action,
+                telemetry_provider=(
+                    self.telemetry.snapshot
+                ),
+                runtime_status_provider=(
+                    self.fan_runtime.status_payload
+                ),
+                restore_automatic=restore_automatic,
+                record_commissioning_event=(
+                    self.record_commissioning_event
+                ),
+            )
+
+        return handle
+
+    def build_fan_reconciliation(
+        self,
+        safety: Any,
+    ) -> HostFanReconciliationCoordinator:
+        """Build Host-owned fan/thermal reconciliation after safety exists."""
+
+        return HostFanReconciliationCoordinator(
+            fan_runtime=self.fan_runtime,
+            safety=safety,
+            thermal_observer=self.thermal_observer,
+            thermal_authority=self.thermal_authority,
+            fan_event_source=self.fan_event_source,
+            record_fan_event=self.record_fan_event,
+            record_commissioning_event=(
+                self.record_commissioning_event
+            ),
+        )
+
+    def build_thermal_lifecycle(
+        self,
+        safety: Any,
+    ) -> HostThermalLifecycleCoordinator:
+        """Build Host-owned thermal lifecycle wiring after safety exists."""
+
+        return HostThermalLifecycleCoordinator(
+            thermal_authority=self.thermal_authority,
+            safety=safety,
+            record_commissioning_event=(
+                self.record_commissioning_event
+            ),
+        )
+
+    def safety_services(
+        self,
+    ) -> HostAgentSafetyServices:
+        """Build the privileged service bundle consumed by Host runtime."""
+
+        return HostAgentSafetyServices(
+            fan_telemetry_provider=(
+                self.telemetry.snapshot
+            ),
+            fan_status_publisher=(
+                self.publish_fan_status
+            ),
+            fan_status_reader=(
+                self.read_fan_status
+            ),
+            fan_event_recorder=(
+                lambda decision, telemetry, source: (
+                    self.record_fan_event(
+                        decision,
+                        dict(telemetry),
+                        source=source,
+                    )
+                )
+            ),
+            thermal_control_handler_factory=(
+                self.build_thermal_control_handler
+            ),
+            fan_reconciliation_factory=(
+                self.build_fan_reconciliation
+            ),
+            thermal_lifecycle_factory=(
+                self.build_thermal_lifecycle
+            ),
+        )
 
     def record_fan_event(
         self,
@@ -218,6 +356,10 @@ def build_host_agent_bootstrap(
         ThermalCommissioningHistory
     ),
     thermal_observer_history_factory=ThermalObserverHistory,
+    drive_temperature_provider_factory=DriveTemperatureProvider,
+    fan_status_provider=get_fan_status,
+    telemetry_factory=HostFanTelemetryProvider,
+    status_bridge_factory=FanControlStatusBridge,
     thermal_policy_factory=ThermalFanPolicy,
     thermal_authority_factory=HostThermalAuthority,
     thermal_observer_factory=HostThermalObserver,
@@ -365,11 +507,26 @@ def build_host_agent_bootstrap(
         ),
     )
 
+    drive_temperature_provider = (
+        drive_temperature_provider_factory()
+    )
+
+    telemetry = telemetry_factory(
+        temperature_provider=(
+            drive_temperature_provider
+        ),
+        fan_status_provider=fan_status_provider,
+    )
+
+    status_bridge = status_bridge_factory()
+
     return HostAgentBootstrap(
         config=config,
         fan_runtime=fan_runtime,
         thermal_authority=thermal_authority,
         thermal_observer=thermal_observer,
+        telemetry=telemetry,
+        status_bridge=status_bridge,
         fan_control_history=fan_control_history,
         thermal_commissioning_history=(
             thermal_commissioning_history
