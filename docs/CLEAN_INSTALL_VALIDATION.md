@@ -54,6 +54,9 @@ sudo ./bin/truepanel compatibility
 sudo ./bin/truepanel host readiness
 sudo ./bin/truepanel host fan-safety \
   --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
+sudo ./bin/truepanel host acceptance \
+  --root / \
+  --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
 sudo ./bin/truepanel host cutover-plan
 ```
 
@@ -189,6 +192,9 @@ sudo ./bin/truepanel compatibility
 sudo ./bin/truepanel host readiness
 sudo ./bin/truepanel host fan-safety \
   --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
+sudo ./bin/truepanel host acceptance \
+  --root / \
+  --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
 sudo ./bin/truepanel host cutover-plan
 ```
 
@@ -211,6 +217,7 @@ Expected results:
 - the standalone cutover marker is absent;
 - `host readiness` reports the dormant deployment prepared safely and standalone activation locked;
 - `host fan-safety` confirms motherboard Automatic mode when fan control is enabled;
+- `host acceptance` reports `Host acceptance: PASS`;
 - `host cutover-plan` reports `Cutover execution: DISABLED`.
 
 Verify the marker directly:
@@ -256,6 +263,9 @@ After any approved bounded manual fan-control commissioning test, return to Auto
 ```bash
 sudo ./bin/truepanel host fan-safety \
   --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
+sudo ./bin/truepanel host acceptance \
+  --root / \
+  --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
 ```
 
 Do not continue to reboot validation unless this reports motherboard fan control `AUTOMATIC`.
@@ -300,6 +310,7 @@ Record at least:
 - `verify` result;
 - Host readiness result;
 - fan-safety result;
+- Host acceptance result;
 - primary and Mission Control service state before and after reboot;
 - standalone Host Agent state before and after reboot;
 - LCD/button result;
