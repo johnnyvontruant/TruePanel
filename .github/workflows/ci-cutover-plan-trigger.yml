@@ -1,0 +1,12 @@
+name: Cutover plan CI trigger
+
+on:
+  push:
+    branches:
+      - agent/host-cutover-plan
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Host cutover plan branch updated"
