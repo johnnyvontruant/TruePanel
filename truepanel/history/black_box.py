@@ -141,6 +141,11 @@ class BlackBoxFrame:
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    def copy(self) -> "BlackBoxFrame":
+        """Return a deep, revalidated copy suitable for replay isolation."""
+
+        return type(self).from_dict(self.as_dict())
+
     @classmethod
     def capture(
         cls,
@@ -273,20 +278,27 @@ class BlackBoxReplay:
     Replay deliberately has no wall-clock sleeps and performs no runtime or
     hardware operations. Consumers such as tests and a future Digital Twin can
     decide how quickly to advance through the immutable frame sequence.
+
+    The replay owns defensive copies of input frames and returns defensive
+    copies from every public frame accessor. Mutating a caller-owned frame or a
+    frame returned from replay therefore cannot alter the stored recording.
     """
 
     def __init__(self, frames: Iterable[BlackBoxFrame]):
-        self._frames = tuple(frames)
-
-        previous_sequence: int | None = None
-        previous_time: float | None = None
-
-        for index, frame in enumerate(self._frames):
+        copied_frames: list[BlackBoxFrame] = []
+        for index, frame in enumerate(frames):
             if not isinstance(frame, BlackBoxFrame):
                 raise TypeError(
                     f"replay frame {index} is not a BlackBoxFrame"
                 )
+            copied_frames.append(frame.copy())
 
+        self._frames = tuple(copied_frames)
+
+        previous_sequence: int | None = None
+        previous_time: float | None = None
+
+        for frame in self._frames:
             if (
                 previous_sequence is not None
                 and frame.sequence <= previous_sequence
@@ -317,7 +329,7 @@ class BlackBoxReplay:
 
     @property
     def frames(self) -> tuple[BlackBoxFrame, ...]:
-        return self._frames
+        return tuple(frame.copy() for frame in self._frames)
 
     @property
     def duration_seconds(self) -> float:
@@ -338,7 +350,7 @@ class BlackBoxReplay:
         index = self._sequence_index.get(int(sequence))
         if index is None:
             return None
-        return self._frames[index]
+        return self._frames[index].copy()
 
     def at_or_before(
         self,
@@ -354,7 +366,7 @@ class BlackBoxReplay:
         if index < 0:
             return None
 
-        return self._frames[index]
+        return self._frames[index].copy()
 
     def between(
         self,
@@ -372,7 +384,7 @@ class BlackBoxReplay:
             )
 
         return tuple(
-            frame
+            frame.copy()
             for frame in self._frames
             if start <= frame.captured_at <= end
         )
@@ -402,7 +414,7 @@ class BlackBoxReplayCursor:
 
         self.replay = replay
 
-        if not replay.frames:
+        if not replay._frames:
             self.index = -1
             return
 
@@ -418,13 +430,13 @@ class BlackBoxReplayCursor:
     def current(self) -> BlackBoxFrame | None:
         if self.index < 0:
             return None
-        return self.replay.frames[self.index]
+        return self.replay._frames[self.index].copy()
 
     def step(
         self,
         delta: int = 1,
     ) -> BlackBoxFrame | None:
-        if not self.replay.frames:
+        if not self.replay._frames:
             return None
 
         target = min(
@@ -462,4 +474,9 @@ class BlackBoxReplayCursor:
         if self.index < 0:
             return iter(())
 
-        return iter(self.replay.frames[self.index:])
+        return iter(
+            tuple(
+                frame.copy()
+                for frame in self.replay._frames[self.index:]
+            )
+        )
