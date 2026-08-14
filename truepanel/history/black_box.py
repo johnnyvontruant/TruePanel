@@ -5,9 +5,10 @@ from __future__ import annotations
 import ipaddress
 import json
 import re
+from bisect import bisect_right
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Iterator, Mapping
 
 
 BLACK_BOX_SCHEMA_VERSION = 1
@@ -34,8 +35,12 @@ _SENSITIVE_KEYS = {
     "wwn",
 }
 
-_MAC_RE = re.compile(r"(?i)(?<![0-9a-f])(?:[0-9a-f]{2}:){5}[0-9a-f]{2}(?![0-9a-f])")
-_IPV4_CANDIDATE_RE = re.compile(r"(?<![0-9.])(?:\d{1,3}\.){3}\d{1,3}(?![0-9.])")
+_MAC_RE = re.compile(
+    r"(?i)(?<![0-9a-f])(?:[0-9a-f]{2}:){5}[0-9a-f]{2}(?![0-9a-f])"
+)
+_IPV4_CANDIDATE_RE = re.compile(
+    r"(?<![0-9.])(?:\d{1,3}\.){3}\d{1,3}(?![0-9.])"
+)
 _UUID_RE = re.compile(
     r"(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-"
     r"[89ab][0-9a-f]{3}-[0-9a-f]{12}\b"
@@ -202,7 +207,12 @@ class BlackBoxFrame:
 class BlackBoxRecorder:
     """Append and replay sanitized Black Box frames as compact JSONL."""
 
-    def __init__(self, path: str | Path, *, max_frame_bytes: int = 262_144):
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        max_frame_bytes: int = 262_144,
+    ):
         self.path = Path(path)
         self.max_frame_bytes = max(1_024, int(max_frame_bytes))
 
@@ -232,7 +242,11 @@ class BlackBoxRecorder:
         if not self.path.exists():
             return
 
-        with self.path.open("r", encoding="utf-8", errors="strict") as handle:
+        with self.path.open(
+            "r",
+            encoding="utf-8",
+            errors="strict",
+        ) as handle:
             for line_number, line in enumerate(handle, start=1):
                 line = line.strip()
                 if not line:
@@ -243,5 +257,209 @@ class BlackBoxRecorder:
                     yield BlackBoxFrame.from_dict(data)
                 except Exception as error:
                     raise ValueError(
-                        f"invalid Black Box frame at line {line_number}: {error}"
+                        "invalid Black Box frame at line "
+                        f"{line_number}: {error}"
                     ) from error
+
+    def load_replay(self) -> "BlackBoxReplay":
+        """Load this recording into a validated deterministic replay."""
+
+        return BlackBoxReplay(self.replay())
+
+
+class BlackBoxReplay:
+    """Validated, deterministic view over an ordered Black Box recording.
+
+    Replay deliberately has no wall-clock sleeps and performs no runtime or
+    hardware operations. Consumers such as tests and a future Digital Twin can
+    decide how quickly to advance through the immutable frame sequence.
+    """
+
+    def __init__(self, frames: Iterable[BlackBoxFrame]):
+        self._frames = tuple(frames)
+
+        previous_sequence: int | None = None
+        previous_time: float | None = None
+
+        for index, frame in enumerate(self._frames):
+            if not isinstance(frame, BlackBoxFrame):
+                raise TypeError(
+                    f"replay frame {index} is not a BlackBoxFrame"
+                )
+
+            if (
+                previous_sequence is not None
+                and frame.sequence <= previous_sequence
+            ):
+                raise ValueError(
+                    "Black Box replay sequences must increase strictly"
+                )
+
+            if (
+                previous_time is not None
+                and frame.captured_at < previous_time
+            ):
+                raise ValueError(
+                    "Black Box replay timestamps must not move backward"
+                )
+
+            previous_sequence = frame.sequence
+            previous_time = frame.captured_at
+
+        self._times = tuple(
+            frame.captured_at
+            for frame in self._frames
+        )
+        self._sequence_index = {
+            frame.sequence: index
+            for index, frame in enumerate(self._frames)
+        }
+
+    @property
+    def frames(self) -> tuple[BlackBoxFrame, ...]:
+        return self._frames
+
+    @property
+    def duration_seconds(self) -> float:
+        if len(self._frames) < 2:
+            return 0.0
+        return (
+            self._frames[-1].captured_at
+            - self._frames[0].captured_at
+        )
+
+    def __len__(self) -> int:
+        return len(self._frames)
+
+    def at_sequence(
+        self,
+        sequence: int,
+    ) -> BlackBoxFrame | None:
+        index = self._sequence_index.get(int(sequence))
+        if index is None:
+            return None
+        return self._frames[index]
+
+    def at_or_before(
+        self,
+        captured_at: float,
+    ) -> BlackBoxFrame | None:
+        """Return the latest frame at or before the requested timestamp."""
+
+        index = bisect_right(
+            self._times,
+            float(captured_at),
+        ) - 1
+
+        if index < 0:
+            return None
+
+        return self._frames[index]
+
+    def between(
+        self,
+        start_at: float,
+        end_at: float,
+    ) -> tuple[BlackBoxFrame, ...]:
+        """Return frames in the inclusive timestamp window."""
+
+        start = float(start_at)
+        end = float(end_at)
+
+        if end < start:
+            raise ValueError(
+                "Black Box replay window end precedes start"
+            )
+
+        return tuple(
+            frame
+            for frame in self._frames
+            if start <= frame.captured_at <= end
+        )
+
+    def cursor(
+        self,
+        *,
+        start_index: int = 0,
+    ) -> "BlackBoxReplayCursor":
+        return BlackBoxReplayCursor(
+            self,
+            start_index=start_index,
+        )
+
+
+class BlackBoxReplayCursor:
+    """Small deterministic playback cursor for tests and UI consumers."""
+
+    def __init__(
+        self,
+        replay: BlackBoxReplay,
+        *,
+        start_index: int = 0,
+    ):
+        if not isinstance(replay, BlackBoxReplay):
+            raise TypeError("replay must be a BlackBoxReplay")
+
+        self.replay = replay
+
+        if not replay.frames:
+            self.index = -1
+            return
+
+        index = int(start_index)
+        if index < 0 or index >= len(replay):
+            raise IndexError(
+                "Black Box replay start index out of range"
+            )
+
+        self.index = index
+
+    @property
+    def current(self) -> BlackBoxFrame | None:
+        if self.index < 0:
+            return None
+        return self.replay.frames[self.index]
+
+    def step(
+        self,
+        delta: int = 1,
+    ) -> BlackBoxFrame | None:
+        if not self.replay.frames:
+            return None
+
+        target = min(
+            max(self.index + int(delta), 0),
+            len(self.replay) - 1,
+        )
+        self.index = target
+        return self.current
+
+    def seek_sequence(
+        self,
+        sequence: int,
+    ) -> BlackBoxFrame | None:
+        index = self.replay._sequence_index.get(int(sequence))
+        if index is None:
+            return None
+
+        self.index = index
+        return self.current
+
+    def seek_time(
+        self,
+        captured_at: float,
+    ) -> BlackBoxFrame | None:
+        frame = self.replay.at_or_before(captured_at)
+        if frame is None:
+            return None
+
+        self.index = self.replay._sequence_index[frame.sequence]
+        return frame
+
+    def remaining(self) -> Iterator[BlackBoxFrame]:
+        """Iterate from the current frame through the end without moving."""
+
+        if self.index < 0:
+            return iter(())
+
+        return iter(self.replay.frames[self.index:])
