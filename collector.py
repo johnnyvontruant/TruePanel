@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+import json
 import os
 import subprocess
 import time
+
+from pathlib import Path
 
 from truepanel.hardware.drive_temperatures import (
     DriveTemperatureProvider,
@@ -35,7 +38,10 @@ class TruePanelCollector:
     def update(self):
         self.state["cpu_percent"] = self.get_cpu_percent()
         self.state["ram_percent"] = self.get_ram_percent()
-        self.state["network"] = self.get_network_rates()
+        rates = self.get_network_rates()
+        self.state["network"] = self.get_network_telemetry(
+            rates
+        )
         self.state["pools"] = self.get_pools()
         self.state["temps"] = self.get_drive_temps()
         self.state["arc"] = self.get_arc_stats()
@@ -111,6 +117,205 @@ class TruePanelCollector:
             }
 
         return rates
+
+    def get_network_telemetry(self, rates=None):
+        rates = rates or {}
+
+        try:
+            result = subprocess.run(
+                [
+                    "ip",
+                    "-json",
+                    "address",
+                    "show",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            address_data = json.loads(
+                result.stdout
+            )
+        except (
+            OSError,
+            subprocess.SubprocessError,
+            json.JSONDecodeError,
+        ):
+            address_data = []
+
+        try:
+            result = subprocess.run(
+                [
+                    "ip",
+                    "-json",
+                    "route",
+                    "show",
+                    "default",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            route_data = json.loads(
+                result.stdout
+            )
+        except (
+            OSError,
+            subprocess.SubprocessError,
+            json.JSONDecodeError,
+        ):
+            route_data = []
+
+        default_interface = None
+
+        for route in route_data:
+            device = route.get("dev")
+
+            if device:
+                default_interface = str(device)
+                break
+
+        physical_interfaces = []
+
+        try:
+            physical_interfaces = sorted(
+                entry.name
+                for entry in Path(
+                    "/sys/class/net"
+                ).iterdir()
+                if (
+                    entry.name != "lo"
+                    and (
+                        entry / "device"
+                    ).exists()
+                )
+            )
+        except OSError:
+            physical_interfaces = []
+
+        physical_positions = {
+            name: position
+            for position, name in enumerate(
+                physical_interfaces,
+                start=1,
+            )
+        }
+
+        telemetry = {}
+
+        for item in address_data:
+            name = str(
+                item.get(
+                    "ifname",
+                    "",
+                )
+            )
+
+            if not name or name == "lo":
+                continue
+
+            is_tailscale = (
+                name.startswith(
+                    "tailscale"
+                )
+            )
+
+            if (
+                name
+                not in physical_interfaces
+                and not is_tailscale
+            ):
+                continue
+
+            ipv4 = None
+
+            for address in item.get(
+                "addr_info",
+                [],
+            ):
+                if (
+                    address.get("family")
+                    != "inet"
+                ):
+                    continue
+
+                value = address.get(
+                    "local"
+                )
+
+                if value:
+                    ipv4 = str(value)
+                    break
+
+            operstate = str(
+                item.get(
+                    "operstate",
+                    "",
+                )
+            ).upper()
+
+            flags = set(
+                item.get(
+                    "flags",
+                    [],
+                )
+            )
+
+            link_up = (
+                operstate == "UP"
+                or "LOWER_UP" in flags
+            )
+
+            rate = rates.get(
+                name,
+                {},
+            )
+
+            position = (
+                physical_positions.get(
+                    name
+                )
+            )
+
+            telemetry[name] = {
+                "position": position,
+                "label": (
+                    "Tailscale"
+                    if is_tailscale
+                    else (
+                        f"Ethernet Port {position}"
+                        if position is not None
+                        else name
+                    )
+                ),
+                "address": ipv4,
+                "download_mb": rate.get(
+                    "download_mb",
+                    0.0,
+                ),
+                "upload_mb": rate.get(
+                    "upload_mb",
+                    0.0,
+                ),
+                "link_up": link_up,
+                "operstate": (
+                    operstate
+                    or "UNKNOWN"
+                ),
+                "primary": (
+                    name
+                    == default_interface
+                ),
+                "kind": (
+                    "tailscale"
+                    if is_tailscale
+                    else "lan"
+                ),
+            }
+
+        return telemetry
 
     def get_pools(self):
         out = self.shell("zpool list -H -o name,size,alloc,free,capacity,health")
