@@ -38,6 +38,12 @@ _SENSITIVE_KEYS = {
 _MAC_RE = re.compile(
     r"(?i)(?<![0-9a-f])(?:[0-9a-f]{2}:){5}[0-9a-f]{2}(?![0-9a-f])"
 )
+_IPV6_CANDIDATE_RE = re.compile(
+    r"(?<![0-9A-Fa-f:.])"
+    r"(?:(?:[0-9A-Fa-f]{0,4}:){2,7}"
+    r"(?:[0-9A-Fa-f]{0,4}|(?:\d{1,3}\.){3}\d{1,3}))"
+    r"(?![0-9A-Fa-f:.])"
+)
 _IPV4_CANDIDATE_RE = re.compile(
     r"(?<![0-9.])(?:\d{1,3}\.){3}\d{1,3}(?![0-9.])"
 )
@@ -79,7 +85,7 @@ def _redact_string(value: str) -> str:
     value = _MAC_RE.sub(REDACTED, value)
     value = _UUID_RE.sub(REDACTED, value)
 
-    def replace_ipv4(match: re.Match[str]) -> str:
+    def replace_ip(match: re.Match[str]) -> str:
         candidate = match.group(0)
         try:
             ipaddress.ip_address(candidate)
@@ -87,7 +93,10 @@ def _redact_string(value: str) -> str:
             return candidate
         return REDACTED
 
-    return _IPV4_CANDIDATE_RE.sub(replace_ipv4, value)
+    # Redact IPv6 before IPv4 so IPv4-mapped IPv6 addresses are replaced as
+    # one identifier rather than leaving a partially redacted IPv6 prefix.
+    value = _IPV6_CANDIDATE_RE.sub(replace_ip, value)
+    return _IPV4_CANDIDATE_RE.sub(replace_ip, value)
 
 
 def sanitize_black_box_value(value: Any) -> Any:
