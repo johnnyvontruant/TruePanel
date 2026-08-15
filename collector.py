@@ -84,36 +84,120 @@ class TruePanelCollector:
         return round((total - available) / total * 100)
 
     def get_network_rates(self):
-        now = time.time()
+        """Return passive per-interface transfer rates from sysfs counters."""
+        now = time.monotonic()
         current = {}
 
-        with open("/proc/net/dev") as f:
-            for line in f.readlines()[2:]:
-                iface, data = line.split(":")
-                iface = iface.strip()
-                if iface == "lo":
-                    continue
+        try:
+            entries = list(
+                Path("/sys/class/net").iterdir()
+            )
+        except OSError:
+            self._last_net = (now, {})
+            return {}
 
-                parts = data.split()
-                current[iface] = (int(parts[0]), int(parts[8]))
+        for entry in entries:
+            if entry.name == "lo":
+                continue
+
+            statistics = entry / "statistics"
+
+            try:
+                rx = int(
+                    (statistics / "rx_bytes")
+                    .read_text(encoding="utf-8")
+                    .strip()
+                )
+                tx = int(
+                    (statistics / "tx_bytes")
+                    .read_text(encoding="utf-8")
+                    .strip()
+                )
+            except (
+                OSError,
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+            if rx < 0 or tx < 0:
+                continue
+
+            current[entry.name] = (
+                rx,
+                tx,
+            )
 
         if self._last_net is None:
-            self._last_net = (now, current)
+            self._last_net = (
+                now,
+                current,
+            )
             return {}
 
         last_time, last = self._last_net
-        elapsed = max(now - last_time, 1)
-        self._last_net = (now, current)
+        self._last_net = (
+            now,
+            current,
+        )
+
+        elapsed = now - last_time
+
+        if elapsed <= 0:
+            return {}
 
         rates = {}
+
         for iface, (rx, tx) in current.items():
-            if iface not in last:
+            previous = last.get(iface)
+
+            if previous is None:
                 continue
 
-            old_rx, old_tx = last[iface]
+            old_rx, old_tx = previous
+            rx_delta = rx - old_rx
+            tx_delta = tx - old_tx
+
+            # A decrease means the kernel counter was reset/wrapped or the
+            # interface was recreated. Treat that sample as a new baseline
+            # instead of publishing a negative or implausibly large rate.
+            if rx_delta < 0 or tx_delta < 0:
+                continue
+
+            download_bytes_per_second = (
+                rx_delta / elapsed
+            )
+            upload_bytes_per_second = (
+                tx_delta / elapsed
+            )
+
             rates[iface] = {
-                "download_mb": round((rx - old_rx) / elapsed / 1024 / 1024, 1),
-                "upload_mb": round((tx - old_tx) / elapsed / 1024 / 1024, 1),
+                # Compatibility fields used by the existing dashboard.
+                "download_mb": round(
+                    download_bytes_per_second
+                    / 1024
+                    / 1024,
+                    1,
+                ),
+                "upload_mb": round(
+                    upload_bytes_per_second
+                    / 1024
+                    / 1024,
+                    1,
+                ),
+                # Explicit wire-rate fields for new API consumers.
+                "download_mbps": round(
+                    download_bytes_per_second
+                    * 8
+                    / 1_000_000,
+                    2,
+                ),
+                "upload_mbps": round(
+                    upload_bytes_per_second
+                    * 8
+                    / 1_000_000,
+                    2,
+                ),
             }
 
         return rates
@@ -291,13 +375,37 @@ class TruePanelCollector:
                     )
                 ),
                 "address": ipv4,
-                "download_mb": rate.get(
-                    "download_mb",
-                    0.0,
+                "download_mb": (
+                    rate.get(
+                        "download_mb",
+                        0.0,
+                    )
+                    if link_up
+                    else 0.0
                 ),
-                "upload_mb": rate.get(
-                    "upload_mb",
-                    0.0,
+                "upload_mb": (
+                    rate.get(
+                        "upload_mb",
+                        0.0,
+                    )
+                    if link_up
+                    else 0.0
+                ),
+                "download_mbps": (
+                    rate.get(
+                        "download_mbps",
+                        0.0,
+                    )
+                    if link_up
+                    else 0.0
+                ),
+                "upload_mbps": (
+                    rate.get(
+                        "upload_mbps",
+                        0.0,
+                    )
+                    if link_up
+                    else 0.0
                 ),
                 "link_up": link_up,
                 "operstate": (
