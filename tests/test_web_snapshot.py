@@ -1436,3 +1436,104 @@ def test_status_snapshot_uses_safe_transport_defaults(
     assert reader["connection_error"] is None
     assert reader["port"] is None
     assert reader["speed"] == 0
+
+
+def test_network_payload_accepts_collector_rate_shape():
+    payload = SnapshotService._network_payload(
+        {
+            "network": {
+                "enp116s0": {
+                    "download_mb": 12.3,
+                    "upload_mb": 1.7,
+                },
+                "tailscale0": {
+                    "download_mb": 0.1,
+                    "upload_mb": 0.0,
+                },
+            }
+        }
+    )
+
+    assert payload == [
+        {
+            "name": "enp116s0",
+            "download_mb": 12.3,
+            "upload_mb": 1.7,
+        },
+        {
+            "name": "tailscale0",
+            "download_mb": 0.1,
+            "upload_mb": 0.0,
+        },
+    ]
+
+
+def test_network_payload_preserves_legacy_address_shape():
+    payload = SnapshotService._network_payload(
+        {
+            "interfaces": {
+                "eth0": "192.168.0.10",
+            }
+        }
+    )
+
+    assert payload == [
+        {
+            "name": "eth0",
+            "address": "192.168.0.10",
+        }
+    ]
+
+
+def test_network_payload_preserves_friendly_interface_metadata():
+    payload = SnapshotService._network_payload(
+        {
+            "network": {
+                "enp116s0": {
+                    "position": 2,
+                    "label": "Ethernet Port 2",
+                    "address": "192.168.0.108",
+                    "primary": True,
+                    "kind": "lan",
+                }
+            }
+        }
+    )
+
+    assert payload == [
+        {
+            "name": "enp116s0",
+            "position": 2,
+            "label": "Ethernet Port 2",
+            "address": "192.168.0.108",
+            "primary": True,
+            "kind": "lan",
+        }
+    ]
+
+
+def test_network_payload_preserves_friendly_interface_metadata():
+    payload = SnapshotService._network_payload(
+        {
+            "network": {
+                "enp116s0": {
+                    "position": 2,
+                    "label": "Ethernet Port 2",
+                    "address": "192.168.0.108",
+                    "primary": True,
+                    "kind": "lan",
+                }
+            }
+        }
+    )
+
+    assert payload == [
+        {
+            "name": "enp116s0",
+            "position": 2,
+            "label": "Ethernet Port 2",
+            "address": "192.168.0.108",
+            "primary": True,
+            "kind": "lan",
+        }
+    ]

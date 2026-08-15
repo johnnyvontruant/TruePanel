@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+import json
 import os
 import subprocess
 import time
+
+from pathlib import Path
 
 from truepanel.hardware.drive_temperatures import (
     DriveTemperatureProvider,
@@ -35,7 +38,10 @@ class TruePanelCollector:
     def update(self):
         self.state["cpu_percent"] = self.get_cpu_percent()
         self.state["ram_percent"] = self.get_ram_percent()
-        self.state["network"] = self.get_network_rates()
+        rates = self.get_network_rates()
+        self.state["network"] = self.get_network_telemetry(
+            rates
+        )
         self.state["pools"] = self.get_pools()
         self.state["temps"] = self.get_drive_temps()
         self.state["arc"] = self.get_arc_stats()
@@ -78,39 +84,346 @@ class TruePanelCollector:
         return round((total - available) / total * 100)
 
     def get_network_rates(self):
-        now = time.time()
+        """Return passive per-interface transfer rates from sysfs counters."""
+        now = time.monotonic()
         current = {}
 
-        with open("/proc/net/dev") as f:
-            for line in f.readlines()[2:]:
-                iface, data = line.split(":")
-                iface = iface.strip()
-                if iface == "lo":
-                    continue
+        try:
+            entries = list(
+                Path("/sys/class/net").iterdir()
+            )
+        except OSError:
+            self._last_net = (now, {})
+            return {}
 
-                parts = data.split()
-                current[iface] = (int(parts[0]), int(parts[8]))
+        for entry in entries:
+            if entry.name == "lo":
+                continue
+
+            statistics = entry / "statistics"
+
+            try:
+                rx = int(
+                    (statistics / "rx_bytes")
+                    .read_text(encoding="utf-8")
+                    .strip()
+                )
+                tx = int(
+                    (statistics / "tx_bytes")
+                    .read_text(encoding="utf-8")
+                    .strip()
+                )
+            except (
+                OSError,
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+            if rx < 0 or tx < 0:
+                continue
+
+            current[entry.name] = (
+                rx,
+                tx,
+            )
 
         if self._last_net is None:
-            self._last_net = (now, current)
+            self._last_net = (
+                now,
+                current,
+            )
             return {}
 
         last_time, last = self._last_net
-        elapsed = max(now - last_time, 1)
-        self._last_net = (now, current)
+        self._last_net = (
+            now,
+            current,
+        )
+
+        elapsed = now - last_time
+
+        if elapsed <= 0:
+            return {}
 
         rates = {}
+
         for iface, (rx, tx) in current.items():
-            if iface not in last:
+            previous = last.get(iface)
+
+            if previous is None:
                 continue
 
-            old_rx, old_tx = last[iface]
+            old_rx, old_tx = previous
+            rx_delta = rx - old_rx
+            tx_delta = tx - old_tx
+
+            # A decrease means the kernel counter was reset/wrapped or the
+            # interface was recreated. Treat that sample as a new baseline
+            # instead of publishing a negative or implausibly large rate.
+            if rx_delta < 0 or tx_delta < 0:
+                continue
+
+            download_bytes_per_second = (
+                rx_delta / elapsed
+            )
+            upload_bytes_per_second = (
+                tx_delta / elapsed
+            )
+
             rates[iface] = {
-                "download_mb": round((rx - old_rx) / elapsed / 1024 / 1024, 1),
-                "upload_mb": round((tx - old_tx) / elapsed / 1024 / 1024, 1),
+                # Compatibility fields used by the existing dashboard.
+                "download_mb": round(
+                    download_bytes_per_second
+                    / 1024
+                    / 1024,
+                    1,
+                ),
+                "upload_mb": round(
+                    upload_bytes_per_second
+                    / 1024
+                    / 1024,
+                    1,
+                ),
+                # Explicit wire-rate fields for new API consumers.
+                "download_mbps": round(
+                    download_bytes_per_second
+                    * 8
+                    / 1_000_000,
+                    2,
+                ),
+                "upload_mbps": round(
+                    upload_bytes_per_second
+                    * 8
+                    / 1_000_000,
+                    2,
+                ),
             }
 
         return rates
+
+    def get_network_telemetry(self, rates=None):
+        rates = rates or {}
+
+        try:
+            result = subprocess.run(
+                [
+                    "ip",
+                    "-json",
+                    "address",
+                    "show",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            address_data = json.loads(
+                result.stdout
+            )
+        except (
+            OSError,
+            subprocess.SubprocessError,
+            json.JSONDecodeError,
+        ):
+            address_data = []
+
+        try:
+            result = subprocess.run(
+                [
+                    "ip",
+                    "-json",
+                    "route",
+                    "show",
+                    "default",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            route_data = json.loads(
+                result.stdout
+            )
+        except (
+            OSError,
+            subprocess.SubprocessError,
+            json.JSONDecodeError,
+        ):
+            route_data = []
+
+        default_interface = None
+
+        for route in route_data:
+            device = route.get("dev")
+
+            if device:
+                default_interface = str(device)
+                break
+
+        physical_interfaces = []
+
+        try:
+            physical_interfaces = sorted(
+                entry.name
+                for entry in Path(
+                    "/sys/class/net"
+                ).iterdir()
+                if (
+                    entry.name != "lo"
+                    and (
+                        entry / "device"
+                    ).exists()
+                )
+            )
+        except OSError:
+            physical_interfaces = []
+
+        physical_positions = {
+            name: position
+            for position, name in enumerate(
+                physical_interfaces,
+                start=1,
+            )
+        }
+
+        telemetry = {}
+
+        for item in address_data:
+            name = str(
+                item.get(
+                    "ifname",
+                    "",
+                )
+            )
+
+            if not name or name == "lo":
+                continue
+
+            is_tailscale = (
+                name.startswith(
+                    "tailscale"
+                )
+            )
+
+            if (
+                name
+                not in physical_interfaces
+                and not is_tailscale
+            ):
+                continue
+
+            ipv4 = None
+
+            for address in item.get(
+                "addr_info",
+                [],
+            ):
+                if (
+                    address.get("family")
+                    != "inet"
+                ):
+                    continue
+
+                value = address.get(
+                    "local"
+                )
+
+                if value:
+                    ipv4 = str(value)
+                    break
+
+            operstate = str(
+                item.get(
+                    "operstate",
+                    "",
+                )
+            ).upper()
+
+            flags = set(
+                item.get(
+                    "flags",
+                    [],
+                )
+            )
+
+            link_up = (
+                operstate == "UP"
+                or "LOWER_UP" in flags
+            )
+
+            rate = rates.get(
+                name,
+                {},
+            )
+
+            position = (
+                physical_positions.get(
+                    name
+                )
+            )
+
+            telemetry[name] = {
+                "position": position,
+                "label": (
+                    "Tailscale"
+                    if is_tailscale
+                    else (
+                        f"Ethernet Port {position}"
+                        if position is not None
+                        else name
+                    )
+                ),
+                "address": ipv4,
+                "download_mb": (
+                    rate.get(
+                        "download_mb",
+                        0.0,
+                    )
+                    if link_up
+                    else 0.0
+                ),
+                "upload_mb": (
+                    rate.get(
+                        "upload_mb",
+                        0.0,
+                    )
+                    if link_up
+                    else 0.0
+                ),
+                "download_mbps": (
+                    rate.get(
+                        "download_mbps",
+                        0.0,
+                    )
+                    if link_up
+                    else 0.0
+                ),
+                "upload_mbps": (
+                    rate.get(
+                        "upload_mbps",
+                        0.0,
+                    )
+                    if link_up
+                    else 0.0
+                ),
+                "link_up": link_up,
+                "operstate": (
+                    operstate
+                    or "UNKNOWN"
+                ),
+                "primary": (
+                    name
+                    == default_interface
+                ),
+                "kind": (
+                    "tailscale"
+                    if is_tailscale
+                    else "lan"
+                ),
+            }
+
+        return telemetry
 
     def get_pools(self):
         out = self.shell("zpool list -H -o name,size,alloc,free,capacity,health")

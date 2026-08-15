@@ -629,3 +629,23 @@ def test_virtual_lcd_allows_room_for_character_spacing():
     assert "width:calc(16ch + 1em)" in source
     assert "letter-spacing:.06em" in source
     assert "white-space:pre" in source
+
+
+def test_dashboard_renders_friendly_network_labels():
+    source = dashboard_source()
+
+    assert "n.label||n.name||n.interface" in source
+    assert "formatNetworkRate" in source
+    assert "download_mb" in source
+    assert "upload_mb" in source
+    assert 'n.kind==="tailscale"' in source
+    assert 'n.primary===true' in source
+
+
+def test_dashboard_hides_inactive_network_noise():
+    source = dashboard_source()
+
+    assert (
+        'n.primary===true||n.kind==="tailscale"||n.link_up===true'
+        in source
+    )
