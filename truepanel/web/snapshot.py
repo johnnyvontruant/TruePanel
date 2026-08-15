@@ -613,6 +613,9 @@ class SnapshotService:
     ) -> list[dict[str, Any]]:
         candidates = (
             state.get(
+                "network"
+            )
+            or state.get(
                 "network_interfaces"
             )
             or state.get(
@@ -628,14 +631,32 @@ class SnapshotService:
             candidates,
             dict,
         ):
-            return [
-                {
+            records = []
+
+            for name, value in (
+                candidates.items()
+            ):
+                record = {
                     "name": str(name),
-                    "address": value,
                 }
-                for name, value
-                in candidates.items()
-            ]
+
+                if isinstance(
+                    value,
+                    dict,
+                ):
+                    record.update(
+                        value
+                    )
+                else:
+                    record[
+                        "address"
+                    ] = value
+
+                records.append(
+                    record
+                )
+
+            return records
 
         if isinstance(
             candidates,
