@@ -1537,3 +1537,70 @@ def test_network_payload_preserves_friendly_interface_metadata():
             "kind": "lan",
         }
     ]
+
+
+
+def test_status_snapshot_includes_health_intelligence(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {
+            "available": False,
+        },
+    )
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        clock=lambda: 100.0,
+    )
+
+    payload = service.status()
+
+    assert (
+        payload["read_only"]
+        is True
+    )
+
+    assert (
+        payload["health"][
+            "state"
+        ]
+        == "ATTENTION"
+    )
+
+    assert (
+        payload["health"][
+            "subsystems"
+        ]["storage"]["state"]
+        == "NOMINAL"
+    )
+
+    assert (
+        payload["health"][
+            "subsystems"
+        ]["services"]["state"]
+        == "UNKNOWN"
+    )
+
+    assert set(
+        payload["health"][
+            "subsystems"
+        ]
+    ) == {
+        "cooling",
+        "thermal",
+        "storage",
+        "network",
+        "front_panel",
+        "services",
+    }

@@ -11,6 +11,7 @@ from typing import Any
 
 from collector import TruePanelCollector
 from truepanel.config.loader import load_config
+from truepanel.health import augment_status_snapshot
 from truepanel.hardware.fan_status_bridge import (
     DEFAULT_FAN_CONTROL_STATUS_PATH,
     FanControlStatusBridge,
@@ -181,7 +182,7 @@ class SnapshotService:
             or {}
         )
 
-        return {
+        payload = {
             "schema_version": 1,
             "read_only": True,
             "timestamp": self.clock(),
@@ -200,6 +201,10 @@ class SnapshotService:
                 self.capabilities()
             ),
         }
+
+        return augment_status_snapshot(
+            payload
+        )
 
     def lcd_status(self) -> dict[str, Any]:
         """
