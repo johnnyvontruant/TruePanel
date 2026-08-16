@@ -379,3 +379,112 @@ def test_services_remain_unknown_until_true_runtime_service_health_exists():
     )
 
     assert payload["subsystems"]["services"]["state"] == "UNKNOWN"
+
+def test_services_nominal_when_all_required_units_are_active():
+    payload = HealthEvaluator().evaluate(
+        services={
+            "available": True,
+            "services": [
+                {
+                    "name": "truepanel.service",
+                    "required": True,
+                    "observed": True,
+                    "load_state": "loaded",
+                    "active_state": "active",
+                    "sub_state": "running",
+                },
+                {
+                    "name": "truepanel-mission-control.service",
+                    "required": True,
+                    "observed": True,
+                    "load_state": "loaded",
+                    "active_state": "active",
+                    "sub_state": "running",
+                },
+            ],
+        },
+    )
+
+    services = payload["subsystems"]["services"]
+
+    assert services["state"] == "NOMINAL"
+    assert services["summary"] == "TruePanel services nominal"
+
+
+def test_failed_required_service_degrades_health():
+    payload = HealthEvaluator().evaluate(
+        services={
+            "available": True,
+            "services": [
+                {
+                    "name": "truepanel.service",
+                    "required": True,
+                    "observed": True,
+                    "load_state": "loaded",
+                    "active_state": "failed",
+                    "sub_state": "failed",
+                },
+                {
+                    "name": "truepanel-mission-control.service",
+                    "required": True,
+                    "observed": True,
+                    "load_state": "loaded",
+                    "active_state": "active",
+                    "sub_state": "running",
+                },
+            ],
+        },
+    )
+
+    services = payload["subsystems"]["services"]
+
+    assert payload["state"] == "DEGRADED"
+    assert services["state"] == "DEGRADED"
+    assert "truepanel.service" in services["reason"]
+
+
+def test_unavailable_service_observation_remains_unknown():
+    payload = HealthEvaluator().evaluate(
+        services={
+            "available": False,
+            "services": [],
+        },
+    )
+
+    services = payload["subsystems"]["services"]
+
+    assert services["state"] == "UNKNOWN"
+
+
+def test_known_service_failure_wins_over_incomplete_observation():
+    payload = HealthEvaluator().evaluate(
+        services={
+            "available": True,
+            "services": [
+                {
+                    "name": "truepanel.service",
+                    "required": True,
+                    "observed": True,
+                    "load_state": "loaded",
+                    "active_state": "failed",
+                    "sub_state": "failed",
+                },
+                {
+                    "name": (
+                        "truepanel-mission-control.service"
+                    ),
+                    "required": True,
+                    "observed": False,
+                    "load_state": "unavailable",
+                    "active_state": "unavailable",
+                    "sub_state": "unavailable",
+                },
+            ],
+        },
+    )
+
+    services = payload["subsystems"]["services"]
+
+    assert payload["state"] == "DEGRADED"
+    assert services["state"] == "DEGRADED"
+    assert "truepanel.service" in services["reason"]

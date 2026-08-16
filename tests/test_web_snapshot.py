@@ -706,21 +706,8 @@ def test_fan_control_history_payload(
         encoding="utf-8",
     )
 
-    class HealthCollector(FakeCollector):
-        def update(self):
-            state = super().update()
-            state["network"] = [
-                {
-                    "name": "eth0",
-                    "address": "192.168.0.10",
-                    "primary": True,
-                    "link_up": True,
-                }
-            ]
-            return state
-
     service = SnapshotService(
-        collector=HealthCollector(),
+        collector=FakeCollector(),
         config={},
         history_path=(
             tmp_path
@@ -1567,8 +1554,21 @@ def test_status_snapshot_includes_health_intelligence(
         },
     )
 
+    class HealthCollector(FakeCollector):
+        def update(self):
+            state = super().update()
+            state["network"] = [
+                {
+                    "name": "eth0",
+                    "address": "192.168.0.10",
+                    "primary": True,
+                    "link_up": True,
+                }
+            ]
+            return state
+
     service = SnapshotService(
-        collector=FakeCollector(),
+        collector=HealthCollector(),
         config={},
         history_path=(
             tmp_path
@@ -1617,3 +1617,50 @@ def test_status_snapshot_includes_health_intelligence(
         "front_panel",
         "services",
     }
+
+def test_status_snapshot_publishes_injected_service_health(
+    tmp_path,
+):
+    class ServiceProvider:
+        def snapshot(self):
+            return {
+                "available": True,
+                "services": [
+                    {
+                        "name": "truepanel.service",
+                        "required": True,
+                        "observed": True,
+                        "load_state": "loaded",
+                        "active_state": "active",
+                        "sub_state": "running",
+                    },
+                    {
+                        "name": (
+                            "truepanel-mission-control.service"
+                        ),
+                        "required": True,
+                        "observed": True,
+                        "load_state": "loaded",
+                        "active_state": "active",
+                        "sub_state": "running",
+                    },
+                ],
+            }
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "service-health.jsonl"
+        ),
+        service_status_provider=ServiceProvider(),
+    )
+
+    payload = service.status()
+
+    assert payload["services"]["available"] is True
+    assert (
+        payload["health"]["subsystems"]["services"]["state"]
+        == "NOMINAL"
+    )

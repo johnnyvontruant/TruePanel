@@ -62,6 +62,7 @@ class HealthEvaluator:
         storage: dict[str, Any] | None = None,
         network: list[dict[str, Any]] | None = None,
         lcd: dict[str, Any] | None = None,
+        services: dict[str, Any] | None = None,
         capabilities: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         subsystems = {
@@ -70,7 +71,7 @@ class HealthEvaluator:
             "storage": self._storage(storage or {}),
             "network": self._network(network or []),
             "front_panel": self._front_panel(lcd or {}),
-            "services": self._services(capabilities or {}),
+            "services": self._services(services or {}),
         }
 
         overall = self.aggregate(subsystems.values())
@@ -378,13 +379,89 @@ class HealthEvaluator:
         )
 
     @staticmethod
-    def _services(capabilities: dict[str, Any]) -> HealthResult:
-        # Mission Control does not yet expose an independent service-health
-        # contract. Keep this explicit rather than inferring health from
-        # capability flags that answer a different question.
+    def _services(services: dict[str, Any]) -> HealthResult:
+        if not services.get("available"):
+            return HealthResult(
+                HealthState.UNKNOWN,
+                "Service health unavailable",
+                "TruePanel could not obtain trustworthy runtime service status.",
+                "Verify systemd status access and the Mission Control runtime.",
+            )
+
+        records = services.get("services")
+
+        if not isinstance(records, list) or not records:
+            return HealthResult(
+                HealthState.UNKNOWN,
+                "Service health unavailable",
+                "The service-status payload did not contain any observations.",
+                "Verify the service-status provider.",
+            )
+
+        required = [
+            record
+            for record in records
+            if isinstance(record, dict)
+            and record.get("required")
+        ]
+
+        if not required:
+            return HealthResult(
+                HealthState.UNKNOWN,
+                "Service health unavailable",
+                "No required TruePanel services were identified.",
+                "Verify the service-status provider contract.",
+            )
+
+        unhealthy = [
+            record
+            for record in required
+            if record.get("observed")
+            and (
+                record.get("load_state") != "loaded"
+                or record.get("active_state") != "active"
+            )
+        ]
+
+        if unhealthy:
+            details = ", ".join(
+                (
+                    f"{record.get('name', 'unknown')}: "
+                    f"{record.get('active_state', 'unknown')}/"
+                    f"{record.get('sub_state', 'unknown')}"
+                )
+                for record in unhealthy
+            )
+
+            return HealthResult(
+                HealthState.DEGRADED,
+                "Required TruePanel service unhealthy",
+                details,
+                "Inspect the affected service before attempting an explicit restart.",
+            )
+
+        unobserved = [
+            record
+            for record in required
+            if not record.get("observed")
+        ]
+
+        if unobserved:
+            names = ", ".join(
+                str(record.get("name", "unknown"))
+                for record in unobserved
+            )
+
+            return HealthResult(
+                HealthState.UNKNOWN,
+                "Service health incomplete",
+                f"Runtime status was unavailable for: {names}.",
+                "Verify systemd status access for the required services.",
+            )
+
         return HealthResult(
-            HealthState.UNKNOWN,
-            "Service health not yet surfaced",
-            "Current capabilities describe features and safety boundaries, not runtime service health.",
-            "No action required; service-health telemetry can be added as a dedicated source later.",
+            HealthState.NOMINAL,
+            "TruePanel services nominal",
+            "All observed required TruePanel services are loaded and active.",
+            "No operator action required.",
         )

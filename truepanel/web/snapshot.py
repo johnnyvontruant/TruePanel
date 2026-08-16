@@ -82,6 +82,7 @@ class SnapshotService:
         fan_control_history_path=None,
         thermal_observer_history_path=None,
         thermal_commissioning_history_path=None,
+        service_status_provider=None,
         clock=None,
     ):
         self.collector = (
@@ -97,6 +98,10 @@ class SnapshotService:
         self.clock = (
             clock
             or time.time
+        )
+
+        self.service_status_provider = (
+            service_status_provider
         )
 
         self.fan_control_bridge = (
@@ -197,6 +202,9 @@ class SnapshotService:
             ),
             "lcd": self._lcd_payload(),
             "fans": self._fan_payload(),
+            "services": (
+                self._service_status_payload()
+            ),
             "capabilities": (
                 self.capabilities()
             ),
@@ -205,6 +213,38 @@ class SnapshotService:
         return augment_status_snapshot(
             payload
         )
+
+    def _service_status_payload(
+        self,
+    ) -> dict[str, Any]:
+        provider = self.service_status_provider
+
+        if provider is None:
+            return {
+                "available": False,
+                "services": [],
+            }
+
+        try:
+            payload = provider.snapshot()
+        except (
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+        ):
+            return {
+                "available": False,
+                "services": [],
+            }
+
+        if not isinstance(payload, dict):
+            return {
+                "available": False,
+                "services": [],
+            }
+
+        return payload
 
     def lcd_status(self) -> dict[str, Any]:
         """

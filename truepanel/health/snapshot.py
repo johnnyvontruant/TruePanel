@@ -42,6 +42,11 @@ def augment_status_snapshot(
             if isinstance(payload.get("lcd"), dict)
             else {}
         ),
+        services=(
+            payload.get("services")
+            if isinstance(payload.get("services"), dict)
+            else {}
+        ),
         capabilities=(
             payload.get("capabilities")
             if isinstance(payload.get("capabilities"), dict)

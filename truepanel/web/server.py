@@ -31,6 +31,7 @@ from truepanel.hardware.lcd_command import (
     LCDCommandClient,
     LCDCommandError,
 )
+from truepanel.health import ServiceStatusProvider
 
 from .snapshot import SnapshotService
 
@@ -1212,7 +1213,14 @@ class MissionControlServer(ThreadingHTTPServer):
         fan_command_client=None,
         lcd_command_client=None,
     ):
-        self.snapshot_service = snapshot_service or SnapshotService()
+        self.snapshot_service = (
+            snapshot_service
+            or SnapshotService(
+                service_status_provider=(
+                    ServiceStatusProvider()
+                ),
+            )
+        )
         self.allow_config_writes = bool(allow_config_writes)
         self.config_path = Path(config_path)
         self.fan_command_client = (
