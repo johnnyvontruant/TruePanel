@@ -706,8 +706,21 @@ def test_fan_control_history_payload(
         encoding="utf-8",
     )
 
+    class HealthCollector(FakeCollector):
+        def update(self):
+            state = super().update()
+            state["network"] = [
+                {
+                    "name": "eth0",
+                    "address": "192.168.0.10",
+                    "primary": True,
+                    "link_up": True,
+                }
+            ]
+            return state
+
     service = SnapshotService(
-        collector=FakeCollector(),
+        collector=HealthCollector(),
         config={},
         history_path=(
             tmp_path
@@ -1575,7 +1588,7 @@ def test_status_snapshot_includes_health_intelligence(
         payload["health"][
             "state"
         ]
-        == "ATTENTION"
+        == "NOMINAL"
     )
 
     assert (
