@@ -627,7 +627,7 @@ def test_virtual_lcd_allows_room_for_character_spacing():
     source = dashboard_source()
 
     assert "width:calc(16ch + 1em)" in source
-    assert "letter-spacing:.06em" in source
+    assert "letter-spacing:.03em" in source
     assert "white-space:pre" in source
 
 
