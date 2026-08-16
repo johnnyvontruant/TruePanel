@@ -649,3 +649,65 @@ def test_dashboard_hides_inactive_network_noise():
         'n.primary===true||n.kind==="tailscale"||n.link_up===true'
         in source
     )
+
+
+def test_dashboard_has_health_command_layer():
+    source = dashboard_source()
+
+    for element_id in (
+        "healthOverall",
+        "healthSummary",
+        "healthReason",
+        "healthUnknown",
+        "healthSubsystems",
+    ):
+        assert f'id="{element_id}"' in source
+
+    assert (
+        source.index('id="healthOverall"')
+        < source.index("<h2>CPU</h2>")
+    )
+
+    assert (
+        "renderHealth(data.health||{})"
+        in source
+    )
+
+
+def test_dashboard_lists_all_health_subsystems():
+    source = dashboard_source()
+
+    expected = {
+        'cooling:"Cooling"',
+        'thermal:"Thermal"',
+        'storage:"Storage"',
+        'network:"Network"',
+        'front_panel:"Front Panel"',
+        'services:"Services"',
+    }
+
+    for contract in expected:
+        assert contract in source
+
+
+def test_dashboard_health_advisory_is_conditional_and_safe():
+    source = dashboard_source()
+
+    assert 'id="healthAdvisory"' in source
+    assert (
+        "advisory.hidden=!showAdvisory"
+        in source
+    )
+
+    for state in (
+        "ATTENTION",
+        "DEGRADED",
+        "CRITICAL",
+    ):
+        assert f'"{state}"' in source
+
+    assert (
+        'id="openFlightManual" '
+        'type="button" disabled'
+        in source
+    )
