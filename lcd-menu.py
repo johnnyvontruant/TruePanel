@@ -40,6 +40,10 @@ from truepanel.host.mode import (
     resolve_host_runtime_mode,
 )
 from truepanel.mission_control import MissionControl
+from truepanel.network_labels import (
+    friendly_network_label,
+    physical_interface_positions,
+)
 from truepanel.mission_control.alert_manager import AlertManager
 from truepanel.mission_control.display_manager import DisplayManager
 from truepanel.mission_control.watchers.fan_health import (
@@ -382,6 +386,9 @@ def add_ips_to_menu():
         return
 
     ip_addresses.clear()
+    physical_positions = (
+        physical_interface_positions()
+    )
 
     for iface in ip_json:
         if iface["link_type"] == "loopback":
@@ -390,7 +397,16 @@ def add_ips_to_menu():
         if get_kind(iface) not in ["", "tun"]:
             continue
 
-        ip_addresses.append((iface["ifname"], get_ipv4(iface)))
+        interface_name = iface["ifname"]
+        ip_addresses.append(
+            (
+                friendly_network_label(
+                    interface_name,
+                    physical_positions,
+                ),
+                get_ipv4(iface),
+            )
+        )
 
     while show_ip in menu:
         menu.remove(show_ip)

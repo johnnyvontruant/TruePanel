@@ -9,6 +9,10 @@ from pathlib import Path
 from truepanel.hardware.drive_temperatures import (
     DriveTemperatureProvider,
 )
+from truepanel.network_labels import (
+    friendly_network_label,
+    physical_interface_positions,
+)
 
 
 class TruePanelCollector:
@@ -261,31 +265,14 @@ class TruePanelCollector:
                 default_interface = str(device)
                 break
 
-        physical_interfaces = []
-
-        try:
-            physical_interfaces = sorted(
-                entry.name
-                for entry in Path(
-                    "/sys/class/net"
-                ).iterdir()
-                if (
-                    entry.name != "lo"
-                    and (
-                        entry / "device"
-                    ).exists()
-                )
+        physical_positions = (
+            physical_interface_positions(
+                Path("/sys/class/net")
             )
-        except OSError:
-            physical_interfaces = []
-
-        physical_positions = {
-            name: position
-            for position, name in enumerate(
-                physical_interfaces,
-                start=1,
-            )
-        }
+        )
+        physical_interfaces = set(
+            physical_positions
+        )
 
         telemetry = {}
 
@@ -365,14 +352,9 @@ class TruePanelCollector:
 
             telemetry[name] = {
                 "position": position,
-                "label": (
-                    "Tailscale"
-                    if is_tailscale
-                    else (
-                        f"Ethernet Port {position}"
-                        if position is not None
-                        else name
-                    )
+                "label": friendly_network_label(
+                    name,
+                    physical_positions,
                 ),
                 "address": ipv4,
                 "download_mb": (

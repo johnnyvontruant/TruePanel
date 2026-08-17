@@ -14,8 +14,9 @@ a refined Virtual Front Panel, and a clearer Mission Control cockpit.
 
 - Added passive per-interface network throughput telemetry using
   kernel RX/TX counters and monotonic sampling.
-- Added friendly Ethernet Port and Tailscale identification while
-  preserving kernel interface names for diagnostics.
+- Added friendly Ethernet Port and Tailscale identification across
+  Mission Control and the physical LCD while preserving kernel
+  interface names for diagnostics.
 - Added conservative Health Intelligence for cooling, thermal,
   storage, network, front-panel, and TruePanel service state.
 - Added cached, read-only observation of the LCD and Mission Control
