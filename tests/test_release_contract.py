@@ -18,7 +18,7 @@ def dependency_name(requirement):
 
 
 def test_release_candidate_product_version():
-    assert truepanel.__version__ == "1.2.0rc1"
+    assert truepanel.__version__ == "1.2.0rc2"
     assert re.fullmatch(
         r"\d+\.\d+\.\d+rc\d+",
         truepanel.__version__,
@@ -46,6 +46,15 @@ def test_project_metadata_uses_authoritative_version():
     assert "dynamic" not in metadata["tool"]["setuptools"]
     assert metadata["project"]["requires-python"] == ">=3.11"
 
+
+
+def test_pytest_collection_is_scoped_to_canonical_suite():
+    metadata = load_pyproject()
+
+    assert (
+        metadata["tool"]["pytest"]["ini_options"]["testpaths"]
+        == ["tests"]
+    )
 
 def test_runtime_requirements_match_project_dependencies():
     metadata = load_pyproject()

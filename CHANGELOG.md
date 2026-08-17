@@ -4,6 +4,51 @@ All notable TruePanel changes are recorded here.
 
 TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.MINOR.PATCH`; release-candidate tags use `vMAJOR.MINOR.PATCH-rcN`.
 
+## [1.2.0-rc2] - 2026-08-17
+
+TruePanel 1.2.0 RC2 combines the hardened lifecycle foundation from
+RC1 with trustworthy network telemetry, read-only Health Intelligence,
+a refined Virtual Front Panel, and a clearer Mission Control cockpit.
+
+### Added
+
+- Added passive per-interface network throughput telemetry using
+  kernel RX/TX counters and monotonic sampling.
+- Added friendly Ethernet Port and Tailscale identification while
+  preserving kernel interface names for diagnostics.
+- Added conservative Health Intelligence for cooling, thermal,
+  storage, network, front-panel, and TruePanel service state.
+- Added cached, read-only observation of the LCD and Mission Control
+  systemd services.
+- Added a full-width System Health command layer with normalized
+  subsystem states and honest unknown-state reporting.
+- Added compact cooling instruments for temperature, active profile,
+  recommendation, readiness, fan speed, and PWM state.
+
+### Changed
+
+- Refined the Virtual Front Panel with deeper blue, restrained
+  dot-matrix texture, tighter spacing, and crisp white glyphs.
+- Reorganized Mission Control around current operating condition and
+  operator decisions.
+- Moved commissioning, fan-control, and thermal history into a
+  collapsed diagnostics drawer while keeping live controls visible.
+
+### Safety
+
+- Network, health, and service observation remain read-only.
+- No endpoint, configuration write, hardware command, service action,
+  or control authority was added.
+- Automatic thermal control remains deliberately unarmed.
+
+### Validated
+
+- Network telemetry and Health Intelligence passed focused regression
+  coverage and live BattleStation verification.
+- Virtual LCD and cockpit changes passed complete GitHub Actions checks.
+- Live cockpit visual QA found no clipping, duplicate identifiers,
+  unintended advisories, or control regressions.
+
 ## [1.2.0-rc1] - 2026-08-13
 
 - Harden guarded upgrade promotion so invalid backup paths are rejected before any backup copy begins; document the required sibling `.truepanel-backup-` naming contract.

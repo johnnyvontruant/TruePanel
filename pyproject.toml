@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "truepanel"
-version = "1.2.0rc1"
+version = "1.2.0rc2"
 description = "Hardware-aware TrueNAS front-panel platform for compatible QNAP systems"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -67,6 +67,9 @@ exclude = [
 
 [tool.setuptools.package-data]
 "truepanel.themes" = ["packs/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 88

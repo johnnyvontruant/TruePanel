@@ -112,7 +112,7 @@ def test_upgrade_guide_documents_safe_backup_root():
     assert "`.truepanel-backup-`" in text
     assert (
         "/mnt/POOL/DATASET/"
-        ".truepanel-backup-TruePanel-before-v1.2.0-rc1"
+        ".truepanel-backup-TruePanel-before-v1.2.0-rc2"
         in text
     )
     assert (
