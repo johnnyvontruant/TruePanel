@@ -95,6 +95,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .cooling-fans .fan-gauge{width:100%}
 @media(max-width:900px){.cooling-instruments{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.cooling-instruments{grid-template-columns:1fr}.cooling-fans{grid-column:1}.cooling-fans .row{display:block}.cooling-fans .fan-reading{width:100%;margin-top:.45rem;align-items:flex-start}}
+.diagnostics-drawer{margin-top:1rem;padding:0 .9rem;border:1px solid rgba(143,164,184,.2);border-radius:10px;background:rgba(3,9,15,.46)}
+.diagnostics-drawer>summary{padding:.9rem 0;cursor:pointer;color:var(--text)}
+.diagnostics-drawer>summary span{font-size:.78rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.diagnostics-drawer>summary small{float:right;color:var(--muted);font-size:.72rem;font-weight:500;letter-spacing:.02em}
+.diagnostics-drawer[open]>summary{margin-bottom:.25rem;border-bottom:1px solid rgba(143,164,184,.16)}
+.diagnostics-drawer .history-panel{margin-top:.75rem}
+@media(max-width:640px){.diagnostics-drawer>summary small{display:block;float:none;margin:.3rem 0 0 1rem}}
 .health-command{position:relative;overflow:hidden;padding:1.35rem 1.5rem;border-color:rgba(57,167,255,.38);background:linear-gradient(115deg,rgba(17,39,59,.98),rgba(8,14,23,.98) 58%,rgba(8,25,38,.98))}
 .health-command::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(57,167,255,.035),transparent)}
 .health-command-head{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem}
@@ -247,6 +254,11 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div id="thermalArmMessage" class="control-message">Checking automatic-control readiness</div>
 </div>
 </div>
+<details id="historyDiagnostics" class="diagnostics-drawer">
+<summary>
+<span>History &amp; Diagnostics</span>
+<small>Commissioning, fan, and thermal records</small>
+</summary>
 <div class="history-panel">
 <h3>Recent Commissioning Activity</h3>
 <div id="commissioningHistory" class="detail">No commissioning events recorded</div>
@@ -259,6 +271,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <h3>Recent Thermal Recommendations</h3>
 <div id="thermalHistory" class="detail">No thermal recommendations recorded</div>
 </div>
+</details>
 </article>
 <article class="card wide"><h2>Storage Pools</h2><div id="pools" class="detail">Awaiting pool telemetry</div></article>
 <article class="card"><h2>Drive Temperatures</h2><div id="temps" class="detail">Awaiting temperature telemetry</div></article>

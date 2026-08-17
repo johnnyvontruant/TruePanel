@@ -755,3 +755,49 @@ def test_dashboard_has_compact_cooling_instrument_strip():
         ".fan-reading>span:first-child"
         in source
     )
+
+
+def test_dashboard_collapses_history_and_diagnostics_by_default():
+    source = dashboard_source()
+
+    drawer = (
+        '<details id="historyDiagnostics" '
+        'class="diagnostics-drawer">'
+    )
+
+    assert drawer in source
+    assert "History &amp; Diagnostics" in source
+    assert (
+        "Commissioning, fan, and thermal records"
+        in source
+    )
+
+    drawer_start = source.index(drawer)
+    drawer_end = source.index(
+        "</details>",
+        drawer_start,
+    )
+
+    assert (
+        source.index(
+            "<h3>Automatic Thermal Control</h3>"
+        )
+        < drawer_start
+    )
+
+    for live_id in (
+        "commissioningHistory",
+        "fanHistory",
+        "thermalHistory",
+    ):
+        position = source.index(
+            f'id="{live_id}"'
+        )
+        assert drawer_start < position < drawer_end
+
+    assert (
+        'id="historyDiagnostics" '
+        'class="diagnostics-drawer" open'
+        not in source
+    )
+    assert ".diagnostics-drawer[open]>summary" in source
