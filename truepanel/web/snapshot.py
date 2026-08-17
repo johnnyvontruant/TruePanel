@@ -11,6 +11,7 @@ from typing import Any
 
 from collector import TruePanelCollector
 from truepanel.config.loader import load_config
+from truepanel.health import augment_status_snapshot
 from truepanel.hardware.fan_status_bridge import (
     DEFAULT_FAN_CONTROL_STATUS_PATH,
     FanControlStatusBridge,
@@ -81,6 +82,7 @@ class SnapshotService:
         fan_control_history_path=None,
         thermal_observer_history_path=None,
         thermal_commissioning_history_path=None,
+        service_status_provider=None,
         clock=None,
     ):
         self.collector = (
@@ -96,6 +98,10 @@ class SnapshotService:
         self.clock = (
             clock
             or time.time
+        )
+
+        self.service_status_provider = (
+            service_status_provider
         )
 
         self.fan_control_bridge = (
@@ -181,7 +187,7 @@ class SnapshotService:
             or {}
         )
 
-        return {
+        payload = {
             "schema_version": 1,
             "read_only": True,
             "timestamp": self.clock(),
@@ -196,10 +202,49 @@ class SnapshotService:
             ),
             "lcd": self._lcd_payload(),
             "fans": self._fan_payload(),
+            "services": (
+                self._service_status_payload()
+            ),
             "capabilities": (
                 self.capabilities()
             ),
         }
+
+        return augment_status_snapshot(
+            payload
+        )
+
+    def _service_status_payload(
+        self,
+    ) -> dict[str, Any]:
+        provider = self.service_status_provider
+
+        if provider is None:
+            return {
+                "available": False,
+                "services": [],
+            }
+
+        try:
+            payload = provider.snapshot()
+        except (
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+        ):
+            return {
+                "available": False,
+                "services": [],
+            }
+
+        if not isinstance(payload, dict):
+            return {
+                "available": False,
+                "services": [],
+            }
+
+        return payload
 
     def lcd_status(self) -> dict[str, Any]:
         """
@@ -613,6 +658,9 @@ class SnapshotService:
     ) -> list[dict[str, Any]]:
         candidates = (
             state.get(
+                "network"
+            )
+            or state.get(
                 "network_interfaces"
             )
             or state.get(
@@ -628,14 +676,32 @@ class SnapshotService:
             candidates,
             dict,
         ):
-            return [
-                {
+            records = []
+
+            for name, value in (
+                candidates.items()
+            ):
+                record = {
                     "name": str(name),
-                    "address": value,
                 }
-                for name, value
-                in candidates.items()
-            ]
+
+                if isinstance(
+                    value,
+                    dict,
+                ):
+                    record.update(
+                        value
+                    )
+                else:
+                    record[
+                        "address"
+                    ] = value
+
+                records.append(
+                    record
+                )
+
+            return records
 
         if isinstance(
             candidates,

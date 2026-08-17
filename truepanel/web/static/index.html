@@ -24,6 +24,7 @@ main{max-width:1400px;margin:0 auto;padding:1.5rem}
 .row:last-child{border-bottom:0}
 .label{color:var(--muted)}
 .value{text-align:right;font-variant-numeric:tabular-nums}
+.network-interface+.network-interface{margin-top:.7rem;padding-top:.7rem;border-top:1px solid rgba(143,164,184,.18)}
 .good{color:var(--good)}
 .warn{color:var(--warn)}
 .bad{color:var(--bad)}
@@ -61,9 +62,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .lcd-panel{grid-column:1/-1;padding:1.25rem;background:linear-gradient(145deg,#151b22,#080b0f);border-color:#34404c;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.28)}
 .lcd-faceplate{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:1.25rem;align-items:stretch;max-width:920px;margin:0 auto;padding:1.2rem;border:1px solid #3a4652;border-radius:16px;background:linear-gradient(135deg,#252b31 0,#11161b 52%,#080b0e 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 28px rgba(0,0,0,.35),0 16px 32px rgba(0,0,0,.32)}
 .lcd-screen-bezel{display:flex;align-items:center;justify-content:center;min-width:0;padding:1rem;border:1px solid #02070c;border-radius:10px;background:#03070b;box-shadow:inset 0 0 18px #000,0 1px 0 rgba(255,255,255,.08)}
-.lcd-screen{position:relative;width:min(100%,700px);overflow:hidden;border:2px solid #223d62;border-radius:7px;padding:1.15rem 1.25rem;background:radial-gradient(circle at 50% 20%,rgba(85,158,255,.25),transparent 48%),linear-gradient(180deg,#234f9f 0,#173d87 48%,#112f6b 100%);box-shadow:inset 0 0 24px rgba(0,0,0,.55),inset 0 0 8px rgba(135,190,255,.35),0 0 22px rgba(41,119,255,.25)}
-.lcd-screen::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;background-image:radial-gradient(circle,rgba(190,226,255,.8) 0 1px,transparent 1.3px);background-size:5px 5px;mix-blend-mode:screen}
-.lcd-row{position:relative;z-index:1;display:block;width:calc(16ch + 1em);max-width:100%;margin:0 auto;white-space:pre;overflow:hidden;color:#d8efff;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:clamp(1.25rem,3.2vw,2.25rem);font-weight:750;line-height:1.35;letter-spacing:.06em;text-shadow:0 0 3px #fff,0 0 8px #8bc6ff,0 0 14px #4a91ff}
+.lcd-screen{position:relative;width:min(100%,700px);overflow:hidden;border:2px solid #16386c;border-radius:7px;padding:1.15rem 1.25rem;background:linear-gradient(180deg,#0a3a8f 0,#07327c 52%,#052a69 100%);box-shadow:inset 0 0 16px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.06)}
+.lcd-screen::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.12;background-image:radial-gradient(circle,rgba(185,210,255,.55) 0 .9px,transparent 1.05px);background-size:6px 6px}
+.lcd-row{position:relative;z-index:1;display:block;width:calc(16ch + 1em);max-width:100%;margin:0 auto;white-space:pre;overflow:hidden;color:#f8fbff;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:clamp(1.25rem,3.2vw,2.25rem);font-weight:780;line-height:1.35;letter-spacing:.03em;text-shadow:none}
 .lcd-controls{display:flex;flex-direction:column;justify-content:center;gap:.8rem}
 .lcd-rocker{position:relative;min-height:74px;padding:.8rem .45rem;border:1px solid #59636c;border-radius:10px;background:linear-gradient(180deg,#353c43,#171c21 58%,#0d1013);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -4px 8px rgba(0,0,0,.55),0 4px 8px rgba(0,0,0,.35);color:#f1f5f8;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;transition:transform .08s ease,filter .12s ease,box-shadow .12s ease}
 .lcd-rocker:hover:not(:disabled){filter:brightness(1.15)}
@@ -83,6 +84,60 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .lcd-transport .row{padding:.4rem 0;font-size:.78rem}
 .lcd-transport .value{overflow-wrap:anywhere}
 @media(max-width:720px){.lcd-faceplate{grid-template-columns:1fr;padding:.85rem}.lcd-controls{display:grid;grid-template-columns:1fr 1fr}.lcd-rocker{min-height:58px}.lcd-screen{padding:.85rem .55rem}.lcd-row{font-size:clamp(1rem,5.4vw,1.6rem)}}
+.cooling-instruments{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}
+.cooling-instrument{min-width:0;padding:.8rem;border:1px solid rgba(143,164,184,.18);border-radius:10px;background:rgba(4,10,16,.48)}
+.cooling-instrument .label{display:block;font-size:.68rem;letter-spacing:.09em;text-transform:uppercase}
+.cooling-instrument .value{display:block;margin-top:.35rem;text-align:left;font-size:1rem;font-weight:750;overflow-wrap:anywhere}
+.cooling-fans{grid-column:1/-1;padding:.25rem .8rem;border:1px solid rgba(57,167,255,.24);border-radius:10px;background:rgba(3,10,17,.55)}
+.cooling-fans .row{align-items:center}
+.cooling-fans .fan-reading{width:min(100%,420px)}
+.cooling-fans .fan-reading>span:first-child{font-size:1.05rem;font-weight:800;color:var(--text)}
+.cooling-fans .fan-gauge{width:100%}
+@media(max-width:900px){.cooling-instruments{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.cooling-instruments{grid-template-columns:1fr}.cooling-fans{grid-column:1}.cooling-fans .row{display:block}.cooling-fans .fan-reading{width:100%;margin-top:.45rem;align-items:flex-start}}
+.diagnostics-drawer{margin-top:1rem;padding:0 .9rem;border:1px solid rgba(143,164,184,.2);border-radius:10px;background:rgba(3,9,15,.46)}
+.diagnostics-drawer>summary{padding:.9rem 0;cursor:pointer;color:var(--text)}
+.diagnostics-drawer>summary span{font-size:.78rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.diagnostics-drawer>summary small{float:right;color:var(--muted);font-size:.72rem;font-weight:500;letter-spacing:.02em}
+.diagnostics-drawer[open]>summary{margin-bottom:.25rem;border-bottom:1px solid rgba(143,164,184,.16)}
+.diagnostics-drawer .history-panel{margin-top:.75rem}
+@media(max-width:640px){.diagnostics-drawer>summary small{display:block;float:none;margin:.3rem 0 0 1rem}}
+.health-command{position:relative;overflow:hidden;padding:1.35rem 1.5rem;border-color:rgba(57,167,255,.38);background:linear-gradient(115deg,rgba(17,39,59,.98),rgba(8,14,23,.98) 58%,rgba(8,25,38,.98))}
+.health-command::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(57,167,255,.035),transparent)}
+.health-command-head{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem}
+.health-command h2{margin-bottom:.45rem}
+.health-overall{font-size:clamp(1.8rem,4vw,3.2rem);font-weight:850;line-height:1;letter-spacing:.04em}
+.health-overall.nominal{color:var(--good)}
+.health-overall.attention{color:var(--warn)}
+.health-overall.degraded,.health-overall.critical{color:var(--bad)}
+.health-overall.unknown{color:var(--muted)}
+.health-summary{margin-top:.45rem;font-size:1rem;color:var(--text)}
+.health-reason{max-width:760px;margin-top:.35rem;color:var(--muted);font-size:.85rem}
+.health-unknown{text-align:right;color:var(--muted);font-size:.75rem}
+.health-unknown strong{display:block;color:var(--text);font-size:1.35rem}
+.health-subsystems{position:relative;z-index:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.65rem;margin-top:1.2rem}
+.health-subsystem{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.2rem .5rem;align-items:center;min-width:0;padding:.7rem .75rem;border:1px solid var(--edge);border-radius:10px;background:rgba(3,8,13,.5)}
+.health-subsystem .health-dot{grid-row:1/3;width:.55rem;height:.55rem;border-radius:50%;background:var(--muted)}
+.health-subsystem .health-name{overflow:hidden;color:var(--muted);font-size:.7rem;letter-spacing:.08em;text-overflow:ellipsis;text-transform:uppercase}
+.health-subsystem strong{font-size:.78rem;letter-spacing:.04em}
+.health-subsystem.nominal .health-dot{background:var(--good);box-shadow:0 0 8px rgba(80,216,144,.6)}
+.health-subsystem.nominal strong{color:var(--good)}
+.health-subsystem.attention .health-dot{background:var(--warn);box-shadow:0 0 8px rgba(255,200,87,.55)}
+.health-subsystem.attention strong{color:var(--warn)}
+.health-subsystem.degraded .health-dot,.health-subsystem.critical .health-dot{background:var(--bad);box-shadow:0 0 8px rgba(255,93,115,.6)}
+.health-subsystem.degraded strong,.health-subsystem.critical strong{color:var(--bad)}
+.health-subsystem.unknown strong{color:var(--muted)}
+.health-advisory{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem 1.5rem;align-items:center;border-color:rgba(255,200,87,.48);background:linear-gradient(110deg,rgba(72,50,10,.42),rgba(17,17,18,.97) 65%)}
+.health-advisory[hidden]{display:none}
+.health-advisory.critical,.health-advisory.degraded{border-color:rgba(255,93,115,.52);background:linear-gradient(110deg,rgba(79,20,31,.48),rgba(17,15,18,.97) 65%)}
+.health-advisory-label{color:var(--warn);font-size:.72rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase}
+.health-advisory.critical .health-advisory-label,.health-advisory.degraded .health-advisory-label{color:var(--bad)}
+.health-advisory-summary{margin-top:.3rem;font-size:1.1rem;font-weight:800}
+.health-advisory-reason,.health-advisory-action{margin-top:.35rem;color:var(--muted);font-size:.84rem}
+.health-advisory-action{color:var(--text)}
+.health-advisory button{min-width:170px}
+@media(max-width:900px){.health-subsystems{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.health-command-head{display:block}.health-unknown{margin-top:1rem;text-align:left}.health-subsystems{grid-template-columns:repeat(2,minmax(0,1fr))}.health-advisory{grid-template-columns:1fr}.health-advisory button{width:100%}}
 footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 @media(max-width:640px){header,main{padding:1rem}}
 </style>
@@ -90,6 +145,27 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <body>
 <header><div><h1>TruePanel Mission Control</h1><div class="sub">Flight Deck telemetry and guarded configuration</div></div><div id="connection" class="badge">Connecting</div></header>
 <main><section class="grid">
+<article class="card wide health-command" aria-labelledby="healthCommandTitle">
+<div class="health-command-head">
+<div>
+<h2 id="healthCommandTitle">System Health</h2>
+<div id="healthOverall" class="health-overall unknown">UNKNOWN</div>
+<div id="healthSummary" class="health-summary">Awaiting Health Intelligence</div>
+<div id="healthReason" class="health-reason">Waiting for the first trustworthy health snapshot.</div>
+</div>
+<div id="healthUnknown" class="health-unknown"><strong>6</strong> unknown subsystems</div>
+</div>
+<div id="healthSubsystems" class="health-subsystems" aria-label="Health subsystem states"></div>
+</article>
+<article id="healthAdvisory" class="card wide health-advisory" aria-live="polite" hidden>
+<div>
+<div id="healthAdvisoryLabel" class="health-advisory-label">Advisory</div>
+<div id="healthAdvisorySummary" class="health-advisory-summary">System attention required</div>
+<div id="healthAdvisoryReason" class="health-advisory-reason"></div>
+<div id="healthAdvisoryAction" class="health-advisory-action"></div>
+</div>
+<button id="openFlightManual" type="button" disabled>Open Flight Manual</button>
+</article>
 <article class="card"><h2>CPU</h2><div id="cpu" class="metric">--</div><div id="load" class="detail">Awaiting telemetry</div></article>
 <article class="card"><h2>Memory</h2><div id="ram" class="metric">--</div></article>
 <article class="card lcd-panel">
@@ -133,17 +209,19 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 </div>
 </article>
 <article class="card wide"><h2>Cooling</h2>
-<div id="fans" class="detail">Awaiting fan telemetry</div>
+<div class="cooling-instruments" aria-label="Current cooling operation">
+<div class="cooling-instrument"><span class="label">Hottest temperature</span><span id="fanThermalTemperature" class="value">--</span></div>
+<div class="cooling-instrument"><span class="label">Active profile</span><span id="fanActiveProfile" class="value">Automatic</span></div>
+<div class="cooling-instrument"><span class="label">Recommended profile</span><span id="fanThermalRecommendation" class="value">Awaiting telemetry</span></div>
+<div class="cooling-instrument"><span class="label">Automatic readiness</span><span id="fanThermalReadiness" class="value">Evaluating</span></div>
+<div id="fans" class="detail cooling-fans">Awaiting fan telemetry</div>
+</div>
 <div class="control-panel">
 <div class="control-state">
 <div class="row"><span class="label">Control runtime</span><span id="fanControlConnection" class="value">Checking</span></div>
-<div class="row"><span class="label">Active profile</span><span id="fanActiveProfile" class="value">Automatic</span></div>
 <div class="row"><span class="label">Requested profile</span><span id="fanRequestedProfile" class="value">Automatic</span></div>
-<div class="row"><span class="label">Thermal recommendation</span><span id="fanThermalRecommendation" class="value">Awaiting telemetry</span></div>
 <div class="row"><span class="label">Recommendation alignment</span><span id="fanThermalAlignment" class="value">Awaiting telemetry</span></div>
-<div class="row"><span class="label">Automatic readiness</span><span id="fanThermalReadiness" class="value">Evaluating</span></div>
 <div class="row"><span class="label">Readiness checks</span><span id="fanThermalChecks" class="value">Awaiting status</span></div>
-<div class="row"><span class="label">Observer temperature</span><span id="fanThermalTemperature" class="value">--</span></div>
 <div class="row"><span class="label">Automatic restore</span><span id="fanControlCountdown" class="value">Not scheduled</span></div>
 </div>
 <div class="control-actions">
@@ -176,6 +254,11 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div id="thermalArmMessage" class="control-message">Checking automatic-control readiness</div>
 </div>
 </div>
+<details id="historyDiagnostics" class="diagnostics-drawer">
+<summary>
+<span>History &amp; Diagnostics</span>
+<small>Commissioning, fan, and thermal records</small>
+</summary>
 <div class="history-panel">
 <h3>Recent Commissioning Activity</h3>
 <div id="commissioningHistory" class="detail">No commissioning events recorded</div>
@@ -188,6 +271,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <h3>Recent Thermal Recommendations</h3>
 <div id="thermalHistory" class="detail">No thermal recommendations recorded</div>
 </div>
+</details>
 </article>
 <article class="card wide"><h2>Storage Pools</h2><div id="pools" class="detail">Awaiting pool telemetry</div></article>
 <article class="card"><h2>Drive Temperatures</h2><div id="temps" class="detail">Awaiting temperature telemetry</div></article>
@@ -211,6 +295,121 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 const q=id=>document.getElementById(id);
 const val=(v,f="--")=>v===null||v===undefined||v===""?f:String(v);
 const rows=(items,fn)=>Array.isArray(items)&&items.length?items.map(fn).join(""):`<div class="detail">No telemetry available</div>`;
+const HEALTH_SUBSYSTEM_LABELS={
+    cooling:"Cooling",
+    thermal:"Thermal",
+    storage:"Storage",
+    network:"Network",
+    front_panel:"Front Panel",
+    services:"Services"
+};
+const HEALTH_STATES=new Set([
+    "NOMINAL",
+    "ATTENTION",
+    "DEGRADED",
+    "CRITICAL",
+    "UNKNOWN"
+]);
+function normalizedHealthState(value){
+    const state=String(
+        value||"UNKNOWN"
+    ).toUpperCase();
+
+    return HEALTH_STATES.has(state)
+        ?state
+        :"UNKNOWN";
+}
+function renderHealth(health){
+    const state=normalizedHealthState(
+        health&&health.state
+    );
+    const stateClass=state.toLowerCase();
+    const subsystems=(
+        health&&health.subsystems||{}
+    );
+    const unknown=Number(
+        health&&health.unknown_subsystems
+    );
+
+    q("healthOverall").className=(
+        "health-overall "+stateClass
+    );
+    q("healthOverall").textContent=state;
+    q("healthSummary").textContent=val(
+        health&&health.summary,
+        "Health unavailable"
+    );
+    q("healthReason").textContent=val(
+        health&&health.reason,
+        "No trustworthy health interpretation is available."
+    );
+    q("healthUnknown").innerHTML=(
+        `<strong>${Number.isFinite(unknown)?unknown:6}</strong> unknown subsystems`
+    );
+
+    q("healthSubsystems").innerHTML=(
+        Object.entries(
+            HEALTH_SUBSYSTEM_LABELS
+        ).map(([name,label])=>{
+            const result=subsystems[name]||{};
+            const subsystemState=(
+                normalizedHealthState(
+                    result.state
+                )
+            );
+
+            return `<div class="health-subsystem ${subsystemState.toLowerCase()}" data-health-subsystem="${name}">
+                <span class="health-dot"></span>
+                <span class="health-name">${label}</span>
+                <strong>${subsystemState}</strong>
+            </div>`;
+        }).join("")
+    );
+
+    const showAdvisory=[
+        "ATTENTION",
+        "DEGRADED",
+        "CRITICAL"
+    ].includes(state);
+    const advisory=q(
+        "healthAdvisory"
+    );
+
+    advisory.hidden=!showAdvisory;
+
+    if(!showAdvisory){
+        advisory.className=(
+            "card wide health-advisory"
+        );
+        return;
+    }
+
+    const labels={
+        ATTENTION:"Advisory",
+        DEGRADED:"Caution",
+        CRITICAL:"Warning"
+    };
+
+    advisory.className=(
+        "card wide health-advisory "
+        +stateClass
+    );
+    q("healthAdvisoryLabel").textContent=(
+        labels[state]
+    );
+    q("healthAdvisorySummary").textContent=val(
+        health.summary,
+        "System attention required"
+    );
+    q("healthAdvisoryReason").textContent=val(
+        health.reason,
+        "A non-nominal condition was detected."
+    );
+    q("healthAdvisoryAction").textContent=val(
+        health.recommended_action,
+        "Review the affected subsystem."
+    );
+}
 const FAN_GAUGE_MAX_RPM=2100;
 function fanGaugePercent(rpm){
     const value=Number(rpm);
@@ -507,7 +706,49 @@ function renderFanControl(control){
     q("fanControlMessage").textContent=reason;
     q("fanControlMessage").className="control-message "+(connected?"good":"bad");
 }
-function render(data){const s=data.system||{},f=data.fans||{},st=data.storage||{};q("cpu").textContent=Math.round(s.cpu_percent||0)+"%";q("ram").textContent=Math.round(s.ram_percent||0)+"%";q("load").textContent=(s.load_average||[]).length?"Load "+s.load_average.join(" / "):"Load unavailable";renderFans(f);renderFanControl(f.control||{});q("hostname").textContent=val(s.hostname);q("updated").textContent=new Date(data.timestamp*1000).toLocaleTimeString();q("pools").innerHTML=rows(st.pools,p=>`<div class="row"><span class="label">${val(p.name,"Pool")}</span><span class="value">${val(p.health||p.status)} · ${val(p.percent_used??p.used_percent??p.capacity)}%</span></div>`);q("temps").innerHTML=rows(st.temperatures,d=>`<div class="row"><span class="label">${val(d.name||d.device||d.disk,"Drive")}</span><span class="value">${val(d.temperature??d.temp??d.temperature_c)}°C</span></div>`);q("network").innerHTML=rows(data.network,n=>`<div class="row"><span class="label">${val(n.name||n.interface,"Interface")}</span><span class="value">${val(n.address||n.ip,"No address")}</span></div>`)}
+function formatNetworkRate(value){
+    const mb=Number(value||0);
+
+    if(!Number.isFinite(mb)||mb<=0){
+        return "0 KB/s";
+    }
+
+    if(mb<1){
+        const kb=mb*1024;
+
+        return (
+            kb<10
+                ?kb.toFixed(1)
+                :kb.toFixed(0)
+        )+" KB/s";
+    }
+
+    return (
+        mb<10
+            ?mb.toFixed(1)
+            :mb.toFixed(0)
+    )+" MB/s";
+}
+
+function render(data){renderHealth(data.health||{});const s=data.system||{},f=data.fans||{},st=data.storage||{};q("cpu").textContent=Math.round(s.cpu_percent||0)+"%";q("ram").textContent=Math.round(s.ram_percent||0)+"%";q("load").textContent=(s.load_average||[]).length?"Load "+s.load_average.join(" / "):"Load unavailable";renderFans(f);renderFanControl(f.control||{});q("hostname").textContent=val(s.hostname);q("updated").textContent=new Date(data.timestamp*1000).toLocaleTimeString();q("pools").innerHTML=rows(st.pools,p=>`<div class="row"><span class="label">${val(p.name,"Pool")}</span><span class="value">${val(p.health||p.status)} · ${val(p.percent_used??p.used_percent??p.capacity)}%</span></div>`);q("temps").innerHTML=rows(st.temperatures,d=>`<div class="row"><span class="label">${val(d.name||d.device||d.disk,"Drive")}</span><span class="value">${val(d.temperature??d.temp??d.temperature_c)}°C</span></div>`);q("network").innerHTML=rows(
+    (data.network||[]).filter(
+        n=>n.primary===true||n.kind==="tailscale"||n.link_up===true
+    ),
+    n=>`<div class="network-interface">
+        <div class="row">
+            <span class="label">${val(n.label||n.name||n.interface,"Interface")}</span>
+            <span class="value ${n.link_up===true?"good":"bad"}">${n.link_up===true?"Online":"Offline"}</span>
+        </div>
+        <div class="row">
+            <span class="label">${val(n.name||n.interface,"Interface")}</span>
+            <span class="value">${val(n.address||n.ip,"No IPv4 address")}</span>
+        </div>
+        <div class="row">
+            <span class="label">Traffic</span>
+            <span class="value">↓ ${formatNetworkRate(n.download_mb)} · ↑ ${formatNetworkRate(n.upload_mb)}</span>
+        </div>
+    </div>`
+)}
 function fanHistorySourceLabel(source){
     const labels={
         manual:"Manual command",

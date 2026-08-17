@@ -627,5 +627,177 @@ def test_virtual_lcd_allows_room_for_character_spacing():
     source = dashboard_source()
 
     assert "width:calc(16ch + 1em)" in source
-    assert "letter-spacing:.06em" in source
+    assert "letter-spacing:.03em" in source
     assert "white-space:pre" in source
+
+
+def test_dashboard_renders_friendly_network_labels():
+    source = dashboard_source()
+
+    assert "n.label||n.name||n.interface" in source
+    assert "formatNetworkRate" in source
+    assert "download_mb" in source
+    assert "upload_mb" in source
+    assert 'n.kind==="tailscale"' in source
+    assert 'n.primary===true' in source
+
+
+def test_dashboard_hides_inactive_network_noise():
+    source = dashboard_source()
+
+    assert (
+        'n.primary===true||n.kind==="tailscale"||n.link_up===true'
+        in source
+    )
+
+
+def test_dashboard_has_health_command_layer():
+    source = dashboard_source()
+
+    for element_id in (
+        "healthOverall",
+        "healthSummary",
+        "healthReason",
+        "healthUnknown",
+        "healthSubsystems",
+    ):
+        assert f'id="{element_id}"' in source
+
+    assert (
+        source.index('id="healthOverall"')
+        < source.index("<h2>CPU</h2>")
+    )
+
+    assert (
+        "renderHealth(data.health||{})"
+        in source
+    )
+
+
+def test_dashboard_lists_all_health_subsystems():
+    source = dashboard_source()
+
+    expected = {
+        'cooling:"Cooling"',
+        'thermal:"Thermal"',
+        'storage:"Storage"',
+        'network:"Network"',
+        'front_panel:"Front Panel"',
+        'services:"Services"',
+    }
+
+    for contract in expected:
+        assert contract in source
+
+
+def test_dashboard_health_advisory_is_conditional_and_safe():
+    source = dashboard_source()
+
+    assert 'id="healthAdvisory"' in source
+    assert (
+        "advisory.hidden=!showAdvisory"
+        in source
+    )
+
+    for state in (
+        "ATTENTION",
+        "DEGRADED",
+        "CRITICAL",
+    ):
+        assert f'"{state}"' in source
+
+    assert (
+        'id="openFlightManual" '
+        'type="button" disabled'
+        in source
+    )
+
+
+def test_dashboard_has_compact_cooling_instrument_strip():
+    source = dashboard_source()
+
+    assert (
+        'class="cooling-instruments" '
+        'aria-label="Current cooling operation"'
+        in source
+    )
+
+    for label in (
+        "Hottest temperature",
+        "Active profile",
+        "Recommended profile",
+        "Automatic readiness",
+    ):
+        assert label in source
+
+    for element_id in (
+        "fans",
+        "fanThermalTemperature",
+        "fanActiveProfile",
+        "fanThermalRecommendation",
+        "fanThermalReadiness",
+    ):
+        assert source.count(
+            f'id="{element_id}"'
+        ) == 1
+
+    assert (
+        source.index(
+            'class="cooling-instruments"'
+        )
+        < source.index(
+            '<div class="control-panel">'
+        )
+    )
+
+    assert (
+        ".cooling-fans "
+        ".fan-reading>span:first-child"
+        in source
+    )
+
+
+def test_dashboard_collapses_history_and_diagnostics_by_default():
+    source = dashboard_source()
+
+    drawer = (
+        '<details id="historyDiagnostics" '
+        'class="diagnostics-drawer">'
+    )
+
+    assert drawer in source
+    assert "History &amp; Diagnostics" in source
+    assert (
+        "Commissioning, fan, and thermal records"
+        in source
+    )
+
+    drawer_start = source.index(drawer)
+    drawer_end = source.index(
+        "</details>",
+        drawer_start,
+    )
+
+    assert (
+        source.index(
+            "<h3>Automatic Thermal Control</h3>"
+        )
+        < drawer_start
+    )
+
+    for live_id in (
+        "commissioningHistory",
+        "fanHistory",
+        "thermalHistory",
+    ):
+        position = source.index(
+            f'id="{live_id}"'
+        )
+        assert drawer_start < position < drawer_end
+
+    assert (
+        'id="historyDiagnostics" '
+        'class="diagnostics-drawer" open'
+        not in source
+    )
+    assert ".diagnostics-drawer[open]>summary" in source

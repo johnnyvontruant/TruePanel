@@ -1436,3 +1436,231 @@ def test_status_snapshot_uses_safe_transport_defaults(
     assert reader["connection_error"] is None
     assert reader["port"] is None
     assert reader["speed"] == 0
+
+
+def test_network_payload_accepts_collector_rate_shape():
+    payload = SnapshotService._network_payload(
+        {
+            "network": {
+                "enp116s0": {
+                    "download_mb": 12.3,
+                    "upload_mb": 1.7,
+                },
+                "tailscale0": {
+                    "download_mb": 0.1,
+                    "upload_mb": 0.0,
+                },
+            }
+        }
+    )
+
+    assert payload == [
+        {
+            "name": "enp116s0",
+            "download_mb": 12.3,
+            "upload_mb": 1.7,
+        },
+        {
+            "name": "tailscale0",
+            "download_mb": 0.1,
+            "upload_mb": 0.0,
+        },
+    ]
+
+
+def test_network_payload_preserves_legacy_address_shape():
+    payload = SnapshotService._network_payload(
+        {
+            "interfaces": {
+                "eth0": "192.168.0.10",
+            }
+        }
+    )
+
+    assert payload == [
+        {
+            "name": "eth0",
+            "address": "192.168.0.10",
+        }
+    ]
+
+
+def test_network_payload_preserves_friendly_interface_metadata():
+    payload = SnapshotService._network_payload(
+        {
+            "network": {
+                "enp116s0": {
+                    "position": 2,
+                    "label": "Ethernet Port 2",
+                    "address": "192.168.0.108",
+                    "primary": True,
+                    "kind": "lan",
+                }
+            }
+        }
+    )
+
+    assert payload == [
+        {
+            "name": "enp116s0",
+            "position": 2,
+            "label": "Ethernet Port 2",
+            "address": "192.168.0.108",
+            "primary": True,
+            "kind": "lan",
+        }
+    ]
+
+
+def test_network_payload_preserves_friendly_interface_metadata():
+    payload = SnapshotService._network_payload(
+        {
+            "network": {
+                "enp116s0": {
+                    "position": 2,
+                    "label": "Ethernet Port 2",
+                    "address": "192.168.0.108",
+                    "primary": True,
+                    "kind": "lan",
+                }
+            }
+        }
+    )
+
+    assert payload == [
+        {
+            "name": "enp116s0",
+            "position": 2,
+            "label": "Ethernet Port 2",
+            "address": "192.168.0.108",
+            "primary": True,
+            "kind": "lan",
+        }
+    ]
+
+
+
+def test_status_snapshot_includes_health_intelligence(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        (
+            "truepanel.web.snapshot."
+            "get_fan_status"
+        ),
+        lambda: {
+            "available": False,
+        },
+    )
+
+    class HealthCollector(FakeCollector):
+        def update(self):
+            state = super().update()
+            state["network"] = [
+                {
+                    "name": "eth0",
+                    "address": "192.168.0.10",
+                    "primary": True,
+                    "link_up": True,
+                }
+            ]
+            return state
+
+    service = SnapshotService(
+        collector=HealthCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "history.jsonl"
+        ),
+        clock=lambda: 100.0,
+    )
+
+    payload = service.status()
+
+    assert (
+        payload["read_only"]
+        is True
+    )
+
+    assert (
+        payload["health"][
+            "state"
+        ]
+        == "NOMINAL"
+    )
+
+    assert (
+        payload["health"][
+            "subsystems"
+        ]["storage"]["state"]
+        == "NOMINAL"
+    )
+
+    assert (
+        payload["health"][
+            "subsystems"
+        ]["services"]["state"]
+        == "UNKNOWN"
+    )
+
+    assert set(
+        payload["health"][
+            "subsystems"
+        ]
+    ) == {
+        "cooling",
+        "thermal",
+        "storage",
+        "network",
+        "front_panel",
+        "services",
+    }
+
+def test_status_snapshot_publishes_injected_service_health(
+    tmp_path,
+):
+    class ServiceProvider:
+        def snapshot(self):
+            return {
+                "available": True,
+                "services": [
+                    {
+                        "name": "truepanel.service",
+                        "required": True,
+                        "observed": True,
+                        "load_state": "loaded",
+                        "active_state": "active",
+                        "sub_state": "running",
+                    },
+                    {
+                        "name": (
+                            "truepanel-mission-control.service"
+                        ),
+                        "required": True,
+                        "observed": True,
+                        "load_state": "loaded",
+                        "active_state": "active",
+                        "sub_state": "running",
+                    },
+                ],
+            }
+
+    service = SnapshotService(
+        collector=FakeCollector(),
+        config={},
+        history_path=(
+            tmp_path
+            / "service-health.jsonl"
+        ),
+        service_status_provider=ServiceProvider(),
+    )
+
+    payload = service.status()
+
+    assert payload["services"]["available"] is True
+    assert (
+        payload["health"]["subsystems"]["services"]["state"]
+        == "NOMINAL"
+    )

@@ -1260,7 +1260,7 @@ class DisplayManager:
         ) % len(interfaces)
 
         arrow = "↑" if interface["link_up"] else "↓"
-        title = f"Ethernet {interface['position']} {arrow}"
+        title = f"Ethernet Port {interface['position']} {arrow}"
         value = interface["ipv4"] or "No IPv4 address"
 
         return self.make_frame(
