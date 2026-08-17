@@ -1,0 +1,50 @@
+{
+  "alerts": [],
+  "cpu_percent": 18.0,
+  "cpu_temperature_c": 51.0,
+  "enclosure": {
+    "bays": [
+      {"bay": 1, "device": "disk1", "health": "ONLINE", "present": true},
+      {"bay": 2, "device": "disk2", "health": "ONLINE", "present": true},
+      {"bay": 3, "device": "disk3", "health": "ONLINE", "present": true},
+      {"bay": 4, "device": "disk4", "health": "ONLINE", "present": true},
+      {"bay": 5, "device": "disk5", "health": "ONLINE", "present": true},
+      {"bay": 6, "device": "disk6", "health": "ONLINE", "present": true}
+    ]
+  },
+  "fans": {
+    "connected": true,
+    "fan_channels": [
+      {"alarm": false, "number": 1, "pwm": 185, "rpm": 1510},
+      {"alarm": false, "number": 2, "pwm": 185, "rpm": 1470},
+      {"alarm": false, "number": 3, "pwm": null, "rpm": 980}
+    ]
+  },
+  "hostname": "HoloDeck-BattleStation",
+  "lcd": {"connected": true, "controller": "A125", "port": "virtual:a125"},
+  "load_average": [0.22, 0.28, 0.31],
+  "network": {
+    "enp115s0": {"address": null, "kind": "lan", "link_up": false, "operstate": "DOWN", "position": 1, "primary": false},
+    "enp116s0": {"address": "192.0.2.10", "kind": "lan", "link_up": true, "operstate": "UP", "position": 2, "primary": true},
+    "enp120s0": {"address": null, "kind": "lan", "link_up": false, "operstate": "DOWN", "position": 3, "primary": false},
+    "enp121s0": {"address": null, "kind": "lan", "link_up": false, "operstate": "DOWN", "position": 4, "primary": false},
+    "tailscale0": {"address": "100.64.0.10", "kind": "tailscale", "link_up": true, "operstate": "UNKNOWN", "primary": false}
+  },
+  "pools": [
+    {"capacity": "57%", "free": "18T", "health": "ONLINE", "name": "HDDs", "size": "42T", "used": "24T"},
+    {"capacity": "24%", "free": "690G", "health": "ONLINE", "name": "SSDs", "size": "910G", "used": "220G"}
+  ],
+  "ram_percent": 41.0,
+  "sensors": {"cpu": 51.0, "system": 38.0},
+  "simulation": true,
+  "telemetry_fresh": true,
+  "temps": [
+    {"drive": "disk1", "temp": 36},
+    {"drive": "disk2", "temp": 37},
+    {"drive": "disk3", "temp": 36},
+    {"drive": "disk4", "temp": 38},
+    {"drive": "disk5", "temp": 37},
+    {"drive": "disk6", "temp": 36}
+  ],
+  "uptime_seconds": 864000
+}
