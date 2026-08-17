@@ -711,3 +711,47 @@ def test_dashboard_health_advisory_is_conditional_and_safe():
         'type="button" disabled'
         in source
     )
+
+
+def test_dashboard_has_compact_cooling_instrument_strip():
+    source = dashboard_source()
+
+    assert (
+        'class="cooling-instruments" '
+        'aria-label="Current cooling operation"'
+        in source
+    )
+
+    for label in (
+        "Hottest temperature",
+        "Active profile",
+        "Recommended profile",
+        "Automatic readiness",
+    ):
+        assert label in source
+
+    for element_id in (
+        "fans",
+        "fanThermalTemperature",
+        "fanActiveProfile",
+        "fanThermalRecommendation",
+        "fanThermalReadiness",
+    ):
+        assert source.count(
+            f'id="{element_id}"'
+        ) == 1
+
+    assert (
+        source.index(
+            'class="cooling-instruments"'
+        )
+        < source.index(
+            '<div class="control-panel">'
+        )
+    )
+
+    assert (
+        ".cooling-fans "
+        ".fan-reading>span:first-child"
+        in source
+    )

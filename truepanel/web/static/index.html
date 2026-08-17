@@ -84,6 +84,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .lcd-transport .row{padding:.4rem 0;font-size:.78rem}
 .lcd-transport .value{overflow-wrap:anywhere}
 @media(max-width:720px){.lcd-faceplate{grid-template-columns:1fr;padding:.85rem}.lcd-controls{display:grid;grid-template-columns:1fr 1fr}.lcd-rocker{min-height:58px}.lcd-screen{padding:.85rem .55rem}.lcd-row{font-size:clamp(1rem,5.4vw,1.6rem)}}
+.cooling-instruments{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}
+.cooling-instrument{min-width:0;padding:.8rem;border:1px solid rgba(143,164,184,.18);border-radius:10px;background:rgba(4,10,16,.48)}
+.cooling-instrument .label{display:block;font-size:.68rem;letter-spacing:.09em;text-transform:uppercase}
+.cooling-instrument .value{display:block;margin-top:.35rem;text-align:left;font-size:1rem;font-weight:750;overflow-wrap:anywhere}
+.cooling-fans{grid-column:1/-1;padding:.25rem .8rem;border:1px solid rgba(57,167,255,.24);border-radius:10px;background:rgba(3,10,17,.55)}
+.cooling-fans .row{align-items:center}
+.cooling-fans .fan-reading{width:min(100%,420px)}
+.cooling-fans .fan-reading>span:first-child{font-size:1.05rem;font-weight:800;color:var(--text)}
+.cooling-fans .fan-gauge{width:100%}
+@media(max-width:900px){.cooling-instruments{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.cooling-instruments{grid-template-columns:1fr}.cooling-fans{grid-column:1}.cooling-fans .row{display:block}.cooling-fans .fan-reading{width:100%;margin-top:.45rem;align-items:flex-start}}
 .health-command{position:relative;overflow:hidden;padding:1.35rem 1.5rem;border-color:rgba(57,167,255,.38);background:linear-gradient(115deg,rgba(17,39,59,.98),rgba(8,14,23,.98) 58%,rgba(8,25,38,.98))}
 .health-command::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(57,167,255,.035),transparent)}
 .health-command-head{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem}
@@ -191,17 +202,19 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 </div>
 </article>
 <article class="card wide"><h2>Cooling</h2>
-<div id="fans" class="detail">Awaiting fan telemetry</div>
+<div class="cooling-instruments" aria-label="Current cooling operation">
+<div class="cooling-instrument"><span class="label">Hottest temperature</span><span id="fanThermalTemperature" class="value">--</span></div>
+<div class="cooling-instrument"><span class="label">Active profile</span><span id="fanActiveProfile" class="value">Automatic</span></div>
+<div class="cooling-instrument"><span class="label">Recommended profile</span><span id="fanThermalRecommendation" class="value">Awaiting telemetry</span></div>
+<div class="cooling-instrument"><span class="label">Automatic readiness</span><span id="fanThermalReadiness" class="value">Evaluating</span></div>
+<div id="fans" class="detail cooling-fans">Awaiting fan telemetry</div>
+</div>
 <div class="control-panel">
 <div class="control-state">
 <div class="row"><span class="label">Control runtime</span><span id="fanControlConnection" class="value">Checking</span></div>
-<div class="row"><span class="label">Active profile</span><span id="fanActiveProfile" class="value">Automatic</span></div>
 <div class="row"><span class="label">Requested profile</span><span id="fanRequestedProfile" class="value">Automatic</span></div>
-<div class="row"><span class="label">Thermal recommendation</span><span id="fanThermalRecommendation" class="value">Awaiting telemetry</span></div>
 <div class="row"><span class="label">Recommendation alignment</span><span id="fanThermalAlignment" class="value">Awaiting telemetry</span></div>
-<div class="row"><span class="label">Automatic readiness</span><span id="fanThermalReadiness" class="value">Evaluating</span></div>
 <div class="row"><span class="label">Readiness checks</span><span id="fanThermalChecks" class="value">Awaiting status</span></div>
-<div class="row"><span class="label">Observer temperature</span><span id="fanThermalTemperature" class="value">--</span></div>
 <div class="row"><span class="label">Automatic restore</span><span id="fanControlCountdown" class="value">Not scheduled</span></div>
 </div>
 <div class="control-actions">
