@@ -21,6 +21,10 @@ from truepanel.hardware.commands import (
     handle_hardware_command,
 )
 from truepanel.history import TelemetryRecorder
+from truepanel.holodeck.commands import (
+    add_holodeck_subcommands,
+    handle_holodeck_command,
+)
 from truepanel.host.commands import (
     add_host_subcommands,
     handle_host_command,
@@ -298,6 +302,7 @@ def build_parser():
     add_plugin_subcommands(subcommands)
     add_hardware_subcommands(subcommands)
     add_host_subcommands(subcommands)
+    add_holodeck_subcommands(subcommands)
     add_mission_control_subcommands(subcommands)
     subcommands.add_parser("version", help="Show TruePanel version")
 
@@ -661,6 +666,11 @@ def main():
         raise SystemExit(
             host_result
         )
+
+    holodeck_result = handle_holodeck_command(args)
+
+    if holodeck_result is not None:
+        raise SystemExit(holodeck_result)
 
     registry = load_plugins()
 
