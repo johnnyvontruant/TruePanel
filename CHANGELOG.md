@@ -33,6 +33,8 @@ a refined Virtual Front Panel, and a clearer Mission Control cockpit.
   operator decisions.
 - Moved commissioning, fan-control, and thermal history into a
   collapsed diagnostics drawer while keeping live controls visible.
+- Guarded promotion now bootstraps the managed `bin/truepanel` CLI
+  wrapper when upgrading legacy deployments that predate it.
 
 ### Safety
 

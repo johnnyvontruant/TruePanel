@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -309,6 +310,65 @@ def sync_tree(
     )
 
 
+
+def ensure_cli_wrapper(
+    deploy_root: Path,
+) -> tuple[bool, str]:
+    """Create the managed CLI wrapper for legacy deployments."""
+
+    bin_root = deploy_root / "bin"
+    wrapper = bin_root / "truepanel"
+
+    if wrapper.is_file():
+        return True, str(wrapper)
+
+    if wrapper.exists():
+        return (
+            False,
+            f"Wrapper path is not a file: {wrapper}",
+        )
+
+    if bin_root.exists() and not bin_root.is_dir():
+        return (
+            False,
+            f"CLI path is not a directory: {bin_root}",
+        )
+
+    temporary = wrapper.with_name(
+        wrapper.name + ".tmp"
+    )
+    python_path = (
+        deploy_root / ".venv" / "bin" / "python"
+    )
+    launcher = deploy_root / "truepanel.py"
+
+    try:
+        bin_root.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        temporary.write_text(
+            (
+                "#!/usr/bin/env bash\n"
+                f'cd "{deploy_root}"\n'
+                f'exec "{python_path}" '
+                f'"{launcher}" "$@"\n'
+            ),
+            encoding="utf-8",
+        )
+        temporary.chmod(0o755)
+        temporary.replace(wrapper)
+    except OSError as error:
+        with suppress(OSError):
+            temporary.unlink(
+                missing_ok=True
+            )
+
+        return False, str(error)
+
+    return True, str(wrapper)
+
+
 def update_manifest_state(
     plan: PromotionPlan,
     *,
@@ -409,18 +469,31 @@ def promote_with_rollback(
         )
         return 1
 
-    restart_result = restarter(
-        plan.deploy_root
-    )
-
-    if restart_result == 0:
-        verification_result = verifier(
+    wrapper_ok, wrapper_detail = (
+        ensure_cli_wrapper(
             plan.deploy_root
         )
-    else:
-        verification_result = (
-            restart_result
+    )
+
+    if not wrapper_ok:
+        print(
+            "FAIL  CLI wrapper bootstrap: "
+            f"{wrapper_detail}"
         )
+        verification_result = 1
+    else:
+        restart_result = restarter(
+            plan.deploy_root
+        )
+
+        if restart_result == 0:
+            verification_result = verifier(
+                plan.deploy_root
+            )
+        else:
+            verification_result = (
+                restart_result
+            )
 
     if verification_result == 0:
         update_manifest_state(

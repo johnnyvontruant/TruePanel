@@ -5,8 +5,12 @@ from pathlib import Path
 
 from truepanel.upgrade.promotion import (
     MANIFEST_NAME,
+    PROMOTION_DEPLOY_EXCLUDES,
     build_promotion_plan,
+    ensure_cli_wrapper,
     promote_with_rollback,
+    sync_command,
+    verify_truepanel,
 )
 
 PRESERVED_NAMES = {
@@ -212,6 +216,13 @@ def test_successful_promotion_preserves_runtime_state(
         runtime_marker.read_text()
         == "preserved"
     )
+
+    wrapper = (
+        deployed / "bin" / "truepanel"
+    )
+    assert wrapper.is_file()
+    assert wrapper.stat().st_mode & 0o111
+
     assert (
         backup
         / "truepanel"
@@ -316,6 +327,12 @@ def test_failed_verification_rolls_back(
     ).read_text() == (
         "theme_pack: tactical\n"
     )
+    assert not (
+        deployed / "bin" / "truepanel"
+    ).exists()
+    assert not (
+        backup / "bin" / "truepanel"
+    ).exists()
 
     manifest = json.loads(
         (
@@ -543,6 +560,7 @@ def test_promotion_rejects_unsafe_backup_before_copy(
 
         def forbidden_runner(
             *args,
+            calls=calls,
             **kwargs,
         ):
             calls.append("runner")
@@ -568,53 +586,205 @@ def test_promotion_rejects_unsafe_backup_before_copy(
             / "truepanel"
             / "marker.txt"
         ).read_text() == "old"
-def test_promotion_bin_exclusion_is_deploy_only(tmp_path):
-    from truepanel.upgrade.promotion import PROMOTION_DEPLOY_EXCLUDES, sync_command
-    s=tmp_path/"source"; d=tmp_path/"dest"
-    assert "--exclude=bin/" not in sync_command(s,d)
-    assert "--exclude=bin/" in sync_command(s,d,extra_excludes=PROMOTION_DEPLOY_EXCLUDES)
+def test_promotion_bin_exclusion_is_deploy_only(
+    tmp_path,
+):
+    source = tmp_path / "source"
+    destination = tmp_path / "destination"
+
+    assert "--exclude=bin/" not in sync_command(
+        source,
+        destination,
+    )
+    assert "--exclude=bin/" in sync_command(
+        source,
+        destination,
+        extra_excludes=PROMOTION_DEPLOY_EXCLUDES,
+    )
 
 
 def _verify_runtime(root):
-    py=root/".venv"/"bin"/"python"; py.parent.mkdir(parents=True); py.write_text("python\n")
-    launcher=root/"truepanel.py"; launcher.write_text("launcher\n")
-    return py, launcher
+    python_path = (
+        root / ".venv" / "bin" / "python"
+    )
+    python_path.parent.mkdir(
+        parents=True
+    )
+    python_path.write_text(
+        "python\n"
+    )
+
+    launcher = root / "truepanel.py"
+    launcher.write_text(
+        "launcher\n"
+    )
+
+    return python_path, launcher
 
 
-def test_verify_truepanel_uses_deployed_generation(tmp_path):
-    import subprocess
-    from truepanel.upgrade.promotion import verify_truepanel
-    root=tmp_path/"TruePanel"; py, launcher=_verify_runtime(root); calls=[]
-    def runner(command,**kwargs):
-        calls.append((list(command),kwargs))
-        return subprocess.CompletedProcess(command,0,"Verification Result\nPASS\n","")
-    assert verify_truepanel(root,runner=runner,sleeper=lambda delay:None)==0
-    assert calls[0][0]==[str(py.resolve()),str(launcher.resolve()),"verify","--root",str(root.resolve())]
-    assert calls[0][1]["timeout"]==120.0
+def test_verify_truepanel_uses_deployed_generation(
+    tmp_path,
+):
+    root = tmp_path / "TruePanel"
+    python_path, launcher = (
+        _verify_runtime(root)
+    )
+    calls = []
 
+    def runner(command, **kwargs):
+        calls.append(
+            (
+                list(command),
+                kwargs,
+            )
+        )
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            "Verification Result\nPASS\n",
+            "",
+        )
 
-def test_verify_truepanel_retries_transient_readiness(tmp_path):
-    import subprocess
-    from truepanel.upgrade.promotion import verify_truepanel
-    root=tmp_path/"TruePanel"; _verify_runtime(root); sleeps=[]; calls=[]
-    responses=[
-        subprocess.CompletedProcess(["verify"],1,"FAIL  LCD transport                  port=/dev/ttyS1 baud=1200 errors=0\n",""),
-        subprocess.CompletedProcess(["verify"],0,"Verification Result\nPASS\n",""),
+    assert verify_truepanel(
+        root,
+        runner=runner,
+        sleeper=lambda delay: None,
+    ) == 0
+    assert calls[0][0] == [
+        str(python_path.resolve()),
+        str(launcher.resolve()),
+        "verify",
+        "--root",
+        str(root.resolve()),
     ]
-    def runner(command,**kwargs):
-        calls.append(list(command)); return responses.pop(0)
-    assert verify_truepanel(root,runner=runner,sleeper=sleeps.append,attempts=3,retry_delay=0.25)==0
-    assert len(calls)==2
-    assert sleeps==[0.25]
+    assert calls[0][1]["timeout"] == 120.0
 
 
-def test_verify_truepanel_does_not_retry_real_failure(tmp_path):
-    import subprocess
-    from truepanel.upgrade.promotion import verify_truepanel
-    root=tmp_path/"TruePanel"; _verify_runtime(root); sleeps=[]; calls=[]
-    def runner(command,**kwargs):
-        calls.append(list(command))
-        return subprocess.CompletedProcess(command,1,"FAIL  Package version                Runtime=1.2.0rc1; deployment metadata differs\nFAIL  LCD transport                  port=/dev/ttyS1 baud=1200 errors=0\n","")
-    assert verify_truepanel(root,runner=runner,sleeper=sleeps.append,attempts=3,retry_delay=0.25)==1
-    assert len(calls)==1
-    assert sleeps==[]
+def test_verify_truepanel_retries_transient_readiness(
+    tmp_path,
+):
+    root = tmp_path / "TruePanel"
+    _verify_runtime(root)
+    sleeps = []
+    calls = []
+    responses = [
+        subprocess.CompletedProcess(
+            ["verify"],
+            1,
+            (
+                "FAIL  LCD transport                  "
+                "port=/dev/ttyS1 baud=1200 errors=0\n"
+            ),
+            "",
+        ),
+        subprocess.CompletedProcess(
+            ["verify"],
+            0,
+            "Verification Result\nPASS\n",
+            "",
+        ),
+    ]
+
+    def runner(command, **_kwargs):
+        calls.append(
+            list(command)
+        )
+        return responses.pop(0)
+
+    assert verify_truepanel(
+        root,
+        runner=runner,
+        sleeper=sleeps.append,
+        attempts=3,
+        retry_delay=0.25,
+    ) == 0
+    assert len(calls) == 2
+    assert sleeps == [0.25]
+
+
+def test_verify_truepanel_does_not_retry_real_failure(
+    tmp_path,
+):
+    root = tmp_path / "TruePanel"
+    _verify_runtime(root)
+    sleeps = []
+    calls = []
+
+    def runner(command, **_kwargs):
+        calls.append(
+            list(command)
+        )
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            (
+                "FAIL  Package version                "
+                "Runtime=1.2.0rc1; deployment metadata differs\n"
+                "FAIL  LCD transport                  "
+                "port=/dev/ttyS1 baud=1200 errors=0\n"
+            ),
+            "",
+        )
+
+    assert verify_truepanel(
+        root,
+        runner=runner,
+        sleeper=sleeps.append,
+        attempts=3,
+        retry_delay=0.25,
+    ) == 1
+    assert len(calls) == 1
+    assert sleeps == []
+
+
+def test_ensure_cli_wrapper_bootstraps_legacy_deployment(
+    tmp_path,
+):
+    deployed = tmp_path / "TruePanel"
+    deployed.mkdir()
+
+    success, detail = ensure_cli_wrapper(
+        deployed
+    )
+
+    wrapper = (
+        deployed / "bin" / "truepanel"
+    )
+
+    assert success is True
+    assert detail == str(wrapper)
+    assert wrapper.read_text(
+        encoding="utf-8"
+    ) == (
+        "#!/usr/bin/env bash\n"
+        f'cd "{deployed}"\n'
+        f'exec "{deployed}/.venv/bin/python" '
+        f'"{deployed}/truepanel.py" "$@"\n'
+    )
+    assert wrapper.stat().st_mode & 0o111
+
+
+def test_ensure_cli_wrapper_preserves_existing_wrapper(
+    tmp_path,
+):
+    deployed = tmp_path / "TruePanel"
+    wrapper = (
+        deployed / "bin" / "truepanel"
+    )
+    wrapper.parent.mkdir(
+        parents=True
+    )
+    wrapper.write_text(
+        "managed wrapper\n",
+        encoding="utf-8",
+    )
+
+    success, detail = ensure_cli_wrapper(
+        deployed
+    )
+
+    assert success is True
+    assert detail == str(wrapper)
+    assert wrapper.read_text(
+        encoding="utf-8"
+    ) == "managed wrapper\n"
