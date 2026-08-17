@@ -223,6 +223,7 @@ Mission Control runs as an independent web companion service. It is localhost-bo
 - [A125 protocol](docs/A125_PROTOCOL.md)
 - [Plugin API](docs/PLUGIN_API.md)
 - [Historical telemetry](docs/HISTORICAL_TELEMETRY.md)
+- [Project HoloDeck Digital Twin](docs/HOLODECK.md)
 - [Development guide](docs/DEVELOPMENT.md)
 - [Project history](docs/HISTORY.md)
 - [Roadmap](docs/ROADMAP.md)
