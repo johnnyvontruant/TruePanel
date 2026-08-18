@@ -59,6 +59,47 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .fan-gauge-fill{display:block;height:100%;width:0;background:var(--accent);transition:width .35s ease}
 .fan-scale{font-size:.7rem;color:var(--muted)}
 .profile-target{display:block;margin-top:.15rem;font-size:.68rem;color:var(--muted);font-weight:400}
+.preflight-panel{position:relative;overflow:hidden;border-color:rgba(57,167,255,.34);background:linear-gradient(130deg,rgba(13,30,45,.98),rgba(7,14,23,.98) 58%,rgba(8,24,36,.98))}
+.preflight-panel::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(57,167,255,.025),transparent)}
+.preflight-head,.preflight-sections,.preflight-actions,.preflight-details,.preflight-message{position:relative;z-index:1}
+.preflight-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem}
+.preflight-head h2{margin-bottom:.45rem}
+.preflight-status{font-size:clamp(1.7rem,4vw,2.8rem);font-weight:850;line-height:1;letter-spacing:.05em}
+.preflight-status.good{color:var(--good)}
+.preflight-status.warn{color:var(--warn)}
+.preflight-status.bad{color:var(--bad)}
+.preflight-summary{margin-top:.45rem;color:var(--text);font-size:.95rem}
+.preflight-meta{display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;color:var(--muted);font-size:.75rem;text-align:right}
+.preflight-meta strong{color:var(--text);font-weight:700}
+.preflight-sections{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.65rem;margin-top:1.15rem}
+.preflight-section{min-width:0;padding:.75rem;border:1px solid var(--edge);border-radius:10px;background:rgba(3,8,13,.5)}
+.preflight-section-name{display:block;overflow:hidden;color:var(--muted);font-size:.68rem;letter-spacing:.08em;text-overflow:ellipsis;text-transform:uppercase}
+.preflight-section-status{display:block;margin-top:.3rem;font-size:.9rem;font-weight:800;letter-spacing:.04em}
+.preflight-section-status.good{color:var(--good)}
+.preflight-section-status.warn{color:var(--warn)}
+.preflight-section-status.bad{color:var(--bad)}
+.preflight-section-count{display:block;margin-top:.2rem;color:var(--muted);font-size:.7rem}
+.preflight-actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1rem}
+.button-link{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--edge);border-radius:8px;padding:.7rem 1rem;background:#132030;color:var(--text);font-size:.86rem;font-weight:700;text-decoration:none}
+.button-link:hover{border-color:#238fd5;background:#172b3e}
+.preflight-details{margin-top:1rem;padding:.75rem .9rem;border:1px solid rgba(143,164,184,.18);border-radius:10px;background:rgba(3,9,15,.46)}
+.preflight-details>summary{cursor:pointer;color:var(--text);font-size:.8rem;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+.preflight-detail-group{margin-top:.8rem}
+.preflight-detail-group h3{margin:0 0 .35rem;color:var(--muted);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase}
+.preflight-check{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(90px,.35fr) minmax(220px,1.7fr);gap:.75rem;padding:.5rem 0;border-bottom:1px solid rgba(143,164,184,.12);font-size:.78rem}
+.preflight-check:last-child{border-bottom:0}
+.preflight-check-name{color:var(--text);font-weight:650}
+.preflight-check-status{font-weight:800}
+.preflight-check-status.good{color:var(--good)}
+.preflight-check-status.warn{color:var(--warn)}
+.preflight-check-status.bad{color:var(--bad)}
+.preflight-check-detail{color:var(--muted);overflow-wrap:anywhere}
+.preflight-message{min-height:1rem;margin-top:.7rem;color:var(--muted);font-size:.75rem}
+.preflight-message.good{color:var(--good)}
+.preflight-message.warn{color:var(--warn)}
+.preflight-message.bad{color:var(--bad)}
+@media(max-width:900px){.preflight-sections{grid-template-columns:repeat(2,minmax(0,1fr))}.preflight-section:last-child{grid-column:1/-1}}
+@media(max-width:640px){.preflight-head{display:block}.preflight-meta{align-items:flex-start;margin-top:.7rem;text-align:left}.preflight-sections{grid-template-columns:1fr}.preflight-section:last-child{grid-column:auto}.preflight-check{grid-template-columns:1fr;gap:.2rem}}
 .lcd-panel{grid-column:1/-1;padding:1.25rem;background:linear-gradient(145deg,#151b22,#080b0f);border-color:#34404c;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.28)}
 .lcd-faceplate{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:1.25rem;align-items:stretch;max-width:920px;margin:0 auto;padding:1.2rem;border:1px solid #3a4652;border-radius:16px;background:linear-gradient(135deg,#252b31 0,#11161b 52%,#080b0e 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03),inset 0 -18px 28px rgba(0,0,0,.35),0 16px 32px rgba(0,0,0,.32)}
 .lcd-screen-bezel{display:flex;align-items:center;justify-content:center;min-width:0;padding:1rem;border:1px solid #02070c;border-radius:10px;background:#03070b;box-shadow:inset 0 0 18px #000,0 1px 0 rgba(255,255,255,.08)}
@@ -165,6 +206,30 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div id="healthAdvisoryAction" class="health-advisory-action"></div>
 </div>
 <button id="openFlightManual" type="button" disabled>Open Flight Manual</button>
+</article>
+<article id="preflightPanel" class="card wide preflight-panel" aria-labelledby="preflightTitle">
+<div class="preflight-head">
+<div>
+<h2 id="preflightTitle">Preflight</h2>
+<div id="preflightFlightStatus" class="preflight-status warn">CHECKING</div>
+<div id="preflightSummary" class="preflight-summary">Running passive compatibility survey.</div>
+</div>
+<div class="preflight-meta">
+<span>Mode: <strong id="preflightMode">Observation only</strong></span>
+<span>Authority: <strong id="preflightAuthority">Hardware control locked</strong></span>
+<span id="preflightCounts">Awaiting checks</span>
+</div>
+</div>
+<div id="preflightSections" class="preflight-sections" aria-label="Preflight subsystem results"></div>
+<div class="preflight-actions">
+<button id="runPreflight" class="primary" type="button">Run Preflight Again</button>
+<a id="preflightSupportBundle" class="button-link" href="/api/v1/preflight/support-bundle" download>Download Support Bundle</a>
+</div>
+<details class="preflight-details">
+<summary>View compatibility details</summary>
+<div id="preflightDetails"></div>
+</details>
+<div id="preflightMessage" class="preflight-message" aria-live="polite">Compatibility checks run on demand and never grant hardware-control authority.</div>
 </article>
 <article class="card"><h2>CPU</h2><div id="cpu" class="metric">--</div><div id="load" class="detail">Awaiting telemetry</div></article>
 <article class="card"><h2>Memory</h2><div id="ram" class="metric">--</div></article>
@@ -1116,6 +1181,210 @@ async function loadFanHistory(){
         await response.json()
     );
 }
+function preflightTone(status){
+    const normalized=String(status||"").toUpperCase();
+
+    if(normalized==="READY"||normalized==="PASS"){
+        return "good";
+    }
+
+    if(normalized==="HOLD"||normalized==="FAIL"){
+        return "bad";
+    }
+
+    return "warn";
+}
+
+function preflightElement(tag,className,text){
+    const element=document.createElement(tag);
+
+    if(className){
+        element.className=className;
+    }
+
+    if(text!==undefined&&text!==null){
+        element.textContent=String(text);
+    }
+
+    return element;
+}
+
+function renderPreflight(payload){
+    const flightStatus=String(
+        payload&&payload.flight_status||"REVIEW"
+    ).toUpperCase();
+    const tone=preflightTone(flightStatus);
+    const sections=Array.isArray(payload&&payload.sections)
+        ?payload.sections
+        :[];
+    const counts=payload&&payload.counts||{};
+
+    q("preflightPanel").dataset.loaded="true";
+    q("preflightFlightStatus").textContent=flightStatus;
+    q("preflightFlightStatus").className=
+        `preflight-status ${tone}`;
+    q("preflightSummary").textContent=val(
+        payload&&payload.summary,
+        "Compatibility result available."
+    );
+    q("preflightMode").textContent=val(
+        payload&&payload.installation_mode,
+        "Observation only"
+    );
+    q("preflightAuthority").textContent=val(
+        payload&&payload.hardware_control,
+        "Hardware control locked"
+    );
+    q("preflightCounts").textContent=(
+        `${Number(counts.pass||0)} pass · `
+        +`${Number(counts.review||0)} review · `
+        +`${Number(counts.fail||0)} fail`
+    );
+
+    const sectionRoot=q("preflightSections");
+    const detailsRoot=q("preflightDetails");
+    sectionRoot.replaceChildren();
+    detailsRoot.replaceChildren();
+
+    sections.forEach(section=>{
+        const checks=Array.isArray(section&&section.checks)
+            ?section.checks
+            :[];
+        const sectionStatus=String(
+            section&&section.status||"REVIEW"
+        ).toUpperCase();
+        const sectionTone=preflightTone(sectionStatus);
+        const card=preflightElement(
+            "div",
+            "preflight-section"
+        );
+        card.append(
+            preflightElement(
+                "span",
+                "preflight-section-name",
+                val(section&&section.label,"Unknown")
+            ),
+            preflightElement(
+                "strong",
+                `preflight-section-status ${sectionTone}`,
+                sectionStatus
+            ),
+            preflightElement(
+                "span",
+                "preflight-section-count",
+                `${checks.length} ${checks.length===1?"check":"checks"}`
+            )
+        );
+        sectionRoot.append(card);
+
+        const group=preflightElement(
+            "section",
+            "preflight-detail-group"
+        );
+        group.append(
+            preflightElement(
+                "h3",
+                "",
+                val(section&&section.label,"Unknown")
+            )
+        );
+
+        if(!checks.length){
+            group.append(
+                preflightElement(
+                    "div",
+                    "detail",
+                    "No checks reported."
+                )
+            );
+        }
+
+        checks.forEach(check=>{
+            const checkStatus=String(
+                check&&check.status||"REVIEW"
+            ).toUpperCase();
+            const row=preflightElement(
+                "div",
+                "preflight-check"
+            );
+            row.append(
+                preflightElement(
+                    "span",
+                    "preflight-check-name",
+                    val(check&&check.name,"Unnamed check")
+                ),
+                preflightElement(
+                    "span",
+                    `preflight-check-status ${preflightTone(checkStatus)}`,
+                    checkStatus
+                ),
+                preflightElement(
+                    "span",
+                    "preflight-check-detail",
+                    val(check&&check.detail,"No detail reported")
+                )
+            );
+            group.append(row);
+        });
+
+        detailsRoot.append(group);
+    });
+}
+
+let preflightRequestInFlight=false;
+
+async function loadPreflight(){
+    if(preflightRequestInFlight){
+        return;
+    }
+
+    preflightRequestInFlight=true;
+    q("runPreflight").disabled=true;
+    q("preflightMessage").textContent=
+        "Running passive compatibility survey…";
+    q("preflightMessage").className=
+        "preflight-message warn";
+
+    try{
+        const response=await fetch(
+            "/api/v1/preflight",
+            {cache:"no-store"}
+        );
+        const payload=await response.json();
+
+        if(!response.ok){
+            throw Error(
+                payload.message
+                ||"Preflight survey failed"
+            );
+        }
+
+        renderPreflight(payload);
+
+        const tone=preflightTone(
+            payload.flight_status
+        );
+        q("preflightMessage").textContent=
+            "Passive compatibility survey complete.";
+        q("preflightMessage").className=
+            `preflight-message ${tone}`;
+    }catch(error){
+        q("preflightFlightStatus").textContent=
+            "UNAVAILABLE";
+        q("preflightFlightStatus").className=
+            "preflight-status bad";
+        q("preflightSummary").textContent=
+            "Preflight could not complete.";
+        q("preflightMessage").textContent=
+            error.message;
+        q("preflightMessage").className=
+            "preflight-message bad";
+    }finally{
+        preflightRequestInFlight=false;
+        q("runPreflight").disabled=false;
+    }
+}
+
 function formPatch(){return{enabled:q("nightEnabled").checked,idle_after:Number(q("idleAfter").value),rotation_interval:Number(q("rotationInterval").value),suppress_info:q("suppressInfo").checked,backlight_off:q("backlightOff").checked,wake_on_button:q("wakeOnButton").checked}}
 function fillPolicy(p){q("nightEnabled").checked=!!p.enabled;q("idleAfter").value=p.idle_after;q("rotationInterval").value=p.rotation_interval;q("suppressInfo").checked=!!p.suppress_info;q("backlightOff").checked=!!p.backlight_off;q("wakeOnButton").checked=!!p.wake_on_button}
 function notice(message,tone=""){q("policyNotice").textContent=message;q("policyNotice").className="notice show "+tone}
@@ -1991,6 +2260,11 @@ async function refresh(){
             "control-message bad";
     }
 }
+q("runPreflight").addEventListener(
+    "click",
+    ()=>loadPreflight()
+);
+
 q("thermalArm").addEventListener(
     "click",
     ()=>requestThermalArm(
@@ -2120,6 +2394,7 @@ q("virtualLcdSelect").addEventListener(
     )
 );
 
+loadPreflight();
 refresh();
 refreshVirtualLcd();
 loadPolicy().catch(
