@@ -36,6 +36,9 @@ snapshot and Health Intelligence pipeline:
 python3 truepanel.py holodeck replay incident.jsonl --json
 ```
 
+Replay input is rejected before materialization when it exceeds 10,000
+nonblank frames, 64 MiB on disk, or the Black Box 256 KiB per-frame ceiling.
+
 Apply a fault to a fresh twin and inspect the resulting state:
 
 ```console
@@ -110,7 +113,10 @@ events, and every event timestamp must be finite and nonnegative.
 thermal policy, debounced fan-health watcher, stateful storage-health watcher,
 Mission Control snapshot service, and Health Intelligence. Its LCD and runtime
 status bridges are rooted in a caller-supplied temporary directory; production
-hardware managers and production `/run` and `/var` paths are never used.
+hardware managers and protected production paths are never used. The runner
+rejects `/dev`, `/etc`, `/proc`, `/run`, `/sys`, `/var`, filesystem root, and
+symlink aliases that resolve into those locations. It also requires a concrete
+HoloDeck provider rather than accepting a duck-typed `simulation` marker.
 
 One deterministic `step()` returns the raw simulated state, thermal
 recommendation, emitted Mission Events, and final Mission Control snapshot.

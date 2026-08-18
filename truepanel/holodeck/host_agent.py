@@ -132,6 +132,11 @@ def build_holodeck_host_agent_runtime(
 ) -> Any:
     """Build a real HostAgentRuntime with no socket or hardware access."""
 
+    if not isinstance(provider, HoloDeckHostProvider) or not provider.simulation:
+        raise ValueError(
+            "HoloDeck Host Agent requires a HoloDeck simulation provider"
+        )
+
     telemetry = HoloDeckFanTelemetryProvider(provider)
     executor = HoloDeckFanExecutor(provider)
     service = FanControlService(

@@ -4,12 +4,27 @@ import math
 import pytest
 
 from truepanel.history.black_box import (
+    MAX_BLACK_BOX_FRAME_BYTES,
+    MAX_BLACK_BOX_REPLAY_BYTES,
+    MAX_BLACK_BOX_REPLAY_FRAMES,
     REDACTED,
     BlackBoxFrame,
     BlackBoxRecorder,
     BlackBoxReplay,
     sanitize_black_box_value,
 )
+
+
+def encoded_frame(sequence=1):
+    frame = BlackBoxFrame.capture(
+        captured_at=float(sequence),
+        sequence=sequence,
+    )
+    return json.dumps(
+        frame.as_dict(),
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
 
 
 def test_sanitizer_redacts_sensitive_keys_and_embedded_identifiers():
@@ -194,6 +209,100 @@ def test_replay_enforces_imported_frame_size_limit(tmp_path):
     recorder.path.write_text("{" + '"padding":"' + ("x" * 2000) + '"}')
     with pytest.raises(ValueError, match="exceeds maximum size"):
         list(recorder.replay())
+
+
+def test_replay_frame_limit_is_enforced_before_materialization(tmp_path):
+    path = tmp_path / "black-box.jsonl"
+    path.write_bytes(b"\n".join(encoded_frame(index) for index in range(1, 4)))
+    recorder = BlackBoxRecorder(path, max_replay_frames=2)
+
+    iterator = iter(recorder.replay())
+    assert next(iterator).sequence == 1
+    assert next(iterator).sequence == 2
+    with pytest.raises(ValueError, match="frame limit exceeded: 3 > 2"):
+        next(iterator)
+
+
+def test_replay_accepts_exact_frame_and_byte_limits(tmp_path):
+    path = tmp_path / "black-box.jsonl"
+    raw = encoded_frame(1) + b"\r\n" + encoded_frame(2)
+    path.write_bytes(raw)
+
+    replay = BlackBoxRecorder(
+        path,
+        max_replay_frames=2,
+        max_replay_bytes=len(raw),
+    ).load_replay()
+
+    assert [frame.sequence for frame in replay.frames] == [1, 2]
+
+
+def test_replay_rejects_one_byte_over_total_limit(tmp_path):
+    path = tmp_path / "black-box.jsonl"
+    raw = encoded_frame() + b"\n"
+    path.write_bytes(raw)
+
+    with pytest.raises(ValueError, match="byte limit exceeded"):
+        BlackBoxRecorder(
+            path,
+            max_replay_bytes=len(raw) - 1,
+        ).load_replay()
+
+
+def test_replay_total_limit_counts_blank_lines(tmp_path):
+    path = tmp_path / "black-box.jsonl"
+    raw = b" " * 32 + b"\n" + encoded_frame()
+    path.write_bytes(raw)
+
+    with pytest.raises(ValueError, match="byte limit exceeded"):
+        BlackBoxRecorder(
+            path,
+            max_replay_bytes=len(raw) - 1,
+        ).load_replay()
+
+
+def test_replay_streams_oversized_blank_lines_without_counting_frames(tmp_path):
+    path = tmp_path / "black-box.jsonl"
+    path.write_bytes(b" " * 2048 + b"\n" + encoded_frame())
+
+    replay = BlackBoxRecorder(
+        path,
+        max_frame_bytes=1024,
+    ).load_replay()
+
+    assert [frame.sequence for frame in replay.frames] == [1]
+
+
+def test_replay_wraps_invalid_utf8_with_physical_line_number(tmp_path):
+    path = tmp_path / "black-box.jsonl"
+    path.write_bytes(b"\n\xff\n")
+
+    with pytest.raises(ValueError, match="frame at line 2"):
+        BlackBoxRecorder(path).load_replay()
+
+
+def test_replay_accepts_final_frame_without_line_terminator(tmp_path):
+    path = tmp_path / "black-box.jsonl"
+    path.write_bytes(encoded_frame())
+
+    assert BlackBoxRecorder(path).load_replay().frames[0].sequence == 1
+
+
+@pytest.mark.parametrize(
+    ("keyword", "value"),
+    (
+        ("max_frame_bytes", MAX_BLACK_BOX_FRAME_BYTES + 1),
+        ("max_replay_frames", MAX_BLACK_BOX_REPLAY_FRAMES + 1),
+        ("max_replay_bytes", MAX_BLACK_BOX_REPLAY_BYTES + 1),
+    ),
+)
+def test_replay_limits_cannot_exceed_authoritative_ceiling(
+    tmp_path,
+    keyword,
+    value,
+):
+    with pytest.raises(ValueError, match="limit must be between"):
+        BlackBoxRecorder(tmp_path / "black-box.jsonl", **{keyword: value})
 
 
 def replay_fixture():

@@ -8,20 +8,18 @@ from argparse import ArgumentTypeError, _SubParsersAction
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from truepanel.history.black_box import BlackBoxReplay
-from truepanel.web.snapshot import SnapshotService
+from truepanel.history.black_box import (
+    MAX_BLACK_BOX_REPLAY_FRAMES,
+    BlackBoxReplay,
+)
 
 from .catalog import HOSTS, host_fixture
 from .clock import DeterministicClock
-from .compiler import IncidentCompiler
 from .invariants import DEFAULT_INVARIANT_RULES, evaluate_timeline
 from .provider import HoloDeckHostProvider
-from .replay import BlackBoxHoloDeckProvider
-from .runner import HoloDeckScenarioRunner
 from .scenario import load_scenario
 
 MAX_REPORT_STEPS = 1_000
-MAX_COMPILER_FRAMES = 10_000
 MAX_COMPILER_EVALUATIONS = 1_000
 
 
@@ -142,9 +140,11 @@ def add_holodeck_subcommands(subcommands: _SubParsersAction) -> None:
     compile_incident.add_argument(
         "--max-frames",
         type=lambda value: _bounded_integer(
-            value, maximum=MAX_COMPILER_FRAMES, label="max-frames"
+            value,
+            maximum=MAX_BLACK_BOX_REPLAY_FRAMES,
+            label="max-frames",
         ),
-        default=MAX_COMPILER_FRAMES,
+        default=MAX_BLACK_BOX_REPLAY_FRAMES,
     )
     compile_incident.add_argument(
         "--max-evaluations",
@@ -202,6 +202,8 @@ def handle_holodeck_command(args) -> int | None:
         return _compile_incident(args)
 
     if args.holodeck_action == "replay":
+        from .replay import BlackBoxHoloDeckProvider
+
         provider = BlackBoxHoloDeckProvider.from_recording(
             args.recording,
             host=args.host,
@@ -218,6 +220,8 @@ def handle_holodeck_command(args) -> int | None:
         return 0
 
     with TemporaryDirectory(prefix="truepanel-holodeck-") as directory:
+        from truepanel.web.snapshot import SnapshotService
+
         root = Path(directory)
         service = SnapshotService(
             collector=provider,
@@ -274,6 +278,8 @@ def _invariant_payload(result) -> dict:
 
 
 def _check_invariants(args, provider) -> int:
+    from .runner import HoloDeckScenarioRunner
+
     with TemporaryDirectory(prefix="truepanel-holodeck-check-") as directory:
         runner = HoloDeckScenarioRunner(provider, runtime_dir=directory)
         observations = []
@@ -301,6 +307,10 @@ def _check_invariants(args, provider) -> int:
 
 
 def _compile_incident(args) -> int:
+    from .compiler import IncidentCompiler
+    from .replay import BlackBoxHoloDeckProvider
+    from .runner import HoloDeckScenarioRunner
+
     if args.output.exists():
         raise ValueError(f"refusing to overwrite existing output: {args.output}")
 

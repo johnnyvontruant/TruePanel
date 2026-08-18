@@ -105,3 +105,25 @@ def test_holodeck_hardware_boundary_remains_deny_all():
 
     with pytest.raises(RuntimeError, match="hardware writes"):
         twin.hardware.write("pwm1", 255)
+
+
+def test_host_agent_rejects_duck_typed_simulation_provider():
+    class FakeProvider:
+        simulation = True
+
+        def apply_fan_decision(self, decision):
+            raise AssertionError(f"unexpected fan decision: {decision}")
+
+    with pytest.raises(ValueError, match="requires a HoloDeck simulation provider"):
+        build_holodeck_host_agent_runtime(FakeProvider())
+
+
+def test_host_agent_runtime_object_graph_is_process_local():
+    runtime = build_holodeck_host_agent_runtime(provider())
+
+    assert runtime.holodeck_executor is runtime.safety.fan_runtime.service.executor
+    assert runtime._ownership_guard is runtime.holodeck_ownership
+    assert runtime.holodeck_status.fan_runtime is runtime.safety.fan_runtime
+
+    runtime.start()
+    assert runtime.fan_server is None

@@ -2,7 +2,12 @@ import json
 
 import pytest
 
-from truepanel.history.black_box import BlackBoxFrame, BlackBoxRecorder, BlackBoxReplay
+from truepanel.history.black_box import (
+    MAX_BLACK_BOX_REPLAY_FRAMES,
+    BlackBoxFrame,
+    BlackBoxRecorder,
+    BlackBoxReplay,
+)
 from truepanel.holodeck.compiler import IncidentCompiler
 
 
@@ -107,3 +112,32 @@ def test_rejects_nonviolating_empty_and_oversized_sources():
             invariant_id="large",
             max_frames=1,
         ).compile(BlackBoxReplay([frame(0), frame(1)]))
+
+
+def test_compiler_cannot_raise_authoritative_replay_frame_limit():
+    with pytest.raises(ValueError, match="max_frames must be between"):
+        IncidentCompiler(
+            lambda frames: True,
+            invariant_id="large",
+            max_frames=MAX_BLACK_BOX_REPLAY_FRAMES + 1,
+        )
+
+
+def test_compiler_path_uses_bounded_recorder_loader(tmp_path, monkeypatch):
+    path = tmp_path / "incident.jsonl"
+    path.write_text("not materialized")
+
+    def reject_before_materialization(self):
+        raise ValueError("bounded loader invoked")
+
+    monkeypatch.setattr(
+        BlackBoxRecorder,
+        "load_replay",
+        reject_before_materialization,
+    )
+
+    with pytest.raises(ValueError, match="bounded loader invoked"):
+        IncidentCompiler(
+            lambda frames: True,
+            invariant_id="bounded",
+        ).compile(path)

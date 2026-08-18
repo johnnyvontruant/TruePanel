@@ -14,6 +14,9 @@ from typing import Any
 
 BLACK_BOX_SCHEMA_VERSION = 1
 REDACTED = "<redacted>"
+MAX_BLACK_BOX_FRAME_BYTES = 262_144
+MAX_BLACK_BOX_REPLAY_FRAMES = 10_000
+MAX_BLACK_BOX_REPLAY_BYTES = 64 * 1024 * 1024
 
 _SENSITIVE_KEYS = {
     "access_key",
@@ -244,10 +247,43 @@ class BlackBoxRecorder:
         self,
         path: str | Path,
         *,
-        max_frame_bytes: int = 262_144,
+        max_frame_bytes: int = MAX_BLACK_BOX_FRAME_BYTES,
+        max_replay_frames: int = MAX_BLACK_BOX_REPLAY_FRAMES,
+        max_replay_bytes: int = MAX_BLACK_BOX_REPLAY_BYTES,
     ):
         self.path = Path(path)
-        self.max_frame_bytes = max(1_024, int(max_frame_bytes))
+        self.max_frame_bytes = self._replay_limit(
+            max_frame_bytes,
+            maximum=MAX_BLACK_BOX_FRAME_BYTES,
+            label="per-frame byte",
+            minimum=1_024,
+        )
+        self.max_replay_frames = self._replay_limit(
+            max_replay_frames,
+            maximum=MAX_BLACK_BOX_REPLAY_FRAMES,
+            label="frame",
+        )
+        self.max_replay_bytes = self._replay_limit(
+            max_replay_bytes,
+            maximum=MAX_BLACK_BOX_REPLAY_BYTES,
+            label="byte",
+        )
+
+    @staticmethod
+    def _replay_limit(
+        value: int,
+        *,
+        maximum: int,
+        label: str,
+        minimum: int = 1,
+    ) -> int:
+        parsed = int(value)
+        if not minimum <= parsed <= maximum:
+            raise ValueError(
+                "Black Box replay "
+                f"{label} limit must be between {minimum} and {maximum}"
+            )
+        return parsed
 
     def append(self, frame: BlackBoxFrame) -> int:
         if not isinstance(frame, BlackBoxFrame):
@@ -291,23 +327,54 @@ class BlackBoxRecorder:
         if not self.path.exists():
             return
 
-        with self.path.open(
-            "r",
-            encoding="utf-8",
-            errors="strict",
-        ) as handle:
-            for line_number, line in enumerate(handle, start=1):
-                line = line.strip()
-                if not line:
+        with self.path.open("rb") as handle:
+            handle.seek(0, 2)
+            total_bytes = handle.tell()
+            handle.seek(0)
+            if total_bytes > self.max_replay_bytes:
+                self._raise_replay_byte_limit(total_bytes)
+
+            frame_count = 0
+            line_number = 0
+            observed_bytes = 0
+            while True:
+                raw_line = handle.readline(self.max_frame_bytes + 2)
+                if not raw_line:
+                    break
+                observed_bytes += len(raw_line)
+                if observed_bytes > self.max_replay_bytes:
+                    self._raise_replay_byte_limit(observed_bytes)
+                line_number += 1
+
+                has_line_feed = raw_line.endswith(b"\n")
+                content = raw_line[:-1] if has_line_feed else raw_line
+                if content.endswith(b"\r"):
+                    content = content[:-1]
+
+                if not has_line_feed and len(raw_line) > self.max_frame_bytes:
+                    if raw_line.strip():
+                        self._raise_oversized_frame(line_number)
+                    observed_bytes += self._consume_blank_line(
+                        handle,
+                        line_number,
+                        observed_bytes,
+                    )
                     continue
 
-                if len(line.encode("utf-8")) > self.max_frame_bytes:
+                if not content.strip():
+                    continue
+                if len(content) > self.max_frame_bytes:
+                    self._raise_oversized_frame(line_number)
+
+                frame_count += 1
+                if frame_count > self.max_replay_frames:
                     raise ValueError(
-                        "invalid Black Box frame at line "
-                        f"{line_number}: frame exceeds maximum size"
+                        "Black Box replay frame limit exceeded: "
+                        f"{frame_count} > {self.max_replay_frames}"
                     )
 
                 try:
+                    line = content.decode("utf-8", errors="strict").strip()
                     data = json.loads(line)
                     yield BlackBoxFrame.from_dict(data)
                 except Exception as error:
@@ -315,6 +382,38 @@ class BlackBoxRecorder:
                         "invalid Black Box frame at line "
                         f"{line_number}: {error}"
                     ) from error
+
+    def _consume_blank_line(
+        self,
+        handle,
+        line_number: int,
+        observed_bytes: int,
+    ) -> int:
+        """Consume one oversized whitespace-only line without accumulating it."""
+
+        consumed = 0
+        while True:
+            chunk = handle.readline(self.max_frame_bytes + 2)
+            consumed += len(chunk)
+            if observed_bytes + consumed > self.max_replay_bytes:
+                self._raise_replay_byte_limit(observed_bytes + consumed)
+            if chunk.strip():
+                self._raise_oversized_frame(line_number)
+            if not chunk or chunk.endswith(b"\n"):
+                return consumed
+
+    def _raise_replay_byte_limit(self, total_bytes: int) -> None:
+        raise ValueError(
+            "Black Box replay byte limit exceeded: "
+            f"{total_bytes} > {self.max_replay_bytes}"
+        )
+
+    @staticmethod
+    def _raise_oversized_frame(line_number: int) -> None:
+        raise ValueError(
+            "invalid Black Box frame at line "
+            f"{line_number}: frame exceeds maximum size"
+        )
 
     def load_replay(self) -> BlackBoxReplay:
         """Load this recording into a validated deterministic replay."""

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from truepanel.history.black_box import (
+    MAX_BLACK_BOX_REPLAY_FRAMES,
     BlackBoxFrame,
     BlackBoxRecorder,
     BlackBoxReplay,
@@ -56,7 +57,7 @@ class IncidentCompiler:
         *,
         invariant_id: str,
         max_evaluations: int = 1_000,
-        max_frames: int = 10_000,
+        max_frames: int = MAX_BLACK_BOX_REPLAY_FRAMES,
     ) -> None:
         if not callable(evaluator):
             raise TypeError("Incident Compiler evaluator must be callable")
@@ -65,7 +66,12 @@ class IncidentCompiler:
         self.evaluator = evaluator
         self.invariant_id = str(invariant_id).strip()
         self.max_evaluations = max(1, int(max_evaluations))
-        self.max_frames = max(1, int(max_frames))
+        self.max_frames = int(max_frames)
+        if not 1 <= self.max_frames <= MAX_BLACK_BOX_REPLAY_FRAMES:
+            raise ValueError(
+                "Incident Compiler max_frames must be between 1 and "
+                f"{MAX_BLACK_BOX_REPLAY_FRAMES}"
+            )
         self.evaluations = 0
         self.budget_exhausted = False
 

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from truepanel.hardware.fan_control import FanProfile
 from truepanel.holodeck import DeterministicClock, HoloDeckHostProvider
 from truepanel.holodeck.runner import HoloDeckScenarioRunner
@@ -104,3 +106,42 @@ def test_runner_uses_only_isolated_runtime_paths(tmp_path):
     )
     assert all(str(bridge.path).startswith(str(tmp_path)) for bridge in bridges)
     assert runner.snapshot_service.history_path.parent == tmp_path
+
+
+@pytest.mark.parametrize(
+    "runtime_dir",
+    (
+        "/",
+        "/dev/truepanel-holodeck",
+        "/etc/truepanel-holodeck",
+        "/proc/truepanel-holodeck",
+        "/run/truepanel-holodeck",
+        "/sys/truepanel-holodeck",
+        "/var/lib/truepanel-holodeck",
+    ),
+)
+def test_runner_rejects_protected_production_runtime_paths(runtime_dir):
+    twin = HoloDeckHostProvider.from_path(
+        FIXTURE,
+        clock=DeterministicClock(0),
+    )
+
+    with pytest.raises(ValueError, match="protected production path"):
+        HoloDeckScenarioRunner(twin, runtime_dir=runtime_dir)
+
+
+def test_runner_rejects_symlink_alias_to_protected_runtime(tmp_path):
+    alias = tmp_path / "runtime-alias"
+    alias.symlink_to("/var/lib")
+    twin = HoloDeckHostProvider.from_path(FIXTURE)
+
+    with pytest.raises(ValueError, match="protected production path"):
+        HoloDeckScenarioRunner(twin, runtime_dir=alias / "truepanel")
+
+
+def test_runner_rejects_duck_typed_simulation_provider(tmp_path):
+    class FakeProvider:
+        simulation = True
+
+    with pytest.raises(ValueError, match="requires a simulation provider"):
+        HoloDeckScenarioRunner(FakeProvider(), runtime_dir=tmp_path)

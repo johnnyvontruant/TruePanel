@@ -25,11 +25,15 @@ canonical scenario. Output accessors return defensive copies.
 
 - Black Box frame validation and sanitization remain mandatory.
 - The evaluator cannot mutate the replay or subsequent candidates.
-- `max_frames` bounds loaded incident size.
+- File-backed inputs are bounded before materialization at 10,000 nonblank
+  frames, 64 MiB total input, and 256 KiB per frame.
+- `max_frames` may lower the 10,000-frame ceiling but cannot raise it.
 - `max_evaluations` bounds minimization work and is reported in the manifest.
 - Budget exhaustion returns the smallest confirmed candidate found so far.
 - Artifacts contain data only and explicitly report that no executable code
   was generated.
+- Rejected input is processed before output-directory creation, leaving no
+  partial regression artifact.
 
 The evaluator is a seam, not embedded policy. A future layer can connect real
 HoloDeck safety invariants, Mission Events, or Health Intelligence outcomes

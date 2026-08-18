@@ -12,6 +12,14 @@ From a repository checkout, the equivalent launcher is:
 python3 truepanel.py
 ```
 
+An installed Python wheel also provides the `truepanel` console command for
+package-contained operations such as `version` and `holodeck`. CI builds that
+wheel, installs it into a fresh environment, changes to a directory outside
+the source checkout, and exercises the HoloDeck run, inject, check, replay,
+and Incident Compiler paths. The production LCD `run` command remains part of
+the native TruePanel deployment, whose managed wrapper runs alongside
+`lcd-menu.py` and the systemd units.
+
 Use `truepanel --help` and each command's `--help` output as the source of truth for the exact options supported by the current checkout.
 
 ## Runtime

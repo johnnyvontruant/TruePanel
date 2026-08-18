@@ -1,3 +1,5 @@
+import pytest
+
 from truepanel.history.black_box import BlackBoxFrame, BlackBoxRecorder, BlackBoxReplay
 from truepanel.history.black_box_chaos import BlackBoxChaosFault, BlackBoxChaosScenario
 from truepanel.history.black_box_compatibility import (
@@ -55,6 +57,18 @@ def test_session_can_load_recorder(tmp_path):
 
     session = BlackBoxReplaySession.from_recorder(recorder)
     assert [view.frame.sequence for view in session.timeline] == [1, 2]
+
+
+def test_session_inherits_recorder_replay_limit(tmp_path):
+    recorder = BlackBoxRecorder(
+        tmp_path / "recording.jsonl",
+        max_replay_frames=1,
+    )
+    for frame in make_replay().frames:
+        recorder.append(frame)
+
+    with pytest.raises(ValueError, match="frame limit exceeded"):
+        BlackBoxReplaySession.from_recorder(recorder)
 
 
 def test_compatibility_session_does_not_invent_lcd_state():

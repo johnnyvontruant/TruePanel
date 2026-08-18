@@ -16,6 +16,34 @@ from truepanel.watchers.storage_health import StorageHealthWatcher
 from truepanel.web.snapshot import SnapshotService
 
 from .provider import HoloDeckHostProvider
+from .replay import BlackBoxHoloDeckProvider
+
+_PROTECTED_RUNTIME_ROOTS = tuple(
+    Path(value)
+    for value in (
+        "/dev",
+        "/etc",
+        "/proc",
+        "/run",
+        "/sys",
+        "/var",
+    )
+)
+
+
+def isolated_runtime_path(value: str | Path) -> Path:
+    """Resolve and reject production-owned runtime locations."""
+
+    candidate = Path(value).expanduser().resolve(strict=False)
+    if candidate == Path("/") or any(
+        candidate == root or root in candidate.parents
+        for root in _PROTECTED_RUNTIME_ROOTS
+    ):
+        raise ValueError(
+            "HoloDeck runtime_dir must not use a protected production path: "
+            f"{candidate}"
+        )
+    return candidate
 
 
 @dataclass(frozen=True)
@@ -60,11 +88,14 @@ class HoloDeckScenarioRunner:
         runtime_dir: str | Path,
         config: dict[str, Any] | None = None,
     ) -> None:
-        if not provider.simulation:
+        if not isinstance(
+            provider,
+            (HoloDeckHostProvider, BlackBoxHoloDeckProvider),
+        ) or not provider.simulation:
             raise ValueError("HoloDeckScenarioRunner requires a simulation provider")
 
         self.provider = provider
-        self.runtime_dir = Path(runtime_dir)
+        self.runtime_dir = isolated_runtime_path(runtime_dir)
         self.runtime_dir.mkdir(parents=True, exist_ok=True)
         self.config = config or {
             "hardware": {
@@ -198,4 +229,8 @@ class HoloDeckScenarioRunner:
         )
 
 
-__all__ = ["HoloDeckObservation", "HoloDeckScenarioRunner"]
+__all__ = [
+    "HoloDeckObservation",
+    "HoloDeckScenarioRunner",
+    "isolated_runtime_path",
+]

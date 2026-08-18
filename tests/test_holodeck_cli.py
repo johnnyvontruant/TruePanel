@@ -201,3 +201,36 @@ def test_compile_incident_refuses_to_overwrite_output(tmp_path):
         handle_holodeck_command(args)
 
     assert output.read_text() == "owned by operator"
+
+
+def test_compile_incident_loader_rejection_leaves_no_partial_output(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    recording = tmp_path / "oversized.jsonl"
+    recording.write_text("bounded by loader")
+    output = tmp_path / "new-directory" / "compiled.json"
+
+    def reject_input(self):
+        raise ValueError("Black Box replay frame limit exceeded")
+
+    monkeypatch.setattr(BlackBoxRecorder, "load_replay", reject_input)
+    args = build_parser().parse_args(
+        [
+            "holodeck",
+            "compile-incident",
+            str(recording),
+            "--invariant",
+            "holodeck.hardware_isolated",
+            "--output",
+            str(output),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="frame limit exceeded"):
+        handle_holodeck_command(args)
+
+    assert not output.exists()
+    assert not output.parent.exists()
+    assert capsys.readouterr().out == ""
