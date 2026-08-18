@@ -1,0 +1,67 @@
+name: Mission Control Preflight Builder
+
+on:
+  push:
+    branches:
+      - feature/mission-control-preflight
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install project and development tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -e ".[development]"
+
+      - name: Apply Preflight feature patch
+        run: python .github/scripts/apply_mission_control_preflight.py
+
+      - name: Check Python style
+        run: |
+          python -m ruff check \
+            truepanel/web/preflight.py \
+            truepanel/web/server.py \
+            tests/test_web_preflight.py
+
+      - name: Run Preflight tests
+        run: python -m pytest tests/test_web_preflight.py -q
+
+      - name: Run full test suite
+        run: python -m pytest -q
+
+      - name: Check patch whitespace
+        run: git diff --check
+
+      - name: Remove one-shot builder
+        run: |
+          rm -f .github/scripts/apply_mission_control_preflight.py
+          rm -f .github/workflows/mission-control-preflight-builder.yml
+
+      - name: Commit feature result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Add Mission Control preflight"
+          git push origin HEAD:feature/mission-control-preflight
