@@ -18,7 +18,7 @@ def dependency_name(requirement):
 
 
 def test_release_candidate_product_version():
-    assert truepanel.__version__ == "1.2.0rc2"
+    assert truepanel.__version__ == "1.2.0rc3"
     assert re.fullmatch(
         r"\d+\.\d+\.\d+rc\d+",
         truepanel.__version__,
