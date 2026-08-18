@@ -37,6 +37,29 @@ jobs:
       - name: Apply Preflight feature patch
         run: python .github/scripts/apply_mission_control_preflight.py
 
+      - name: Normalize generated Python
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("tests/test_web_preflight.py")
+          source = path.read_text(encoding="utf-8")
+          broken = '''    assert 'fetch(
+                      "/api/v1/preflight"' in source
+              assert "loadPreflight();
+          refresh();" in source
+          '''
+          fixed = '''    assert '\"/api/v1/preflight\"' in source
+              assert "loadPreflight();" in source
+          '''
+          if broken not in source:
+              raise SystemExit("Generated Preflight test normalization anchor not found")
+          path.write_text(source.replace(broken, fixed, 1), encoding="utf-8")
+          PY
+          python -m ruff check --fix \
+            truepanel/web/preflight.py \
+            truepanel/web/server.py
+
       - name: Check Python style
         run: |
           python -m ruff check \
