@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from truepanel.compatibility.models import CompatibilityCheck, CompatibilityReport
 
-
 PREFLIGHT_SCHEMA_VERSION = 1
 
 _STATUS_RANK = {
