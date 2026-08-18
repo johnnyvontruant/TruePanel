@@ -48,6 +48,9 @@ Documentation = "https://github.com/johnnyvontruant/TruePanel/tree/main/docs"
 Issues = "https://github.com/johnnyvontruant/TruePanel/issues"
 Repository = "https://github.com/johnnyvontruant/TruePanel"
 
+[project.scripts]
+truepanel = "truepanel.cli:main"
+
 [tool.setuptools]
 include-package-data = true
 py-modules = ["collector"]

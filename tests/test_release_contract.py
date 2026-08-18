@@ -45,6 +45,22 @@ def test_project_metadata_uses_authoritative_version():
     assert "dynamic" not in metadata["project"]
     assert "dynamic" not in metadata["tool"]["setuptools"]
     assert metadata["project"]["requires-python"] == ">=3.11"
+    assert metadata["project"]["scripts"] == {
+        "truepanel": "truepanel.cli:main"
+    }
+
+
+def test_ci_smokes_installed_wheel_outside_source_checkout():
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    smoke = ROOT / "development" / "tools" / "smoke_installed_wheel.py"
+
+    assert "installed-wheel-smoke:" in workflow
+    assert "python -m build --wheel" in workflow
+    assert "cd \"$RUNNER_TEMP\"" in workflow
+    assert "smoke_installed_wheel.py" in workflow
+    assert smoke.is_file()
 
 
 

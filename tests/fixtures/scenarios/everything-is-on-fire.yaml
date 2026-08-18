@@ -1,0 +1,24 @@
+name: everything-is-on-fire
+host: battlestation
+events:
+  - at: 10
+    type: temperature
+    sensor: cpu
+    value: 78
+  - at: 20
+    type: fan_stall
+    channel: 1
+  - at: 30
+    type: disk_fault
+    bay: 4
+  - at: 40
+    type: network_down
+    interface: enp116s0
+  - at: 50
+    type: lcd_disconnect
+  - at: 60
+    type: telemetry_stale
+  - at: 70
+    type: temperature
+    sensor: cpu
+    value: 92

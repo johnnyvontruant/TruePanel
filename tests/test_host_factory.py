@@ -196,6 +196,21 @@ def test_factory_does_not_start_runtime(
     assert called == []
 
 
+def test_factory_accepts_socketless_server_factory():
+    runtime = factory.build_host_agent_runtime(
+        fan_runtime=FakeFanRuntime(),
+        safety_services=HostAgentSafetyServices(
+            fan_telemetry_provider=telemetry,
+        ),
+        fan_server_factory=lambda: None,
+    )
+
+    runtime.start()
+
+    assert runtime.started is True
+    assert runtime.fan_server is None
+
+
 class FakeBootstrap:
     def __init__(self, fan_runtime, safety_services):
         self.fan_runtime = fan_runtime

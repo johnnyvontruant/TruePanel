@@ -13,6 +13,7 @@ This directory is the operating manual for the modern TruePanel platform.
 - [Architecture](ARCHITECTURE.md)
 - [Philosophy](PHILOSOPHY.md)
 - [Historical telemetry](HISTORICAL_TELEMETRY.md)
+- [Project HoloDeck Digital Twin](HOLODECK.md)
 - [Plugin API](PLUGIN_API.md)
 
 ## Project Stargate

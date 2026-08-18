@@ -11,7 +11,6 @@ from typing import Any
 
 from collector import TruePanelCollector
 from truepanel.config.loader import load_config
-from truepanel.health import augment_status_snapshot
 from truepanel.hardware.fan_status_bridge import (
     DEFAULT_FAN_CONTROL_STATUS_PATH,
     FanControlStatusBridge,
@@ -30,6 +29,7 @@ from truepanel.hardware.lcd_reader_status_bridge import (
 from truepanel.hardware.thermal_commissioning import (
     thermal_commissioning_state,
 )
+from truepanel.health import augment_status_snapshot
 from truepanel.history.fan_control import (
     DEFAULT_FAN_CONTROL_HISTORY_PATH,
     FanControlHistory,
@@ -83,6 +83,7 @@ class SnapshotService:
         thermal_observer_history_path=None,
         thermal_commissioning_history_path=None,
         service_status_provider=None,
+        fan_status_provider=None,
         clock=None,
     ):
         self.collector = (
@@ -102,6 +103,10 @@ class SnapshotService:
 
         self.service_status_provider = (
             service_status_provider
+        )
+        self.fan_status_provider = (
+            fan_status_provider
+            or get_fan_status
         )
 
         self.fan_control_bridge = (
@@ -600,13 +605,16 @@ class SnapshotService:
     ) -> dict[str, Any]:
         return {
             "hostname": (
-                socket.gethostname()
+                state.get("hostname")
+                or socket.gethostname()
             ),
             "platform": (
-                platform.system()
+                state.get("platform")
+                or platform.system()
             ),
             "machine": (
-                platform.machine()
+                state.get("machine")
+                or platform.machine()
             ),
             "cpu_percent": _safe_number(
                 state.get(
@@ -714,7 +722,7 @@ class SnapshotService:
     def _fan_payload(self) -> dict[str, Any]:
         try:
             payload = dict(
-                get_fan_status()
+                self.fan_status_provider()
                 or {}
             )
         except Exception:
