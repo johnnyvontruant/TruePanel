@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+MAX_SCENARIO_EVENTS = 1_000
 
 SUPPORTED_EVENTS = frozenset(
     {
@@ -41,8 +44,16 @@ class ScenarioEvent:
         if event_type not in SUPPORTED_EVENTS:
             raise ValueError(f"unsupported HoloDeck event: {event_type or '<empty>'}")
         at = float(payload.get("at", 0.0))
+
+        if not math.isfinite(at):
+            raise ValueError(
+                "scenario event time must be finite"
+            )
+
         if at < 0:
-            raise ValueError("scenario event time cannot be negative")
+            raise ValueError(
+                "scenario event time cannot be negative"
+            )
         return cls(
             at=at,
             type=event_type,
@@ -66,8 +77,23 @@ class Scenario:
             raise ValueError("scenario host must be a fixture name")
         raw_events = payload.get("events", [])
         if not isinstance(raw_events, list):
-            raise ValueError("scenario events must be a list")
-        events = tuple(sorted(ScenarioEvent.from_dict(item) for item in raw_events))
+            raise ValueError(
+                "scenario events must be a list"
+            )
+
+        if len(raw_events) > MAX_SCENARIO_EVENTS:
+            raise ValueError(
+                "scenario event limit exceeded: "
+                f"{len(raw_events)} > "
+                f"{MAX_SCENARIO_EVENTS}"
+            )
+
+        events = tuple(
+            sorted(
+                ScenarioEvent.from_dict(item)
+                for item in raw_events
+            )
+        )
         return cls(name=name, host=host, events=events)
 
 

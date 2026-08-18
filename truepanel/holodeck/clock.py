@@ -2,12 +2,28 @@
 
 from __future__ import annotations
 
+import math
+
+
+def _finite_time(value: float, label: str) -> float:
+    parsed = float(value)
+
+    if not math.isfinite(parsed):
+        raise ValueError(
+            f"HoloDeck {label} must be finite"
+        )
+
+    return parsed
+
 
 class DeterministicClock:
     """A wall/monotonic compatible clock advanced only by its owner."""
 
     def __init__(self, start: float = 0.0):
-        self._start = float(start)
+        self._start = _finite_time(
+            start,
+            "start time",
+        )
         self._value = self._start
 
     def __call__(self) -> float:
@@ -18,14 +34,20 @@ class DeterministicClock:
         return self._value
 
     def advance(self, seconds: float) -> float:
-        seconds = float(seconds)
+        seconds = _finite_time(
+            seconds,
+            "advance",
+        )
         if seconds < 0:
             raise ValueError("HoloDeck time cannot move backwards")
         self._value += seconds
         return self._value
 
     def set(self, value: float) -> float:
-        value = float(value)
+        value = _finite_time(
+            value,
+            "set time",
+        )
         if value < self._value:
             raise ValueError("HoloDeck time cannot move backwards")
         self._value = value

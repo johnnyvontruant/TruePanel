@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from argparse import ArgumentTypeError, _SubParsersAction
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -33,6 +34,24 @@ def _bounded_integer(value: str, *, maximum: int, label: str) -> int:
     return parsed
 
 
+def _finite_nonnegative(
+    value: str,
+    *,
+    label: str,
+) -> float:
+    parsed = float(value)
+
+    if (
+        not math.isfinite(parsed)
+        or parsed < 0
+    ):
+        raise ArgumentTypeError(
+            f"{label} must be finite and nonnegative"
+        )
+
+    return parsed
+
+
 def add_holodeck_subcommands(subcommands: _SubParsersAction) -> None:
     parser = subcommands.add_parser(
         "holodeck",
@@ -43,8 +62,23 @@ def add_holodeck_subcommands(subcommands: _SubParsersAction) -> None:
     run = actions.add_parser("run", help="Replay a simulated host scenario")
     run.add_argument("host", choices=sorted(HOSTS), nargs="?", default="battlestation")
     run.add_argument("--scenario", type=Path, dest="holodeck_scenario")
-    run.add_argument("--steps", type=int, default=1)
-    run.add_argument("--step-seconds", type=float, default=10.0)
+    run.add_argument(
+        "--steps",
+        type=lambda value: _bounded_integer(
+            value,
+            maximum=MAX_REPORT_STEPS,
+            label="steps",
+        ),
+        default=1,
+    )
+    run.add_argument(
+        "--step-seconds",
+        type=lambda value: _finite_nonnegative(
+            value,
+            label="step-seconds",
+        ),
+        default=10.0,
+    )
     run.add_argument("--json", action="store_true", dest="holodeck_json")
 
     inject = actions.add_parser("inject", help="Apply one fault to a fresh twin")
@@ -78,7 +112,14 @@ def add_holodeck_subcommands(subcommands: _SubParsersAction) -> None:
         ),
         default=1,
     )
-    check.add_argument("--step-seconds", type=float, default=10.0)
+    check.add_argument(
+        "--step-seconds",
+        type=lambda value: _finite_nonnegative(
+            value,
+            label="step-seconds",
+        ),
+        default=10.0,
+    )
     check.add_argument("--json", action="store_true", dest="holodeck_json")
 
     compile_incident = actions.add_parser(

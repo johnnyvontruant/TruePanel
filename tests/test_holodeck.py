@@ -88,6 +88,100 @@ def test_clock_rejects_time_travel():
         clock.advance(-1)
 
 
+@pytest.mark.parametrize(
+    "value",
+    (
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+    ),
+)
+def test_clock_rejects_non_finite_time(value):
+    with pytest.raises(
+        ValueError,
+        match="finite",
+    ):
+        DeterministicClock(value)
+
+    clock = DeterministicClock(0)
+
+    with pytest.raises(
+        ValueError,
+        match="finite",
+    ):
+        clock.advance(value)
+
+    with pytest.raises(
+        ValueError,
+        match="finite",
+    ):
+        clock.set(value)
+
+
+@pytest.mark.parametrize(
+    "timestamp",
+    (
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+    ),
+)
+def test_scenario_rejects_non_finite_event_time(
+    tmp_path,
+    timestamp,
+):
+    path = tmp_path / "non-finite.json"
+    path.write_text(
+        json.dumps(
+            {
+                "name": "non-finite-time",
+                "host": "battlestation",
+                "events": [
+                    {
+                        "at": timestamp,
+                        "type": "lcd_disconnect",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="finite",
+    ):
+        load_scenario(path)
+
+
+def test_scenario_rejects_unbounded_event_count(
+    tmp_path,
+):
+    path = tmp_path / "unbounded.json"
+    path.write_text(
+        json.dumps(
+            {
+                "name": "too-many-events",
+                "host": "battlestation",
+                "events": [
+                    {
+                        "at": index,
+                        "type": "lcd_disconnect",
+                    }
+                    for index in range(1_001)
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="event limit",
+    ):
+        load_scenario(path)
+
+
 def test_provider_reset_rewinds_scenario_clock_and_events():
     provider = build_provider()
     provider.advance(70)

@@ -73,10 +73,59 @@ def test_holodeck_check_emits_compact_bounded_report(capsys):
     assert "snapshot" not in report
 
 
-def test_holodeck_check_rejects_unbounded_steps():
-    with pytest.raises((SystemExit, ValueError)):
+@pytest.mark.parametrize(
+    "action",
+    (
+        "run",
+        "check",
+    ),
+)
+def test_holodeck_commands_reject_unbounded_steps(
+    action,
+):
+    with pytest.raises(
+        (SystemExit, ValueError),
+    ):
         build_parser().parse_args(
-            ["holodeck", "check", "--steps", "1001"]
+            [
+                "holodeck",
+                action,
+                "--steps",
+                "1001",
+            ]
+        )
+
+
+@pytest.mark.parametrize(
+    "action",
+    (
+        "run",
+        "check",
+    ),
+)
+@pytest.mark.parametrize(
+    "value",
+    (
+        "nan",
+        "inf",
+        "-inf",
+        "-1",
+    ),
+)
+def test_holodeck_commands_reject_invalid_step_interval(
+    action,
+    value,
+):
+    with pytest.raises(
+        (SystemExit, ValueError),
+    ):
+        build_parser().parse_args(
+            [
+                "holodeck",
+                action,
+                "--step-seconds",
+                value,
+            ]
         )
 
 

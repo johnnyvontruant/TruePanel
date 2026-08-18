@@ -56,8 +56,9 @@ python3 truepanel.py holodeck check battlestation \
 
 The report is deliberately compact. It contains rule identifiers, observation
 indexes, and bounded evidence only; it never prints raw host state, snapshots,
-or Black Box frames. Runs are limited to 1,000 observations and return status
-0 when every invariant passes or status 1 when a violation is found.
+or Black Box frames. Both `run` and `check` are limited to 1,000 observations.
+Step intervals must be finite and nonnegative. A command returns status 0 when
+every requested invariant passes or status 1 when a violation is found.
 
 Compile a recorded violation into sanitized, data-only regression material:
 
@@ -100,7 +101,8 @@ python3 truepanel.py holodeck run battlestation \
 
 Supported events currently include temperature changes, fan stall/recovery,
 disk fault/removal, network up/down, LCD connect/disconnect, telemetry
-freshness, and pool-health changes.
+freshness, and pool-health changes. Scenario documents are limited to 1,000
+events, and every event timestamp must be finite and nonnegative.
 
 ## Whole-stack failure stories
 
@@ -124,11 +126,13 @@ recording replay, the real Host Agent safety/fan lifecycle, Mission Control,
 Health Intelligence, thermal policy, and production watcher behavior. All fan
 decisions are applied only to the in-memory twin.
 
-The remaining integration slices are:
+The remaining follow-up slices are:
 
 1. Start an embedded Mission Control server on an ephemeral port for real HTTP
    smoke tests where the execution sandbox permits sockets.
 2. Converge the older Black Box chaos vocabulary with HoloDeck's channel-,
    bay-, interface-, and sensor-specific scenario events.
-3. Add incident-to-regression tooling: recording, replay, fault mutation,
-   fixed behavior, and proof of non-regression.
+
+Incident-to-regression tooling is now present through Black Box recording,
+deterministic replay, bounded fault mutation, invariant evaluation, and the
+data-only Incident Compiler.
