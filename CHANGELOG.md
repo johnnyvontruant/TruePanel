@@ -4,6 +4,58 @@ All notable TruePanel changes are recorded here.
 
 TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.MINOR.PATCH`; release-candidate tags use `vMAJOR.MINOR.PATCH-rcN`.
 
+## [1.2.0-rc3] - 2026-08-18
+
+TruePanel 1.2.0 RC3 adds HoloDeck, a deterministic whole-stack digital
+twin, and the Black Box incident toolchain to the validated RC2
+lifecycle and Mission Control foundation.
+
+### Added
+
+- Added deterministic BattleStation host fixtures, scenario playback,
+  bounded fault injection, invariant evaluation, and read-only Mission
+  Control snapshots through HoloDeck.
+- Added sanitized Black Box recording, deterministic replay, sessions,
+  fault mutation, compatibility analysis, narration, and Mission
+  Control adapters.
+- Added the data-only Incident Compiler, which minimizes recordings into
+  reproducible regression artifacts without generating executable code.
+- Added a packaged `truepanel` console entry point and an installed-wheel
+  smoke test that runs outside the source checkout.
+
+### Changed
+
+- Host construction and web snapshots now accept explicit simulated
+  providers while production selection remains one-way and unchanged.
+- HoloDeck imports are lazy so ordinary version, verification, LCD, and
+  Mission Control commands do not load the simulation runtime.
+- GitHub Actions now builds a wheel, installs it into a fresh environment,
+  and exercises HoloDeck run, injection, checking, replay, and compilation.
+
+### Safety
+
+- Black Box replay is bounded to 10,000 nonblank frames, 64 MiB of total
+  input, and 256 KiB per frame before decoding or materialization.
+- HoloDeck clocks and scenario timestamps reject non-finite values;
+  scenarios and command work are bounded before execution.
+- HoloDeck rejects protected runtime paths and aliases beneath `/dev`,
+  `/etc`, `/proc`, `/run`, `/sys`, and `/var`.
+- Simulated Host Agent control uses in-memory ownership, status, and
+  execution with no fan-command server or production hardware authority.
+
+### Validated
+
+- The combined RC2 and HoloDeck tree passed the canonical GitHub Actions
+  test job and the installed-wheel smoke job.
+- Local integration validation passed 2,033 canonical tests and 114
+  release-critical and HoloDeck-focused tests.
+- BattleStation passed 25 production-isolation contracts against the exact
+  RC3 integration commit while both live service identities remained
+  unchanged.
+- The protected live deployment fingerprint remained identical across
+  257 files before and after HoloDeck run, fault injection, invariant
+  checking, replay, and incident compilation.
+
 ## [1.2.0-rc2] - 2026-08-17
 
 TruePanel 1.2.0 RC2 combines the hardened lifecycle foundation from

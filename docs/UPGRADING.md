@@ -73,13 +73,13 @@ Do not promote a stage that did not complete validation successfully.
 
 Promotion requires the exact confirmation phrase `PROMOTE_TRUEPANEL`.
 
-The explicit `--backup-root` must be a sibling of the deployment root, its basename must begin with `.truepanel-backup-`, and the path must not already exist. For the example deployment, a valid path is `/mnt/POOL/DATASET/.truepanel-backup-TruePanel-before-v1.2.0-rc2`. TruePanel validates this backup location before any deployment files are copied.
+The explicit `--backup-root` must be a sibling of the deployment root, its basename must begin with `.truepanel-backup-`, and the path must not already exist. For the example deployment, a valid path is `/mnt/POOL/DATASET/.truepanel-backup-TruePanel-before-v1.2.0-rc3`. TruePanel validates this backup location before any deployment files are copied.
 
 ```bash
 python3 truepanel.py upgrade \
   --root /mnt/POOL/DATASET/TruePanel \
   --stage-root <stage-root> \
-  --backup-root /mnt/POOL/DATASET/.truepanel-backup-TruePanel-before-v1.2.0-rc2 \
+  --backup-root /mnt/POOL/DATASET/.truepanel-backup-TruePanel-before-v1.2.0-rc3 \
   --promote \
   --confirm PROMOTE_TRUEPANEL
 ```
