@@ -88,6 +88,7 @@ def test_unknown_checks_remain_visible_in_host_section():
 
     assert host["checks"][0]["name"] == "Future Compatibility Probe"
 
+
 def _handler_with_json_capture():
     from truepanel.web.server import MissionControlRequestHandler
 
@@ -143,7 +144,7 @@ def test_support_bundle_handler_is_downloadable_and_privacy_safe(monkeypatch):
     )
 
 
-def test_preflight_routes_are_registered():
+def test_preflight_route_is_registered():
     from truepanel.web.server import MissionControlRequestHandler
 
     handler = object.__new__(MissionControlRequestHandler)
@@ -154,6 +155,19 @@ def test_preflight_routes_are_registered():
     handler.do_GET()
 
     assert called == ["/api/v1/preflight"]
+
+
+def test_support_bundle_route_is_registered():
+    from truepanel.web.server import MissionControlRequestHandler
+
+    handler = object.__new__(MissionControlRequestHandler)
+    called = []
+    handler.path = "/api/v1/preflight/support-bundle"
+    handler._preflight_support_bundle = lambda parsed: called.append(parsed.path)
+
+    handler.do_GET()
+
+    assert called == ["/api/v1/preflight/support-bundle"]
 
 
 def test_dashboard_preflight_is_on_demand_not_in_refresh_loop():
