@@ -62,6 +62,30 @@ The stable release must satisfy all of the following:
 - service restarts and remains active
 - rollback path documented
 
+## Promote a release candidate to stable
+
+Promote only from a release candidate that has already passed the installed-system
+acceptance gate. Keep the promotion diff limited to release metadata,
+documentation, and release-contract assertions unless a genuine blocker is found.
+
+1. Create a short-lived promotion branch from `release/vX.Y.Z`.
+2. Change `truepanel.__version__` and `[project].version` from `X.Y.ZrcN` to
+   `X.Y.Z`.
+3. Add the final `X.Y.Z` section to `CHANGELOG.md` while preserving the RC
+   history below it.
+4. Update release-contract assertions so the stable version cannot regress to
+   a prerelease identifier or drift from package metadata.
+5. Run the release-contract tests and complete canonical test suite.
+6. Build and smoke-test the installed wheel in a clean environment.
+7. Merge the promotion branch into `release/vX.Y.Z` only after CI passes.
+8. Run CI against the exact resulting release-branch commit and preserve the
+   evidence.
+9. Reconcile `main` with the tested release tree without introducing additional
+   product changes. If reconciliation creates a new commit, rerun CI on that
+   exact commit before tagging it.
+10. Create `vX.Y.Z` only on a commit whose exact contents passed the stable
+    acceptance gate. Never move an existing release tag.
+
 ## Publish a release candidate
 
 After candidate acceptance:
