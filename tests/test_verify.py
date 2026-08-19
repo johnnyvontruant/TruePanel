@@ -53,6 +53,13 @@ def create_installation(root: Path):
     )
     (root / "start-truepanel.sh").write_text("")
     (root / "deploy-truenas.sh").write_text("")
+    wrapper = root / "bin" / "truepanel"
+    wrapper.parent.mkdir()
+    wrapper.write_text(
+        "#!/usr/bin/env bash\n",
+        encoding="utf-8",
+    )
+    wrapper.chmod(0o755)
     (
         root / "truepanel" / "__init__.py"
     ).write_text(
@@ -73,6 +80,30 @@ def test_installation_files_pass(
         item["status"] == PASS
         for item in results
     )
+
+
+
+def test_installation_files_report_non_executable_cli_wrapper(
+    tmp_path,
+):
+    create_installation(tmp_path)
+
+    wrapper = (
+        tmp_path / "bin" / "truepanel"
+    )
+    wrapper.chmod(0o644)
+
+    results = check_installation_files(
+        tmp_path
+    )
+    cli_wrapper = next(
+        item
+        for item in results
+        if item["name"] == "CLI wrapper"
+    )
+
+    assert cli_wrapper["status"] == FAIL
+    assert "Not executable" in cli_wrapper["detail"]
 
 
 def test_installation_files_report_missing(

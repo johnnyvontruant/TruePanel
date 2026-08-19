@@ -74,6 +74,7 @@ def build_host_agent_runtime(
     fan_runtime: Any,
     safety_services: HostAgentSafetyServices,
     ownership_guard: Any | None = None,
+    fan_server_factory: Callable[[], Any | None] | None = None,
 ) -> HostAgentRuntime:
     """Assemble the current privileged TruePanel Host Agent runtime."""
 
@@ -125,17 +126,9 @@ def build_host_agent_runtime(
         else None
     )
 
-    return HostAgentRuntime(
-        fan_runtime=fan_runtime,
-        safety=safety,
-        ownership_guard=ownership_guard,
-        fan_status_reader=(
-            safety_services.fan_status_reader
-        ),
-        fan_reconciliation=fan_reconciliation,
-        thermal_lifecycle=thermal_lifecycle,
-        fan_server_factory=lambda: (
-            build_fan_command_server(
+    if fan_server_factory is None:
+        def fan_server_factory():
+            return build_fan_command_server(
                 fan_runtime=fan_runtime,
                 telemetry_provider=(
                     safety.telemetry
@@ -154,7 +147,17 @@ def build_host_agent_runtime(
                     safety.handle_thermal_control
                 ),
             )
+
+    return HostAgentRuntime(
+        fan_runtime=fan_runtime,
+        safety=safety,
+        ownership_guard=ownership_guard,
+        fan_status_reader=(
+            safety_services.fan_status_reader
         ),
+        fan_reconciliation=fan_reconciliation,
+        thermal_lifecycle=thermal_lifecycle,
+        fan_server_factory=fan_server_factory,
     )
 
 

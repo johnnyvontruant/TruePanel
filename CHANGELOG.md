@@ -2,7 +2,194 @@
 
 All notable TruePanel changes are recorded here.
 
-TruePanel follows semantic versioning. Release tags use the form `vMAJOR.MINOR.PATCH`.
+TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.MINOR.PATCH`; release-candidate tags use `vMAJOR.MINOR.PATCH-rcN`.
+
+## [1.2.0] - 2026-08-19
+
+TruePanel 1.2.0 graduates the validated RC3 tree to a stable release and
+adds Mission Control Preflight as the final operator-facing release feature.
+The RC1 through RC3 history below preserves the detailed lifecycle,
+Mission Control, HoloDeck, and Black Box development record.
+
+### Added
+
+- Added on-demand Mission Control Preflight reporting for Host, Storage,
+  Cooling, Front Panel, and Safety Interlocks.
+- Added READY / REVIEW / HOLD projection while preserving non-blocking
+  review items instead of hiding them behind an overall ready state.
+- Added a downloadable privacy-safe compatibility support bundle from
+  Mission Control.
+
+### Safety
+
+- Preflight remains passive and read-only and does not grant hardware-control
+  authority.
+- Support bundles continue to exclude hostnames, IP addresses, hardware
+  serials, WWIDs, MAC addresses, usernames, configuration secrets, and pool
+  contents.
+- Automatic thermal control remains deliberately unarmed.
+
+### Validated
+
+- The final Preflight integration passed 2,045 canonical tests on the
+  reference development environment before stable promotion.
+- Live BattleStation validation reported `READY` / `SUPPORTED` with 14 PASS,
+  2 REVIEW, and 0 FAIL checks while both TruePanel services remained active.
+- The live support-bundle endpoint returned HTTP 200, omitted the reference
+  host's hostname and all detected non-loopback IP addresses, and emitted a
+  single `Cache-Control: no-store` response header.
+- Mission Control Preflight completed live visual and operator-flow review on
+  the reference QNAP TVS-671.
+
+## [1.2.0-rc3] - 2026-08-18
+
+TruePanel 1.2.0 RC3 adds HoloDeck, a deterministic whole-stack digital
+twin, and the Black Box incident toolchain to the validated RC2
+lifecycle and Mission Control foundation.
+
+### Added
+
+- Added deterministic BattleStation host fixtures, scenario playback,
+  bounded fault injection, invariant evaluation, and read-only Mission
+  Control snapshots through HoloDeck.
+- Added sanitized Black Box recording, deterministic replay, sessions,
+  fault mutation, compatibility analysis, narration, and Mission
+  Control adapters.
+- Added the data-only Incident Compiler, which minimizes recordings into
+  reproducible regression artifacts without generating executable code.
+- Added a packaged `truepanel` console entry point and an installed-wheel
+  smoke test that runs outside the source checkout.
+
+### Changed
+
+- Host construction and web snapshots now accept explicit simulated
+  providers while production selection remains one-way and unchanged.
+- HoloDeck imports are lazy so ordinary version, verification, LCD, and
+  Mission Control commands do not load the simulation runtime.
+- GitHub Actions now builds a wheel, installs it into a fresh environment,
+  and exercises HoloDeck run, injection, checking, replay, and compilation.
+
+### Safety
+
+- Black Box replay is bounded to 10,000 nonblank frames, 64 MiB of total
+  input, and 256 KiB per frame before decoding or materialization.
+- HoloDeck clocks and scenario timestamps reject non-finite values;
+  scenarios and command work are bounded before execution.
+- HoloDeck rejects protected runtime paths and aliases beneath `/dev`,
+  `/etc`, `/proc`, `/run`, `/sys`, and `/var`.
+- Simulated Host Agent control uses in-memory ownership, status, and
+  execution with no fan-command server or production hardware authority.
+
+### Validated
+
+- The combined RC2 and HoloDeck tree passed the canonical GitHub Actions
+  test job and the installed-wheel smoke job.
+- Local integration validation passed 2,033 canonical tests and 114
+  release-critical and HoloDeck-focused tests.
+- BattleStation passed 25 production-isolation contracts against the exact
+  RC3 integration commit while both live service identities remained
+  unchanged.
+- The protected live deployment fingerprint remained identical across
+  257 files before and after HoloDeck run, fault injection, invariant
+  checking, replay, and incident compilation.
+
+## [1.2.0-rc2] - 2026-08-17
+
+TruePanel 1.2.0 RC2 combines the hardened lifecycle foundation from
+RC1 with trustworthy network telemetry, read-only Health Intelligence,
+a refined Virtual Front Panel, and a clearer Mission Control cockpit.
+
+### Added
+
+- Added passive per-interface network throughput telemetry using
+  kernel RX/TX counters and monotonic sampling.
+- Added friendly Ethernet Port and Tailscale identification across
+  Mission Control and the physical LCD while preserving kernel
+  interface names for diagnostics.
+- Added conservative Health Intelligence for cooling, thermal,
+  storage, network, front-panel, and TruePanel service state.
+- Added cached, read-only observation of the LCD and Mission Control
+  systemd services.
+- Added a full-width System Health command layer with normalized
+  subsystem states and honest unknown-state reporting.
+- Added compact cooling instruments for temperature, active profile,
+  recommendation, readiness, fan speed, and PWM state.
+
+### Changed
+
+- Refined the Virtual Front Panel with deeper blue, restrained
+  dot-matrix texture, tighter spacing, and crisp white glyphs.
+- Reorganized Mission Control around current operating condition and
+  operator decisions.
+- Moved commissioning, fan-control, and thermal history into a
+  collapsed diagnostics drawer while keeping live controls visible.
+- Guarded promotion now bootstraps the managed `bin/truepanel` CLI
+  wrapper when upgrading legacy deployments that predate it.
+
+### Safety
+
+- Network, health, and service observation remain read-only.
+- No endpoint, configuration write, hardware command, service action,
+  or control authority was added.
+- Automatic thermal control remains deliberately unarmed.
+
+### Validated
+
+- Network telemetry and Health Intelligence passed focused regression
+  coverage and live BattleStation verification.
+- Virtual LCD and cockpit changes passed complete GitHub Actions checks.
+- Live cockpit visual QA found no clipping, duplicate identifiers,
+  unintended advisories, or control regressions.
+
+## [1.2.0-rc1] - 2026-08-13
+
+- Harden guarded upgrade promotion so invalid backup paths are rejected before any backup copy begins; document the required sibling `.truepanel-backup-` naming contract.
+- Preserve installer-owned `bin/` artifacts during stage promotion so `bin/truepanel` survives source synchronization while retained backups remain able to restore the wrapper.
+- Run promotion and rollback verification with the deployed generation's own Python/runtime, retrying only transient Mission Control or LCD readiness failures.
+
+TruePanel 1.2.0 RC1 graduates the hardened native lifecycle,
+compatibility survey, Host ownership boundary, and clean-install path.
+
+### Added
+
+- Guarded install, uninstall, upgrade, repair, verify, rollback,
+  cleanup, and promotion lifecycle contracts.
+- Passive compatibility survey, storage classification, and
+  privacy-safe support bundles.
+- Dormant privileged Host Agent deployment with single-owner
+  enforcement, readiness, fan-safety, acceptance, and cutover checks.
+- Clean-install Run 3 regression and release evidence.
+
+### Changed
+
+- Fresh-install synchronization excludes source-local configuration,
+  secrets, virtual environments, caches, history, and plugin state.
+- Clean-install state can be quarantined outside the managed target.
+- Support evidence is retained outside the managed installation root.
+- Isolated TrueNAS virtual-environment bootstrap supports systems
+  without `ensurepip`.
+- Fresh buzzer defaults are safe and use the supported `pcspkr`
+  backend while disabled.
+
+### Validated
+
+Clean-install Run 3 on the reference QNAP TVS-671 passed:
+
+- genuine blank-target installation;
+- first LCD hardware startup;
+- Mission Control activation;
+- automatic Flight Deck rotation;
+- physical front-panel button navigation;
+- controlled LCD-service restart;
+- full TrueNAS reboot;
+- native installed verification;
+- motherboard fan control remaining Automatic;
+- Host acceptance remaining PASS;
+- standalone Host Agent remaining dormant and marker-gated.
+
+Unsupported fresh-buzzer warnings fell from five pre-fix occurrences
+to zero on corrected fresh startup, controlled restart, full reboot,
+and final post-reboot physical validation.
 
 ## [1.1.0] - 2026-07-30
 

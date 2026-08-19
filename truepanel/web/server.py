@@ -10,6 +10,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from truepanel.compatibility.checks import collect_compatibility
+from truepanel.compatibility.support import (
+    build_support_bundle,
+    default_support_path,
+)
 from truepanel.config.persistence import (
     ConfigurationPersistenceError,
     ConfigurationPersistenceService,
@@ -22,8 +27,8 @@ from truepanel.hardware.fan_command import (
     AFTERBURNERS_CONFIRMATION,
     BOUNDED_AUTOMATIC_CONFIRMATION,
     BOUNDED_AUTOMATIC_RENEW_CONFIRMATION,
-    THERMAL_ARM_CONFIRMATION,
     SUPERVISED_THERMAL_CONFIRMATION,
+    THERMAL_ARM_CONFIRMATION,
     FanCommandClient,
     FanCommandError,
 )
@@ -33,6 +38,7 @@ from truepanel.hardware.lcd_command import (
 )
 from truepanel.health import ServiceStatusProvider
 
+from .preflight import build_preflight_payload
 from .snapshot import SnapshotService
 
 LOGGER = logging.getLogger("truepanel.web")
@@ -52,6 +58,10 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             "/": self._dashboard,
             "/index.html": self._dashboard,
             "/api/v1/status": self._status,
+            "/api/v1/preflight": self._preflight,
+            "/api/v1/preflight/support-bundle": (
+                self._preflight_support_bundle
+            ),
             "/api/v1/lcd": self._lcd_status,
             "/api/v1/history": self._history,
             "/api/v1/fans/history": (
@@ -127,6 +137,61 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
     def _status(self, parsed):
         del parsed
         self._json(self.snapshot_service.status())
+
+    def _preflight(self, parsed):
+        del parsed
+
+        try:
+            report = collect_compatibility()
+        except Exception:
+            LOGGER.exception(
+                "Mission Control preflight survey failed"
+            )
+            self._json(
+                {
+                    "error": "preflight_unavailable",
+                    "message": (
+                        "Passive compatibility survey could not complete."
+                    ),
+                },
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+
+        self._json(
+            build_preflight_payload(report)
+        )
+
+    def _preflight_support_bundle(self, parsed):
+        del parsed
+
+        try:
+            report = collect_compatibility()
+            payload = build_support_bundle(report)
+            filename = default_support_path().name
+        except Exception:
+            LOGGER.exception(
+                "Mission Control support bundle generation failed"
+            )
+            self._json(
+                {
+                    "error": "support_bundle_unavailable",
+                    "message": (
+                        "Privacy-safe support bundle could not be generated."
+                    ),
+                },
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+
+        self._json(
+            payload,
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="{filename}"'
+                ),
+            },
+        )
 
     def _lcd_status(self, parsed):
         del parsed

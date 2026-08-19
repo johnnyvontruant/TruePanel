@@ -664,3 +664,16 @@ def test_successful_rollback_does_not_copy_receipt_into_deployment(
         safety
         / "truepanel-backup-receipt.json"
     ).is_file()
+def test_rollback_restore_keeps_bin_copy_enabled(tmp_path):
+    deployed=tmp_path/"TruePanel"; selected=tmp_path/".truepanel-backup-selected-wrapper"; safety=tmp_path/".truepanel-backup-rollback-wrapper"
+    create_install(deployed,marker="current",config="theme_pack: tactical\n")
+    create_install(selected,marker="previous",config="theme_pack: default\n")
+    selected.joinpath("truepanel.yaml").unlink()
+    wrapper=selected/"bin"/"truepanel"; wrapper.parent.mkdir(); wrapper.write_text("restored-wrapper\n")
+    add_receipt(selected,deployed)
+    runner=SandboxRsync()
+    plan=build_rollback_plan(deploy_root=deployed,selected_backup_root=selected,safety_backup_root=safety)
+    result=rollback_with_recovery(plan,runner=runner,restarter=lambda root:0,verifier=lambda root:0 if marker(root)=="previous" else 1)
+    assert result==0
+    assert (deployed/"bin"/"truepanel").read_text()=="restored-wrapper\n"
+    assert all("--exclude=bin/" not in command for command in runner.commands)

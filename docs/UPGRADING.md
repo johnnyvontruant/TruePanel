@@ -71,18 +71,24 @@ Do not promote a stage that did not complete validation successfully.
 
 ## 5. Promote the validated stage
 
-Promotion requires the exact confirmation phrase `PROMOTE_TRUEPANEL`:
+Promotion requires the exact confirmation phrase `PROMOTE_TRUEPANEL`.
+
+The explicit `--backup-root` must be a sibling of the deployment root, its basename must begin with `.truepanel-backup-`, and the path must not already exist. For the example deployment, a valid path is `/mnt/POOL/DATASET/.truepanel-backup-TruePanel-before-v1.2.0-rc3`. TruePanel validates this backup location before any deployment files are copied.
 
 ```bash
 python3 truepanel.py upgrade \
   --root /mnt/POOL/DATASET/TruePanel \
   --stage-root <stage-root> \
-  --backup-root <backup-root> \
+  --backup-root /mnt/POOL/DATASET/.truepanel-backup-TruePanel-before-v1.2.0-rc3 \
   --promote \
   --confirm PROMOTE_TRUEPANEL
 ```
 
 Promotion creates a deployment backup, installs the validated stage, restarts the required runtime, and verifies the promoted deployment.
+
+Installer-owned `bin/` artifacts, including `bin/truepanel`, are preserved during stage-to-deployment synchronization. Backup creation and rollback continue to copy these artifacts so a retained generation can restore the managed wrapper.
+
+Lifecycle verification runs with the deployed generation's own `.venv/bin/python` and `truepanel.py`. Only transient Mission Control or LCD readiness failures are retried after a restart; other verification failures return immediately.
 
 If promotion verification fails, TruePanel automatically attempts to restore the pre-upgrade deployment and verifies that rollback before returning control to the operator.
 

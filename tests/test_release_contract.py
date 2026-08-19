@@ -18,9 +18,38 @@ def dependency_name(requirement):
 
 
 def test_stable_product_version():
-    assert truepanel.__version__ == "1.1.0"
-    assert re.fullmatch(r"\d+\.\d+\.\d+", truepanel.__version__)
+    assert truepanel.__version__ == "1.2.0"
+    assert re.fullmatch(
+        r"\d+\.\d+\.\d+",
+        truepanel.__version__,
+    )
+    assert "rc" not in truepanel.__version__.lower()
     assert truepanel.__version__ == MISSION_CONTROL_VERSION
+
+
+def test_release_policy_documents_candidate_and_stable_versions():
+    release = (ROOT / "docs" / "RELEASE.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "X.Y.ZrcN" in release
+    assert "vX.Y.Z-rcN" in release
+    assert "vX.Y.Z" in release
+    assert "no prerelease suffix" in release
+    assert "Promote a release candidate to stable" in release
+    assert "Never move an existing release tag" in release
+
+
+def test_stable_changelog_preserves_release_candidate_history():
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+    stable_heading = "## [1.2.0] - 2026-08-19"
+    rc3_heading = "## [1.2.0-rc3] - 2026-08-18"
+
+    assert stable_heading in changelog
+    assert rc3_heading in changelog
+    assert changelog.index(stable_heading) < changelog.index(rc3_heading)
+    assert "Mission Control Preflight" in changelog
 
 
 def test_project_metadata_uses_authoritative_version():
@@ -31,6 +60,31 @@ def test_project_metadata_uses_authoritative_version():
     assert "dynamic" not in metadata["project"]
     assert "dynamic" not in metadata["tool"]["setuptools"]
     assert metadata["project"]["requires-python"] == ">=3.11"
+    assert metadata["project"]["scripts"] == {
+        "truepanel": "truepanel.cli:main"
+    }
+
+
+def test_ci_smokes_installed_wheel_outside_source_checkout():
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    smoke = ROOT / "development" / "tools" / "smoke_installed_wheel.py"
+
+    assert "installed-wheel-smoke:" in workflow
+    assert "python -m build --wheel" in workflow
+    assert "cd \"$RUNNER_TEMP\"" in workflow
+    assert "smoke_installed_wheel.py" in workflow
+    assert smoke.is_file()
+
+
+def test_pytest_collection_is_scoped_to_canonical_suite():
+    metadata = load_pyproject()
+
+    assert (
+        metadata["tool"]["pytest"]["ini_options"]["testpaths"]
+        == ["tests"]
+    )
 
 
 def test_runtime_requirements_match_project_dependencies():
@@ -86,19 +140,14 @@ def test_installer_release_paths_are_consistent():
     ):
         assert "TRUEPANEL_INSTALL_ROOT" in source
         assert "--root" in source
-        assert (
-            "systemctl show truepanel.service"
-            in source
-        )
+        assert "systemctl show truepanel.service" in source
         assert "/opt/truepanel" not in source
 
     assert 'BIN_DIR="$INSTALL_DIR/bin"' in installer
     assert 'ExecStart=$BIN_FILE run' in installer
 
-    assert (
-        'BIN_FILE="$INSTALL_DIR/bin/truepanel"'
-        in uninstaller
-    )
+    assert 'BIN_FILE="$INSTALL_DIR/bin/truepanel"' in uninstaller
+
 
 def test_production_entrypoints_compile():
     entrypoints = (

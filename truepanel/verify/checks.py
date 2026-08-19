@@ -132,6 +132,35 @@ def check_installation_files(
                 )
             )
 
+    wrapper = (
+        root / "bin" / "truepanel"
+    )
+
+    if (
+        wrapper.is_file()
+        and wrapper.stat().st_mode & 0o111
+    ):
+        results.append(
+            passed(
+                "CLI wrapper",
+                str(wrapper),
+            )
+        )
+    elif wrapper.is_file():
+        results.append(
+            failed(
+                "CLI wrapper",
+                f"Not executable: {wrapper}",
+            )
+        )
+    else:
+        results.append(
+            failed(
+                "CLI wrapper",
+                f"Missing: {wrapper}",
+            )
+        )
+
     return results
 
 
