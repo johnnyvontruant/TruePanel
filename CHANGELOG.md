@@ -4,6 +4,43 @@ All notable TruePanel changes are recorded here.
 
 TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.MINOR.PATCH`; release-candidate tags use `vMAJOR.MINOR.PATCH-rcN`.
 
+## [1.2.0] - 2026-08-19
+
+TruePanel 1.2.0 graduates the validated RC3 tree to a stable release and
+adds Mission Control Preflight as the final operator-facing release feature.
+The RC1 through RC3 history below preserves the detailed lifecycle,
+Mission Control, HoloDeck, and Black Box development record.
+
+### Added
+
+- Added on-demand Mission Control Preflight reporting for Host, Storage,
+  Cooling, Front Panel, and Safety Interlocks.
+- Added READY / REVIEW / HOLD projection while preserving non-blocking
+  review items instead of hiding them behind an overall ready state.
+- Added a downloadable privacy-safe compatibility support bundle from
+  Mission Control.
+
+### Safety
+
+- Preflight remains passive and read-only and does not grant hardware-control
+  authority.
+- Support bundles continue to exclude hostnames, IP addresses, hardware
+  serials, WWIDs, MAC addresses, usernames, configuration secrets, and pool
+  contents.
+- Automatic thermal control remains deliberately unarmed.
+
+### Validated
+
+- The final Preflight integration passed 2,045 canonical tests on the
+  reference development environment before stable promotion.
+- Live BattleStation validation reported `READY` / `SUPPORTED` with 14 PASS,
+  2 REVIEW, and 0 FAIL checks while both TruePanel services remained active.
+- The live support-bundle endpoint returned HTTP 200, omitted the reference
+  host's hostname and all detected non-loopback IP addresses, and emitted a
+  single `Cache-Control: no-store` response header.
+- Mission Control Preflight completed live visual and operator-flow review on
+  the reference QNAP TVS-671.
+
 ## [1.2.0-rc3] - 2026-08-18
 
 TruePanel 1.2.0 RC3 adds HoloDeck, a deterministic whole-stack digital

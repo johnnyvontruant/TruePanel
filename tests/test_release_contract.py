@@ -17,12 +17,13 @@ def dependency_name(requirement):
     return re.split(r"[<>=!~\[]", requirement, maxsplit=1)[0].strip().lower()
 
 
-def test_release_candidate_product_version():
-    assert truepanel.__version__ == "1.2.0rc3"
+def test_stable_product_version():
+    assert truepanel.__version__ == "1.2.0"
     assert re.fullmatch(
-        r"\d+\.\d+\.\d+rc\d+",
+        r"\d+\.\d+\.\d+",
         truepanel.__version__,
     )
+    assert "rc" not in truepanel.__version__.lower()
     assert truepanel.__version__ == MISSION_CONTROL_VERSION
 
 
@@ -35,6 +36,20 @@ def test_release_policy_documents_candidate_and_stable_versions():
     assert "vX.Y.Z-rcN" in release
     assert "vX.Y.Z" in release
     assert "no prerelease suffix" in release
+    assert "Promote a release candidate to stable" in release
+    assert "Never move an existing release tag" in release
+
+
+def test_stable_changelog_preserves_release_candidate_history():
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+    stable_heading = "## [1.2.0] - 2026-08-19"
+    rc3_heading = "## [1.2.0-rc3] - 2026-08-18"
+
+    assert stable_heading in changelog
+    assert rc3_heading in changelog
+    assert changelog.index(stable_heading) < changelog.index(rc3_heading)
+    assert "Mission Control Preflight" in changelog
 
 
 def test_project_metadata_uses_authoritative_version():
@@ -63,7 +78,6 @@ def test_ci_smokes_installed_wheel_outside_source_checkout():
     assert smoke.is_file()
 
 
-
 def test_pytest_collection_is_scoped_to_canonical_suite():
     metadata = load_pyproject()
 
@@ -71,6 +85,7 @@ def test_pytest_collection_is_scoped_to_canonical_suite():
         metadata["tool"]["pytest"]["ini_options"]["testpaths"]
         == ["tests"]
     )
+
 
 def test_runtime_requirements_match_project_dependencies():
     metadata = load_pyproject()
@@ -125,19 +140,14 @@ def test_installer_release_paths_are_consistent():
     ):
         assert "TRUEPANEL_INSTALL_ROOT" in source
         assert "--root" in source
-        assert (
-            "systemctl show truepanel.service"
-            in source
-        )
+        assert "systemctl show truepanel.service" in source
         assert "/opt/truepanel" not in source
 
     assert 'BIN_DIR="$INSTALL_DIR/bin"' in installer
     assert 'ExecStart=$BIN_FILE run' in installer
 
-    assert (
-        'BIN_FILE="$INSTALL_DIR/bin/truepanel"'
-        in uninstaller
-    )
+    assert 'BIN_FILE="$INSTALL_DIR/bin/truepanel"' in uninstaller
+
 
 def test_production_entrypoints_compile():
     entrypoints = (
