@@ -11,6 +11,30 @@ from .invariants import evaluate_timeline
 from .missions import mission_names, mission_scenario
 from .provider import HoloDeckHostProvider
 from .runner import HoloDeckScenarioRunner
+from .temporal import temporal_payload
+
+
+DEFAULT_OBSERVATION_INTERVAL_SECONDS = 10.0
+
+
+def _observation_schedule(
+    scenario,
+    *,
+    interval: float = DEFAULT_OBSERVATION_INTERVAL_SECONDS,
+) -> list[float]:
+    """Return deterministic cadence ticks plus every explicit event time."""
+
+    event_times = sorted({float(event.at) for event in scenario.events})
+    if not event_times:
+        return [0.0]
+
+    end_time = event_times[-1]
+    schedule = {0.0, *event_times}
+    tick = float(interval)
+    while tick < end_time:
+        schedule.add(tick)
+        tick += float(interval)
+    return sorted(schedule)
 
 
 def _terminal_contract(
@@ -135,7 +159,7 @@ def run_mission_report(
     *,
     runtime_dir: str | Path,
 ) -> dict[str, Any]:
-    """Run every transition in a built-in mission and return a safe summary."""
+    """Run a mission on deterministic cadence and return a safe summary."""
 
     scenario = mission_scenario(name)
     provider = HoloDeckHostProvider(
@@ -147,14 +171,20 @@ def run_mission_report(
         runtime_dir=runtime_dir,
     )
 
+    observation_times = _observation_schedule(scenario)
     observations = [runner.step()]
     previous_time = 0.0
-    for event_time in sorted({event.at for event in scenario.events}):
-        observations.append(runner.step(event_time - previous_time))
-        previous_time = event_time
+    for observation_time in observation_times[1:]:
+        observations.append(runner.step(observation_time - previous_time))
+        previous_time = observation_time
 
     invariant_result = evaluate_timeline(observations)
     operator_acceptance = acceptance_payload(scenario.name, observations)
+    temporal_semantics = temporal_payload(
+        scenario.name,
+        observations,
+        observation_times,
+    )
     final = observations[-1]
     recommendations = [
         observation.recommendation.recommended_profile.value
@@ -189,6 +219,7 @@ def run_mission_report(
         invariant_result.passed
         and contracts_passed
         and operator_acceptance["passed"]
+        and temporal_semantics["passed"]
     )
 
     return {
@@ -196,6 +227,7 @@ def run_mission_report(
         "host": scenario.host,
         "passed": passed,
         "simulated_seconds": previous_time,
+        "observation_interval_seconds": DEFAULT_OBSERVATION_INTERVAL_SECONDS,
         "scenario_event_count": len(scenario.events),
         "observation_count": len(observations),
         "mission_event_count": sum(len(item.events) for item in observations),
@@ -208,6 +240,7 @@ def run_mission_report(
             "checks": contracts,
         },
         "mission_control_acceptance": operator_acceptance,
+        "temporal_semantics": temporal_semantics,
         "invariants": {
             "passed": invariant_result.passed,
             "rule_count": invariant_result.rule_count,
@@ -252,6 +285,9 @@ def run_flight_deck_report(*, runtime_dir: str | Path) -> dict[str, Any]:
         "mission_control_acceptance_passed": sum(
             1 for item in reports if item["mission_control_acceptance"]["passed"]
         ),
+        "temporal_semantics_passed": sum(
+            1 for item in reports if item["temporal_semantics"]["passed"]
+        ),
         "missions": [
             {
                 "mission": item["mission"],
@@ -260,6 +296,7 @@ def run_flight_deck_report(*, runtime_dir: str | Path) -> dict[str, Any]:
                 "mission_control_acceptance_passed": item[
                     "mission_control_acceptance"
                 ]["passed"],
+                "temporal_semantics_passed": item["temporal_semantics"]["passed"],
                 "invariants_passed": item["invariants"]["passed"],
                 "violation_count": item["invariants"]["violation_count"],
             }
@@ -268,4 +305,8 @@ def run_flight_deck_report(*, runtime_dir: str | Path) -> dict[str, Any]:
     }
 
 
-__all__ = ["run_flight_deck_report", "run_mission_report"]
+__all__ = [
+    "DEFAULT_OBSERVATION_INTERVAL_SECONDS",
+    "run_flight_deck_report",
+    "run_mission_report",
+]
