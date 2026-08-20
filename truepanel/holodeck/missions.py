@@ -35,12 +35,32 @@ _MISSIONS: dict[str, dict[str, Any]] = {
             {"at": 35, "type": "pool_health", "pool": "HDDs", "health": "DEGRADED"},
         ],
     },
+    "drive-failure-recovery": {
+        "name": "drive-failure-recovery",
+        "host": "battlestation",
+        "events": [
+            {"at": 30, "type": "disk_fault", "bay": 3},
+            {"at": 35, "type": "pool_health", "pool": "HDDs", "health": "DEGRADED"},
+            {"at": 120, "type": "disk_recover", "bay": 3},
+            {"at": 125, "type": "pool_health", "pool": "HDDs", "health": "ONLINE"},
+        ],
+    },
     "drive-removal": {
         "name": "drive-removal",
         "host": "battlestation",
         "events": [
             {"at": 30, "type": "disk_remove", "bay": 3},
             {"at": 35, "type": "pool_health", "pool": "HDDs", "health": "DEGRADED"},
+        ],
+    },
+    "drive-removal-reinsert": {
+        "name": "drive-removal-reinsert",
+        "host": "battlestation",
+        "events": [
+            {"at": 30, "type": "disk_remove", "bay": 3},
+            {"at": 35, "type": "pool_health", "pool": "HDDs", "health": "DEGRADED"},
+            {"at": 120, "type": "disk_insert", "bay": 3},
+            {"at": 125, "type": "pool_health", "pool": "HDDs", "health": "ONLINE"},
         ],
     },
     "network-flap": {
