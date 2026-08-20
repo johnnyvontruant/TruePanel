@@ -1,5 +1,8 @@
 from truepanel.holodeck.missions import mission_names
-from truepanel.holodeck.report import run_mission_report
+from truepanel.holodeck.report import (
+    DEFAULT_OBSERVATION_INTERVAL_SECONDS,
+    run_mission_report,
+)
 
 
 def test_each_builtin_mission_produces_a_bounded_flight_report(tmp_path):
@@ -12,7 +15,19 @@ def test_each_builtin_mission_produces_a_bounded_flight_report(tmp_path):
         assert report["mission"] == name
         assert report["host"] == "battlestation"
         assert report["scenario_event_count"] >= 2
-        assert report["observation_count"] <= report["scenario_event_count"] + 1
+
+        cadence_ticks = int(
+            report["simulated_seconds"]
+            // DEFAULT_OBSERVATION_INTERVAL_SECONDS
+        )
+        maximum_observations = (
+            cadence_ticks
+            + report["scenario_event_count"]
+            + 1
+        )
+
+        assert report["observation_count"] >= report["scenario_event_count"] + 1
+        assert report["observation_count"] <= maximum_observations
         assert report["invariants"]["rule_count"] > 0
         assert "snapshot" not in report
         assert "hostname" not in report
