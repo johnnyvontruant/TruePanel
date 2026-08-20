@@ -12,8 +12,12 @@ from .provider import HoloDeckHostProvider
 from .runner import HoloDeckScenarioRunner
 
 
-def _terminal_contract(name: str, state: dict[str, Any]) -> list[dict[str, Any]]:
-    """Evaluate the promised terminal state for one built-in mission."""
+def _terminal_contract(
+    name: str,
+    state: dict[str, Any],
+    recommendations: list[str],
+) -> list[dict[str, Any]]:
+    """Evaluate the promised behavior and terminal state for one mission."""
 
     fans = state.get("fans", {}).get("fan_channels", [])
     fan_one = next(
@@ -34,60 +38,94 @@ def _terminal_contract(name: str, state: dict[str, Any]) -> list[dict[str, Any]]
         if isinstance(pool, dict)
     }
 
-    checks: dict[str, tuple[str, Any, Any]] = {
-        "thermal-ramp": (
-            "cpu_temperature_recovered",
-            state.get("cpu_temperature_c"),
-            54.0,
-        ),
-        "fan-stall-recovery": (
-            "fan_1_recovered",
-            bool(fan_one.get("rpm", 0) > 0 and not fan_one.get("alarm", False)),
-            True,
-        ),
-        "drive-failure": (
-            "drive_3_faulted_pool_degraded",
+    checks: dict[str, list[tuple[str, Any, Any]]] = {
+        "thermal-ramp": [
             (
-                str(bay_three.get("health", "")).upper(),
-                pools.get("HDDs"),
+                "cpu_temperature_recovered",
+                state.get("cpu_temperature_c"),
+                54.0,
             ),
-            ("FAULTED", "DEGRADED"),
-        ),
-        "drive-removal": (
-            "drive_3_removed_pool_degraded",
             (
-                bool(bay_three.get("present", True)),
-                pools.get("HDDs"),
+                "thermal_escalated_to_afterburners",
+                "afterburners" in recommendations,
+                True,
             ),
-            (False, "DEGRADED"),
-        ),
-        "network-flap": (
-            "primary_network_recovered",
-            bool(
-                state.get("network", {})
-                .get("enp116s0", {})
-                .get("link_up", False)
+            (
+                "thermal_downshifted_after_peak",
+                recommendations[-1] if recommendations else None,
+                "cooling_boost",
             ),
-            True,
-        ),
-        "lcd-loss-recovery": (
-            "lcd_recovered",
-            bool(state.get("lcd", {}).get("connected", False)),
-            True,
-        ),
-        "stale-telemetry-recovery": (
-            "telemetry_recovered",
-            bool(state.get("telemetry_fresh", False)),
-            True,
-        ),
+        ],
+        "fan-stall-recovery": [
+            (
+                "fan_1_recovered",
+                bool(fan_one.get("rpm", 0) > 0 and not fan_one.get("alarm", False)),
+                True,
+            )
+        ],
+        "drive-failure": [
+            (
+                "drive_3_faulted_pool_degraded",
+                (
+                    str(bay_three.get("health", "")).upper(),
+                    pools.get("HDDs"),
+                ),
+                ("FAULTED", "DEGRADED"),
+            )
+        ],
+        "drive-removal": [
+            (
+                "drive_3_removed_pool_degraded",
+                (
+                    bool(bay_three.get("present", True)),
+                    pools.get("HDDs"),
+                ),
+                (False, "DEGRADED"),
+            )
+        ],
+        "network-flap": [
+            (
+                "primary_network_recovered",
+                bool(
+                    state.get("network", {})
+                    .get("enp116s0", {})
+                    .get("link_up", False)
+                ),
+                True,
+            )
+        ],
+        "lcd-loss-recovery": [
+            (
+                "lcd_recovered",
+                bool(state.get("lcd", {}).get("connected", False)),
+                True,
+            )
+        ],
+        "stale-telemetry-recovery": [
+            (
+                "telemetry_entered_safe_automatic",
+                "automatic" in recommendations,
+                True,
+            ),
+            (
+                "telemetry_recovered",
+                bool(state.get("telemetry_fresh", False)),
+                True,
+            ),
+            (
+                "thermal_policy_recovered_from_automatic",
+                recommendations[-1] if recommendations else None,
+                "cooling_boost",
+            ),
+        ],
     }
 
-    check_id, actual, expected = checks[name]
     return [
         {
             "check_id": check_id,
             "passed": actual == expected,
         }
+        for check_id, actual, expected in checks[name]
     ]
 
 
@@ -116,6 +154,10 @@ def run_mission_report(
 
     invariant_result = evaluate_timeline(observations)
     final = observations[-1]
+    recommendations = [
+        observation.recommendation.recommended_profile.value
+        for observation in observations
+    ]
     pools = {
         str(pool.get("name")): str(pool.get("health", "UNKNOWN"))
         for pool in final.state.get("pools", [])
@@ -135,7 +177,11 @@ def run_mission_report(
         if "storage" in str(getattr(event, "source", "")).lower()
         or "storage" in str(getattr(event, "kind", "")).lower()
     )
-    contracts = _terminal_contract(scenario.name, final.state)
+    contracts = _terminal_contract(
+        scenario.name,
+        final.state,
+        recommendations,
+    )
     contracts_passed = all(item["passed"] for item in contracts)
 
     return {
@@ -148,6 +194,7 @@ def run_mission_report(
         "mission_event_count": sum(len(item.events) for item in observations),
         "fan_event_count": fan_events,
         "storage_event_count": storage_events,
+        "thermal_recommendations": recommendations,
         "contracts": {
             "passed": contracts_passed,
             "check_count": len(contracts),
