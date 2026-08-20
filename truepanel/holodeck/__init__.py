@@ -5,6 +5,7 @@ from __future__ import annotations
 from importlib import import_module
 
 _EXPORTS = {
+    "AcceptanceCheck": (".acceptance", "AcceptanceCheck"),
     "DeterministicClock": (".clock", "DeterministicClock"),
     "BlackBoxHoloDeckProvider": (".replay", "BlackBoxHoloDeckProvider"),
     "HoloDeckHostProvider": (".provider", "HoloDeckHostProvider"),
@@ -17,9 +18,14 @@ _EXPORTS = {
     "Scenario": (".scenario", "Scenario"),
     "ScenarioEvent": (".scenario", "ScenarioEvent"),
     "SimulationSafetyError": (".provider", "SimulationSafetyError"),
+    "acceptance_payload": (".acceptance", "acceptance_payload"),
     "build_holodeck_host_agent_runtime": (
         ".host_agent",
         "build_holodeck_host_agent_runtime",
+    ),
+    "evaluate_mission_control_acceptance": (
+        ".acceptance",
+        "evaluate_mission_control_acceptance",
     ),
     "evaluate_observation": (".invariants", "evaluate_observation"),
     "evaluate_timeline": (".invariants", "evaluate_timeline"),
