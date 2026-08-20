@@ -75,6 +75,13 @@ def _print_human(report: dict) -> None:
         f"({acceptance['check_count']} checks, "
         f"{acceptance['failed_count']} failed)"
     )
+    temporal = report["temporal_semantics"]
+    print(
+        "Temporal semantics: "
+        f"{'PASS' if temporal['passed'] else 'FAIL'} "
+        f"({temporal['check_count']} checks, "
+        f"{temporal['failed_count']} failed)"
+    )
     print(
         "Invariants: "
         f"{report['invariants']['rule_count']} rules, "
@@ -107,6 +114,11 @@ def _print_flight_deck(report: dict) -> None:
         f"{report['mission_control_acceptance_passed']}/"
         f"{report['mission_count']} passed"
     )
+    print(
+        "Temporal semantics: "
+        f"{report['temporal_semantics_passed']}/"
+        f"{report['mission_count']} passed"
+    )
     print(f"Simulated time: {report['simulated_seconds']:.1f}s")
     print(f"Scenario events: {report['scenario_event_count']}")
     print(f"Mission Control events: {report['mission_event_count']}")
@@ -117,6 +129,7 @@ def _print_flight_deck(report: dict) -> None:
             f"contracts={'PASS' if mission['contracts_passed'] else 'FAIL'} "
             "mission-control="
             f"{'PASS' if mission['mission_control_acceptance_passed'] else 'FAIL'} "
+            f"temporal={'PASS' if mission['temporal_semantics_passed'] else 'FAIL'} "
             f"invariants={'PASS' if mission['invariants_passed'] else 'FAIL'}"
         )
 
