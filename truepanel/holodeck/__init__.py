@@ -26,6 +26,7 @@ _EXPORTS = {
     "load_scenario": (".scenario", "load_scenario"),
     "mission_names": (".missions", "mission_names"),
     "mission_scenario": (".missions", "mission_scenario"),
+    "run_mission_report": (".report", "run_mission_report"),
 }
 
 __all__ = list(_EXPORTS)
