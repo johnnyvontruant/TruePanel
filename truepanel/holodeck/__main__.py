@@ -8,7 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from .missions import mission_names
-from .report import run_mission_report
+from .report import run_flight_deck_report, run_mission_report
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,17 +36,38 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Use an explicit isolated runtime directory",
     )
+
+    suite = actions.add_parser(
+        "flight-deck",
+        help="Run every built-in mission as one readiness exercise",
+    )
+    suite.add_argument(
+        "--json",
+        action="store_true",
+        dest="json_output",
+        help="Print the machine-readable Flight Deck summary",
+    )
+    suite.add_argument(
+        "--runtime-dir",
+        type=Path,
+        help="Use an explicit isolated runtime directory",
+    )
     return parser
 
 
 def _print_human(report: dict) -> None:
-    status = "PASS" if report["invariants"]["passed"] else "FAIL"
+    status = "PASS" if report["passed"] else "FAIL"
     print(f"HoloDeck mission: {report['mission']}")
     print(f"Result: {status}")
     print(f"Simulated time: {report['simulated_seconds']:.1f}s")
     print(f"Scenario events: {report['scenario_event_count']}")
     print(f"Observations: {report['observation_count']}")
     print(f"Mission Control events: {report['mission_event_count']}")
+    print(
+        "Contracts: "
+        f"{'PASS' if report['contracts']['passed'] else 'FAIL'} "
+        f"({report['contracts']['check_count']} checks)"
+    )
     print(
         "Invariants: "
         f"{report['invariants']['rule_count']} rules, "
@@ -67,6 +88,31 @@ def _print_human(report: dict) -> None:
     print(f"Pools: {pools}")
 
 
+def _print_flight_deck(report: dict) -> None:
+    status = "PASS" if report["passed"] else "FAIL"
+    print(f"HoloDeck Flight Deck: {status}")
+    print(
+        f"Missions: {report['passed_count']}/{report['mission_count']} passed, "
+        f"{report['failed_count']} failed"
+    )
+    print(f"Simulated time: {report['simulated_seconds']:.1f}s")
+    print(f"Scenario events: {report['scenario_event_count']}")
+    print(f"Mission Control events: {report['mission_event_count']}")
+    for mission in report["missions"]:
+        print(
+            f"- {'PASS' if mission['passed'] else 'FAIL'} "
+            f"{mission['mission']} "
+            f"contracts={'PASS' if mission['contracts_passed'] else 'FAIL'} "
+            f"invariants={'PASS' if mission['invariants_passed'] else 'FAIL'}"
+        )
+
+
+def _runtime_report(args):
+    if args.action == "flight-deck":
+        return run_flight_deck_report(runtime_dir=args.runtime_dir)
+    return run_mission_report(args.mission, runtime_dir=args.runtime_dir)
+
+
 def _execute(args) -> int:
     if args.action == "list":
         for name in mission_names():
@@ -74,22 +120,19 @@ def _execute(args) -> int:
         return 0
 
     if args.runtime_dir is not None:
-        report = run_mission_report(
-            args.mission,
-            runtime_dir=args.runtime_dir,
-        )
+        report = _runtime_report(args)
     else:
         with TemporaryDirectory(prefix="truepanel-holodeck-mission-") as directory:
-            report = run_mission_report(
-                args.mission,
-                runtime_dir=directory,
-            )
+            args.runtime_dir = Path(directory)
+            report = _runtime_report(args)
 
     if args.json_output:
         print(json.dumps(report, sort_keys=True))
+    elif args.action == "flight-deck":
+        _print_flight_deck(report)
     else:
         _print_human(report)
-    return 0 if report["invariants"]["passed"] else 1
+    return 0 if report["passed"] else 1
 
 
 def main(argv: list[str] | None = None) -> int:
