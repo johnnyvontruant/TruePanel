@@ -201,10 +201,11 @@ class HoloDeckHostProvider:
 
     def _disk_insert(self, values: Mapping[str, Any]) -> None:
         number = int(values["bay"])
+        target = self._bay(number)
         restored = self._baseline_bay(number)
         restored.update({"present": True, "health": "ONLINE", "faulted": False})
-        self._bay(number).clear()
-        self._bay(number).update(restored)
+        target.clear()
+        target.update(restored)
 
     def _interface(self, name: str) -> dict[str, Any]:
         network = self._state.setdefault("network", {})
