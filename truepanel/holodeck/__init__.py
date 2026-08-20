@@ -24,6 +24,8 @@ _EXPORTS = {
     "evaluate_observation": (".invariants", "evaluate_observation"),
     "evaluate_timeline": (".invariants", "evaluate_timeline"),
     "load_scenario": (".scenario", "load_scenario"),
+    "mission_names": (".missions", "mission_names"),
+    "mission_scenario": (".missions", "mission_scenario"),
 }
 
 __all__ = list(_EXPORTS)
