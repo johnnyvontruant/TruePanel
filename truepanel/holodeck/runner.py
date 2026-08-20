@@ -76,9 +76,9 @@ class _SimulatedServices:
 class HoloDeckScenarioRunner:
     """Drive real policy, watchers, SnapshotService, and Health Intelligence.
 
-    Every provider and runtime bridge is explicitly injected.  The runner
-    never constructs a production hardware manager and never reads a
-    production ``/run`` or ``/var`` status path.
+    Every provider and runtime bridge is explicitly injected. The runner never
+    constructs a production hardware manager and never reads a production
+    ``/run`` or ``/var`` status path.
     """
 
     def __init__(
@@ -200,6 +200,36 @@ class HoloDeckScenarioRunner:
             }
         )
 
+    def _publish_thermal(
+        self,
+        recommendation: ThermalFanRecommendation,
+    ) -> None:
+        """Publish observe-only policy state into the isolated status bridge."""
+
+        self.snapshot_service.fan_control_bridge.publish(
+            {
+                "enabled": False,
+                "connected": True,
+                "active_profile": "automatic",
+                "requested_profile": "automatic",
+                "control_authority": "automatic",
+                "safety_hold": False,
+                "recovery_pending": False,
+                "thermal_policy_mode": "observe_only",
+                "thermal_operator_armed": False,
+                "thermal_dry_run": True,
+                "thermal_control_state": "observing",
+                "thermal_control_reason": recommendation.reason,
+                "thermal_simulated_profile": recommendation.recommended_profile.value,
+                "thermal_recommended_profile": recommendation.recommended_profile.value,
+                "thermal_hottest_temperature_c": recommendation.hottest_temperature_c,
+                "thermal_recommendation_reason": recommendation.reason,
+                "thermal_recommendation_changed": recommendation.changed,
+                "thermal_telemetry_valid": recommendation.telemetry_valid,
+                "last_reason": "HoloDeck observe-only thermal simulation.",
+            }
+        )
+
     def step(self, seconds: float = 0.0) -> HoloDeckObservation:
         """Advance simulated time and evaluate one complete observation."""
 
@@ -214,6 +244,7 @@ class HoloDeckScenarioRunner:
             telemetry_fresh=telemetry["telemetry_fresh"],
         )
         self._publish_lcd(state)
+        self._publish_thermal(recommendation)
 
         events = []
         for watcher in (self.fan_watcher, self.storage_watcher):
