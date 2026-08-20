@@ -17,9 +17,34 @@ def test_every_builtin_mission_satisfies_terminal_contract(tmp_path):
 
         assert report["passed"] is True
         assert report["contracts"]["passed"] is True
-        assert report["contracts"]["check_count"] == 1
-        assert report["contracts"]["checks"][0]["passed"] is True
+        assert report["contracts"]["check_count"] >= 1
+        assert all(
+            item["passed"]
+            for item in report["contracts"]["checks"]
+        )
         assert report["invariants"]["passed"] is True
+
+
+def test_thermal_ramp_proves_escalation_and_recovery(tmp_path):
+    report = run_mission_report(
+        "thermal-ramp",
+        runtime_dir=tmp_path / "thermal",
+    )
+
+    assert "afterburners" in report["thermal_recommendations"]
+    assert report["thermal_recommendations"][-1] == "cooling_boost"
+    assert report["contracts"]["check_count"] == 3
+
+
+def test_stale_telemetry_proves_safe_fallback_and_recovery(tmp_path):
+    report = run_mission_report(
+        "stale-telemetry-recovery",
+        runtime_dir=tmp_path / "telemetry",
+    )
+
+    assert "automatic" in report["thermal_recommendations"]
+    assert report["thermal_recommendations"][-1] == "cooling_boost"
+    assert report["contracts"]["check_count"] == 3
 
 
 def test_flight_deck_runs_complete_catalog(tmp_path):
