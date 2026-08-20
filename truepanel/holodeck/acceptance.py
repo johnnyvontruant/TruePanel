@@ -132,6 +132,29 @@ def evaluate_mission_control_acceptance(
                 ),
             ]
         )
+    elif mission in {"drive-failure-recovery", "drive-removal-reinsert"}:
+        states = _subsystem_states(timeline, "storage")
+        degraded_index = next(
+            (index for index, state in enumerate(states) if state == "DEGRADED"),
+            None,
+        )
+        checks.extend(
+            [
+                _check(
+                    "mission_control.storage_degraded_visible",
+                    degraded_index is not None,
+                ),
+                _check(
+                    "mission_control.storage_recovery_visible",
+                    degraded_index is not None
+                    and "NOMINAL" in states[degraded_index + 1 :],
+                ),
+                _check(
+                    "mission_control.storage_terminal_nominal",
+                    states[-1] == "NOMINAL",
+                ),
+            ]
+        )
     elif mission == "network-flap":
         states = _subsystem_states(timeline, "network")
         checks.extend(
