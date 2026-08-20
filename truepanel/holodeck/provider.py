@@ -141,7 +141,9 @@ class HoloDeckHostProvider:
             "fan_stall": self._fan_stall,
             "fan_recover": self._fan_recover,
             "disk_fault": self._disk_fault,
+            "disk_recover": self._disk_recover,
             "disk_remove": self._disk_remove,
+            "disk_insert": self._disk_insert,
             "network_down": self._network_down,
             "network_up": self._network_up,
             "lcd_disconnect": lambda _v: self._set_lcd(False),
@@ -181,11 +183,28 @@ class HoloDeckHostProvider:
                 return bay
         raise ValueError(f"unknown simulated drive bay: {number}")
 
+    def _baseline_bay(self, number: int) -> dict[str, Any]:
+        for bay in self._baseline.get("enclosure", {}).get("bays", []):
+            if int(bay.get("bay", -1)) == number:
+                return copy.deepcopy(bay)
+        raise ValueError(f"unknown baseline simulated drive bay: {number}")
+
     def _disk_fault(self, values: Mapping[str, Any]) -> None:
         self._bay(int(values["bay"])).update({"health": "FAULTED", "faulted": True})
 
+    def _disk_recover(self, values: Mapping[str, Any]) -> None:
+        bay = self._bay(int(values["bay"]))
+        bay.update({"health": "ONLINE", "faulted": False, "present": True})
+
     def _disk_remove(self, values: Mapping[str, Any]) -> None:
         self._bay(int(values["bay"])).update({"present": False, "device": None})
+
+    def _disk_insert(self, values: Mapping[str, Any]) -> None:
+        number = int(values["bay"])
+        restored = self._baseline_bay(number)
+        restored.update({"present": True, "health": "ONLINE", "faulted": False})
+        self._bay(number).clear()
+        self._bay(number).update(restored)
 
     def _interface(self, name: str) -> dict[str, Any]:
         network = self._state.setdefault("network", {})
