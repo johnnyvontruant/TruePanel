@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .acceptance import acceptance_payload
 from .catalog import host_fixture
 from .invariants import evaluate_timeline
 from .missions import mission_names, mission_scenario
@@ -153,6 +154,7 @@ def run_mission_report(
         previous_time = event_time
 
     invariant_result = evaluate_timeline(observations)
+    operator_acceptance = acceptance_payload(scenario.name, observations)
     final = observations[-1]
     recommendations = [
         observation.recommendation.recommended_profile.value
@@ -183,11 +185,16 @@ def run_mission_report(
         recommendations,
     )
     contracts_passed = all(item["passed"] for item in contracts)
+    passed = (
+        invariant_result.passed
+        and contracts_passed
+        and operator_acceptance["passed"]
+    )
 
     return {
         "mission": scenario.name,
         "host": scenario.host,
-        "passed": invariant_result.passed and contracts_passed,
+        "passed": passed,
         "simulated_seconds": previous_time,
         "scenario_event_count": len(scenario.events),
         "observation_count": len(observations),
@@ -200,6 +207,7 @@ def run_mission_report(
             "check_count": len(contracts),
             "checks": contracts,
         },
+        "mission_control_acceptance": operator_acceptance,
         "invariants": {
             "passed": invariant_result.passed,
             "rule_count": invariant_result.rule_count,
@@ -241,11 +249,17 @@ def run_flight_deck_report(*, runtime_dir: str | Path) -> dict[str, Any]:
         "simulated_seconds": sum(item["simulated_seconds"] for item in reports),
         "scenario_event_count": sum(item["scenario_event_count"] for item in reports),
         "mission_event_count": sum(item["mission_event_count"] for item in reports),
+        "mission_control_acceptance_passed": sum(
+            1 for item in reports if item["mission_control_acceptance"]["passed"]
+        ),
         "missions": [
             {
                 "mission": item["mission"],
                 "passed": item["passed"],
                 "contracts_passed": item["contracts"]["passed"],
+                "mission_control_acceptance_passed": item[
+                    "mission_control_acceptance"
+                ]["passed"],
                 "invariants_passed": item["invariants"]["passed"],
                 "violation_count": item["invariants"]["violation_count"],
             }
