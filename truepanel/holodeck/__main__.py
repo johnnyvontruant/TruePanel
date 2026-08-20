@@ -68,6 +68,13 @@ def _print_human(report: dict) -> None:
         f"{'PASS' if report['contracts']['passed'] else 'FAIL'} "
         f"({report['contracts']['check_count']} checks)"
     )
+    acceptance = report["mission_control_acceptance"]
+    print(
+        "Mission Control acceptance: "
+        f"{'PASS' if acceptance['passed'] else 'FAIL'} "
+        f"({acceptance['check_count']} checks, "
+        f"{acceptance['failed_count']} failed)"
+    )
     print(
         "Invariants: "
         f"{report['invariants']['rule_count']} rules, "
@@ -95,6 +102,11 @@ def _print_flight_deck(report: dict) -> None:
         f"Missions: {report['passed_count']}/{report['mission_count']} passed, "
         f"{report['failed_count']} failed"
     )
+    print(
+        "Mission Control acceptance: "
+        f"{report['mission_control_acceptance_passed']}/"
+        f"{report['mission_count']} passed"
+    )
     print(f"Simulated time: {report['simulated_seconds']:.1f}s")
     print(f"Scenario events: {report['scenario_event_count']}")
     print(f"Mission Control events: {report['mission_event_count']}")
@@ -103,6 +115,8 @@ def _print_flight_deck(report: dict) -> None:
             f"- {'PASS' if mission['passed'] else 'FAIL'} "
             f"{mission['mission']} "
             f"contracts={'PASS' if mission['contracts_passed'] else 'FAIL'} "
+            "mission-control="
+            f"{'PASS' if mission['mission_control_acceptance_passed'] else 'FAIL'} "
             f"invariants={'PASS' if mission['invariants_passed'] else 'FAIL'}"
         )
 
