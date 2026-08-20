@@ -7,9 +7,88 @@ from typing import Any
 
 from .catalog import host_fixture
 from .invariants import evaluate_timeline
-from .missions import mission_scenario
+from .missions import mission_names, mission_scenario
 from .provider import HoloDeckHostProvider
 from .runner import HoloDeckScenarioRunner
+
+
+def _terminal_contract(name: str, state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Evaluate the promised terminal state for one built-in mission."""
+
+    fans = state.get("fans", {}).get("fan_channels", [])
+    fan_one = next(
+        (item for item in fans if int(item.get("number", -1)) == 1),
+        {},
+    )
+    bay_three = next(
+        (
+            item
+            for item in state.get("enclosure", {}).get("bays", [])
+            if int(item.get("bay", -1)) == 3
+        ),
+        {},
+    )
+    pools = {
+        str(pool.get("name")): str(pool.get("health", "UNKNOWN"))
+        for pool in state.get("pools", [])
+        if isinstance(pool, dict)
+    }
+
+    checks: dict[str, tuple[str, Any, Any]] = {
+        "thermal-ramp": (
+            "cpu_temperature_recovered",
+            state.get("cpu_temperature_c"),
+            54.0,
+        ),
+        "fan-stall-recovery": (
+            "fan_1_recovered",
+            bool(fan_one.get("rpm", 0) > 0 and not fan_one.get("alarm", False)),
+            True,
+        ),
+        "drive-failure": (
+            "drive_3_faulted_pool_degraded",
+            (
+                str(bay_three.get("health", "")).upper(),
+                pools.get("HDDs"),
+            ),
+            ("FAULTED", "DEGRADED"),
+        ),
+        "drive-removal": (
+            "drive_3_removed_pool_degraded",
+            (
+                bool(bay_three.get("present", True)),
+                pools.get("HDDs"),
+            ),
+            (False, "DEGRADED"),
+        ),
+        "network-flap": (
+            "primary_network_recovered",
+            bool(
+                state.get("network", {})
+                .get("enp116s0", {})
+                .get("link_up", False)
+            ),
+            True,
+        ),
+        "lcd-loss-recovery": (
+            "lcd_recovered",
+            bool(state.get("lcd", {}).get("connected", False)),
+            True,
+        ),
+        "stale-telemetry-recovery": (
+            "telemetry_recovered",
+            bool(state.get("telemetry_fresh", False)),
+            True,
+        ),
+    }
+
+    check_id, actual, expected = checks[name]
+    return [
+        {
+            "check_id": check_id,
+            "passed": actual == expected,
+        }
+    ]
 
 
 def run_mission_report(
@@ -17,12 +96,7 @@ def run_mission_report(
     *,
     runtime_dir: str | Path,
 ) -> dict[str, Any]:
-    """Run every transition in a built-in mission and return a safe summary.
-
-    The report intentionally excludes raw host snapshots.  It records only
-    deterministic mission metadata, invariant outcomes, event counts, and
-    high-level terminal state useful to CI and operator review.
-    """
+    """Run every transition in a built-in mission and return a safe summary."""
 
     scenario = mission_scenario(name)
     provider = HoloDeckHostProvider(
@@ -61,16 +135,24 @@ def run_mission_report(
         if "storage" in str(getattr(event, "source", "")).lower()
         or "storage" in str(getattr(event, "kind", "")).lower()
     )
+    contracts = _terminal_contract(scenario.name, final.state)
+    contracts_passed = all(item["passed"] for item in contracts)
 
     return {
         "mission": scenario.name,
         "host": scenario.host,
+        "passed": invariant_result.passed and contracts_passed,
         "simulated_seconds": previous_time,
         "scenario_event_count": len(scenario.events),
         "observation_count": len(observations),
         "mission_event_count": sum(len(item.events) for item in observations),
         "fan_event_count": fan_events,
         "storage_event_count": storage_events,
+        "contracts": {
+            "passed": contracts_passed,
+            "check_count": len(contracts),
+            "checks": contracts,
+        },
         "invariants": {
             "passed": invariant_result.passed,
             "rule_count": invariant_result.rule_count,
@@ -95,4 +177,34 @@ def run_mission_report(
     }
 
 
-__all__ = ["run_mission_report"]
+def run_flight_deck_report(*, runtime_dir: str | Path) -> dict[str, Any]:
+    """Run the complete built-in mission catalog as one readiness exercise."""
+
+    root = Path(runtime_dir)
+    reports = [
+        run_mission_report(name, runtime_dir=root / name)
+        for name in mission_names()
+    ]
+    passed = all(item["passed"] for item in reports)
+    return {
+        "passed": passed,
+        "mission_count": len(reports),
+        "passed_count": sum(1 for item in reports if item["passed"]),
+        "failed_count": sum(1 for item in reports if not item["passed"]),
+        "simulated_seconds": sum(item["simulated_seconds"] for item in reports),
+        "scenario_event_count": sum(item["scenario_event_count"] for item in reports),
+        "mission_event_count": sum(item["mission_event_count"] for item in reports),
+        "missions": [
+            {
+                "mission": item["mission"],
+                "passed": item["passed"],
+                "contracts_passed": item["contracts"]["passed"],
+                "invariants_passed": item["invariants"]["passed"],
+                "violation_count": item["invariants"]["violation_count"],
+            }
+            for item in reports
+        ],
+    }
+
+
+__all__ = ["run_flight_deck_report", "run_mission_report"]
