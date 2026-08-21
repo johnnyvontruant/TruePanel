@@ -1,8 +1,8 @@
 """Guided-recovery extension for the Mission Control HTTP server.
 
 The established server implementation lives in :mod:`server_base`. This thin
-wrapper preserves its public API and command-line entry point while adding one
-read-only static Flight Manual asset to the existing dashboard.
+wrapper preserves its public API and command-line entry point while adding the
+read-only Flight Manual and Project Lifeline assets to the existing dashboard.
 
 Compatibility evidence retained for source-contract tests implemented by the
 base module:
@@ -30,15 +30,23 @@ _FLIGHT_MANUAL_TAG = (
     _FLIGHT_MANUAL_MARKER
     + b'\n<script src="/flight-manual.js" defer></script>\n'
 )
+_LIFELINE_MARKER = b"<!-- truepanel-lifeline -->"
+_LIFELINE_TAG = (
+    _LIFELINE_MARKER
+    + b'\n<script src="/lifeline.js" defer></script>\n'
+)
 
 
 class MissionControlRequestHandler(_base.MissionControlRequestHandler):
-    """Serve the existing dashboard plus its read-only recovery manual."""
+    """Serve the existing dashboard plus read-only recovery extensions."""
 
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/flight-manual.js":
-            self._flight_manual_script(parsed)
+            self._static_script("flight-manual.js", "flight_manual_unavailable")
+            return
+        if parsed.path == "/lifeline.js":
+            self._static_script("lifeline.js", "lifeline_unavailable")
             return
         super().do_GET()
 
@@ -54,26 +62,31 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             )
             return
 
+        tags = b""
         if _FLIGHT_MANUAL_MARKER not in body:
+            tags += _FLIGHT_MANUAL_TAG
+        if _LIFELINE_MARKER not in body:
+            tags += _LIFELINE_TAG
+
+        if tags:
             if b"</body>" in body:
                 body = body.replace(
                     b"</body>",
-                    _FLIGHT_MANUAL_TAG + b"</body>",
+                    tags + b"</body>",
                     1,
                 )
             else:
-                body += _FLIGHT_MANUAL_TAG
+                body += tags
 
         self._send(body, content_type="text/html; charset=utf-8")
 
-    def _flight_manual_script(self, parsed):
-        del parsed
-        candidate = STATIC_DIR / "flight-manual.js"
+    def _static_script(self, filename, error_code):
+        candidate = STATIC_DIR / filename
         try:
             body = candidate.read_bytes()
         except OSError:
             self._json(
-                {"error": "flight_manual_unavailable"},
+                {"error": error_code},
                 status=HTTPStatus.NOT_FOUND,
             )
             return
@@ -81,6 +94,10 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             body,
             content_type="application/javascript; charset=utf-8",
         )
+
+    def _flight_manual_script(self, parsed):
+        del parsed
+        self._static_script("flight-manual.js", "flight_manual_unavailable")
 
     def _preflight(self, parsed):
         # Preserve the long-standing monkeypatch seam on this public module.
