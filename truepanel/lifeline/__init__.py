@@ -1,5 +1,10 @@
 """Project Lifeline guided-repair primitives."""
 
+from .identify import (
+    BayIdentificationService,
+    DEFAULT_IDENTIFY_SECONDS,
+    MAX_IDENTIFY_SECONDS,
+)
 from .profiles import (
     QNAP_TVS_X71,
     ServiceProfile,
@@ -19,9 +24,12 @@ from .session import (
 from .store import DEFAULT_LIFELINE_PATH, LifelineSessionStore
 
 __all__ = [
+    "BayIdentificationService",
+    "DEFAULT_IDENTIFY_SECONDS",
     "DEFAULT_LIFELINE_PATH",
     "DRIVE_PHASES",
     "LifelineSessionStore",
+    "MAX_IDENTIFY_SECONDS",
     "QNAP_TVS_X71",
     "RepairGate",
     "RepairSession",
