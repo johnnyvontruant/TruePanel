@@ -1,8 +1,10 @@
-"""Add health intelligence to existing Mission Control snapshot payloads."""
+"""Add health intelligence and operator guidance to Mission Control snapshots."""
 
 from __future__ import annotations
 
 from typing import Any
+
+from truepanel.guidance import guidance_for_snapshot
 
 from .intelligence import HealthEvaluator
 
@@ -14,8 +16,8 @@ def augment_status_snapshot(
 ) -> dict[str, Any]:
     """Return an additive health-aware copy of a status snapshot.
 
-    Existing top-level values are preserved exactly. Health Intelligence only
-    consumes those values and publishes a new ``health`` object.
+    Existing top-level values are preserved exactly. Health Intelligence and
+    operator guidance only consume those values and publish additive objects.
     """
 
     result = dict(payload)
@@ -53,5 +55,7 @@ def augment_status_snapshot(
             else {}
         ),
     )
+
+    result["operator_guidance"] = guidance_for_snapshot(payload)
 
     return result
