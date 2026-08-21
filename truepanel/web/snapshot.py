@@ -34,7 +34,11 @@ from __future__ import annotations
 from typing import Any
 
 from truepanel.guidance.storage_evidence import StorageRecoveryEvidenceProvider
-from truepanel.lifeline import LifelineSessionStore, service_profile_for_config
+from truepanel.lifeline import (
+    LifelineSessionStore,
+    ReplacementCandidateProvider,
+    service_profile_for_config,
+)
 
 from . import snapshot_base as _base
 
@@ -65,6 +69,7 @@ class SnapshotService(_base.SnapshotService):
         self,
         *args,
         storage_evidence_provider=None,
+        replacement_candidate_provider=None,
         lifeline_store=None,
         lifeline_path=None,
         **kwargs,
@@ -76,6 +81,10 @@ class SnapshotService(_base.SnapshotService):
         self.storage_evidence_provider = (
             storage_evidence_provider
             or StorageRecoveryEvidenceProvider()
+        )
+        self.replacement_candidate_provider = (
+            replacement_candidate_provider
+            or ReplacementCandidateProvider()
         )
         self.lifeline_store = (
             lifeline_store
@@ -91,29 +100,54 @@ class SnapshotService(_base.SnapshotService):
         try:
             result = self.lifeline_store.observe(payload)
             profile = self.lifeline_service_profile
-            profile_changed = False
-            if profile is not None and profile.drive_service_supported:
-                for session in _safe_list(
-                    _safe_dict(result.get("lifeline")).get("sessions")
-                ):
-                    if not isinstance(session, dict) or session.get("status") != "active":
-                        continue
-                    context = _safe_dict(session.get("context"))
-                    if (
+            changed = False
+            storage_devices = _safe_list(
+                _safe_dict(payload.get("storage")).get("devices")
+            )
+
+            for session in _safe_list(
+                _safe_dict(result.get("lifeline")).get("sessions")
+            ):
+                if not isinstance(session, dict) or session.get("status") != "active":
+                    continue
+                session_id = str(session.get("id") or "")
+                if not session_id:
+                    continue
+                context = _safe_dict(session.get("context"))
+
+                if profile is not None and profile.drive_service_supported:
+                    if not (
                         context.get("service_procedure_verified") is True
                         and context.get("service_profile") == profile.key
                         and context.get("service_source") == profile.source_title
                     ):
-                        continue
-                    self.lifeline_store.set_service_procedure_verified(
-                        str(session.get("id") or ""),
-                        verified=True,
-                        profile=profile.key,
-                        source=profile.source_title,
-                    )
-                    profile_changed = True
+                        self.lifeline_store.set_service_procedure_verified(
+                            session_id,
+                            verified=True,
+                            profile=profile.key,
+                            source=profile.source_title,
+                        )
+                        changed = True
 
-            if profile_changed:
+                try:
+                    candidates = self.replacement_candidate_provider.candidates(
+                        _safe_dict(session.get("original_fault")),
+                        storage_devices=storage_devices,
+                    )
+                except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+                    candidates = []
+
+                existing_candidates = _safe_list(
+                    context.get("replacement_candidates")
+                )
+                if candidates != existing_candidates:
+                    self.lifeline_store.set_replacement_candidates(
+                        session_id,
+                        candidates,
+                    )
+                    changed = True
+
+            if changed:
                 result = self.lifeline_store.observe(payload)
 
             lifeline = _safe_dict(result.get("lifeline"))
