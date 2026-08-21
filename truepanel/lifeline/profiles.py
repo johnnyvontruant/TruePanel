@@ -2,7 +2,8 @@
 
 Profiles are explicit and source-backed. Lifeline never guesses a chassis from
 bay count, hostname, DMI fragments, or visual similarity. A deployment must
-select a known profile before model-specific physical service can be unlocked.
+select both a known service profile and an exact model covered by that profile
+before model-specific physical service can be unlocked.
 """
 
 from __future__ import annotations
@@ -21,7 +22,27 @@ class ServiceProfile:
     source_url: str
     source_scope: str
     drive_service_supported: bool
+    selected_model: str | None = None
     notes: tuple[str, ...] = ()
+
+    def for_model(self, model: str) -> "ServiceProfile" | None:
+        normalized = str(model or "").strip().upper()
+        supported = {item.upper(): item for item in self.models}
+        canonical = supported.get(normalized)
+        if canonical is None:
+            return None
+        return ServiceProfile(
+            key=self.key,
+            manufacturer=self.manufacturer,
+            family=self.family,
+            models=self.models,
+            source_title=self.source_title,
+            source_url=self.source_url,
+            source_scope=self.source_scope,
+            drive_service_supported=self.drive_service_supported,
+            selected_model=canonical,
+            notes=self.notes,
+        )
 
     def to_payload(self) -> dict[str, Any]:
         return asdict(self)
@@ -56,7 +77,7 @@ def service_profile(key: Any) -> ServiceProfile | None:
 
 
 def service_profile_for_config(config: Any) -> ServiceProfile | None:
-    """Resolve only an explicit configured service profile."""
+    """Resolve only an explicit profile whose exact model is covered."""
 
     if not isinstance(config, dict):
         return None
@@ -66,7 +87,13 @@ def service_profile_for_config(config: Any) -> ServiceProfile | None:
     lifeline = hardware.get("lifeline")
     if not isinstance(lifeline, dict):
         return None
-    return service_profile(lifeline.get("service_profile"))
+    profile = service_profile(lifeline.get("service_profile"))
+    if profile is None:
+        return None
+    model = str(lifeline.get("chassis_model") or "").strip()
+    if not model:
+        return None
+    return profile.for_model(model)
 
 
 def profile_keys() -> tuple[str, ...]:
