@@ -34,14 +34,11 @@ from __future__ import annotations
 from typing import Any
 
 from truepanel.guidance.storage_evidence import StorageRecoveryEvidenceProvider
-from truepanel.lifeline import LifelineSessionStore
+from truepanel.lifeline import LifelineSessionStore, service_profile_for_config
 
 from . import snapshot_base as _base
 
 
-# Keep the historical monkeypatch seam at truepanel.web.snapshot.get_fan_status.
-# The subclass below passes a proxy into the base implementation so a test or
-# platform adapter replacing this name continues to affect new instances.
 get_fan_status = _base.get_fan_status
 
 _UNHEALTHY_POOL_STATES = {
@@ -87,13 +84,45 @@ class SnapshotService(_base.SnapshotService):
                 clock=self.clock,
             )
         )
+        self.lifeline_service_profile = service_profile_for_config(self.config)
 
     def status(self) -> dict[str, Any]:
         payload = super().status()
         try:
-            return self.lifeline_store.observe(payload)
+            result = self.lifeline_store.observe(payload)
+            profile = self.lifeline_service_profile
+            profile_changed = False
+            if profile is not None and profile.drive_service_supported:
+                for session in _safe_list(
+                    _safe_dict(result.get("lifeline")).get("sessions")
+                ):
+                    if not isinstance(session, dict) or session.get("status") != "active":
+                        continue
+                    context = _safe_dict(session.get("context"))
+                    if (
+                        context.get("service_procedure_verified") is True
+                        and context.get("service_profile") == profile.key
+                        and context.get("service_source") == profile.source_title
+                    ):
+                        continue
+                    self.lifeline_store.set_service_procedure_verified(
+                        str(session.get("id") or ""),
+                        verified=True,
+                        profile=profile.key,
+                        source=profile.source_title,
+                    )
+                    profile_changed = True
+
+            if profile_changed:
+                result = self.lifeline_store.observe(payload)
+
+            lifeline = _safe_dict(result.get("lifeline"))
+            if profile is not None:
+                lifeline = dict(lifeline)
+                lifeline["service_profile"] = profile.to_payload()
+                result["lifeline"] = lifeline
+            return result
         except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
-            # Lifeline metadata must never take Mission Control telemetry down.
             result = dict(payload)
             result["lifeline"] = {
                 "schema_version": 1,
@@ -109,12 +138,9 @@ class SnapshotService(_base.SnapshotService):
     ) -> dict[str, Any]:
         payload = super()._storage_payload(state)
 
-        # These values already exist in the collector. Publishing them here is
-        # additive and performs no extra hardware I/O.
         payload["smart"] = _safe_list(state.get("smart"))
         payload["zfs_activity"] = _safe_dict(state.get("zfs_activity"))
 
-        # HoloDeck/tests may provide deterministic member evidence directly.
         supplied_devices = state.get("storage_devices")
         if isinstance(supplied_devices, list):
             payload["devices"] = supplied_devices
