@@ -1,8 +1,9 @@
 """Guided-recovery extension for Mission Control snapshots.
 
 The mature snapshot implementation remains in :mod:`snapshot_base`. This
-wrapper adds storage evidence needed by Project Kobayashi while preserving the
-existing public ``SnapshotService`` import path and monkeypatch seams.
+wrapper adds storage evidence needed by Project Kobayashi plus Project
+Lifeline's metadata-only repair-session ledger while preserving the existing
+public ``SnapshotService`` import path and monkeypatch seams.
 
 Compatibility evidence retained for source-contract tests implemented by the
 base module:
@@ -33,6 +34,7 @@ from __future__ import annotations
 from typing import Any
 
 from truepanel.guidance.storage_evidence import StorageRecoveryEvidenceProvider
+from truepanel.lifeline import LifelineSessionStore
 
 from . import snapshot_base as _base
 
@@ -60,12 +62,14 @@ def _safe_dict(value: Any) -> dict:
 
 
 class SnapshotService(_base.SnapshotService):
-    """Add read-only storage-recovery evidence to the existing snapshot."""
+    """Add read-only recovery evidence and persistent Lifeline metadata."""
 
     def __init__(
         self,
         *args,
         storage_evidence_provider=None,
+        lifeline_store=None,
+        lifeline_path=None,
         **kwargs,
     ) -> None:
         if kwargs.get("fan_status_provider") is None:
@@ -76,6 +80,28 @@ class SnapshotService(_base.SnapshotService):
             storage_evidence_provider
             or StorageRecoveryEvidenceProvider()
         )
+        self.lifeline_store = (
+            lifeline_store
+            or LifelineSessionStore(
+                path=lifeline_path,
+                clock=self.clock,
+            )
+        )
+
+    def status(self) -> dict[str, Any]:
+        payload = super().status()
+        try:
+            return self.lifeline_store.observe(payload)
+        except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+            # Lifeline metadata must never take Mission Control telemetry down.
+            result = dict(payload)
+            result["lifeline"] = {
+                "schema_version": 1,
+                "read_only_hardware": True,
+                "available": False,
+                "sessions": [],
+            }
+            return result
 
     def _storage_payload(
         self,
