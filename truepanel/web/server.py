@@ -2,7 +2,8 @@
 
 The established server implementation lives in :mod:`server_base`. This thin
 wrapper preserves its public API and command-line entry point while adding the
-read-only Flight Manual and Project Lifeline assets to the existing dashboard.
+Flight Manual and Project Lifeline assets. Lifeline may persist an operator's
+backup-state acknowledgement, but it exposes no storage or hardware mutation.
 
 Compatibility evidence retained for source-contract tests implemented by the
 base module:
@@ -17,6 +18,7 @@ base module:
 
 from __future__ import annotations
 
+import json
 from http import HTTPStatus
 from urllib.parse import urlparse
 
@@ -35,10 +37,13 @@ _LIFELINE_TAG = (
     _LIFELINE_MARKER
     + b'\n<script src="/lifeline.js" defer></script>\n'
 )
+_LIFELINE_ACK_PATH = "/api/v1/lifeline/acknowledge"
+_LIFELINE_ACK_INTENT = "lifeline-backup-ack"
+_LIFELINE_ACK_CONFIRMATION = "ACKNOWLEDGE_BACKUP_STATE"
 
 
 class MissionControlRequestHandler(_base.MissionControlRequestHandler):
-    """Serve the existing dashboard plus read-only recovery extensions."""
+    """Serve the existing dashboard plus guarded recovery extensions."""
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -49,6 +54,13 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             self._static_script("lifeline.js", "lifeline_unavailable")
             return
         super().do_GET()
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path == _LIFELINE_ACK_PATH:
+            self._lifeline_acknowledge(parsed)
+            return
+        super().do_POST()
 
     def _dashboard(self, parsed):
         del parsed
@@ -98,6 +110,93 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
     def _flight_manual_script(self, parsed):
         del parsed
         self._static_script("flight-manual.js", "flight_manual_unavailable")
+
+    def _lifeline_acknowledge(self, parsed):
+        del parsed
+        if self.headers.get("X-TruePanel-Intent", "") != _LIFELINE_ACK_INTENT:
+            self._json(
+                {
+                    "error": "lifeline_intent_required",
+                    "message": "Lifeline acknowledgement requires an explicit same-origin intent header.",
+                },
+                status=HTTPStatus.FORBIDDEN,
+            )
+            return
+
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except (TypeError, ValueError):
+            content_length = 0
+        if content_length < 1 or content_length > 4096:
+            self._json(
+                {"error": "invalid_request", "message": "Acknowledgement body must be between 1 and 4096 bytes."},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        try:
+            body = json.loads(self.rfile.read(content_length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self._json(
+                {"error": "invalid_json", "message": "Acknowledgement body must contain valid JSON."},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+        if not isinstance(body, dict):
+            self._json(
+                {"error": "invalid_request", "message": "Acknowledgement body must be a JSON object."},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        session_id = str(body.get("session_id") or "").strip()
+        acknowledgement = str(body.get("acknowledgement") or "").strip()
+        confirmation = str(body.get("confirmation") or "").strip()
+        value = body.get("value", True)
+        if (
+            not session_id
+            or acknowledgement != "backup_state"
+            or confirmation != _LIFELINE_ACK_CONFIRMATION
+            or not isinstance(value, bool)
+        ):
+            self._json(
+                {
+                    "error": "lifeline_acknowledgement_rejected",
+                    "message": "Only an explicit backup-state acknowledgement is accepted by this endpoint.",
+                },
+                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+            return
+
+        store = getattr(self.snapshot_service, "lifeline_store", None)
+        if store is None:
+            self._json(
+                {"error": "lifeline_unavailable"},
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+        try:
+            session = store.acknowledge(session_id, acknowledgement, value)
+        except KeyError:
+            self._json(
+                {"error": "lifeline_session_not_found"},
+                status=HTTPStatus.NOT_FOUND,
+            )
+            return
+        except (OSError, RuntimeError, TypeError, ValueError):
+            self._json(
+                {"error": "lifeline_acknowledgement_failed"},
+                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+            return
+
+        self._json(
+            {
+                "ok": True,
+                "hardware_mutation": False,
+                "session": session,
+            }
+        )
 
     def _preflight(self, parsed):
         # Preserve the long-standing monkeypatch seam on this public module.
