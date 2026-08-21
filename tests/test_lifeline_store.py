@@ -54,6 +54,8 @@ def test_fault_opens_persistent_session(tmp_path):
     sessions = payload["lifeline"]["sessions"]
     assert len(sessions) == 1
     assert sessions[0]["status"] == "active"
+    assert sessions[0]["attempt"] == 1
+    assert sessions[0]["id"].endswith(":attempt-1")
     assert sessions[0]["original_fault"]["serial_last4"] == "MW4K"
     assert sessions[0]["last_session"]["phase"] == "prepare"
     assert path.exists()
@@ -153,6 +155,7 @@ def test_session_does_not_close_on_single_healthy_observation(tmp_path):
 
     assert session["status"] == "active"
     assert session["healthy_observations"] == 1
+    assert session["last_session"]["phase"] == "verify"
 
 
 def test_three_consecutive_healthy_observations_close_session(tmp_path):
@@ -168,6 +171,30 @@ def test_three_consecutive_healthy_observations_close_session(tmp_path):
     assert session["healthy_observations"] == 3
     assert session["last_session"]["phase"] == "complete"
     assert session["last_session"]["recovery_verified"] is True
+
+
+def test_repeat_fault_creates_new_attempt_without_erasing_history(tmp_path):
+    store = LifelineSessionStore(path=tmp_path / "lifeline.json")
+    first = store.observe(guidance_payload())["lifeline"]["sessions"][0]
+    first_id = first["id"]
+
+    store.observe(healthy_payload())
+    store.observe(healthy_payload())
+    closed = store.observe(healthy_payload())["lifeline"]["sessions"][0]
+    assert closed["id"] == first_id
+    assert closed["status"] == "completed"
+
+    repeated = store.observe(guidance_payload())
+    sessions = repeated["lifeline"]["sessions"]
+
+    assert len(sessions) == 2
+    assert [item["attempt"] for item in sessions] == [1, 2]
+    assert sessions[0]["id"] == first_id
+    assert sessions[0]["status"] == "completed"
+    assert sessions[1]["status"] == "active"
+    assert sessions[1]["id"].endswith(":attempt-2")
+    assert sessions[1]["id"] != first_id
+    assert sessions[1]["fault_key"] == sessions[0]["fault_key"]
 
 
 def test_degraded_observation_resets_healthy_verification_count(tmp_path):
