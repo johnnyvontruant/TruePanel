@@ -1,8 +1,8 @@
 """Persistent, metadata-only Project Lifeline repair session ledger.
 
 The ledger remembers the identity and progress of an operator repair across
-changing telemetry and Mission Control refreshes.  It writes only TruePanel
-metadata.  It has no pool, disk, enclosure, or hardware-control authority.
+changing telemetry and Mission Control refreshes. It writes only TruePanel
+metadata and has no pool, disk, enclosure, or hardware-control authority.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _session_key(evidence: dict[str, Any]) -> str | None:
+def _fault_key(evidence: dict[str, Any]) -> str | None:
     pool = _text(evidence.get("pool"))
     vdev = _text(evidence.get("vdev"))
     device = _text(evidence.get("device"))
@@ -80,7 +80,7 @@ class LifelineSessionStore:
     def _load(self) -> dict[str, Any]:
         try:
             raw = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        except (OSError, TypeError, ValueError):
             return self._empty()
         if not isinstance(raw, dict) or raw.get("schema_version") != _SCHEMA_VERSION:
             return self._empty()
@@ -109,7 +109,12 @@ class LifelineSessionStore:
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
             sessions = list(self._state["sessions"].values())
-            sessions.sort(key=lambda item: float(item.get("created_at", 0.0)))
+            sessions.sort(
+                key=lambda item: (
+                    float(item.get("created_at", 0.0)),
+                    str(item.get("id", "")),
+                )
+            )
             return {
                 "schema_version": _SCHEMA_VERSION,
                 "read_only_hardware": True,
@@ -138,11 +143,7 @@ class LifelineSessionStore:
         profile: str | None = None,
         source: str | None = None,
     ) -> dict[str, Any]:
-        """Record system-verified chassis procedure provenance.
-
-        This is intentionally not an operator acknowledgement. A caller must
-        supply the hardware-profile verification result and provenance.
-        """
+        """Record system-verified chassis procedure provenance."""
 
         with self._lock:
             session = self._state["sessions"].get(str(session_id))
@@ -174,8 +175,28 @@ class LifelineSessionStore:
             self._save()
             return deepcopy(session)
 
+    def _active_for_fault(self, key: str) -> dict[str, Any] | None:
+        for session in self._state["sessions"].values():
+            if not isinstance(session, dict):
+                continue
+            if session.get("status") != "active":
+                continue
+            if session.get("fault_key") == key:
+                return session
+        return None
+
+    def _next_attempt(self, key: str) -> int:
+        attempts = [
+            int(item.get("attempt", 0) or 0)
+            for item in self._state["sessions"].values()
+            if isinstance(item, dict) and item.get("fault_key") == key
+        ]
+        return max(attempts, default=0) + 1
+
     def _new_session(self, key: str, evidence: dict[str, Any]) -> dict[str, Any]:
         now = float(self.clock())
+        attempt = self._next_attempt(key)
+        session_id = f"{key}:attempt-{attempt}"
         original = {
             "pool": evidence.get("pool"),
             "vdev": evidence.get("vdev"),
@@ -187,8 +208,10 @@ class LifelineSessionStore:
             "serial_last4": evidence.get("serial_last4"),
             "capacity_bytes": evidence.get("capacity_bytes"),
         }
-        return {
-            "id": key,
+        session = {
+            "id": session_id,
+            "fault_key": key,
+            "attempt": attempt,
             "kind": "drive_replacement",
             "status": "active",
             "created_at": now,
@@ -206,6 +229,8 @@ class LifelineSessionStore:
             "healthy_observations": 0,
             "last_session": None,
         }
+        self._state["sessions"][session_id] = session
+        return session
 
     def _evaluate(
         self,
@@ -245,7 +270,7 @@ class LifelineSessionStore:
         guidance = _list(result.get("operator_guidance"))
         now = float(self.clock())
         changed = False
-        seen: set[str] = set()
+        seen_faults: set[str] = set()
 
         with self._lock:
             sessions = self._state["sessions"]
@@ -255,17 +280,18 @@ class LifelineSessionStore:
                     continue
                 runtime = _dict(item.get("runtime"))
                 evidence = _dict(runtime.get("evidence"))
-                key = _session_key(evidence)
+                key = _fault_key(evidence)
                 if key is None:
                     continue
-                seen.add(key)
-                ledger = sessions.get(key)
-                if not isinstance(ledger, dict) or ledger.get("status") == "completed":
+                seen_faults.add(key)
+                ledger = self._active_for_fault(key)
+                if ledger is None:
                     ledger = self._new_session(key, evidence)
-                    sessions[key] = ledger
                     changed = True
 
-                ledger["healthy_observations"] = 0
+                if ledger.get("healthy_observations") != 0:
+                    ledger["healthy_observations"] = 0
+                    changed = True
                 ledger["updated_at"] = now
                 repair = self._evaluate(ledger, evidence)
                 if ledger.get("last_session") != repair:
@@ -273,10 +299,10 @@ class LifelineSessionStore:
                     changed = True
                 item["repair_session"] = deepcopy(repair)
 
-            for key, ledger in list(sessions.items()):
+            for ledger in list(sessions.values()):
                 if not isinstance(ledger, dict) or ledger.get("status") != "active":
                     continue
-                if key in seen:
+                if ledger.get("fault_key") in seen_faults:
                     continue
 
                 original = _dict(ledger.get("original_fault"))
