@@ -10,6 +10,10 @@ from truepanel.guidance import (
     guidance_payload,
 )
 from truepanel.holodeck.missions import mission_names
+from truepanel.holodeck.report import (
+    run_flight_deck_report,
+    run_mission_report,
+)
 
 
 def test_every_holodeck_mission_has_operator_guidance():
@@ -56,7 +60,10 @@ def test_model_specific_guidance_has_hardware_source():
         item = guidance_for(code)
         if not item.model_specific:
             continue
-        assert any(source.authority == "QNAP" for source in item.sources)
+        assert any(
+            source.authority == "QNAP"
+            for source in item.sources
+        )
 
 
 def test_guidance_payload_is_json_serializable():
@@ -65,6 +72,35 @@ def test_guidance_payload_is_json_serializable():
     assert "storage.disk_faulted" in encoded
     assert "verification" in payload
     assert "sources" in payload
+
+
+def test_each_mission_report_passes_operator_guidance(tmp_path):
+    for mission in mission_names():
+        report = run_mission_report(
+            mission,
+            runtime_dir=tmp_path / mission,
+        )
+        guidance = report["operator_guidance"]
+        assert guidance["passed"] is True
+        assert guidance["fault_codes"]
+        assert guidance["check_count"] >= 5
+        assert guidance["failed_count"] == 0
+        assert all(
+            item["passed"]
+            for item in guidance["checks"]
+        )
+
+
+def test_flight_deck_requires_all_guidance_contracts(tmp_path):
+    report = run_flight_deck_report(
+        runtime_dir=tmp_path / "flight-deck"
+    )
+    assert report["passed"] is True
+    assert report["operator_guidance_passed"] == report["mission_count"]
+    assert all(
+        item["operator_guidance_passed"]
+        for item in report["missions"]
+    )
 
 
 def test_unknown_guidance_code_is_actionable():
