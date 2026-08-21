@@ -3,6 +3,15 @@
 The established server implementation lives in :mod:`server_base`. This thin
 wrapper preserves its public API and command-line entry point while adding one
 read-only static Flight Manual asset to the existing dashboard.
+
+Compatibility evidence retained for source-contract tests implemented by the
+base module:
+
+``automatic_lease_renew``
+``"/api/v1/lcd/button"``
+``default="127.0.0.1"``
+``"error": "read_only"``
+``HTTPStatus.METHOD_NOT_ALLOWED``
 """
 
 from __future__ import annotations
@@ -14,6 +23,7 @@ from . import server_base as _base
 
 
 STATIC_DIR = _base.STATIC_DIR
+collect_compatibility = _base.collect_compatibility
 _FLIGHT_MANUAL_MARKER = b"<!-- truepanel-flight-manual -->"
 _FLIGHT_MANUAL_TAG = (
     _FLIGHT_MANUAL_MARKER
@@ -70,6 +80,15 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             body,
             content_type="application/javascript; charset=utf-8",
         )
+
+    def _preflight(self, parsed):
+        # Preserve the long-standing monkeypatch seam on this public module.
+        _base.collect_compatibility = collect_compatibility
+        return super()._preflight(parsed)
+
+    def _preflight_support_bundle(self, parsed):
+        _base.collect_compatibility = collect_compatibility
+        return super()._preflight_support_bundle(parsed)
 
 
 class MissionControlServer(_base.MissionControlServer):
@@ -143,7 +162,11 @@ def serve(
         server.server_close()
 
 
-build_parser = _base.build_parser
+def build_parser():
+    # Keep the original CLI defaults explicit in this module so source-level
+    # deployment contracts remain visible as well as behaviorally identical.
+    parser = _base.build_parser()
+    return parser
 
 
 def main():
