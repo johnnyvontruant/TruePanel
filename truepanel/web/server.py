@@ -37,6 +37,11 @@ _LIFELINE_TAG = (
     _LIFELINE_MARKER
     + b'\n<script src="/lifeline.js" defer></script>\n'
 )
+_LIFELINE_ACTIONS_MARKER = b"<!-- truepanel-lifeline-actions -->"
+_LIFELINE_ACTIONS_TAG = (
+    _LIFELINE_ACTIONS_MARKER
+    + b'\n<script src="/lifeline-actions.js" defer></script>\n'
+)
 _LIFELINE_ACK_PATH = "/api/v1/lifeline/acknowledge"
 _LIFELINE_ACK_INTENT = "lifeline-backup-ack"
 _LIFELINE_ACK_CONFIRMATION = "ACKNOWLEDGE_BACKUP_STATE"
@@ -52,6 +57,9 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             return
         if parsed.path == "/lifeline.js":
             self._static_script("lifeline.js", "lifeline_unavailable")
+            return
+        if parsed.path == "/lifeline-actions.js":
+            self._static_script("lifeline-actions.js", "lifeline_actions_unavailable")
             return
         super().do_GET()
 
@@ -79,6 +87,8 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             tags += _FLIGHT_MANUAL_TAG
         if _LIFELINE_MARKER not in body:
             tags += _LIFELINE_TAG
+        if _LIFELINE_ACTIONS_MARKER not in body:
+            tags += _LIFELINE_ACTIONS_TAG
 
         if tags:
             if b"</body>" in body:
@@ -221,8 +231,6 @@ class MissionControlServer(_base.MissionControlServer):
         fan_command_client=None,
         lcd_command_client=None,
     ):
-        # Mirror the stable server initializer, changing only the request
-        # handler passed to ThreadingHTTPServer.
         self.snapshot_service = (
             snapshot_service
             or _base.SnapshotService(
@@ -280,8 +288,6 @@ def serve(
 
 
 def build_parser():
-    # Keep the original CLI defaults explicit in this module so source-level
-    # deployment contracts remain visible as well as behaviorally identical.
     parser = _base.build_parser()
     return parser
 
