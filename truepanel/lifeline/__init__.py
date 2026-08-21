@@ -8,9 +8,12 @@ from .session import (
     ReplacementAssessment,
     evaluate_drive_repair,
 )
+from .store import DEFAULT_LIFELINE_PATH, LifelineSessionStore
 
 __all__ = [
+    "DEFAULT_LIFELINE_PATH",
     "DRIVE_PHASES",
+    "LifelineSessionStore",
     "RepairGate",
     "RepairSession",
     "ReplacementAssessment",
