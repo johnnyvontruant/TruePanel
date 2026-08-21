@@ -1,128 +1,35 @@
-"""Dependency-free HTTP server for TruePanel Mission Control."""
+"""Guided-recovery extension for the Mission Control HTTP server.
+
+The established server implementation lives in :mod:`server_base`. This thin
+wrapper preserves its public API and command-line entry point while adding one
+read-only static Flight Manual asset to the existing dashboard.
+"""
 
 from __future__ import annotations
 
-import argparse
-import json
-import logging
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
-from truepanel.compatibility.checks import collect_compatibility
-from truepanel.compatibility.support import (
-    build_support_bundle,
-    default_support_path,
+from . import server_base as _base
+
+
+STATIC_DIR = _base.STATIC_DIR
+_FLIGHT_MANUAL_MARKER = b"<!-- truepanel-flight-manual -->"
+_FLIGHT_MANUAL_TAG = (
+    _FLIGHT_MANUAL_MARKER
+    + b'\n<script src="/flight-manual.js" defer></script>\n'
 )
-from truepanel.config.persistence import (
-    ConfigurationPersistenceError,
-    ConfigurationPersistenceService,
-)
-from truepanel.config.policy import (
-    ConfigurationError,
-    ConfigurationPolicyService,
-)
-from truepanel.hardware.fan_command import (
-    AFTERBURNERS_CONFIRMATION,
-    BOUNDED_AUTOMATIC_CONFIRMATION,
-    BOUNDED_AUTOMATIC_RENEW_CONFIRMATION,
-    SUPERVISED_THERMAL_CONFIRMATION,
-    THERMAL_ARM_CONFIRMATION,
-    FanCommandClient,
-    FanCommandError,
-)
-from truepanel.hardware.lcd_command import (
-    LCDCommandClient,
-    LCDCommandError,
-)
-from truepanel.health import ServiceStatusProvider
-
-from .preflight import build_preflight_payload
-from .snapshot import SnapshotService
-
-LOGGER = logging.getLogger("truepanel.web")
-STATIC_DIR = Path(__file__).parent / "static"
 
 
-class MissionControlRequestHandler(BaseHTTPRequestHandler):
-    server_version = "TruePanelMissionControl/1.1"
-
-    @property
-    def snapshot_service(self):
-        return self.server.snapshot_service
+class MissionControlRequestHandler(_base.MissionControlRequestHandler):
+    """Serve the existing dashboard plus its read-only recovery manual."""
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        routes = {
-            "/": self._dashboard,
-            "/index.html": self._dashboard,
-            "/api/v1/status": self._status,
-            "/api/v1/preflight": self._preflight,
-            "/api/v1/preflight/support-bundle": (
-                self._preflight_support_bundle
-            ),
-            "/api/v1/lcd": self._lcd_status,
-            "/api/v1/history": self._history,
-            "/api/v1/fans/history": (
-                self._fan_history
-            ),
-            "/api/v1/fans/thermal-history": (
-                self._thermal_history
-            ),
-            "/api/v1/fans/commissioning-history": (
-                self._commissioning_history
-            ),
-            "/api/v1/capabilities": self._capabilities,
-            "/api/v1/config/night-mode": self._night_mode,
-            "/healthz": self._health,
-        }
-        handler = routes.get(parsed.path)
-        if handler is None:
-            self._json({"error": "not_found", "path": parsed.path}, status=HTTPStatus.NOT_FOUND)
+        if parsed.path == "/flight-manual.js":
+            self._flight_manual_script(parsed)
             return
-        handler(parsed)
-
-    def do_POST(self):
-        parsed = urlparse(self.path)
-
-        if parsed.path == "/api/v1/config/night-mode/preview":
-            self._night_mode_preview(parsed)
-            return
-
-        if parsed.path == "/api/v1/config/night-mode/save":
-            self._night_mode_save(parsed)
-            return
-
-        if parsed.path == "/api/v1/fans/profile":
-            self._fan_profile(parsed)
-            return
-
-        if parsed.path == "/api/v1/fans/thermal-arm":
-            self._thermal_arm(parsed)
-            return
-
-        if parsed.path == "/api/v1/lcd/button":
-            self._lcd_button(parsed)
-            return
-
-        self._write_blocked()
-
-    def do_PUT(self):
-        self._write_blocked()
-
-    def do_PATCH(self):
-        self._write_blocked()
-
-    def do_DELETE(self):
-        self._write_blocked()
-
-    def _write_blocked(self):
-        self._json(
-            {"error": "read_only", "message": "Mission Control write operations are not enabled."},
-            status=HTTPStatus.METHOD_NOT_ALLOWED,
-            headers={"Allow": "GET"},
-        )
+        super().do_GET()
 
     def _dashboard(self, parsed):
         del parsed
@@ -130,1143 +37,43 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         try:
             body = candidate.read_bytes()
         except OSError:
-            self._json({"error": "dashboard_unavailable"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
-            return
-        self._send(body, content_type="text/html; charset=utf-8")
-
-    def _status(self, parsed):
-        del parsed
-        self._json(self.snapshot_service.status())
-
-    def _preflight(self, parsed):
-        del parsed
-
-        try:
-            report = collect_compatibility()
-        except Exception:
-            LOGGER.exception(
-                "Mission Control preflight survey failed"
-            )
             self._json(
-                {
-                    "error": "preflight_unavailable",
-                    "message": (
-                        "Passive compatibility survey could not complete."
-                    ),
-                },
-                status=HTTPStatus.SERVICE_UNAVAILABLE,
-            )
-            return
-
-        self._json(
-            build_preflight_payload(report)
-        )
-
-    def _preflight_support_bundle(self, parsed):
-        del parsed
-
-        try:
-            report = collect_compatibility()
-            payload = build_support_bundle(report)
-            filename = default_support_path().name
-        except Exception:
-            LOGGER.exception(
-                "Mission Control support bundle generation failed"
-            )
-            self._json(
-                {
-                    "error": "support_bundle_unavailable",
-                    "message": (
-                        "Privacy-safe support bundle could not be generated."
-                    ),
-                },
-                status=HTTPStatus.SERVICE_UNAVAILABLE,
-            )
-            return
-
-        self._json(
-            payload,
-            headers={
-                "Content-Disposition": (
-                    f'attachment; filename="{filename}"'
-                ),
-            },
-        )
-
-    def _lcd_status(self, parsed):
-        del parsed
-        self._json(
-            self.snapshot_service.lcd_status()
-        )
-
-    def _history(self, parsed):
-        query = parse_qs(parsed.query)
-        raw_limit = query.get("limit", ["240"])[0]
-        try:
-            limit = int(raw_limit)
-        except (TypeError, ValueError):
-            limit = 240
-        self._json(self.snapshot_service.history(limit=limit))
-
-    def _fan_history(self, parsed):
-        query = parse_qs(parsed.query)
-        raw_limit = query.get(
-            "limit",
-            ["20"],
-        )[0]
-
-        try:
-            limit = int(raw_limit)
-        except (
-            TypeError,
-            ValueError,
-        ):
-            limit = 20
-
-        self._json(
-            self.snapshot_service
-            .fan_control_history_payload(
-                limit=limit
-            )
-        )
-
-    def _thermal_history(self, parsed):
-        query = parse_qs(
-            parsed.query
-        )
-        raw_limit = query.get(
-            "limit",
-            ["20"],
-        )[0]
-
-        try:
-            limit = int(
-                raw_limit
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            limit = 20
-
-        self._json(
-            self.snapshot_service
-            .thermal_observer_history_payload(
-                limit=limit
-            )
-        )
-
-    def _commissioning_history(
-        self,
-        parsed,
-    ):
-        query = parse_qs(
-            parsed.query
-        )
-        raw_limit = query.get(
-            "limit",
-            ["20"],
-        )[0]
-
-        try:
-            limit = int(
-                raw_limit
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            limit = 20
-
-        self._json(
-            self.snapshot_service
-            .thermal_commissioning_history_payload(
-                limit=limit
-            )
-        )
-
-    def _capabilities(self, parsed):
-        del parsed
-        self._json(self.snapshot_service.capabilities())
-
-    def _night_mode(self, parsed):
-        del parsed
-        service = ConfigurationPolicyService(
-            self.snapshot_service.config
-        )
-        self._json(
-            {
-                "read_only": not self.server.allow_config_writes,
-                "writes_enabled": self.server.allow_config_writes,
-                "night_mode": service.night_mode.as_dict(),
-            }
-        )
-
-    def _night_mode_preview(self, parsed):
-        del parsed
-
-        raw_length = self.headers.get("Content-Length", "0")
-
-        try:
-            content_length = int(raw_length)
-        except (TypeError, ValueError):
-            content_length = 0
-
-        if content_length < 1 or content_length > 16384:
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": "Preview body must be between 1 and 16384 bytes.",
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        raw_body = self.rfile.read(content_length)
-
-        try:
-            payload = json.loads(raw_body.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            self._json(
-                {
-                    "error": "invalid_json",
-                    "message": "Preview body must contain valid JSON.",
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        if not isinstance(payload, dict):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": "Preview body must be a JSON object.",
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        patch = payload.get("night_mode", payload)
-
-        if not isinstance(patch, dict):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": "night_mode must be a JSON object.",
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        service = ConfigurationPolicyService(
-            self.snapshot_service.config
-        )
-
-        try:
-            preview = service.preview_night_mode(patch)
-        except ConfigurationError as error:
-            self._json(
-                {
-                    "error": "configuration_rejected",
-                    "message": str(error),
-                },
-                status=HTTPStatus.UNPROCESSABLE_ENTITY,
-            )
-            return
-
-        self._json(
-            {
-                "read_only": True,
-                "persisted": False,
-                "preview": preview.as_dict(),
-            }
-        )
-
-    def _night_mode_save(self, parsed):
-        del parsed
-
-        if not self.server.allow_config_writes:
-            self._json(
-                {
-                    "error": "configuration_writes_disabled",
-                    "message": (
-                        "Configuration writes require "
-                        "--allow-config-writes."
-                    ),
-                },
-                status=HTTPStatus.FORBIDDEN,
-            )
-            return
-
-        raw_length = self.headers.get("Content-Length", "0")
-
-        try:
-            content_length = int(raw_length)
-        except (TypeError, ValueError):
-            content_length = 0
-
-        if content_length < 1 or content_length > 16384:
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "Save body must be between "
-                        "1 and 16384 bytes."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        raw_body = self.rfile.read(content_length)
-
-        try:
-            payload = json.loads(raw_body.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            self._json(
-                {
-                    "error": "invalid_json",
-                    "message": "Save body must contain valid JSON.",
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        if not isinstance(payload, dict):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": "Save body must be a JSON object.",
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        patch = payload.get("night_mode")
-        dry_run = payload.get("dry_run", False)
-
-        if not isinstance(patch, dict):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": "night_mode must be a JSON object.",
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        if not isinstance(dry_run, bool):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": "dry_run must be boolean.",
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        service = ConfigurationPersistenceService(
-            self.server.config_path,
-            self.snapshot_service.config,
-        )
-
-        try:
-            result = service.save_night_mode(
-                patch,
-                dry_run=dry_run,
-            )
-        except ConfigurationError as error:
-            self._json(
-                {
-                    "error": "configuration_rejected",
-                    "message": str(error),
-                },
-                status=HTTPStatus.UNPROCESSABLE_ENTITY,
-            )
-            return
-        except ConfigurationPersistenceError as error:
-            self._json(
-                {
-                    "error": "configuration_persistence_failed",
-                    "message": str(error),
-                },
+                {"error": "dashboard_unavailable"},
                 status=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
             return
 
-        if result.persisted:
-            self.snapshot_service.config = result.proposed
+        if _FLIGHT_MANUAL_MARKER not in body:
+            if b"</body>" in body:
+                body = body.replace(
+                    b"</body>",
+                    _FLIGHT_MANUAL_TAG + b"</body>",
+                    1,
+                )
+            else:
+                body += _FLIGHT_MANUAL_TAG
 
-        response = result.as_dict()
-        response.update(
-            {
-                "restart_required": bool(
-                    result.persisted and result.changed
-                ),
-                "restart_performed": False,
-                "writes_enabled": True,
-            }
-        )
-        self._json(response)
+        self._send(body, content_type="text/html; charset=utf-8")
 
-    def _thermal_arm(self, parsed):
+    def _flight_manual_script(self, parsed):
         del parsed
-
-        raw_length = self.headers.get(
-            "Content-Length",
-            "0",
-        )
-
+        candidate = STATIC_DIR / "flight-manual.js"
         try:
-            content_length = int(
-                raw_length
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            content_length = 0
-
-        if (
-            content_length < 1
-            or content_length > 4096
-        ):
+            body = candidate.read_bytes()
+        except OSError:
             self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "Thermal arm body must be "
-                        "between 1 and 4096 bytes."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
+                {"error": "flight_manual_unavailable"},
+                status=HTTPStatus.NOT_FOUND,
             )
             return
-
-        try:
-            payload = json.loads(
-                self.rfile.read(
-                    content_length
-                ).decode("utf-8")
-            )
-        except (
-            UnicodeDecodeError,
-            json.JSONDecodeError,
-        ):
-            self._json(
-                {
-                    "error": "invalid_json",
-                    "message": (
-                        "Thermal arm body must "
-                        "contain valid JSON."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        if not isinstance(
-            payload,
-            dict,
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "Thermal arm body must "
-                        "be a JSON object."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        unknown_fields = sorted(
-            set(payload)
-            - {
-                "action",
-                "confirmation",
-            }
-        )
-
-        if unknown_fields:
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "Unknown thermal arm fields: "
-                        + ", ".join(unknown_fields)
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        action = payload.get(
-            "action"
-        )
-
-        if not isinstance(
-            action,
-            str,
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "action must be a string."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        action = action.strip().lower()
-
-        if action not in {
-            "arm",
-            "disarm",
-            "supervised_live",
-            "automatic_lease",
-            "automatic_lease_renew",
-        }:
-            self._json(
-                {
-                    "error": "invalid_action",
-                    "message": (
-                        "action must be arm, disarm, "
-                        "supervised_live, automatic_lease, or "
-                        "automatic_lease_renew."
-                    ),
-                },
-                status=HTTPStatus.UNPROCESSABLE_ENTITY,
-            )
-            return
-
-        confirmation = payload.get(
-            "confirmation"
-        )
-
-        if (
-            confirmation is not None
-            and not isinstance(
-                confirmation,
-                str,
-            )
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "confirmation must be "
-                        "a string."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        required_confirmation = None
-
-        if action == "arm":
-            required_confirmation = (
-                THERMAL_ARM_CONFIRMATION
-            )
-        elif action == "supervised_live":
-            required_confirmation = (
-                SUPERVISED_THERMAL_CONFIRMATION
-            )
-        elif action == "automatic_lease":
-            required_confirmation = (
-                BOUNDED_AUTOMATIC_CONFIRMATION
-            )
-        elif action == "automatic_lease_renew":
-            required_confirmation = (
-                BOUNDED_AUTOMATIC_RENEW_CONFIRMATION
-            )
-
-        if (
-            required_confirmation is not None
-            and confirmation
-            != required_confirmation
-        ):
-            self._json(
-                {
-                    "error": (
-                        "confirmation_required"
-                    ),
-                    "message": (
-                        "This thermal-control action "
-                        "requires explicit confirmation."
-                    ),
-                    "confirmation_required": (
-                        required_confirmation
-                    ),
-                },
-                status=HTTPStatus.CONFLICT,
-            )
-            return
-
-        try:
-            response = (
-                self.server
-                .fan_command_client
-                .request_thermal_control(
-                    action,
-                    confirmation=confirmation,
-                )
-            )
-        except FanCommandError as error:
-            self._json(
-                {
-                    "error": "runtime_unavailable",
-                    "message": str(error),
-                },
-                status=HTTPStatus.SERVICE_UNAVAILABLE,
-            )
-            return
-
-        if not response.get(
-            "ok",
-            False,
-        ):
-            status_name = response.get(
-                "status",
-                "rejected",
-            )
-
-            status_code = {
-                "confirmation_required": (
-                    HTTPStatus.CONFLICT
-                ),
-                "readiness_blocked": (
-                    HTTPStatus.CONFLICT
-                ),
-                "wrong_mode": (
-                    HTTPStatus.CONFLICT
-                ),
-                "live_control_locked": (
-                    HTTPStatus.CONFLICT
-                ),
-                "unsupported": (
-                    HTTPStatus.NOT_IMPLEMENTED
-                ),
-            }.get(
-                status_name,
-                HTTPStatus.UNPROCESSABLE_ENTITY,
-            )
-
-            self._json(
-                {
-                    "error": status_name,
-                    **response,
-                },
-                status=status_code,
-            )
-            return
-
-        self._json(
-            response,
-            status=HTTPStatus.OK,
+        self._send(
+            body,
+            content_type="application/javascript; charset=utf-8",
         )
 
 
-    def _lcd_button(self, parsed):
-        del parsed
-
-        raw_length = self.headers.get(
-            "Content-Length",
-            "0",
-        )
-
-        try:
-            content_length = int(
-                raw_length
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            content_length = 0
-
-        if (
-            content_length < 1
-            or content_length > 1024
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "LCD button body must be "
-                        "between 1 and 1024 bytes."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        try:
-            payload = json.loads(
-                self.rfile.read(
-                    content_length
-                ).decode(
-                    "utf-8"
-                )
-            )
-        except (
-            UnicodeDecodeError,
-            json.JSONDecodeError,
-        ):
-            self._json(
-                {
-                    "error": "invalid_json",
-                    "message": (
-                        "LCD button body must "
-                        "contain valid JSON."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        if not isinstance(
-            payload,
-            dict,
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "LCD button body must "
-                        "be a JSON object."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        unknown_fields = sorted(
-            set(payload)
-            - {
-                "button",
-            }
-        )
-
-        if unknown_fields:
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "Unknown LCD button fields: "
-                        + ", ".join(
-                            unknown_fields
-                        )
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        button = payload.get(
-            "button"
-        )
-
-        if not isinstance(
-            button,
-            str,
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "button must be a string."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        button = button.strip().lower()
-
-        if button not in {
-            "enter",
-            "select",
-        }:
-            self._json(
-                {
-                    "error": "unknown_button",
-                    "message": (
-                        "button must be enter "
-                        "or select."
-                    ),
-                    "allowed_buttons": [
-                        "enter",
-                        "select",
-                    ],
-                },
-                status=(
-                    HTTPStatus
-                    .UNPROCESSABLE_ENTITY
-                ),
-            )
-            return
-
-        try:
-            response = (
-                self.server
-                .lcd_command_client
-                .request(
-                    button
-                )
-            )
-        except LCDCommandError as error:
-            self._json(
-                {
-                    "error": (
-                        "lcd_command_unavailable"
-                    ),
-                    "message": str(error),
-                },
-                status=(
-                    HTTPStatus
-                    .SERVICE_UNAVAILABLE
-                ),
-            )
-            return
-
-        if response.get(
-            "ok"
-        ) is True:
-            self._json(
-                response,
-                status=HTTPStatus.OK,
-            )
-            return
-
-        status_name = response.get(
-            "status",
-            "command_rejected",
-        )
-
-        status_code = {
-            "dispatcher_unavailable": (
-                HTTPStatus
-                .SERVICE_UNAVAILABLE
-            ),
-            "execution_failed": (
-                HTTPStatus
-                .INTERNAL_SERVER_ERROR
-            ),
-            "unknown_button": (
-                HTTPStatus
-                .UNPROCESSABLE_ENTITY
-            ),
-            "invalid_request": (
-                HTTPStatus.BAD_REQUEST
-            ),
-            "invalid_source": (
-                HTTPStatus.BAD_REQUEST
-            ),
-        }.get(
-            status_name,
-            HTTPStatus.BAD_REQUEST,
-        )
-
-        self._json(
-            {
-                "error": status_name,
-                **response,
-            },
-            status=status_code,
-        )
-
-
-    def _fan_profile(self, parsed):
-        del parsed
-
-        raw_length = self.headers.get(
-            "Content-Length",
-            "0",
-        )
-
-        try:
-            content_length = int(
-                raw_length
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            content_length = 0
-
-        if (
-            content_length < 1
-            or content_length > 4096
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "Fan profile body must be "
-                        "between 1 and 4096 bytes."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        raw_body = self.rfile.read(
-            content_length
-        )
-
-        try:
-            payload = json.loads(
-                raw_body.decode(
-                    "utf-8"
-                )
-            )
-        except (
-            UnicodeDecodeError,
-            json.JSONDecodeError,
-        ):
-            self._json(
-                {
-                    "error": "invalid_json",
-                    "message": (
-                        "Fan profile body must "
-                        "contain valid JSON."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        if not isinstance(
-            payload,
-            dict,
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "Fan profile body must "
-                        "be a JSON object."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        allowed_fields = {
-            "profile",
-            "confirmation",
-        }
-
-        unknown_fields = sorted(
-            set(payload)
-            - allowed_fields
-        )
-
-        if unknown_fields:
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "Unknown fan profile fields: "
-                        + ", ".join(
-                            unknown_fields
-                        )
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        profile = payload.get(
-            "profile"
-        )
-
-        if not isinstance(
-            profile,
-            str,
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "profile must be a string."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        profile = profile.strip().lower()
-
-        allowed_profiles = {
-            "automatic",
-            "quiet",
-            "balanced",
-            "cooling_boost",
-            "afterburners",
-        }
-
-        if profile not in allowed_profiles:
-            self._json(
-                {
-                    "error": "unknown_profile",
-                    "message": (
-                        "Unknown fan profile."
-                    ),
-                    "allowed_profiles": sorted(
-                        allowed_profiles
-                    ),
-                },
-                status=HTTPStatus.UNPROCESSABLE_ENTITY,
-            )
-            return
-
-        confirmation = payload.get(
-            "confirmation"
-        )
-
-        if (
-            confirmation is not None
-            and not isinstance(
-                confirmation,
-                str,
-            )
-        ):
-            self._json(
-                {
-                    "error": "invalid_request",
-                    "message": (
-                        "confirmation must be "
-                        "a string."
-                    ),
-                },
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        if (
-            profile == "afterburners"
-            and confirmation
-            != AFTERBURNERS_CONFIRMATION
-        ):
-            self._json(
-                {
-                    "error": (
-                        "confirmation_required"
-                    ),
-                    "message": (
-                        "Afterburners requires "
-                        "explicit confirmation."
-                    ),
-                    "confirmation_required": (
-                        AFTERBURNERS_CONFIRMATION
-                    ),
-                },
-                status=HTTPStatus.CONFLICT,
-            )
-            return
-
-        try:
-            response = (
-                self.server
-                .fan_command_client
-                .request(
-                    profile,
-                    confirmation=confirmation,
-                )
-            )
-        except FanCommandError as error:
-            self._json(
-                {
-                    "error": (
-                        "fan_command_unavailable"
-                    ),
-                    "message": str(
-                        error
-                    ),
-                },
-                status=(
-                    HTTPStatus
-                    .SERVICE_UNAVAILABLE
-                ),
-            )
-            return
-
-        if response.get(
-            "ok"
-        ) is True:
-            self._json(
-                response,
-                status=HTTPStatus.OK,
-            )
-            return
-
-        status_name = response.get(
-            "status",
-            "command_rejected",
-        )
-
-        status_map = {
-            "disabled": (
-                HTTPStatus.FORBIDDEN
-            ),
-            "disconnected": (
-                HTTPStatus.SERVICE_UNAVAILABLE
-            ),
-            "confirmation_required": (
-                HTTPStatus.CONFLICT
-            ),
-            "profile_locked": (
-                HTTPStatus.UNPROCESSABLE_ENTITY
-            ),
-            "telemetry_unavailable": (
-                HTTPStatus.SERVICE_UNAVAILABLE
-            ),
-            "execution_failed": (
-                HTTPStatus.INTERNAL_SERVER_ERROR
-            ),
-        }
-
-        self._json(
-            response,
-            status=status_map.get(
-                status_name,
-                HTTPStatus.BAD_REQUEST,
-            ),
-        )
-
-    def _health(self, parsed):
-        del parsed
-        self._json({"status": "ok", "service": "truepanel-mission-control", "read_only": True})
-
-    def _json(self, payload, status=HTTPStatus.OK, headers=None):
-        body = json.dumps(payload, indent=2, sort_keys=True, default=str).encode("utf-8")
-        self._send(body, status=status, content_type="application/json; charset=utf-8", headers=headers)
-
-    def _send(self, body, status=HTTPStatus.OK, content_type="application/octet-stream", headers=None):
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("X-Frame-Options", "DENY")
-        for name, value in (headers or {}).items():
-            self.send_header(name, value)
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, format, *args):
-        LOGGER.info("%s - %s", self.address_string(), format % args)
-
-
-class MissionControlServer(ThreadingHTTPServer):
-    daemon_threads = True
-    allow_reuse_address = True
+class MissionControlServer(_base.MissionControlServer):
+    """Use the extended request handler with the established server state."""
 
     def __init__(
         self,
@@ -1278,25 +85,31 @@ class MissionControlServer(ThreadingHTTPServer):
         fan_command_client=None,
         lcd_command_client=None,
     ):
+        # Mirror the stable server initializer, changing only the request
+        # handler passed to ThreadingHTTPServer.
         self.snapshot_service = (
             snapshot_service
-            or SnapshotService(
+            or _base.SnapshotService(
                 service_status_provider=(
-                    ServiceStatusProvider()
+                    _base.ServiceStatusProvider()
                 ),
             )
         )
         self.allow_config_writes = bool(allow_config_writes)
-        self.config_path = Path(config_path)
+        self.config_path = _base.Path(config_path)
         self.fan_command_client = (
             fan_command_client
-            or FanCommandClient()
+            or _base.FanCommandClient()
         )
         self.lcd_command_client = (
             lcd_command_client
-            or LCDCommandClient()
+            or _base.LCDCommandClient()
         )
-        super().__init__(address, MissionControlRequestHandler)
+        _base.ThreadingHTTPServer.__init__(
+            self,
+            address,
+            MissionControlRequestHandler,
+        )
 
 
 def serve(
@@ -1317,7 +130,11 @@ def serve(
         fan_command_client=fan_command_client,
         lcd_command_client=lcd_command_client,
     )
-    LOGGER.info("Mission Control listening on http://%s:%s", host, port)
+    _base.LOGGER.info(
+        "Mission Control listening on http://%s:%s",
+        host,
+        port,
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -1326,35 +143,27 @@ def serve(
         server.server_close()
 
 
-def build_parser():
-    parser = argparse.ArgumentParser(description="Run the read-only TruePanel Mission Control dashboard")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8787)
-    parser.add_argument(
-        "--allow-config-writes",
-        action="store_true",
-        help=(
-            "Enable guarded configuration persistence. "
-            "Disabled by default."
-        ),
-    )
-    parser.add_argument(
-        "--config-path",
-        default="truepanel.yaml",
-        help="Configuration file used for guarded writes.",
-    )
-    return parser
+build_parser = _base.build_parser
 
 
 def main():
     args = build_parser().parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    _base.logging.basicConfig(
+        level=_base.logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     serve(
         host=args.host,
         port=args.port,
         allow_config_writes=args.allow_config_writes,
         config_path=args.config_path,
     )
+
+
+def __getattr__(name):
+    """Preserve access to less-common public helpers from the base module."""
+
+    return getattr(_base, name)
 
 
 if __name__ == "__main__":
