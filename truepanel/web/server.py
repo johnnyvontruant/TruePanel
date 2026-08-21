@@ -9,6 +9,7 @@ base module:
 
 ``automatic_lease_renew``
 ``"/api/v1/lcd/button"``
+``"/api/v1/lcd"``
 ``default="127.0.0.1"``
 ``"error": "read_only"``
 ``HTTPStatus.METHOD_NOT_ALLOWED``
