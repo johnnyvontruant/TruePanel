@@ -23,6 +23,7 @@ It can:
 - reject undersized, ambiguous, existing-pool, or preserve-data candidates
 - detect an active resilver and force the session into recovery monitoring
 - require repeated healthy observations before closing the repair
+- preserve completed repair history if the same fault recurs later
 
 It cannot:
 
@@ -36,6 +37,11 @@ It cannot:
 
 A future guarded-authority project must implement those operations separately.
 
+The runtime contract makes this distinction explicit:
+
+- `write_preconditions_complete` means all planning prerequisites for a future guarded write have been satisfied.
+- `can_execute_replacement` is always `false` in this Lifeline slice.
+
 ## Persistent repair ledger
 
 Default path:
@@ -47,6 +53,7 @@ Default path:
 The ledger is TruePanel metadata only. It is written atomically with mode `0600` and records:
 
 - original fault identity
+- repair attempt number
 - repair-session state
 - selected model-specific service provenance
 - operator backup-state acknowledgement
@@ -57,22 +64,30 @@ The ledger is TruePanel metadata only. It is written atomically with mode `0600`
 
 The original fault identity is retained intentionally. Linux device names can be reused after media removal or hot-swap, so a later device appearing as `/dev/sdc` must not silently rewrite the identity of the disk that originally failed.
 
+Repeated failures are preserved as separate attempts, for example:
+
+```text
+drive:HDDs:raidz1-0:sdc:attempt-1
+drive:HDDs:raidz1-0:sdc:attempt-2
+```
+
+A completed attempt remains in repair history when a later attempt opens.
+
 ## Drive-repair phases
 
 The deterministic drive session uses these phases:
 
 1. `diagnose`
-2. `prepare`
-3. `identify`
+2. `identify`
+3. `prepare`
 4. `service_ready`
-5. `await_replacement`
-6. `validate_replacement`
-7. `replacement_ready`
-8. `monitor_recovery`
-9. `verify`
-10. `complete`
+5. `validate_replacement`
+6. `replacement_ready`
+7. `monitor_recovery`
+8. `verify`
+9. `complete`
 
-The current evaluator can skip phases when telemetry already proves their prerequisites. It never skips safety gates.
+The current evaluator can skip phases when telemetry already proves their prerequisites. It never skips safety gates, and the normal repair path is monotonically ordered.
 
 ## Repair gates
 
@@ -160,7 +175,7 @@ While recovery is active, Lifeline reports `monitor_recovery` and prevents physi
 
 The session does not disappear when the original fault card clears.
 
-When the affected pool returns ONLINE and no resilver is active, the ledger begins verification. Three consecutive healthy observations are required before the repair is marked `completed`.
+When the affected pool returns ONLINE and no resilver is active, the ledger enters `verify`. Three consecutive healthy observations are required before the repair is marked `completed`.
 
 Any intervening degraded observation resets the healthy counter to zero.
 
