@@ -13,7 +13,15 @@ from typing import Any
 from .catalog import guidance_payload
 
 
-_HEALTHY_POOL_STATES = {"ONLINE"}
+_UNHEALTHY_POOL_STATES = {
+    "DEGRADED",
+    "FAULTED",
+    "OFFLINE",
+    "REMOVED",
+    "SUSPENDED",
+    "UNAVAIL",
+    "UNAVAILABLE",
+}
 _FAULTED_DEVICE_STATES = {"FAULTED", "UNAVAIL", "UNAVAILABLE"}
 
 
@@ -82,7 +90,7 @@ def _pool_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
             continue
 
         state = _text(pool.get("health") or pool.get("state")).upper()
-        if not state or state in _HEALTHY_POOL_STATES:
+        if state not in _UNHEALTHY_POOL_STATES:
             continue
 
         evidence = {
