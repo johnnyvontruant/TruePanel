@@ -1,5 +1,6 @@
 """Project Lifeline guided-repair primitives."""
 
+from .runtime import attach_repair_sessions
 from .session import (
     DRIVE_PHASES,
     RepairGate,
@@ -13,5 +14,6 @@ __all__ = [
     "RepairGate",
     "RepairSession",
     "ReplacementAssessment",
+    "attach_repair_sessions",
     "evaluate_drive_repair",
 ]
