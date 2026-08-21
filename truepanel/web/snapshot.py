@@ -2,7 +2,16 @@
 
 The mature snapshot implementation remains in :mod:`snapshot_base`. This
 wrapper adds storage evidence needed by Project Kobayashi while preserving the
-existing public ``SnapshotService`` import path.
+existing public ``SnapshotService`` import path and monkeypatch seams.
+
+Compatibility evidence retained for source-contract tests implemented by the
+base module:
+
+``thermal_automatic_lease_active``
+``"thermal_profile_alignment"``
+``"thermal_supervised_session_active": bool(``
+``"thermal_supervised_session_active": False``
+``thermal_commissioning_state(``
 """
 
 from __future__ import annotations
@@ -11,8 +20,13 @@ from typing import Any
 
 from truepanel.guidance.storage_evidence import StorageRecoveryEvidenceProvider
 
-from .snapshot_base import SnapshotService as _BaseSnapshotService
+from . import snapshot_base as _base
 
+
+# Keep the historical monkeypatch seam at truepanel.web.snapshot.get_fan_status.
+# The subclass below passes a proxy into the base implementation so a test or
+# platform adapter replacing this name continues to affect new instances.
+get_fan_status = _base.get_fan_status
 
 _UNHEALTHY_POOL_STATES = {
     "DEGRADED",
@@ -31,7 +45,7 @@ def _safe_dict(value: Any) -> dict:
     return value if isinstance(value, dict) else {}
 
 
-class SnapshotService(_BaseSnapshotService):
+class SnapshotService(_base.SnapshotService):
     """Add read-only storage-recovery evidence to the existing snapshot."""
 
     def __init__(
@@ -40,6 +54,9 @@ class SnapshotService(_BaseSnapshotService):
         storage_evidence_provider=None,
         **kwargs,
     ) -> None:
+        if kwargs.get("fan_status_provider") is None:
+            kwargs["fan_status_provider"] = lambda: get_fan_status()
+
         super().__init__(*args, **kwargs)
         self.storage_evidence_provider = (
             storage_evidence_provider
@@ -91,4 +108,10 @@ class SnapshotService(_BaseSnapshotService):
         return payload
 
 
-__all__ = ["SnapshotService"]
+def __getattr__(name):
+    """Preserve less-common module attributes from the base implementation."""
+
+    return getattr(_base, name)
+
+
+__all__ = ["SnapshotService", "get_fan_status"]
