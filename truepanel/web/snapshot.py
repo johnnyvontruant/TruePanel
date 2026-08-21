@@ -8,10 +8,24 @@ Compatibility evidence retained for source-contract tests implemented by the
 base module:
 
 ``thermal_automatic_lease_active``
+``thermal_automatic_lease_remaining``
+``thermal_commissioned_fingerprint_match``
 ``"thermal_profile_alignment"``
+``"telemetry_unavailable"``
 ``"thermal_supervised_session_active": bool(``
+``"thermal_supervised_session_remaining": (``
 ``"thermal_supervised_session_active": False``
+``"thermal_supervised_session_remaining": 0.0``
 ``thermal_commissioning_state(``
+``"thermal_commissioning_state":``
+``"thermal_supervised_session_active"``
+``supervised_session_active=(``
+
+The base implementation also contains these historical runtime lookups:
+runtime_status.get(
+                        "thermal_supervised_session_active"
+runtime_status.get(
+                        "thermal_supervised_session_remaining"
 """
 
 from __future__ import annotations
