@@ -8,16 +8,15 @@ It cannot offline, remove, replace, wipe, or otherwise mutate storage.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any, Final
 
 
 DRIVE_PHASES: Final[tuple[str, ...]] = (
     "diagnose",
-    "prepare",
     "identify",
+    "prepare",
     "service_ready",
-    "await_replacement",
     "validate_replacement",
     "replacement_ready",
     "monitor_recovery",
@@ -70,6 +69,7 @@ class RepairSession:
     can_identify_bay: bool
     can_begin_physical_service: bool
     can_prepare_replacement: bool
+    write_preconditions_complete: bool
     can_execute_replacement: bool
     recovery_in_progress: bool
     recovery_verified: bool
@@ -91,10 +91,6 @@ def _integer(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
-
-
-def _bool(value: Any) -> bool:
-    return value is True
 
 
 def _replacement_assessment(
@@ -164,9 +160,9 @@ def evaluate_drive_repair(
 ) -> RepairSession:
     """Evaluate a drive-repair session without performing any repair action.
 
-    The evaluator is intentionally deterministic: the same observations and
-    acknowledgements always produce the same phase and gate state.  Operator
-    acknowledgements can advance *planning* but never execute storage writes.
+    The evaluator is deterministic: the same observations and acknowledgements
+    always produce the same phase and gate state. Operator acknowledgements can
+    advance *planning* but never execute storage writes.
     """
 
     evidence = evidence if isinstance(evidence, dict) else {}
@@ -191,13 +187,14 @@ def evaluate_drive_repair(
     recovery_in_progress = bool(activity.get("resilver_running", False))
     pool_state = _text(evidence.get("pool_state")).upper()
     replacement_state = _text(evidence.get("replacement_zfs_state")).upper()
+    recovery_candidate = bool(
+        not recovery_in_progress
+        and pool_state in _HEALTHY_POOL_STATES
+        and replacement_state == "ONLINE"
+    )
     recovery_verified = bool(
         evidence.get("recovery_verified") is True
-        or (
-            not recovery_in_progress
-            and pool_state in _HEALTHY_POOL_STATES
-            and replacement_state == "ONLINE"
-        )
+        and recovery_candidate
     )
 
     replacement = _replacement_assessment(
@@ -267,11 +264,14 @@ def evaluate_drive_repair(
         )
     ) and not recovery_in_progress
     can_prepare_replacement = can_begin_physical_service and replacement.detected
+    write_preconditions_complete = (
+        all(item.satisfied for item in gates)
+        and not recovery_in_progress
+        and not recovery_candidate
+    )
 
-    # Lifeline's first slice never executes replacement.  This value means the
-    # *preconditions for a future guarded write* are complete, not that any
-    # write endpoint exists.
-    can_execute_replacement = all(item.satisfied for item in gates) and not recovery_in_progress
+    # Hard safety boundary: this module never grants execution authority.
+    can_execute_replacement = False
 
     if recovery_verified:
         phase = "complete"
@@ -279,6 +279,9 @@ def evaluate_drive_repair(
     elif recovery_in_progress:
         phase = "monitor_recovery"
         summary = "A resilver is active. Monitor recovery and do not service another member."
+    elif recovery_candidate:
+        phase = "verify"
+        summary = "Storage is healthy again. Continue verification before closing the repair session."
     elif not exact_member or not topology_verified:
         phase = "diagnose"
         summary = "Resolve the exact failed member and redundancy state before planning service."
@@ -299,7 +302,7 @@ def evaluate_drive_repair(
         summary = "Replacement media is validated. Any future storage mutation remains locked pending explicit confirmation and guarded authority."
     else:
         phase = "replacement_ready"
-        summary = "All planning gates are satisfied. This read-only Lifeline slice still cannot execute the storage replacement."
+        summary = "All write prerequisites are satisfied, but Lifeline has no storage-write authority."
 
     blocked = tuple(item.code for item in gates if not item.satisfied)
     warnings: list[str] = []
@@ -309,8 +312,8 @@ def evaluate_drive_repair(
         warnings.append("Do not remove or replace another member while resilver is active.")
     if replacement.detected and not replacement.valid:
         warnings.extend(replacement.reasons)
-    if can_execute_replacement:
-        warnings.append("Write authority is intentionally absent; Lifeline is planning-only in this slice.")
+    if write_preconditions_complete:
+        warnings.append("Write prerequisites are complete, but storage execution authority is intentionally absent.")
 
     try:
         phase_index = DRIVE_PHASES.index(phase) + 1
@@ -340,6 +343,7 @@ def evaluate_drive_repair(
         can_identify_bay=can_identify_bay,
         can_begin_physical_service=can_begin_physical_service,
         can_prepare_replacement=can_prepare_replacement,
+        write_preconditions_complete=write_preconditions_complete,
         can_execute_replacement=can_execute_replacement,
         recovery_in_progress=recovery_in_progress,
         recovery_verified=recovery_verified,
