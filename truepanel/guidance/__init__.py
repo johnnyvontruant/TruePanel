@@ -10,6 +10,7 @@ from .catalog import (
     guidance_for_mission,
     guidance_payload,
 )
+from .runtime import guidance_for_snapshot
 
 __all__ = [
     "FaultGuidance",
@@ -19,5 +20,6 @@ __all__ = [
     "guidance_codes",
     "guidance_for",
     "guidance_for_mission",
+    "guidance_for_snapshot",
     "guidance_payload",
 ]
