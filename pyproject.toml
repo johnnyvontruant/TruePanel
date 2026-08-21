@@ -70,6 +70,7 @@ exclude = [
 
 [tool.setuptools.package-data]
 "truepanel.themes" = ["packs/*.yaml"]
+"truepanel.web" = ["static/*.html", "static/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
