@@ -1,8 +1,9 @@
 """Guided-recovery extension for Mission Control snapshots.
 
 The mature snapshot implementation remains in :mod:`snapshot_base`. This
-wrapper adds storage evidence needed by Project Kobayashi while preserving the
-existing public ``SnapshotService`` import path and monkeypatch seams.
+wrapper adds storage evidence needed by Project Kobayashi plus Project
+Lifeline's metadata-only repair-session ledger while preserving the existing
+public ``SnapshotService`` import path and monkeypatch seams.
 
 Compatibility evidence retained for source-contract tests implemented by the
 base module:
@@ -33,13 +34,15 @@ from __future__ import annotations
 from typing import Any
 
 from truepanel.guidance.storage_evidence import StorageRecoveryEvidenceProvider
+from truepanel.lifeline import (
+    LifelineSessionStore,
+    ReplacementCandidateProvider,
+    service_profile_for_config,
+)
 
 from . import snapshot_base as _base
 
 
-# Keep the historical monkeypatch seam at truepanel.web.snapshot.get_fan_status.
-# The subclass below passes a proxy into the base implementation so a test or
-# platform adapter replacing this name continues to affect new instances.
 get_fan_status = _base.get_fan_status
 
 _UNHEALTHY_POOL_STATES = {
@@ -60,12 +63,15 @@ def _safe_dict(value: Any) -> dict:
 
 
 class SnapshotService(_base.SnapshotService):
-    """Add read-only storage-recovery evidence to the existing snapshot."""
+    """Add read-only recovery evidence and persistent Lifeline metadata."""
 
     def __init__(
         self,
         *args,
         storage_evidence_provider=None,
+        replacement_candidate_provider=None,
+        lifeline_store=None,
+        lifeline_path=None,
         **kwargs,
     ) -> None:
         if kwargs.get("fan_status_provider") is None:
@@ -76,6 +82,89 @@ class SnapshotService(_base.SnapshotService):
             storage_evidence_provider
             or StorageRecoveryEvidenceProvider()
         )
+        self.replacement_candidate_provider = (
+            replacement_candidate_provider
+            or ReplacementCandidateProvider()
+        )
+        self.lifeline_store = (
+            lifeline_store
+            or LifelineSessionStore(
+                path=lifeline_path,
+                clock=self.clock,
+            )
+        )
+        self.lifeline_service_profile = service_profile_for_config(self.config)
+
+    def status(self) -> dict[str, Any]:
+        payload = super().status()
+        try:
+            result = self.lifeline_store.observe(payload)
+            profile = self.lifeline_service_profile
+            changed = False
+            storage_devices = _safe_list(
+                _safe_dict(payload.get("storage")).get("devices")
+            )
+
+            for session in _safe_list(
+                _safe_dict(result.get("lifeline")).get("sessions")
+            ):
+                if not isinstance(session, dict) or session.get("status") != "active":
+                    continue
+                session_id = str(session.get("id") or "")
+                if not session_id:
+                    continue
+                context = _safe_dict(session.get("context"))
+
+                if profile is not None and profile.drive_service_supported:
+                    if not (
+                        context.get("service_procedure_verified") is True
+                        and context.get("service_profile") == profile.key
+                        and context.get("service_source") == profile.source_title
+                    ):
+                        self.lifeline_store.set_service_procedure_verified(
+                            session_id,
+                            verified=True,
+                            profile=profile.key,
+                            source=profile.source_title,
+                        )
+                        changed = True
+
+                try:
+                    candidates = self.replacement_candidate_provider.candidates(
+                        _safe_dict(session.get("original_fault")),
+                        storage_devices=storage_devices,
+                    )
+                except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+                    candidates = []
+
+                existing_candidates = _safe_list(
+                    context.get("replacement_candidates")
+                )
+                if candidates != existing_candidates:
+                    self.lifeline_store.set_replacement_candidates(
+                        session_id,
+                        candidates,
+                    )
+                    changed = True
+
+            if changed:
+                result = self.lifeline_store.observe(payload)
+
+            lifeline = _safe_dict(result.get("lifeline"))
+            if profile is not None:
+                lifeline = dict(lifeline)
+                lifeline["service_profile"] = profile.to_payload()
+                result["lifeline"] = lifeline
+            return result
+        except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+            result = dict(payload)
+            result["lifeline"] = {
+                "schema_version": 1,
+                "read_only_hardware": True,
+                "available": False,
+                "sessions": [],
+            }
+            return result
 
     def _storage_payload(
         self,
@@ -83,12 +172,9 @@ class SnapshotService(_base.SnapshotService):
     ) -> dict[str, Any]:
         payload = super()._storage_payload(state)
 
-        # These values already exist in the collector. Publishing them here is
-        # additive and performs no extra hardware I/O.
         payload["smart"] = _safe_list(state.get("smart"))
         payload["zfs_activity"] = _safe_dict(state.get("zfs_activity"))
 
-        # HoloDeck/tests may provide deterministic member evidence directly.
         supplied_devices = state.get("storage_devices")
         if isinstance(supplied_devices, list):
             payload["devices"] = supplied_devices
