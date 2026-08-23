@@ -199,9 +199,10 @@ def _smart_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
 def _faulted_device_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
     """Publish member-specific repair guidance when rich evidence is available.
 
-    ``storage.devices`` is an additive forward-compatible contract. Current
-    collector snapshots may not populate it yet; in that case a degraded pool
-    remains in diagnosis-only guidance and TruePanel never guesses a bay.
+    A missing member can remain logically identified by ZFS even when no
+    current Linux block device exists. Logical member identity is therefore
+    kept separate from physical device/bay identity and cannot unlock physical
+    service on its own.
     """
 
     results: list[dict[str, Any]] = []
@@ -216,13 +217,17 @@ def _faulted_device_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
             continue
 
         bay = record.get("bay") or record.get("physical_bay")
+        member_id = record.get("member_id") or record.get("zfs_name")
+        device = record.get("device") or record.get("drive")
         evidence = {
             "pool": record.get("pool"),
             "vdev": record.get("vdev"),
             "vdev_topology": record.get("vdev_topology"),
             "remaining_redundancy": record.get("remaining_redundancy"),
+            "member_id": member_id,
+            "historical_path": record.get("historical_path"),
             "bay": bay,
-            "device": record.get("device") or record.get("drive"),
+            "device": device,
             "model": record.get("model"),
             "capacity_bytes": record.get("capacity_bytes"),
             "present": record.get("present"),
@@ -234,22 +239,19 @@ def _faulted_device_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
         }
 
         blocked = []
-        required = (
-            ("pool", evidence["pool"]),
-            ("vdev", evidence["vdev"]),
-            ("vdev_topology", evidence["vdev_topology"]),
-            ("remaining_redundancy", evidence["remaining_redundancy"]),
-            ("physical_bay", evidence["bay"]),
-            ("device", evidence["device"]),
-            ("capacity", evidence["capacity_bytes"]),
-        )
-        for name, value in required:
-            if value is None or value == "":
-                blocked.append(f"{name}_not_verified")
+        if not evidence["pool"] or not evidence["vdev"] or not member_id:
+            blocked.append("member_identity_not_verified")
+        if not evidence["vdev_topology"]:
+            blocked.append("vdev_topology_not_verified")
+        if evidence["remaining_redundancy"] is None:
+            blocked.append("remaining_redundancy_not_verified")
+        if not device:
+            blocked.append("device_not_verified")
+        if not bay:
+            blocked.append("physical_bay_not_verified")
+        if evidence["capacity_bytes"] is None:
+            blocked.append("capacity_not_verified")
 
-        # Even complete fault evidence is not enough to authorize replacement.
-        # We still need a verified chassis procedure, backup acknowledgement,
-        # and a validated replacement candidate before destructive actions.
         blocked.extend(
             (
                 "chassis_service_procedure_not_verified",
@@ -258,11 +260,12 @@ def _faulted_device_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
 
-        phase = (
-            "monitor_recovery"
-            if activity["resilver_running"]
-            else "prepare_repair"
-        )
+        if activity["resilver_running"]:
+            phase = "monitor_recovery"
+        elif not device or not bay:
+            phase = "identify"
+        else:
+            phase = "prepare_repair"
 
         results.append(
             _active_payload(
