@@ -102,11 +102,44 @@ Production guards remained unchanged across the Gate 0C run:
 
 Gate 0C: PASS.
 
+## BattleStation Gate 0D-R
+
+Gate 0D-R collected read-only Linux, udev, SMART, PCI/SATA, by-path, and enclosure evidence to determine whether the disks previously commissioned as Bays 5 and 6 could be independently derived from the enclosure topology.
+
+Observed disk paths:
+
+- `sda` serial `WKD3MW7K`, HCTL `0:0:0:0`, `ID_PATH=pci-0000:00:1f.2-ata-1.0`
+- `sdb` serial `WKD3MW4K`, HCTL `1:0:0:0`, `ID_PATH=pci-0000:00:1f.2-ata-2.0`
+- `sde` serial `WKD3MW0D`, HCTL `3:0:0:0`, `ID_PATH=pci-0000:00:1f.2-ata-4.0`
+- `sdd` serial `WSD9KX4V`, HCTL `8:0:0:0`, `ID_PATH=pci-0000:7b:00.0-ata-2.0`, WWN `0x5000c500e6494082`
+- `sdf` serial `WSD9QAWH`, HCTL `12:0:0:0`, `ID_PATH=pci-0000:7c:00.0-ata-2.0`, WWN `0x5000c500e649d14a`
+
+The enclosure object independently correlated:
+
+- Slot 00 -> `sda`
+- Slot 01 -> `sdb`
+- Slot 03 -> `sde`
+
+The enclosure object did not expose block-device links for Slots 02, 04, or 05. `sdd` and `sdf` are visible through separate PCI/SATA controller paths and therefore have no independent enclosure-path correlation on this host.
+
+This establishes an important provenance distinction:
+
+- Bays 1, 2, and 4 can be classified as kernel/enclosure-derived mappings.
+- The mappings previously commissioned for Bays 5 and 6 cannot be claimed as enclosure-derived on BattleStation.
+- `sdd` and `sdf` do have durable hardware identities through serial, WWN, HCTL, and PCI/SATA by-path values.
+- Any Bay 5/6 mapping must remain an explicitly commissioned/configured mapping unless a separate model-specific physical-controller relationship is independently verified.
+
+The Gate 0D-R collection also confirmed the production configuration and service PIDs were unchanged and the shell PATH remained intact after correcting the diagnostic harness.
+
+Gate 0D-R: PASS.
+
 ### Safety disposition
 
 Gate 0B: PASS.
 
 Gate 0C: PASS.
+
+Gate 0D-R: PASS.
 
 Physical-control ladder: HOLD while the scrub is active and until deployed topology configuration is reconciled and independently verified.
 
