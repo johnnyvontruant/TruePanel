@@ -40,9 +40,11 @@ def _fault_key(evidence: dict[str, Any]) -> str | None:
     pool = _text(evidence.get("pool"))
     vdev = _text(evidence.get("vdev"))
     device = _text(evidence.get("device"))
-    if not pool or not vdev or not device:
+    member_id = _text(evidence.get("member_id") or evidence.get("zfs_name"))
+    identity = device or member_id
+    if not pool or not vdev or not identity:
         return None
-    return f"drive:{pool}:{vdev}:{device}"
+    return f"drive:{pool}:{vdev}:{identity}"
 
 
 def _pool_state(payload: dict[str, Any], pool_name: str) -> str:
@@ -143,8 +145,6 @@ class LifelineSessionStore:
         profile: str | None = None,
         source: str | None = None,
     ) -> dict[str, Any]:
-        """Record system-verified chassis procedure provenance."""
-
         with self._lock:
             session = self._state["sessions"].get(str(session_id))
             if not isinstance(session, dict):
@@ -162,8 +162,6 @@ class LifelineSessionStore:
         session_id: str,
         candidates: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        """Record candidates produced by a read-only inventory validator."""
-
         safe = [deepcopy(item) for item in candidates if isinstance(item, dict)]
         with self._lock:
             session = self._state["sessions"].get(str(session_id))
@@ -202,6 +200,8 @@ class LifelineSessionStore:
             "vdev": evidence.get("vdev"),
             "vdev_topology": evidence.get("vdev_topology"),
             "remaining_redundancy": evidence.get("remaining_redundancy"),
+            "member_id": evidence.get("member_id") or evidence.get("zfs_name"),
+            "historical_path": evidence.get("historical_path"),
             "device": evidence.get("device"),
             "bay": evidence.get("bay"),
             "model": evidence.get("model"),
@@ -264,8 +264,6 @@ class LifelineSessionStore:
         return repair.to_payload()
 
     def observe(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """Observe one status payload and return it with persistent Lifeline state."""
-
         result = deepcopy(payload)
         guidance = _list(result.get("operator_guidance"))
         now = float(self.clock())
