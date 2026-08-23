@@ -157,6 +157,66 @@ class LifelineSessionStore:
             self._save()
             return deepcopy(session)
 
+    def set_historical_physical_identity(
+        self,
+        session_id: str,
+        *,
+        member_id: str,
+        bay: int,
+        serial_last4: str,
+        source: str,
+    ) -> dict[str, Any]:
+        """Persist verified historical member-to-bay provenance.
+
+        This is metadata-only commissioning state. It cannot be used to
+        override a currently present Linux device, and the asserted member ID
+        must exactly match the immutable original fault identity.
+        """
+
+        member_id = _text(member_id)
+        serial_last4 = _text(serial_last4)
+        source = _text(source)
+        try:
+            bay = int(bay)
+        except (TypeError, ValueError) as error:
+            raise ValueError("historical physical bay must be an integer") from error
+
+        if not member_id:
+            raise ValueError("historical member identity is required")
+        if bay <= 0:
+            raise ValueError("historical physical bay must be positive")
+        if not serial_last4:
+            raise ValueError("historical serial identity is required")
+        if not source:
+            raise ValueError("historical identity provenance source is required")
+
+        with self._lock:
+            session = self._state["sessions"].get(str(session_id))
+            if not isinstance(session, dict):
+                raise KeyError("unknown Lifeline session")
+
+            original = _dict(session.get("original_fault"))
+            original_member = _text(original.get("member_id"))
+            if member_id != original_member:
+                raise ValueError("historical identity does not match original fault member")
+            if _text(original.get("device")):
+                raise ValueError(
+                    "historical identity cannot override a current Linux device identity"
+                )
+
+            context = session.setdefault("context", {})
+            context["physical_identity"] = {
+                "verified": True,
+                "kind": "historical_verified",
+                "member_id": member_id,
+                "bay": bay,
+                "serial_last4": serial_last4,
+                "source": source,
+            }
+            session["updated_at"] = float(self.clock())
+            self._save()
+            return deepcopy(session)
+
     def set_replacement_candidates(
         self,
         session_id: str,
@@ -221,6 +281,7 @@ class LifelineSessionStore:
                 "service_procedure_verified": False,
                 "service_profile": None,
                 "service_source": None,
+                "physical_identity": None,
                 "acknowledgements": {
                     "backup_state": False,
                 },
@@ -250,14 +311,41 @@ class LifelineSessionStore:
         if candidate is None and len(candidates) > 1:
             candidate = {"ambiguous": True}
 
+        repair_evidence = dict(evidence)
+        bay_identity_verified: bool | None = None
+        physical_identity = _dict(context.get("physical_identity"))
+        current_member = _text(
+            repair_evidence.get("member_id") or repair_evidence.get("zfs_name")
+        )
+        historical_member = _text(physical_identity.get("member_id"))
+        if (
+            physical_identity.get("verified") is True
+            and physical_identity.get("kind") == "historical_verified"
+            and current_member
+            and historical_member == current_member
+            and not _text(repair_evidence.get("device"))
+        ):
+            try:
+                historical_bay = int(physical_identity.get("bay"))
+            except (TypeError, ValueError):
+                historical_bay = 0
+            serial_last4 = _text(physical_identity.get("serial_last4"))
+            source = _text(physical_identity.get("source"))
+            if historical_bay > 0 and serial_last4 and source:
+                repair_evidence["bay"] = historical_bay
+                repair_evidence["physical_identity_source"] = "historical_verified"
+                repair_evidence["physical_identity_serial_last4"] = serial_last4
+                bay_identity_verified = True
+
         repair = evaluate_drive_repair(
-            evidence,
+            repair_evidence,
             service_procedure_verified=bool(
                 context.get("service_procedure_verified", False)
             ),
             backup_acknowledged=bool(
                 acknowledgements.get("backup_state", False)
             ),
+            bay_identity_verified=bay_identity_verified,
             replacement_candidate=candidate,
             replacement_operation_confirmed=False,
         )
