@@ -69,10 +69,45 @@ The controlled Gate 0B shadow process changed into the deployed root before hard
 
 Before physical Lifeline controls are commissioned, the deployed configuration must be reconciled with the already-verified chassis topology. No configuration change should be made merely to satisfy Lifeline; the mapping must be independently confirmed first.
 
+## BattleStation Gate 0C
+
+Gate 0C re-ran the corrected model against the same live degraded RAIDZ1 condition from the updated Lifeline head.
+
+Observed corrected evidence:
+
+- `member_id` preserved as `15571478626791065431`
+- `historical_path` preserved as `/dev/disk/by-partuuid/389d5fd4-8899-434f-b171-ef29d8937033`
+- `device` correctly remained null because no current Linux block device could be proven
+- `physical_bay` correctly remained null
+- remaining RAIDZ1 redundancy remained `0`
+- generic operator guidance phase was `identify`
+- persistent Lifeline repair-session phase was also `identify`
+- member-identity and redundancy gates were satisfied
+- physical-identity gate remained unsatisfied
+- `can_identify_bay` remained false
+- `can_begin_physical_service` remained false
+- `can_execute_replacement` remained false
+- active scrub telemetry was observed without intervention
+
+The controlled test also proved the configuration-context finding directly:
+
+- deployed `hardware.topology.front_bays` was empty
+- repository checkout `hardware.topology.front_bays` contained the commissioned serial overrides for Bays 5 and 6
+
+Production guards remained unchanged across the Gate 0C run:
+
+- deployed configuration SHA unchanged
+- LCD service PID unchanged
+- Mission Control service PID unchanged
+
+Gate 0C: PASS.
+
 ### Safety disposition
 
 Gate 0B: PASS.
 
-Physical-control ladder: HOLD while the scrub is active and until deployed topology configuration is reconciled.
+Gate 0C: PASS.
 
-No pool member was offlined, replaced, wiped, removed, or otherwise mutated during this test.
+Physical-control ladder: HOLD while the scrub is active and until deployed topology configuration is reconciled and independently verified.
+
+No pool member was offlined, replaced, wiped, removed, or otherwise mutated during these tests.
