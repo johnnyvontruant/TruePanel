@@ -160,9 +160,12 @@ def evaluate_drive_repair(
 ) -> RepairSession:
     """Evaluate a drive-repair session without performing any repair action.
 
-    Logical ZFS membership and current Linux hardware identity are deliberately
-    separate. A removed disk may remain exactly identified by a ZFS member ID
-    while having no current ``/dev`` node or verified physical bay.
+    Logical ZFS membership, current Linux hardware identity, and verified
+    historical physical identity are deliberately separate. A removed disk may
+    remain exactly identified by a ZFS member ID and a previously persisted
+    serial/WWN-to-bay proof even though it no longer has a current ``/dev``
+    node. Historical identity is accepted only when the caller explicitly
+    verifies that provenance; an empty slot is never sufficient evidence.
     """
 
     evidence = evidence if isinstance(evidence, dict) else {}
@@ -176,6 +179,10 @@ def evaluate_drive_repair(
     historical_path = _text(evidence.get("historical_path"))
     device = _text(evidence.get("device"))
     bay = evidence.get("bay") or evidence.get("physical_bay")
+    physical_identity_source = _text(evidence.get("physical_identity_source"))
+    physical_identity_serial_last4 = _text(
+        evidence.get("physical_identity_serial_last4")
+    )
     state = _text(evidence.get("zfs_state")).upper()
     failed_capacity = _integer(evidence.get("capacity_bytes"))
     redundancy = evidence.get("remaining_redundancy")
@@ -187,9 +194,25 @@ def evaluate_drive_repair(
         and state in _UNHEALTHY_MEMBER_STATES
     )
     topology_verified = bool(topology and redundancy is not None)
-    physical_identity = bool(device and bay)
-    if bay_identity_verified is not None:
-        physical_identity = physical_identity and bool(bay_identity_verified)
+
+    current_physical_identity = bool(device and bay)
+    historical_physical_identity = bool(
+        member_id
+        and bay
+        and not device
+        and physical_identity_source == "historical_verified"
+        and physical_identity_serial_last4
+    )
+
+    if bay_identity_verified is None:
+        physical_identity = current_physical_identity
+    elif bay_identity_verified is False:
+        physical_identity = False
+    else:
+        physical_identity = bool(
+            current_physical_identity
+            or historical_physical_identity
+        )
 
     recovery_in_progress = bool(activity.get("resilver_running", False))
     pool_state = _text(evidence.get("pool_state")).upper()
@@ -226,7 +249,7 @@ def evaluate_drive_repair(
             "physical_identity",
             "Physical bay independently verified",
             physical_identity,
-            "The hardware inventory must independently correlate a current Linux device to a physical bay.",
+            "The physical bay must be proven either by current device-to-bay inventory or by explicitly verified historical member-to-hardware provenance.",
         ),
         _gate(
             "service_procedure",
@@ -343,6 +366,8 @@ def evaluate_drive_repair(
             "historical_path": historical_path or None,
             "device": device or None,
             "bay": bay,
+            "physical_identity_source": physical_identity_source or None,
+            "physical_identity_serial_last4": physical_identity_serial_last4 or None,
             "zfs_state": state or None,
             "capacity_bytes": failed_capacity,
         },
