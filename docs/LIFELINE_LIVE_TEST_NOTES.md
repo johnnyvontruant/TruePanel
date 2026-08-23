@@ -133,6 +133,52 @@ The Gate 0D-R collection also confirmed the production configuration and service
 
 Gate 0D-R: PASS.
 
+## BattleStation Gate 0E
+
+Gate 0E searched local TruePanel history and ZFS history for a historical identity bridge for the missing member.
+
+TruePanel's storage event ledger repeatedly preserves a stable physical identity for serial `WKD3MW6D`:
+
+- physical bay: `3`
+- model: `ST8000NE001-2M71`
+- critical SMART state with persistent pending and offline-uncorrectable sectors
+- Linux device names changed over time (`sdc`, `sde`, `sdb`) while serial and physical bay remained stable
+
+ZFS history independently preserves the missing PARTUUID as an original `HDDs` member and records an explicit offline/online cycle for that PARTUUID on 2026-07-24.
+
+An archived prior BattleStation diagnostic captured the complete incident-specific chain from the missing PARTUUID to serial `WKD3MW6D` and Bay 3. That evidence is sufficient for human incident reconstruction, but current Lifeline intentionally does not consume conversational or external diagnostic history as storage authority evidence.
+
+The live run therefore produced a new design requirement: persist a local metadata-only historical storage identity ledger while members are present so future failures can prove `ZFS member identity -> serial/WWN -> physical bay` without empty-slot inference.
+
+The contract is documented separately in `docs/LIFELINE_HISTORICAL_IDENTITY.md`.
+
+Gate 0E: PASS as an evidence-recovery/design gate. Current physical-identity gate remains intentionally locked.
+
+## BattleStation Gate 0F
+
+Gate 0F verified exact service-profile selection against the same real degraded RAIDZ1 condition.
+
+Observed behavior:
+
+- production configuration selected no Lifeline service profile implicitly
+- explicit `qnap-tvs-x71` plus exact model `TVS-671` resolved successfully
+- unsupported model `TVS-872XT` was rejected
+- missing chassis model was rejected
+- invented/automatic profile selection was rejected
+- generic DMI strings (`INSYDE`, `QW56`, OEM placeholders) did not implicitly select the TVS-671 profile
+- QNAP TVS-x71 hardware-manual provenance was attached to the shadow repair session
+- the repair session still remained at `identify`
+- `physical_identity` remained blocked
+- `can_identify_bay` remained false
+- `can_begin_physical_service` remained false
+- `can_execute_replacement` remained false
+
+This proves that valid model-specific service provenance cannot substitute for independently verified physical member identity.
+
+Production configuration hash and the LCD/Mission Control PIDs were unchanged across the test. The active scrub remained untouched.
+
+Gate 0F: PASS.
+
 ### Safety disposition
 
 Gate 0B: PASS.
@@ -140,6 +186,10 @@ Gate 0B: PASS.
 Gate 0C: PASS.
 
 Gate 0D-R: PASS.
+
+Gate 0E: PASS as evidence-recovery/design validation; physical identity remains locked in the current implementation.
+
+Gate 0F: PASS.
 
 Physical-control ladder: HOLD while the scrub is active and until deployed topology configuration is reconciled and independently verified.
 
