@@ -160,9 +160,9 @@ def evaluate_drive_repair(
 ) -> RepairSession:
     """Evaluate a drive-repair session without performing any repair action.
 
-    The evaluator is deterministic: the same observations and acknowledgements
-    always produce the same phase and gate state. Operator acknowledgements can
-    advance *planning* but never execute storage writes.
+    Logical ZFS membership and current Linux hardware identity are deliberately
+    separate. A removed disk may remain exactly identified by a ZFS member ID
+    while having no current ``/dev`` node or verified physical bay.
     """
 
     evidence = evidence if isinstance(evidence, dict) else {}
@@ -172,13 +172,20 @@ def evaluate_drive_repair(
     pool = _text(evidence.get("pool"))
     vdev = _text(evidence.get("vdev"))
     topology = _text(evidence.get("vdev_topology"))
+    member_id = _text(evidence.get("member_id") or evidence.get("zfs_name"))
+    historical_path = _text(evidence.get("historical_path"))
     device = _text(evidence.get("device"))
     bay = evidence.get("bay") or evidence.get("physical_bay")
     state = _text(evidence.get("zfs_state")).upper()
     failed_capacity = _integer(evidence.get("capacity_bytes"))
     redundancy = evidence.get("remaining_redundancy")
 
-    exact_member = bool(pool and vdev and device and state in _UNHEALTHY_MEMBER_STATES)
+    exact_member = bool(
+        pool
+        and vdev
+        and (member_id or device)
+        and state in _UNHEALTHY_MEMBER_STATES
+    )
     topology_verified = bool(topology and redundancy is not None)
     physical_identity = bool(device and bay)
     if bay_identity_verified is not None:
@@ -207,7 +214,7 @@ def evaluate_drive_repair(
             "member_identity",
             "Faulted member identified",
             exact_member,
-            "Pool, VDEV, logical device, and unhealthy ZFS member state must agree.",
+            "Pool, VDEV, logical ZFS member identity, and unhealthy member state must agree.",
         ),
         _gate(
             "redundancy",
@@ -219,7 +226,7 @@ def evaluate_drive_repair(
             "physical_identity",
             "Physical bay independently verified",
             physical_identity,
-            "The hardware inventory must independently correlate the logical member to a physical bay.",
+            "The hardware inventory must independently correlate a current Linux device to a physical bay.",
         ),
         _gate(
             "service_procedure",
@@ -270,7 +277,6 @@ def evaluate_drive_repair(
         and not recovery_candidate
     )
 
-    # Hard safety boundary: this module never grants execution authority.
     can_execute_replacement = False
 
     if recovery_verified:
@@ -333,6 +339,8 @@ def evaluate_drive_repair(
             "vdev": vdev or None,
             "vdev_topology": topology or None,
             "remaining_redundancy": redundancy,
+            "member_id": member_id or None,
+            "historical_path": historical_path or None,
             "device": device or None,
             "bay": bay,
             "zfs_state": state or None,
