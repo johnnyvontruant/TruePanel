@@ -22,6 +22,7 @@ function installStyle(){
 .cooling-instrument[data-cockpit-readiness="uncommissioned"]{border-color:rgba(255,200,87,.34);background:rgba(54,39,10,.16)}
 .preflight-section[data-cockpit-review="true"]{position:relative;cursor:pointer;border-color:rgba(255,200,87,.5);box-shadow:inset 0 0 0 1px rgba(255,200,87,.05)}.preflight-section[data-cockpit-review="true"]:hover{background:rgba(255,200,87,.07)}.preflight-section[data-cockpit-review="true"]:focus-visible{outline:2px solid var(--warn);outline-offset:2px}.preflight-review-hint{display:block;margin-top:.35rem;color:var(--warn);font-size:.62rem;font-weight:750;letter-spacing:.05em;text-transform:uppercase}.preflight-detail-group.cockpit-preflight-focus{border-left:2px solid var(--warn);padding-left:.75rem;animation:cockpitFocus 1.2s ease-out}@keyframes cockpitFocus{0%{background:rgba(255,200,87,.12)}100%{background:transparent}}
 .cockpit-maintenance-drawer{grid-column:1/-1;margin:0;padding:0 1rem;border:1px solid var(--edge);border-radius:14px;background:linear-gradient(145deg,rgba(12,20,30,.9),rgba(7,12,19,.94))}.cockpit-maintenance-drawer>summary{display:flex;align-items:center;gap:.8rem;padding:1rem 0;cursor:pointer;list-style:none}.cockpit-maintenance-drawer>summary::-webkit-details-marker{display:none}.cockpit-maintenance-drawer>summary::before{content:"▸";color:var(--muted);font-size:.72rem}.cockpit-maintenance-drawer[open]>summary::before{content:"▾"}.cockpit-maintenance-title{font-size:.76rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.cockpit-maintenance-state{margin-left:auto;color:var(--muted);font-size:.72rem;text-align:right}.cockpit-maintenance-state.good{color:var(--good)}.cockpit-maintenance-state.warn{color:var(--warn)}.cockpit-maintenance-drawer[open]>summary{border-bottom:1px solid rgba(143,164,184,.14)}.cockpit-maintenance-drawer>.card{margin:1rem 0;grid-column:auto}.cockpit-maintenance-drawer>.card+ .card{margin-top:0}
+.cockpit-final-lcd-first #cockpitOverview{margin-top:-.28rem}
 @media(max-width:640px){.cockpit-drawer>summary,.cockpit-maintenance-drawer>summary{align-items:flex-start}.cockpit-drawer-state,.cockpit-maintenance-state{max-width:55%}}
 `;
     document.head.appendChild(style);
@@ -321,6 +322,27 @@ function installMaintenanceDrawer(){
     refresh();
 }
 
+function promoteLcdFirstBaseline(){
+    const params=new URLSearchParams(window.location.search);
+    if(params.get("cockpit-preview")==="1"||params.has("layout")) return;
+
+    const promote=()=>{
+        const grid=document.querySelector("main .grid");
+        const overview=document.getElementById("cockpitOverview");
+        const vfp=document.querySelector(".lcd-panel");
+        if(!grid||!overview||!vfp) return;
+
+        grid.prepend(vfp);
+        grid.insertBefore(overview,vfp.nextSibling);
+        document.body.classList.add("cockpit-final-lcd-first");
+        document.body.dataset.cockpitBaseline="lcd-first";
+    };
+
+    window.requestAnimationFrame(()=>{
+        window.requestAnimationFrame(promote);
+    });
+}
+
 function cleanFooter(){
     const footer=document.querySelector("footer");
     if(footer) footer.textContent="TruePanel Mission Control";
@@ -333,6 +355,7 @@ function install(){
     installThermalReadinessSemantics();
     installPreflightReviewNavigation();
     installMaintenanceDrawer();
+    promoteLcdFirstBaseline();
     cleanFooter();
     document.body.classList.add("cockpit-polished");
 }
