@@ -1,5 +1,10 @@
 """Project Lifeline guided-repair primitives."""
 
+from .fingerprint import (
+    DEFAULT_DRIVE_FINGERPRINT_PATH,
+    DriveFingerprintProvider,
+    DriveFingerprintStore,
+)
 from .identify import (
     BayIdentificationService,
     DEFAULT_IDENTIFY_SECONDS,
@@ -25,9 +30,12 @@ from .store import DEFAULT_LIFELINE_PATH, LifelineSessionStore
 
 __all__ = [
     "BayIdentificationService",
+    "DEFAULT_DRIVE_FINGERPRINT_PATH",
     "DEFAULT_IDENTIFY_SECONDS",
     "DEFAULT_LIFELINE_PATH",
     "DRIVE_PHASES",
+    "DriveFingerprintProvider",
+    "DriveFingerprintStore",
     "LifelineSessionStore",
     "MAX_IDENTIFY_SECONDS",
     "QNAP_TVS_X71",
