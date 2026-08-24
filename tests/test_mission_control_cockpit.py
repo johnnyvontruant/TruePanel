@@ -9,6 +9,13 @@ SCRIPT = (
     / "static"
     / "flight-manual.js"
 )
+INDEX = (
+    ROOT
+    / "truepanel"
+    / "web"
+    / "static"
+    / "index.html"
+)
 
 
 def script_text():
@@ -54,11 +61,12 @@ def test_cockpit_layout_is_progressive_enhancement():
     assert "function installCockpitLayout(panel){" in text
     assert 'document.querySelector("main .grid")' in text
     assert 'document.getElementById("cockpitOverview")' in text
+    assert 'document.getElementById("cockpitTelemetry")' not in text
     assert 'document.body.classList.add("cockpit-layout")' in text
     assert "installCockpitLayout(panel);" in text
 
 
-def test_cockpit_promotes_existing_command_and_instrument_cards():
+def test_cockpit_promotes_command_status_and_lower_telemetry_cards():
     layout = cockpit_function()
 
     expected = (
@@ -67,14 +75,18 @@ def test_cockpit_promotes_existing_command_and_instrument_cards():
         'document.getElementById("preflightPanel")',
         'document.getElementById("cpu")?.closest("article")',
         'document.getElementById("ram")?.closest("article")',
+        'document.getElementById("pools")?.closest("article")',
+        'document.getElementById("temps")?.closest("article")',
         'document.getElementById("network")?.closest("article")',
         'health.dataset.cockpitRole="system-health"',
         'preflight.dataset.cockpitRole="preflight"',
         'cpu.dataset.cockpitRole="cpu"',
         'memory.dataset.cockpitRole="memory"',
+        'storage.dataset.cockpitRole="storage"',
+        'temperatures.dataset.cockpitRole="drive-temperatures"',
         'network.dataset.cockpitRole="network"',
         'commandLabel.textContent="Command Status"',
-        'instrumentLabel.textContent="Live Instruments"',
+        'telemetryLabel.textContent="Operations Telemetry"',
     )
 
     for marker in expected:
@@ -91,19 +103,48 @@ def test_cockpit_layout_does_not_touch_virtual_front_panel():
     assert "virtualLcdLine2" not in layout
 
 
-def test_cockpit_keeps_advisory_and_flight_manual_near_command_status():
+def test_virtual_front_panel_remains_in_original_dom_between_command_and_cooling():
+    index = INDEX.read_text(encoding="utf-8")
     layout = cockpit_function()
 
+    cpu = index.index('<div id="cpu"')
+    memory = index.index('<div id="ram"')
+    front_panel = index.index("Virtual Front Panel")
+    cooling = index.index("<h2>Cooling</h2>")
+
+    assert cpu < front_panel
+    assert memory < front_panel
+    assert front_panel < cooling
+    assert "resourceStack.append(cpu,memory);" in layout
+    assert "grid.prepend(overview);" in layout
+    assert "virtualLcd" not in layout
+
+
+def test_cockpit_keeps_advisory_and_flight_manual_with_command_status():
+    layout = cockpit_function()
+
+    assert "commandRow.append(health,preflight);" in layout
     assert "if(advisory) overview.append(advisory);" in layout
     assert "if(panel) overview.append(panel);" in layout
-    assert "overview.append(instrumentLabel,instruments);" in layout
+    assert "grid.prepend(overview);" in layout
+
+
+def test_cpu_memory_join_storage_temperature_network_telemetry_zone():
+    layout = cockpit_function()
+
+    assert 'telemetry.id="cockpitTelemetry";' in layout
+    assert 'telemetry.className="cockpit-telemetry-zone";' in layout
+    assert "resourceStack.append(cpu,memory);" in layout
+    assert "telemetryGrid.append(temperatures,network,resourceStack);" in layout
+    assert 'storage.insertAdjacentElement("afterend",telemetry);' in layout
 
 
 def test_cockpit_layout_has_desktop_and_mobile_compositions():
     layout = cockpit_function()
 
     assert ".cockpit-command-row" in layout
-    assert ".cockpit-instrument-strip" in layout
+    assert ".cockpit-telemetry-grid" in layout
+    assert ".cockpit-resource-stack" in layout
     assert "grid-template-columns:minmax(0,1.2fr)" in layout
     assert "@media(max-width:980px)" in layout
     assert "@media(max-width:640px)" in layout
