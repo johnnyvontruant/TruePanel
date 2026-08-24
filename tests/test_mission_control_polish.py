@@ -53,18 +53,6 @@ def test_polish_collapses_controls_but_leaves_operational_cooling_visible():
     assert 'document.getElementById("fanThermalTemperature")' not in script
 
 
-def test_intentionally_uncommissioned_thermal_control_is_amber_not_fault_red():
-    script = text()
-
-    assert "function installThermalReadinessSemantics(){" in script
-    assert 'document.getElementById("fanThermalReadiness")' in script
-    assert "thermal policy is not configured for automatic control" in script
-    assert 'const desired="Not commissioned · Observe only"' in script
-    assert 'readiness.classList.remove("bad","good")' in script
-    assert 'readiness.classList.add("value","warn")' in script
-    assert 'data-cockpit-readiness","uncommissioned"' in script
-
-
 def test_preflight_review_cards_have_direct_path_to_details():
     script = text()
 
@@ -89,19 +77,6 @@ def test_preflight_review_navigation_does_not_fake_review_as_pass():
     assert "acknowledge" not in script.lower()
 
 
-def test_bottom_configuration_and_status_are_secondary_maintenance_drawer():
-    script = text()
-
-    assert "function installMaintenanceDrawer(){" in script
-    assert 'document.getElementById("nightEnabled")?.closest("article")' in script
-    assert 'document.getElementById("configMode")?.closest("article")' in script
-    assert 'details.id="cockpitMaintenance"' in script
-    assert '"Configuration & Mission Control"' in script
-    assert 'details.append(summary,night,status)' in script
-    assert 'config.toLowerCase().includes("read only")' in script
-    assert 'hardware.toLowerCase().includes("disabled")' in script
-
-
 def test_footer_drops_stale_hard_coded_version():
     script = text()
 
@@ -118,3 +93,39 @@ def test_drawer_summaries_keep_health_state_visible_while_closed():
     assert 'text:"Healthy",tone:"good"' in script
     assert 'text:"Attention required",tone:"bad"' in script
     assert '`Active ${activeText}${mode?` · ${mode}`:""}`' in script
+
+
+def test_intentionally_uncommissioned_thermal_control_is_amber_not_fault_red():
+    script = text()
+
+    assert 'document.getElementById("fanThermalReadiness")' in script
+    assert 'normalized.includes("thermal policy is not configured for automatic control")' in script
+    assert 'const desired="Not commissioned · Observe only"' in script
+    assert 'const desiredClass="value warn"' in script
+    assert 'data-cockpit-readiness","uncommissioned"' in script
+
+
+def test_mutation_observer_writes_are_idempotent():
+    script = text()
+
+    assert 'if(readiness.className!==desiredClass)' in script
+    assert 'if(readiness.textContent!==desired)' in script
+    assert 'if(stateNode.className!==desiredClass)' in script
+    assert 'if(stateNode.textContent!==desiredText)' in script
+    assert 'if(state.className!==desiredClass)' in script
+    assert 'if(state.textContent!==desiredText)' in script
+
+    assert 'readiness.classList.remove("bad","good")' not in script
+    assert 'readiness.classList.add("value","warn")' not in script
+
+
+def test_bottom_maintenance_cards_are_secondary_drawer():
+    script = text()
+
+    assert 'id="cockpitMaintenance"' not in script
+    assert 'details.id="cockpitMaintenance"' in script
+    assert '"Configuration & Mission Control"' in script
+    assert 'document.getElementById("nightEnabled")?.closest("article")' in script
+    assert 'document.getElementById("configMode")?.closest("article")' in script
+    assert 'Direct hardware access' in script
+    assert 'cockpit-maintenance-state' in script
