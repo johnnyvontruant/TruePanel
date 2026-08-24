@@ -43,8 +43,14 @@ function drawerAround(target,{id,className,title,state}){
 
     const refresh=()=>{
         const result=state();
-        stateNode.textContent=result.text;
-        stateNode.className=`cockpit-drawer-state ${result.tone||""}`.trim();
+        const desiredText=String(result.text||"");
+        const desiredClass=`cockpit-drawer-state ${result.tone||""}`.trim();
+        if(stateNode.textContent!==desiredText){
+            stateNode.textContent=desiredText;
+        }
+        if(stateNode.className!==desiredClass){
+            stateNode.className=desiredClass;
+        }
     };
 
     refresh();
@@ -160,17 +166,23 @@ function installThermalReadinessSemantics(){
         );
 
         if(!intentional){
-            instrument?.removeAttribute("data-cockpit-readiness");
+            if(instrument?.hasAttribute("data-cockpit-readiness")){
+                instrument.removeAttribute("data-cockpit-readiness");
+            }
             return;
         }
 
         const desired="Not commissioned · Observe only";
+        const desiredClass="value warn";
         if(readiness.textContent!==desired){
             readiness.textContent=desired;
         }
-        readiness.classList.remove("bad","good");
-        readiness.classList.add("value","warn");
-        instrument?.setAttribute("data-cockpit-readiness","uncommissioned");
+        if(readiness.className!==desiredClass){
+            readiness.className=desiredClass;
+        }
+        if(instrument?.getAttribute("data-cockpit-readiness")!=="uncommissioned"){
+            instrument.setAttribute("data-cockpit-readiness","uncommissioned");
+        }
     };
 
     new MutationObserver(refresh).observe(readiness,{
@@ -194,16 +206,28 @@ function installPreflightReviewNavigation(){
             const status=card.querySelector(".preflight-section-status");
             const review=String(status?.textContent||"").trim().toUpperCase()==="REVIEW";
             if(review){
-                card.dataset.cockpitReview="true";
-                card.setAttribute("role","button");
-                card.tabIndex=0;
+                if(card.dataset.cockpitReview!=="true"){
+                    card.dataset.cockpitReview="true";
+                }
+                if(card.getAttribute("role")!=="button"){
+                    card.setAttribute("role","button");
+                }
+                if(card.tabIndex!==0){
+                    card.tabIndex=0;
+                }
                 if(!card.querySelector(".preflight-review-hint")){
                     card.append(el("span","preflight-review-hint","Review details →"));
                 }
             }else{
-                delete card.dataset.cockpitReview;
-                card.removeAttribute("role");
-                card.removeAttribute("tabindex");
+                if(card.dataset.cockpitReview!==undefined){
+                    delete card.dataset.cockpitReview;
+                }
+                if(card.hasAttribute("role")){
+                    card.removeAttribute("role");
+                }
+                if(card.hasAttribute("tabindex")){
+                    card.removeAttribute("tabindex");
+                }
                 card.querySelector(".preflight-review-hint")?.remove();
             }
         });
@@ -275,8 +299,14 @@ function installMaintenanceDrawer(){
             config.toLowerCase().includes("read only")
             &&hardware.toLowerCase().includes("disabled")
         );
-        state.textContent=`${config} · Hardware ${hardware}`;
-        state.className=`cockpit-maintenance-state ${safe?"good":"warn"}`;
+        const desiredText=`${config} · Hardware ${hardware}`;
+        const desiredClass=`cockpit-maintenance-state ${safe?"good":"warn"}`;
+        if(state.textContent!==desiredText){
+            state.textContent=desiredText;
+        }
+        if(state.className!==desiredClass){
+            state.className=desiredClass;
+        }
     };
 
     [configMode,directValue].filter(Boolean).forEach(node=>{
