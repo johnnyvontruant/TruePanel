@@ -26,6 +26,7 @@ from urllib.parse import urlparse
 from truepanel.lifeline import BayIdentificationService
 
 from . import server_base as _base
+from .bay_mirror import BayMirrorProvider
 
 
 STATIC_DIR = _base.STATIC_DIR
@@ -130,6 +131,35 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
                 body += tags
 
         self._send(body, content_type="text/html; charset=utf-8")
+
+    def _status(self, parsed):
+        del parsed
+        payload = self.snapshot_service.status()
+        if not isinstance(payload, dict):
+            payload = {}
+
+        storage = payload.get("storage")
+        if not isinstance(storage, dict):
+            storage = {}
+        else:
+            storage = dict(storage)
+
+        try:
+            mirror = self.server.bay_mirror_provider.snapshot()
+        except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+            mirror = {
+                "schema_version": 1,
+                "read_only_hardware": True,
+                "privacy_safe": True,
+                "available": False,
+                "count": 0,
+                "bays": [],
+            }
+
+        storage["bay_mirror"] = mirror
+        payload = dict(payload)
+        payload["storage"] = storage
+        self._json(payload)
 
     def _static_script(self, filename, error_code):
         candidate = STATIC_DIR / filename
@@ -379,6 +409,7 @@ class MissionControlServer(_base.MissionControlServer):
         fan_command_client=None,
         lcd_command_client=None,
         lifeline_identify_service=None,
+        bay_mirror_provider=None,
     ):
         self.snapshot_service = (
             snapshot_service
@@ -402,6 +433,10 @@ class MissionControlServer(_base.MissionControlServer):
             lifeline_identify_service
             or BayIdentificationService()
         )
+        self.bay_mirror_provider = (
+            bay_mirror_provider
+            or BayMirrorProvider()
+        )
         _base.ThreadingHTTPServer.__init__(
             self,
             address,
@@ -419,6 +454,7 @@ def serve(
     fan_command_client=None,
     lcd_command_client=None,
     lifeline_identify_service=None,
+    bay_mirror_provider=None,
 ):
     server = MissionControlServer(
         (host, int(port)),
@@ -428,6 +464,7 @@ def serve(
         fan_command_client=fan_command_client,
         lcd_command_client=lcd_command_client,
         lifeline_identify_service=lifeline_identify_service,
+        bay_mirror_provider=bay_mirror_provider,
     )
     _base.LOGGER.info(
         "Mission Control listening on http://%s:%s",
