@@ -62,6 +62,52 @@ def _safe_dict(value: Any) -> dict:
     return value if isinstance(value, dict) else {}
 
 
+def _replacement_fault_for_session(session: dict[str, Any]) -> dict[str, Any]:
+    """Return discovery evidence enriched only by verified session provenance.
+
+    The immutable original fault deliberately remains unchanged when a removed
+    disk has no current Linux device or bay. Replacement discovery may still
+    use the independently verified historical target from the latest repair
+    evaluation so that a same-slot workflow remains scoped to that bay.
+    """
+
+    original = dict(_safe_dict(session.get("original_fault")))
+    repair = _safe_dict(session.get("last_session"))
+    target = _safe_dict(repair.get("target"))
+
+    original_member = str(original.get("member_id") or "").strip()
+    target_member = str(target.get("member_id") or "").strip()
+    target_source = str(target.get("physical_identity_source") or "").strip()
+    original_device = str(original.get("device") or "").strip()
+
+    if not (
+        original_member
+        and target_member == original_member
+        and not original_device
+        and target_source == "historical_verified"
+    ):
+        return original
+
+    bay = target.get("bay")
+    if bay is not None:
+        original["bay"] = bay
+
+    if not str(original.get("serial_last4") or "").strip():
+        serial_last4 = str(
+            target.get("physical_identity_serial_last4") or ""
+        ).strip()
+        if serial_last4:
+            original["serial_last4"] = serial_last4
+
+    if original.get("capacity_bytes") in (None, ""):
+        capacity = target.get("capacity_bytes")
+        if capacity not in (None, ""):
+            original["capacity_bytes"] = capacity
+            original["capacity_source"] = target.get("capacity_source")
+
+    return original
+
+
 class SnapshotService(_base.SnapshotService):
     """Add read-only recovery evidence and persistent Lifeline metadata."""
 
@@ -131,7 +177,7 @@ class SnapshotService(_base.SnapshotService):
 
                 try:
                     candidates = self.replacement_candidate_provider.candidates(
-                        _safe_dict(session.get("original_fault")),
+                        _replacement_fault_for_session(session),
                         storage_devices=storage_devices,
                     )
                 except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
