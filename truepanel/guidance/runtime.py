@@ -436,7 +436,7 @@ def guidance_for_snapshot(payload: dict[str, Any]) -> list[dict[str, Any]]:
     faulted member; a DEGRADED pool or SMART warning alone never becomes a
     guessed physical-drive replacement. Non-storage guidance is similarly
     evidence-bound: only monitored fan faults, a verified primary-link loss,
-    or an unavailable/unhealthy LCD reader activate cards.
+    or an explicitly present unavailable/unhealthy LCD domain activate cards.
     """
 
     storage = _dict(payload.get("storage"))
@@ -450,7 +450,8 @@ def guidance_for_snapshot(payload: dict[str, Any]) -> list[dict[str, Any]]:
     guidance.extend(_smart_guidance(storage))
     guidance.extend(_fan_stall_guidance(fans))
     guidance.extend(_network_link_guidance(network))
-    guidance.extend(_front_panel_guidance(lcd))
+    if "lcd" in payload:
+        guidance.extend(_front_panel_guidance(lcd))
     return guidance
 
 
