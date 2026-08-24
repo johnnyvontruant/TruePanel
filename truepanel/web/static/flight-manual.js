@@ -37,6 +37,7 @@ function safeUrl(value){
 function phaseText(phase){
     return ({
         diagnose:"DIAGNOSE",
+        identify:"IDENTIFY",
         prepare_repair:"PREPARE REPAIR",
         monitor_recovery:"MONITOR RECOVERY",
     })[phase]||String(phase||"REVIEW").replaceAll("_"," ").toUpperCase();
@@ -47,13 +48,13 @@ function phaseNote(item){
     const evidence=runtime.evidence||{};
     if(runtime.phase==="monitor_recovery"){
         const resilver=evidence.resilver_state||{};
-        const progress=resilver.percent!=null?` ${esc(resilver.percent)}% complete.`:"";
-        const remaining=resilver.remaining?` ${esc(resilver.remaining)}.`:"";
+        const progress=resilver.percent!=null?` ${resilver.percent}% complete.`:"";
+        const remaining=resilver.remaining?` ${resilver.remaining}.`:"";
         return `Recovery is already in progress.${progress}${remaining} Do not replace another member until redundancy is restored.`;
     }
     if(item.code==="storage.disk_faulted"){
-        const bay=evidence.bay?`Bay ${esc(evidence.bay)}`:"the physical bay";
-        const device=evidence.device?` /dev/${esc(evidence.device)}`:"";
+        const bay=evidence.bay?`Bay ${evidence.bay}`:"the physical bay";
+        const device=evidence.device?` /dev/${evidence.device}`:"";
         return `A faulted ZFS member is identified. ${bay}${device} is evidence only until every service gate below is satisfied.`;
     }
     if(item.code==="storage.pool_degraded"){
@@ -116,8 +117,7 @@ function evidenceRows(evidence){
     for(const [key,title] of preferred){
         const value=evidence[key];
         if(value===undefined||value===null||value==="") continue;
-        const display=evidenceDisplay(key,value);
-        rows.push(`<div class="fm-evidence-row"><span>${esc(title)}</span><strong>${esc(display)}</strong></div>`);
+        rows.push(`<div class="fm-evidence-row"><span>${esc(title)}</span><strong>${esc(evidenceDisplay(key,value))}</strong></div>`);
     }
     return rows.join("")||'<div class="fm-empty">No fault-specific evidence is verified yet.</div>';
 }
@@ -247,13 +247,15 @@ function installCockpitLayout(panel){
     const preflight=document.getElementById("preflightPanel");
     const cpu=document.getElementById("cpu")?.closest("article");
     const memory=document.getElementById("ram")?.closest("article");
+    const storage=document.getElementById("pools")?.closest("article");
+    const temperatures=document.getElementById("temps")?.closest("article");
     const network=document.getElementById("network")?.closest("article");
 
-    if(!health||!preflight||!cpu||!memory||!network) return;
+    if(!health||!preflight||!cpu||!memory||!storage||!temperatures||!network) return;
 
     const style=document.createElement("style");
     style.textContent=`
-.cockpit-overview{grid-column:1/-1;display:grid;gap:1rem}.cockpit-zone-label{color:var(--muted);font-size:.66rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase}.cockpit-command-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(360px,.8fr);gap:1rem;align-items:stretch}.cockpit-command-row>.card{height:100%;margin:0}.cockpit-command-row .health-command,.cockpit-command-row .preflight-panel{grid-column:auto}.cockpit-instrument-strip{display:grid;grid-template-columns:minmax(170px,.6fr) minmax(170px,.6fr) minmax(320px,1.8fr);gap:1rem}.cockpit-instrument-strip>.card{min-width:0;margin:0}.cockpit-instrument-strip .metric{font-size:1.65rem}.cockpit-overview>.health-advisory{grid-column:auto;margin:0}.cockpit-overview>#flightManualPanel{grid-column:auto;margin:0}.cockpit-overview .preflight-sections{grid-template-columns:repeat(2,minmax(0,1fr))}.cockpit-overview .preflight-section:last-child{grid-column:1/-1}@media(max-width:980px){.cockpit-command-row{grid-template-columns:1fr}.cockpit-instrument-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.cockpit-instrument-strip>[data-cockpit-role="network"]{grid-column:1/-1}}@media(max-width:640px){.cockpit-instrument-strip{grid-template-columns:1fr}.cockpit-instrument-strip>[data-cockpit-role="network"]{grid-column:auto}}
+.cockpit-overview{grid-column:1/-1;display:grid;gap:1rem}.cockpit-zone-label{color:var(--muted);font-size:.66rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase}.cockpit-command-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(360px,.8fr);gap:1rem;align-items:stretch}.cockpit-command-row>.card{height:100%;margin:0}.cockpit-command-row .health-command,.cockpit-command-row .preflight-panel{grid-column:auto}.cockpit-overview>.health-advisory{grid-column:auto;margin:0}.cockpit-overview>#flightManualPanel{grid-column:auto;margin:0}.cockpit-overview .preflight-sections{grid-template-columns:repeat(2,minmax(0,1fr))}.cockpit-overview .preflight-section:last-child{grid-column:1/-1}.cockpit-telemetry-zone{grid-column:1/-1;display:grid;gap:.55rem}.cockpit-telemetry-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(190px,.72fr);gap:1rem;align-items:stretch}.cockpit-telemetry-grid>.card{margin:0;min-width:0;height:100%}.cockpit-resource-stack{display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:1rem}.cockpit-resource-stack>.card{margin:0;min-width:0}.cockpit-resource-stack .metric{font-size:1.55rem}@media(max-width:980px){.cockpit-command-row{grid-template-columns:1fr}.cockpit-telemetry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cockpit-resource-stack{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}}@media(max-width:640px){.cockpit-telemetry-grid,.cockpit-resource-stack{grid-template-columns:1fr}.cockpit-resource-stack{grid-column:auto}}
 `;
     document.head.appendChild(style);
 
@@ -261,6 +263,8 @@ function installCockpitLayout(panel){
     preflight.dataset.cockpitRole="preflight";
     cpu.dataset.cockpitRole="cpu";
     memory.dataset.cockpitRole="memory";
+    storage.dataset.cockpitRole="storage";
+    temperatures.dataset.cockpitRole="drive-temperatures";
     network.dataset.cockpitRole="network";
     if(advisory) advisory.dataset.cockpitRole="advisory";
     if(panel) panel.dataset.cockpitRole="flight-manual";
@@ -268,7 +272,7 @@ function installCockpitLayout(panel){
     const overview=document.createElement("section");
     overview.id="cockpitOverview";
     overview.className="cockpit-overview";
-    overview.setAttribute("aria-label","Mission Control command deck");
+    overview.setAttribute("aria-label","Mission Control command status");
 
     const commandLabel=document.createElement("div");
     commandLabel.className="cockpit-zone-label";
@@ -278,20 +282,31 @@ function installCockpitLayout(panel){
     commandRow.className="cockpit-command-row";
     commandRow.append(health,preflight);
 
-    const instrumentLabel=document.createElement("div");
-    instrumentLabel.className="cockpit-zone-label";
-    instrumentLabel.textContent="Live Instruments";
-
-    const instruments=document.createElement("div");
-    instruments.className="cockpit-instrument-strip";
-    instruments.append(cpu,memory,network);
-
     overview.append(commandLabel,commandRow);
     if(advisory) overview.append(advisory);
     if(panel) overview.append(panel);
-    overview.append(instrumentLabel,instruments);
-
     grid.prepend(overview);
+
+    const telemetry=document.createElement("section");
+    telemetry.id="cockpitTelemetry";
+    telemetry.className="cockpit-telemetry-zone";
+    telemetry.setAttribute("aria-label","Operations telemetry");
+
+    const telemetryLabel=document.createElement("div");
+    telemetryLabel.className="cockpit-zone-label";
+    telemetryLabel.textContent="Operations Telemetry";
+
+    const telemetryGrid=document.createElement("div");
+    telemetryGrid.className="cockpit-telemetry-grid";
+
+    const resourceStack=document.createElement("div");
+    resourceStack.className="cockpit-resource-stack";
+    resourceStack.append(cpu,memory);
+
+    telemetryGrid.append(temperatures,network,resourceStack);
+    telemetry.append(telemetryLabel,telemetryGrid);
+    storage.insertAdjacentElement("afterend",telemetry);
+
     document.body.classList.add("cockpit-layout");
 }
 
