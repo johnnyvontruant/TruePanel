@@ -122,7 +122,6 @@ def test_mutation_observer_writes_are_idempotent():
 def test_bottom_maintenance_cards_are_secondary_drawer():
     script = text()
 
-    assert 'id="cockpitMaintenance"' not in script
     assert 'details.id="cockpitMaintenance"' in script
     assert '"Configuration & Mission Control"' in script
     assert 'document.getElementById("nightEnabled")?.closest("article")' in script
