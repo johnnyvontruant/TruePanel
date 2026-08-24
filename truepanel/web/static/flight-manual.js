@@ -138,6 +138,63 @@ function card(item){
     </article>`;
 }
 
+function installCockpitLayout(panel){
+    const grid=document.querySelector("main .grid");
+    if(!grid||document.getElementById("cockpitOverview")) return;
+
+    const health=document.querySelector(".health-command");
+    const advisory=document.getElementById("healthAdvisory");
+    const preflight=document.getElementById("preflightPanel");
+    const cpu=document.getElementById("cpu")?.closest("article");
+    const memory=document.getElementById("ram")?.closest("article");
+    const network=document.getElementById("network")?.closest("article");
+
+    if(!health||!preflight||!cpu||!memory||!network) return;
+
+    const style=document.createElement("style");
+    style.textContent=`
+.cockpit-overview{grid-column:1/-1;display:grid;gap:1rem}.cockpit-zone-label{color:var(--muted);font-size:.66rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase}.cockpit-command-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(360px,.8fr);gap:1rem;align-items:stretch}.cockpit-command-row>.card{height:100%;margin:0}.cockpit-command-row .health-command,.cockpit-command-row .preflight-panel{grid-column:auto}.cockpit-instrument-strip{display:grid;grid-template-columns:minmax(170px,.6fr) minmax(170px,.6fr) minmax(320px,1.8fr);gap:1rem}.cockpit-instrument-strip>.card{min-width:0;margin:0}.cockpit-instrument-strip .metric{font-size:1.65rem}.cockpit-overview>.health-advisory{grid-column:auto;margin:0}.cockpit-overview>#flightManualPanel{grid-column:auto;margin:0}.cockpit-overview .preflight-sections{grid-template-columns:repeat(2,minmax(0,1fr))}.cockpit-overview .preflight-section:last-child{grid-column:1/-1}@media(max-width:980px){.cockpit-command-row{grid-template-columns:1fr}.cockpit-instrument-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.cockpit-instrument-strip>[data-cockpit-role="network"]{grid-column:1/-1}}@media(max-width:640px){.cockpit-instrument-strip{grid-template-columns:1fr}.cockpit-instrument-strip>[data-cockpit-role="network"]{grid-column:auto}}
+`;
+    document.head.appendChild(style);
+
+    health.dataset.cockpitRole="system-health";
+    preflight.dataset.cockpitRole="preflight";
+    cpu.dataset.cockpitRole="cpu";
+    memory.dataset.cockpitRole="memory";
+    network.dataset.cockpitRole="network";
+    if(advisory) advisory.dataset.cockpitRole="advisory";
+    if(panel) panel.dataset.cockpitRole="flight-manual";
+
+    const overview=document.createElement("section");
+    overview.id="cockpitOverview";
+    overview.className="cockpit-overview";
+    overview.setAttribute("aria-label","Mission Control command deck");
+
+    const commandLabel=document.createElement("div");
+    commandLabel.className="cockpit-zone-label";
+    commandLabel.textContent="Command Status";
+
+    const commandRow=document.createElement("div");
+    commandRow.className="cockpit-command-row";
+    commandRow.append(health,preflight);
+
+    const instrumentLabel=document.createElement("div");
+    instrumentLabel.className="cockpit-zone-label";
+    instrumentLabel.textContent="Live Instruments";
+
+    const instruments=document.createElement("div");
+    instruments.className="cockpit-instrument-strip";
+    instruments.append(cpu,memory,network);
+
+    overview.append(commandLabel,commandRow);
+    if(advisory) overview.append(advisory);
+    if(panel) overview.append(panel);
+    overview.append(instrumentLabel,instruments);
+
+    grid.prepend(overview);
+    document.body.classList.add("cockpit-layout");
+}
+
 function install(){
     if(document.getElementById("flightManualPanel")) return;
     const button=document.getElementById("openFlightManual");
@@ -157,6 +214,8 @@ function install(){
     const advisory=document.getElementById("healthAdvisory");
     if(advisory&&advisory.parentNode) advisory.insertAdjacentElement("afterend",panel);
     else document.querySelector("main")?.prepend(panel);
+
+    installCockpitLayout(panel);
 
     button.addEventListener("click",()=>{
         panel.classList.add("show");
