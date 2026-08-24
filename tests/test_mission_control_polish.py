@@ -1,0 +1,95 @@
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = (
+    ROOT
+    / "truepanel"
+    / "web"
+    / "static"
+    / "cockpit-polish.js"
+)
+
+
+def text():
+    return SCRIPT.read_text(encoding="utf-8")
+
+
+def test_polish_layer_is_read_only_dom_enhancement():
+    script = text()
+
+    assert "fetch(" not in script
+    assert 'method:"POST"' not in script
+    assert 'method:"PUT"' not in script
+    assert 'method:"PATCH"' not in script
+    assert 'method:"DELETE"' not in script
+    assert "XMLHttpRequest" not in script
+
+
+def test_polish_collapses_lcd_transport_without_touching_vfp_display():
+    script = text()
+
+    assert 'document.querySelector(".lcd-transport")' in script
+    assert 'id:"cockpitLcdTransport"' in script
+    assert 'title:"LCD Transport"' in script
+    assert "virtualLcdScreen" not in script
+    assert "virtualLcdLine1" not in script
+    assert "virtualLcdLine2" not in script
+    assert "lcd-faceplate" not in script
+    assert "lcd-screen" not in script
+    assert "lcd-rocker" not in script
+
+
+def test_polish_collapses_controls_but_leaves_operational_cooling_visible():
+    script = text()
+
+    assert 'document.getElementById("fanControlConnection")' in script
+    assert 'closest(".control-panel")' in script
+    assert 'id:"cockpitCoolingControls"' in script
+    assert 'title:"Controls & Automation"' in script
+    assert "fanActiveProfile" in script
+    assert "fanThermalRecommendation" in script
+    assert 'document.getElementById("fans")' not in script
+    assert 'document.getElementById("fanThermalTemperature")' not in script
+
+
+def test_preflight_review_cards_have_direct_path_to_details():
+    script = text()
+
+    assert 'document.getElementById("preflightSections")' in script
+    assert 'document.getElementById("preflightDetails")' in script
+    assert 'textContent||""' in script
+    assert '==="REVIEW"' in script
+    assert 'card.dataset.cockpitReview="true"' in script
+    assert 'card.setAttribute("role","button")' in script
+    assert 'card.tabIndex=0' in script
+    assert '"Review details →"' in script
+    assert "details.open=true" in script
+    assert 'group.scrollIntoView({behavior:"smooth",block:"center"})' in script
+
+
+def test_preflight_review_navigation_does_not_fake_review_as_pass():
+    script = text()
+
+    assert 'status?.textContent' in script
+    assert 'textContent="PASS"' not in script
+    assert 'textContent="READY"' not in script
+    assert "acknowledge" not in script.lower()
+
+
+def test_footer_drops_stale_hard_coded_version():
+    script = text()
+
+    assert 'footer.textContent="TruePanel Mission Control"' in script
+    assert "v1.1" not in script
+
+
+def test_drawer_summaries_keep_health_state_visible_while_closed():
+    script = text()
+
+    assert 'document.getElementById("lcdTransportConnection")' in script
+    assert 'document.getElementById("lcdTransportReader")' in script
+    assert 'document.getElementById("lcdTransportDispatcher")' in script
+    assert 'text:"Healthy",tone:"good"' in script
+    assert 'text:"Attention required",tone:"bad"' in script
+    assert '`Active ${activeText}${mode?` · ${mode}`:""}`' in script
