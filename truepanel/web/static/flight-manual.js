@@ -7,6 +7,11 @@ const PRIORITY={
     "storage.disk_faulted":0,
     "storage.pool_degraded":1,
     "storage.smart_warning":2,
+    "cooling.fan_stall":3,
+    "thermal.high_temperature":4,
+    "network.link_down":5,
+    "front_panel.lcd_unavailable":6,
+    "telemetry.stale":7,
 };
 
 const esc=value=>String(value??"")
@@ -54,26 +59,121 @@ function phaseNote(item){
     if(item.code==="storage.pool_degraded"){
         return "The pool is degraded, but TruePanel will not guess which disk to remove. Resolve the affected VDEV and exact hardware identity first.";
     }
-    return "Review the evidence and complete safe diagnostic checks before considering physical service.";
+    if(item.code==="storage.smart_warning"){
+        return "A drive-health warning is not the same as a faulted ZFS member. Correlate SMART evidence, ZFS state, and physical identity before considering replacement.";
+    }
+    return "Review the verified evidence and complete safe diagnostic checks before considering any disruptive action.";
+}
+
+function evidenceDisplay(key,value){
+    if(typeof value==="boolean") return value?"Yes":"No";
+    if(Array.isArray(value)){
+        if(!value.length) return "None";
+        return value.map(item=>{
+            if(item&&typeof item==="object"){
+                const name=item.label||item.name||"Item";
+                const rpm=Number(item.rpm);
+                return Number.isFinite(rpm)?`${name} · ${rpm} RPM`:String(name);
+            }
+            return String(item);
+        }).join(", ");
+    }
+    if(value&&typeof value==="object"){
+        const parts=[];
+        if(value.resilver_running===true) parts.push("Resilver running");
+        if(value.scrub_running===true) parts.push("Scrub running");
+        if(value.percent!=null) parts.push(`${value.percent}%`);
+        if(value.remaining) parts.push(String(value.remaining));
+        if(value.status_line) parts.push(String(value.status_line));
+        return parts.length?parts.join(" · "):JSON.stringify(value);
+    }
+    if(key==="device") return `/dev/${value}`;
+    if(key==="current_rpm") return `${value} RPM`;
+    if(key.endsWith("_temperature_c")) return `${value}°C`;
+    if(key==="telemetry_age_seconds") return `${value}s`;
+    return String(value);
 }
 
 function evidenceRows(evidence){
     const preferred=[
         ["pool","Pool"],["pool_state","Pool state"],["vdev","VDEV"],
         ["vdev_topology","Topology"],["remaining_redundancy","Redundancy remaining"],
-        ["bay","Physical bay"],["device","Linux device"],["label","Inventory label"],
+        ["bay","Physical bay"],["device","Linux device"],["label","Label"],
         ["model","Model"],["serial_last4","Serial suffix"],["zfs_state","ZFS state"],
         ["read_errors","Read errors"],["write_errors","Write errors"],
         ["checksum_errors","Checksum errors"],["mapping_source","Bay mapping source"],
+        ["fan_label","Fan"],["fan_channel","Fan channel"],["current_rpm","Current RPM"],
+        ["failure_observations","Failure observations"],["other_fan_rpm","Other monitored fans"],
+        ["cpu_temperature_c","CPU temperature"],["system_temperature_c","System temperature"],
+        ["telemetry_age_seconds","Telemetry age"],["interface","Interface"],
+        ["link_up","Carrier"],["operstate","Operating state"],["address","Address"],
+        ["primary","Primary path"],["other_reachable_interfaces","Alternate reachable paths"],
+        ["tailscale_reachable","Tailscale reachable"],["serial_device","Serial device"],
+        ["reader_connected","Reader connected"],["last_successful_io","Last healthy I/O"],
+        ["dispatcher_alive","Dispatcher running"],["mission_control_reachable","Mission Control reachable"],
     ];
     const rows=[];
     for(const [key,title] of preferred){
         const value=evidence[key];
         if(value===undefined||value===null||value==="") continue;
-        const display=key==="device"?`/dev/${value}`:value;
+        const display=evidenceDisplay(key,value);
         rows.push(`<div class="fm-evidence-row"><span>${esc(title)}</span><strong>${esc(display)}</strong></div>`);
     }
-    return rows.join("")||'<div class="fm-empty">No member-specific evidence is verified yet.</div>';
+    return rows.join("")||'<div class="fm-empty">No fault-specific evidence is verified yet.</div>';
+}
+
+function calloutFor(item,evidence){
+    const code=String(item.code||"");
+    if(code.startsWith("storage.")){
+        const exactBay=Boolean(evidence.bay&&evidence.device);
+        return{
+            className:exactBay?"caution":"danger",
+            headline:exactBay
+                ?"Physical identity has been correlated, but removal remains locked until the service gates are satisfied."
+                :"DO NOT REMOVE A DISK. TruePanel has not verified an exact physical bay and device pair.",
+            detail:phaseNote(item),
+        };
+    }
+    if(code==="cooling.fan_stall"){
+        return{
+            className:"caution",
+            headline:"Cooling capacity may be reduced.",
+            detail:"Keep temperatures within safe limits. Do not open the chassis until the model-specific service procedure is verified.",
+        };
+    }
+    if(code.startsWith("thermal.")){
+        return{
+            className:"caution",
+            headline:"Protect thermal margin while diagnosing the cause.",
+            detail:"Reduce avoidable load and restore trustworthy cooling telemetry before escalating control or service actions.",
+        };
+    }
+    if(code==="network.link_down"){
+        return{
+            className:"caution",
+            headline:"Preserve any working management path.",
+            detail:"Check carrier, cable, and the peer switch/router port before changing interface configuration.",
+        };
+    }
+    if(code.startsWith("front_panel.")){
+        return{
+            className:"caution",
+            headline:"This is a front-panel fault, not a storage fault.",
+            detail:"Keep managing the NAS through Mission Control while checking the LCD reader service and serial path.",
+        };
+    }
+    if(code==="telemetry.stale"){
+        return{
+            className:"caution",
+            headline:"Hardware state is partially unknown until fresh telemetry returns.",
+            detail:"Keep automated decisions conservative and recover the narrowest stale telemetry source first.",
+        };
+    }
+    return{
+        className:"caution",
+        headline:"Safe diagnostic guidance only.",
+        detail:"Review verified evidence before taking any disruptive action.",
+    };
 }
 
 function gate(name,value){
@@ -110,23 +210,23 @@ function card(item){
     const evidence=runtime.evidence||{};
     const action=runtime.action_gate||{};
     const blockers=Array.isArray(action.blocked_by)?action.blocked_by:[];
-    const exactBay=Boolean(evidence.bay&&evidence.device);
-    const warning=exactBay
-        ?"Physical identity has been correlated, but removal remains locked until the service gates are satisfied."
-        :"DO NOT REMOVE A DISK. TruePanel has not verified an exact physical bay and device pair.";
+    const callout=calloutFor(item,evidence);
+    const disruptiveLabel=String(item.code||"").startsWith("storage.")
+        ?"Destructive storage action"
+        :"Disruptive action";
     return `<article class="fm-card" data-guidance-code="${esc(item.code)}">
         <div class="fm-card-head">
             <div><span class="fm-kicker">${esc(item.code)}</span><h3>${esc(item.title||"Operator guidance")}</h3></div>
             <span class="fm-phase">${esc(phaseText(runtime.phase))}</span>
         </div>
         <p class="fm-summary">${esc(item.summary||"")}</p>
-        <div class="fm-callout ${exactBay?"caution":"danger"}"><strong>${esc(warning)}</strong><span>${phaseNote(item)}</span></div>
+        <div class="fm-callout ${callout.className}"><strong>${esc(callout.headline)}</strong><span>${esc(callout.detail)}</span></div>
         <div class="fm-grid">
             <section><h4>Verified evidence</h4><div class="fm-evidence">${evidenceRows(evidence)}</div></section>
             <section><h4>Action gates</h4><div class="fm-gates">
                 ${gate("Safe diagnostics",action.safe_checks)}
                 ${gate("Physical service",action.physical_service_ready)}
-                ${gate("Destructive storage action",action.destructive_actions_ready)}
+                ${gate(disruptiveLabel,action.destructive_actions_ready)}
             </div>${blockers.length?`<div class="fm-blockers"><strong>Blocked by</strong>${blockers.map(item=>`<span>${esc(label(item))}</span>`).join("")}</div>`:""}</section>
         </div>
         ${steps("Immediate actions",item.immediate_actions)}
