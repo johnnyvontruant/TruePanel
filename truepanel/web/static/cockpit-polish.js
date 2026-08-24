@@ -19,8 +19,10 @@ function installStyle(){
 .cockpit-drawer>summary::-webkit-details-marker{display:none}.cockpit-drawer>summary::before{content:"▸";margin-right:.5rem;color:var(--muted);font-size:.7rem}.cockpit-drawer[open]>summary::before{content:"▾"}.cockpit-drawer-title{display:flex;align-items:center;font-size:.75rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.cockpit-drawer-state{margin-left:auto;color:var(--muted);font-size:.72rem;font-weight:600;letter-spacing:.01em;text-align:right;text-transform:none}.cockpit-drawer-state.good{color:var(--good)}.cockpit-drawer-state.warn{color:var(--warn)}.cockpit-drawer-state.bad{color:var(--bad)}.cockpit-drawer[open]>summary{border-bottom:1px solid rgba(143,164,184,.14)}
 .cockpit-lcd-drawer .lcd-transport{max-width:none;margin:0;padding:.85rem 0;border:0;border-radius:0;background:transparent}.cockpit-lcd-drawer .lcd-transport h3{display:none}
 .cockpit-cooling-drawer .control-panel{margin:0;padding:.85rem 0 0;border-top:0}.cockpit-cooling-drawer+.diagnostics-drawer{margin-top:.75rem}
+.cooling-instrument[data-cockpit-readiness="uncommissioned"]{border-color:rgba(255,200,87,.34);background:rgba(54,39,10,.16)}
 .preflight-section[data-cockpit-review="true"]{position:relative;cursor:pointer;border-color:rgba(255,200,87,.5);box-shadow:inset 0 0 0 1px rgba(255,200,87,.05)}.preflight-section[data-cockpit-review="true"]:hover{background:rgba(255,200,87,.07)}.preflight-section[data-cockpit-review="true"]:focus-visible{outline:2px solid var(--warn);outline-offset:2px}.preflight-review-hint{display:block;margin-top:.35rem;color:var(--warn);font-size:.62rem;font-weight:750;letter-spacing:.05em;text-transform:uppercase}.preflight-detail-group.cockpit-preflight-focus{border-left:2px solid var(--warn);padding-left:.75rem;animation:cockpitFocus 1.2s ease-out}@keyframes cockpitFocus{0%{background:rgba(255,200,87,.12)}100%{background:transparent}}
-@media(max-width:640px){.cockpit-drawer>summary{align-items:flex-start}.cockpit-drawer-state{max-width:55%}}
+.cockpit-maintenance-drawer{grid-column:1/-1;margin:0;padding:0 1rem;border:1px solid var(--edge);border-radius:14px;background:linear-gradient(145deg,rgba(12,20,30,.9),rgba(7,12,19,.94))}.cockpit-maintenance-drawer>summary{display:flex;align-items:center;gap:.8rem;padding:1rem 0;cursor:pointer;list-style:none}.cockpit-maintenance-drawer>summary::-webkit-details-marker{display:none}.cockpit-maintenance-drawer>summary::before{content:"▸";color:var(--muted);font-size:.72rem}.cockpit-maintenance-drawer[open]>summary::before{content:"▾"}.cockpit-maintenance-title{font-size:.76rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.cockpit-maintenance-state{margin-left:auto;color:var(--muted);font-size:.72rem;text-align:right}.cockpit-maintenance-state.good{color:var(--good)}.cockpit-maintenance-state.warn{color:var(--warn)}.cockpit-maintenance-drawer[open]>summary{border-bottom:1px solid rgba(143,164,184,.14)}.cockpit-maintenance-drawer>.card{margin:1rem 0;grid-column:auto}.cockpit-maintenance-drawer>.card+ .card{margin-top:0}
+@media(max-width:640px){.cockpit-drawer>summary,.cockpit-maintenance-drawer>summary{align-items:flex-start}.cockpit-drawer-state,.cockpit-maintenance-state{max-width:55%}}
 `;
     document.head.appendChild(style);
 }
@@ -143,6 +145,44 @@ function installCoolingControlsDrawer(){
     });
 }
 
+function installThermalReadinessSemantics(){
+    const readiness=document.getElementById("fanThermalReadiness");
+    if(!readiness) return;
+
+    const instrument=readiness.closest(".cooling-instrument");
+
+    const refresh=()=>{
+        const current=String(readiness.textContent||"").trim();
+        const normalized=current.toLowerCase();
+        const intentional=(
+            normalized.includes("thermal policy is not configured for automatic control")
+            ||normalized.startsWith("not commissioned")
+        );
+
+        if(!intentional){
+            instrument?.removeAttribute("data-cockpit-readiness");
+            return;
+        }
+
+        const desired="Not commissioned · Observe only";
+        if(readiness.textContent!==desired){
+            readiness.textContent=desired;
+        }
+        readiness.classList.remove("bad","good");
+        readiness.classList.add("value","warn");
+        instrument?.setAttribute("data-cockpit-readiness","uncommissioned");
+    };
+
+    new MutationObserver(refresh).observe(readiness,{
+        childList:true,
+        subtree:true,
+        characterData:true,
+        attributes:true,
+        attributeFilter:["class"],
+    });
+    refresh();
+}
+
 function installPreflightReviewNavigation(){
     const sections=document.getElementById("preflightSections");
     const details=document.querySelector(".preflight-details");
@@ -205,6 +245,52 @@ function installPreflightReviewNavigation(){
     annotate();
 }
 
+function installMaintenanceDrawer(){
+    if(document.getElementById("cockpitMaintenance")) return;
+
+    const night=document.getElementById("nightEnabled")?.closest("article");
+    const status=document.getElementById("configMode")?.closest("article");
+    if(!night||!status||night.parentNode!==status.parentNode) return;
+
+    const configMode=document.getElementById("configMode");
+    const directRow=[...status.querySelectorAll(".row")].find(row=>
+        String(row.querySelector(".label")?.textContent||"").trim()==="Direct hardware access"
+    );
+    const directValue=directRow?.querySelector(".value");
+
+    const details=el("details","cockpit-maintenance-drawer");
+    details.id="cockpitMaintenance";
+    const summary=el("summary");
+    const title=el("span","cockpit-maintenance-title","Configuration & Mission Control");
+    const state=el("span","cockpit-maintenance-state","Checking");
+    summary.append(title,state);
+
+    night.parentNode.insertBefore(details,night);
+    details.append(summary,night,status);
+
+    const refresh=()=>{
+        const config=String(configMode?.textContent||"Configuration").trim();
+        const hardware=String(directValue?.textContent||"Unknown").trim();
+        const safe=(
+            config.toLowerCase().includes("read only")
+            &&hardware.toLowerCase().includes("disabled")
+        );
+        state.textContent=`${config} · Hardware ${hardware}`;
+        state.className=`cockpit-maintenance-state ${safe?"good":"warn"}`;
+    };
+
+    [configMode,directValue].filter(Boolean).forEach(node=>{
+        new MutationObserver(refresh).observe(node,{
+            childList:true,
+            subtree:true,
+            characterData:true,
+            attributes:true,
+            attributeFilter:["class"],
+        });
+    });
+    refresh();
+}
+
 function cleanFooter(){
     const footer=document.querySelector("footer");
     if(footer) footer.textContent="TruePanel Mission Control";
@@ -214,7 +300,9 @@ function install(){
     installStyle();
     installLcdTransportDrawer();
     installCoolingControlsDrawer();
+    installThermalReadinessSemantics();
     installPreflightReviewNavigation();
+    installMaintenanceDrawer();
     cleanFooter();
     document.body.classList.add("cockpit-polished");
 }
