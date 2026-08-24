@@ -36,6 +36,15 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _integer(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _fault_key(evidence: dict[str, Any]) -> str | None:
     pool = _text(evidence.get("pool"))
     vdev = _text(evidence.get("vdev"))
@@ -217,6 +226,79 @@ class LifelineSessionStore:
             self._save()
             return deepcopy(session)
 
+    def set_historical_media_properties(
+        self,
+        session_id: str,
+        *,
+        member_id: str,
+        serial_last4: str,
+        capacity_bytes: int,
+        source: str,
+        model: str | None = None,
+    ) -> dict[str, Any]:
+        """Persist verified historical capacity/model evidence for a removed member.
+
+        Historical media properties are accepted only after the same member
+        and serial suffix have already been commissioned as physical identity.
+        They never override a current Linux device or live capacity reading.
+        """
+
+        member_id = _text(member_id)
+        serial_last4 = _text(serial_last4)
+        source = _text(source)
+        model = _text(model) or None
+        try:
+            capacity_bytes = int(capacity_bytes)
+        except (TypeError, ValueError) as error:
+            raise ValueError("historical media capacity must be an integer") from error
+
+        if not member_id:
+            raise ValueError("historical member identity is required")
+        if not serial_last4:
+            raise ValueError("historical serial identity is required")
+        if capacity_bytes <= 0:
+            raise ValueError("historical media capacity must be positive")
+        if not source:
+            raise ValueError("historical media provenance source is required")
+
+        with self._lock:
+            session = self._state["sessions"].get(str(session_id))
+            if not isinstance(session, dict):
+                raise KeyError("unknown Lifeline session")
+
+            original = _dict(session.get("original_fault"))
+            if member_id != _text(original.get("member_id")):
+                raise ValueError("historical media does not match original fault member")
+            if _text(original.get("device")):
+                raise ValueError(
+                    "historical media cannot override a current Linux device identity"
+                )
+
+            context = session.setdefault("context", {})
+            physical_identity = _dict(context.get("physical_identity"))
+            if not (
+                physical_identity.get("verified") is True
+                and physical_identity.get("kind") == "historical_verified"
+                and _text(physical_identity.get("member_id")) == member_id
+                and _text(physical_identity.get("serial_last4")) == serial_last4
+            ):
+                raise ValueError(
+                    "historical media requires verified matching physical identity"
+                )
+
+            context["historical_media"] = {
+                "verified": True,
+                "kind": "historical_verified",
+                "member_id": member_id,
+                "serial_last4": serial_last4,
+                "capacity_bytes": capacity_bytes,
+                "model": model,
+                "source": source,
+            }
+            session["updated_at"] = float(self.clock())
+            self._save()
+            return deepcopy(session)
+
     def set_replacement_candidates(
         self,
         session_id: str,
@@ -282,6 +364,7 @@ class LifelineSessionStore:
                 "service_profile": None,
                 "service_source": None,
                 "physical_identity": None,
+                "historical_media": None,
                 "acknowledgements": {
                     "backup_state": False,
                 },
@@ -336,6 +419,28 @@ class LifelineSessionStore:
                 repair_evidence["physical_identity_source"] = "historical_verified"
                 repair_evidence["physical_identity_serial_last4"] = serial_last4
                 bay_identity_verified = True
+
+        historical_media = _dict(context.get("historical_media"))
+        if (
+            historical_media.get("verified") is True
+            and historical_media.get("kind") == "historical_verified"
+            and current_member
+            and _text(historical_media.get("member_id")) == current_member
+            and _text(historical_media.get("serial_last4"))
+            == _text(physical_identity.get("serial_last4"))
+            and not _text(repair_evidence.get("device"))
+        ):
+            historical_capacity = _integer(
+                historical_media.get("capacity_bytes")
+            )
+            historical_source = _text(historical_media.get("source"))
+            if historical_capacity is not None and historical_capacity > 0 and historical_source:
+                if _integer(repair_evidence.get("capacity_bytes")) is None:
+                    repair_evidence["capacity_bytes"] = historical_capacity
+                    repair_evidence["capacity_source"] = "historical_verified"
+                historical_model = _text(historical_media.get("model"))
+                if historical_model and not _text(repair_evidence.get("model")):
+                    repair_evidence["model"] = historical_model
 
         repair = evaluate_drive_repair(
             repair_evidence,
