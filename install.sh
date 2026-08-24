@@ -74,7 +74,7 @@ Actions a real install would perform:
   Create CLI wrapper: $bin_file
   Install LCD service: $SERVICE_FILE
   Install Mission Control service: $MISSION_CONTROL_SERVICE_FILE
-  Declare private persistent Mission Control state: /var/lib/truepanel (mode 0700)
+  Declare private persistent Lifeline state: /var/lib/truepanel/lifeline (mode 0700)
   Create/preserve Mission Control environment: $MISSION_CONTROL_ENV_FILE
   Install dormant Host Agent service: $HOST_AGENT_SERVICE_FILE
   Keep standalone Host Agent activation locked and do not start it
@@ -360,7 +360,7 @@ ExecStart=$PYTHON_BIN -m truepanel.web.service
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=15
-StateDirectory=truepanel
+StateDirectory=truepanel/lifeline
 StateDirectoryMode=0700
 NoNewPrivileges=true
 PrivateTmp=true
