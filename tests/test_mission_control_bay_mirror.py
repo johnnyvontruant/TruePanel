@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from truepanel.web import bay_mirror
 from truepanel.web.bay_mirror import BayMirrorProvider
 
 
@@ -133,3 +134,28 @@ def test_bay_mirror_marks_present_nonmember_as_attention_not_online():
     assert payload["bays"][0]["state"] == "present"
     assert payload["bays"][0]["pool"] is None
     assert payload["bays"][0]["zfs_state"] is None
+
+
+def test_bay_mirror_honors_mission_control_config_environment(monkeypatch, tmp_path):
+    config_path = tmp_path / "installed-truepanel.yaml"
+    config_path.write_text("hardware: {}\n", encoding="utf-8")
+    monkeypatch.setenv("TRUEPANEL_MC_CONFIG_PATH", str(config_path))
+
+    provider = BayMirrorProvider(
+        inventory=Inventory([]),
+        status_runner=lambda: "",
+    )
+
+    assert provider._config_path == config_path.resolve()
+
+
+def test_bay_mirror_defaults_to_installed_truepanel_config(monkeypatch, tmp_path):
+    monkeypatch.delenv("TRUEPANEL_MC_CONFIG_PATH", raising=False)
+    monkeypatch.setattr(bay_mirror, "installation_root", lambda: tmp_path)
+
+    provider = BayMirrorProvider(
+        inventory=Inventory([]),
+        status_runner=lambda: "",
+    )
+
+    assert provider._config_path == tmp_path / "truepanel.yaml"
