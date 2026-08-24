@@ -15,7 +15,7 @@ def service_heredoc(script, variable):
     return script[start:end]
 
 
-def test_mission_control_declares_private_persistent_state_directory():
+def test_mission_control_declares_private_persistent_lifeline_directory():
     cases = (
         ("install.sh", "MISSION_CONTROL_SERVICE_FILE"),
         ("start-truepanel.sh", "MISSION_SERVICE_FILE"),
@@ -27,8 +27,9 @@ def test_mission_control_declares_private_persistent_state_directory():
             variable,
         )
 
-        assert "StateDirectory=truepanel" in unit
+        assert "StateDirectory=truepanel/lifeline" in unit
         assert "StateDirectoryMode=0700" in unit
+        assert "StateDirectory=truepanel\n" not in unit
         assert "PrivateTmp=true" in unit
         assert "UMask=0027" in unit
 
@@ -48,9 +49,15 @@ def test_install_dry_run_documents_persistent_state_contract():
     installer = source("install.sh")
 
     assert (
+        "Declare private persistent Lifeline state: "
+        "/var/lib/truepanel/lifeline (mode 0700)"
+        in installer
+    )
+
+    assert (
         "Declare private persistent Mission Control state: "
         "/var/lib/truepanel (mode 0700)"
-        in installer
+        not in installer
     )
 
 
@@ -74,8 +81,8 @@ def test_uninstall_removes_lifeline_metadata_after_safety_gates():
         in uninstaller
     )
 
-    # Never recursively remove the shared TruePanel state root. Future
-    # persistent features may own sibling state under /var/lib/truepanel.
+    # Never recursively remove the shared TruePanel state root. Existing
+    # history/storage features own sibling state under /var/lib/truepanel.
     assert (
         'rm -rf -- "$PERSISTENT_STATE_DIR"'
         not in uninstaller
