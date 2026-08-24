@@ -105,6 +105,25 @@ def test_storage_pools_are_compact_health_and_capacity_instruments():
     assert 'String(raw??"").replace("%","")' in script
 
 
+def test_storage_pool_guard_restores_legacy_overwrites_without_self_loop():
+    script = text()
+
+    start = script.index("function installPoolStabilityGuard(){")
+    end = script.index("function variantNodes(){", start)
+    guard = script[start:end]
+
+    assert 'target.dataset.cockpitPoolGuard==="true"' in guard
+    assert 'target.querySelector(".cockpit-pool-grid")' in guard
+    assert "if(!pools.length" in guard
+    assert "updatePools(lastStatus)" in guard
+    assert "new MutationObserver(restore).observe(target" in guard
+    assert "subtree:false" in guard
+    assert "target.innerHTML=" not in guard
+
+    assert "lastStatus=data;" in script
+    assert "installPoolStabilityGuard();" in script
+
+
 def test_three_layout_variants_share_one_code_path():
     script = text()
 
