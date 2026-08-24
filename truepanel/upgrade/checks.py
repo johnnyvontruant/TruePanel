@@ -22,7 +22,7 @@ from truepanel.paths import installation_root
 STAGE_PREFIX = ".truepanel-stage-"
 
 RSYNC_EXCLUDES = (
-    ".git/",
+    ".git",
     ".venv/",
     ".pytest_cache/",
     ".ruff_cache/",
