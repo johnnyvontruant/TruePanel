@@ -31,10 +31,13 @@ runtime_status.get(
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from truepanel.guidance.storage_evidence import StorageRecoveryEvidenceProvider
 from truepanel.lifeline import (
+    DriveFingerprintProvider,
+    DriveFingerprintStore,
     LifelineSessionStore,
     ReplacementCandidateProvider,
     service_profile_for_config,
@@ -60,6 +63,53 @@ def _safe_list(value: Any) -> list:
 
 def _safe_dict(value: Any) -> dict:
     return value if isinstance(value, dict) else {}
+
+
+def _session_by_id(payload: dict[str, Any], session_id: str) -> dict[str, Any] | None:
+    for session in _safe_list(_safe_dict(payload.get("lifeline")).get("sessions")):
+        if isinstance(session, dict) and str(session.get("id") or "") == session_id:
+            return session
+    return None
+
+
+def _fingerprint_matches_session(
+    session: dict[str, Any],
+    fingerprint: dict[str, Any],
+) -> bool:
+    original = _safe_dict(session.get("original_fault"))
+    if fingerprint.get("verified") is not True or fingerprint.get("conflicted") is True:
+        return False
+    if str(original.get("device") or "").strip():
+        return False
+
+    member_id = str(original.get("member_id") or "").strip()
+    pool = str(original.get("pool") or "").strip()
+    if not member_id or member_id != str(fingerprint.get("member_guid") or "").strip():
+        return False
+    if not pool or pool != str(fingerprint.get("pool") or "").strip():
+        return False
+
+    historical_path = str(original.get("historical_path") or "").strip()
+    partuuid = str(fingerprint.get("partuuid") or "").strip()
+    if historical_path:
+        expected_path = f"/dev/disk/by-partuuid/{partuuid}" if partuuid else ""
+        if not expected_path or historical_path != expected_path:
+            return False
+
+    try:
+        bay = int(fingerprint.get("physical_bay"))
+        capacity = int(fingerprint.get("capacity_bytes"))
+    except (TypeError, ValueError):
+        return False
+
+    serial_last4 = str(fingerprint.get("serial_last4") or "").strip()
+    mapping_source = str(fingerprint.get("mapping_source") or "").strip()
+    return bool(
+        bay > 0
+        and capacity > 0
+        and serial_last4
+        and mapping_source == "kernel"
+    )
 
 
 def _replacement_fault_for_session(session: dict[str, Any]) -> dict[str, Any]:
@@ -116,6 +166,9 @@ class SnapshotService(_base.SnapshotService):
         *args,
         storage_evidence_provider=None,
         replacement_candidate_provider=None,
+        drive_fingerprint_provider=None,
+        drive_fingerprint_store=None,
+        drive_fingerprint_path=None,
         lifeline_store=None,
         lifeline_path=None,
         **kwargs,
@@ -139,11 +192,101 @@ class SnapshotService(_base.SnapshotService):
                 clock=self.clock,
             )
         )
+
+        if drive_fingerprint_path is None and lifeline_path is not None:
+            drive_fingerprint_path = Path(lifeline_path).with_name(
+                "drive-fingerprints.json"
+            )
+        self.drive_fingerprint_provider = (
+            drive_fingerprint_provider
+            or DriveFingerprintProvider(clock=self.clock)
+        )
+        self.drive_fingerprint_store = (
+            drive_fingerprint_store
+            or DriveFingerprintStore(
+                path=drive_fingerprint_path,
+                clock=self.clock,
+            )
+        )
         self.lifeline_service_profile = service_profile_for_config(self.config)
+
+    def _record_healthy_fingerprints(self) -> None:
+        try:
+            fingerprints = self.drive_fingerprint_provider.fingerprints()
+            self.drive_fingerprint_store.record(fingerprints)
+        except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+            return
+
+    def _commission_from_fingerprint(self, session: dict[str, Any]) -> bool:
+        original = _safe_dict(session.get("original_fault"))
+        context = _safe_dict(session.get("context"))
+        pool = str(original.get("pool") or "").strip()
+        member_id = str(original.get("member_id") or "").strip()
+        if not pool or not member_id:
+            return False
+
+        fingerprint = self.drive_fingerprint_store.lookup(pool, member_id)
+        if not isinstance(fingerprint, dict):
+            return False
+        if not _fingerprint_matches_session(session, fingerprint):
+            return False
+
+        try:
+            bay = int(fingerprint.get("physical_bay"))
+            capacity = int(fingerprint.get("capacity_bytes"))
+        except (TypeError, ValueError):
+            return False
+        serial_last4 = str(fingerprint.get("serial_last4") or "").strip()
+        source = "TruePanel last-known-good healthy drive fingerprint"
+        changed = False
+
+        physical_identity = _safe_dict(context.get("physical_identity"))
+        if physical_identity:
+            if not (
+                physical_identity.get("verified") is True
+                and str(physical_identity.get("member_id") or "").strip() == member_id
+                and int(physical_identity.get("bay") or 0) == bay
+                and str(physical_identity.get("serial_last4") or "").strip()
+                == serial_last4
+            ):
+                return False
+        else:
+            self.lifeline_store.set_historical_physical_identity(
+                str(session.get("id") or ""),
+                member_id=member_id,
+                bay=bay,
+                serial_last4=serial_last4,
+                source=source,
+            )
+            changed = True
+
+        historical_media = _safe_dict(context.get("historical_media"))
+        if historical_media:
+            if not (
+                historical_media.get("verified") is True
+                and str(historical_media.get("member_id") or "").strip() == member_id
+                and str(historical_media.get("serial_last4") or "").strip()
+                == serial_last4
+                and int(historical_media.get("capacity_bytes") or 0) == capacity
+            ):
+                return changed
+        else:
+            self.lifeline_store.set_historical_media_properties(
+                str(session.get("id") or ""),
+                member_id=member_id,
+                serial_last4=serial_last4,
+                capacity_bytes=capacity,
+                model=str(fingerprint.get("model") or "").strip() or None,
+                source=source,
+            )
+            changed = True
+
+        return changed
 
     def status(self) -> dict[str, Any]:
         payload = super().status()
         try:
+            self._record_healthy_fingerprints()
             result = self.lifeline_store.observe(payload)
             profile = self.lifeline_service_profile
             changed = False
@@ -151,14 +294,26 @@ class SnapshotService(_base.SnapshotService):
                 _safe_dict(payload.get("storage")).get("devices")
             )
 
-            for session in _safe_list(
-                _safe_dict(result.get("lifeline")).get("sessions")
-            ):
-                if not isinstance(session, dict) or session.get("status") != "active":
+            sessions = list(
+                _safe_list(_safe_dict(result.get("lifeline")).get("sessions"))
+            )
+            for initial_session in sessions:
+                if (
+                    not isinstance(initial_session, dict)
+                    or initial_session.get("status") != "active"
+                ):
                     continue
-                session_id = str(session.get("id") or "")
+                session_id = str(initial_session.get("id") or "")
                 if not session_id:
                     continue
+
+                session = initial_session
+                if self._commission_from_fingerprint(session):
+                    result = self.lifeline_store.observe(payload)
+                    refreshed = _session_by_id(result, session_id)
+                    if isinstance(refreshed, dict):
+                        session = refreshed
+
                 context = _safe_dict(session.get("context"))
 
                 if profile is not None and profile.drive_service_supported:
@@ -196,11 +351,11 @@ class SnapshotService(_base.SnapshotService):
             if changed:
                 result = self.lifeline_store.observe(payload)
 
-            lifeline = _safe_dict(result.get("lifeline"))
+            lifeline = dict(_safe_dict(result.get("lifeline")))
+            lifeline["drive_fingerprints"] = self.drive_fingerprint_store.snapshot()
             if profile is not None:
-                lifeline = dict(lifeline)
                 lifeline["service_profile"] = profile.to_payload()
-                result["lifeline"] = lifeline
+            result["lifeline"] = lifeline
             return result
         except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
             result = dict(payload)
