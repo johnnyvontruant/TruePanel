@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
 from truepanel.guidance.storage_evidence import normalize_device, parse_zpool_status
+from truepanel.paths import installation_root
 
 
 _FAULT_STATES = {
@@ -33,6 +35,13 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _default_config_path() -> Path:
+    configured = str(os.environ.get("TRUEPANEL_MC_CONFIG_PATH", "")).strip()
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return installation_root() / "truepanel.yaml"
+
+
 class BayMirrorProvider:
     """Describe front-bay state without publishing disk identity.
 
@@ -40,11 +49,10 @@ class BayMirrorProvider:
     omit Linux device names, serial numbers, WWNs, models, partition UUIDs, and
     capacity values. The UI receives only enough evidence to mirror bay lights.
 
-    When ``config_path`` is supplied, the provider resolves logical topology
-    from that exact TruePanel configuration instead of depending on the
-    process working directory. This matters for bays whose physical identity is
-    administrator-configured because Linux does not expose a usable enclosure
-    link for them.
+    Logical topology is resolved from the same installed TruePanel configuration
+    used by Mission Control, rather than from the process working directory.
+    This matters for bays whose physical identity is administrator-configured
+    because Linux does not expose a usable enclosure link for them.
     """
 
     def __init__(
@@ -56,16 +64,14 @@ class BayMirrorProvider:
     ) -> None:
         self._inventory = inventory
         self._status_runner = status_runner or _default_status_runner
-        self._config_path = Path(config_path) if config_path is not None else None
+        self._config_path = (
+            Path(config_path).expanduser().resolve()
+            if config_path is not None
+            else _default_config_path()
+        )
 
     def _inventory_service(self):
         if self._inventory is not None:
-            return self._inventory
-
-        if self._config_path is None:
-            from truepanel.hardware.manager import HardwareManager
-
-            self._inventory = HardwareManager().inventory
             return self._inventory
 
         from truepanel.config.loader import load_config
