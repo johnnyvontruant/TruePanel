@@ -128,3 +128,29 @@ def test_bottom_maintenance_cards_are_secondary_drawer():
     assert 'document.getElementById("configMode")?.closest("article")' in script
     assert 'Direct hardware access' in script
     assert 'cockpit-maintenance-state' in script
+
+
+def test_lcd_first_becomes_final_non_preview_baseline():
+    script = text()
+
+    assert "function promoteLcdFirstBaseline()" in script
+    assert 'params.get("cockpit-preview")==="1"||params.has("layout")' in script
+    assert 'const overview=document.getElementById("cockpitOverview")' in script
+    assert 'const vfp=document.querySelector(".lcd-panel")' in script
+    assert "grid.prepend(vfp)" in script
+    assert "grid.insertBefore(overview,vfp.nextSibling)" in script
+    assert 'document.body.dataset.cockpitBaseline="lcd-first"' in script
+    assert 'document.body.classList.add("cockpit-final-lcd-first")' in script
+    assert 'window.requestAnimationFrame(()=>{' in script
+    assert 'window.requestAnimationFrame(promote)' in script
+    assert '.cockpit-final-lcd-first #cockpitOverview{margin-top:-.28rem}' in script
+
+
+def test_preview_layout_selector_remains_authoritative_during_comparison():
+    script = text()
+
+    start = script.index("function promoteLcdFirstBaseline(){")
+    end = script.index("function cleanFooter(){", start)
+    final_layout = script[start:end]
+
+    assert 'if(params.get("cockpit-preview")==="1"||params.has("layout")) return;' in final_layout
