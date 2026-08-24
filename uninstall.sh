@@ -16,6 +16,8 @@ HOST_AGENT_SERVICE_FILE="/etc/systemd/system/truepanel-host-agent.service"
 MISSION_ENV_FILE="/etc/default/truepanel-mission-control"
 LEGACY_BIN_FILE="/usr/local/bin/truepanel"
 RUNTIME_DIR="/run/truepanel"
+PERSISTENT_STATE_DIR="/var/lib/truepanel"
+LIFELINE_STATE_DIR="$PERSISTENT_STATE_DIR/lifeline"
 CUTOVER_MARKER_FILE="/run/truepanel/standalone-host-agent.enabled"
 HOST_OWNERSHIP_FILE="/run/truepanel/host-owner.lock"
 FAN_SOCKET_FILE="/run/truepanel/fan-control.sock"
@@ -89,6 +91,10 @@ Runtime state that would be removed:
   $LCD_DISPLAY_STATUS_FILE
   $HOST_OWNERSHIP_FILE
   $RUNTIME_DIR (when empty)
+
+Persistent Lifeline metadata that would be removed:
+  $LIFELINE_STATE_DIR
+  $PERSISTENT_STATE_DIR (when empty)
 
 CLI/install paths that would be removed:
   $BIN_FILE
@@ -305,6 +311,10 @@ rm -f \
   "$LCD_DISPLAY_STATUS_FILE" \
   "$HOST_OWNERSHIP_FILE"
 rmdir "$RUNTIME_DIR" 2>/dev/null || true
+
+echo "Removing persistent Lifeline metadata..."
+rm -rf -- "$LIFELINE_STATE_DIR"
+rmdir "$PERSISTENT_STATE_DIR" 2>/dev/null || true
 
 echo "Removing CLI wrapper..."
 rm -f "$BIN_FILE" "$LEGACY_BIN_FILE"
