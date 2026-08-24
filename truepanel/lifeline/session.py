@@ -112,7 +112,9 @@ def _replacement_assessment(
             reasons.append("replacement_device_not_verified")
         if capacity is None:
             reasons.append("replacement_capacity_not_verified")
-        elif failed_capacity is not None and capacity < failed_capacity:
+        if failed_capacity is None:
+            reasons.append("replacement_minimum_capacity_not_verified")
+        elif capacity is not None and capacity < failed_capacity:
             reasons.append("replacement_capacity_too_small")
         if candidate.get("member_of_pool") is True:
             reasons.append("replacement_belongs_to_pool")
@@ -185,6 +187,7 @@ def evaluate_drive_repair(
     )
     state = _text(evidence.get("zfs_state")).upper()
     failed_capacity = _integer(evidence.get("capacity_bytes"))
+    capacity_source = _text(evidence.get("capacity_source"))
     redundancy = evidence.get("remaining_redundancy")
 
     exact_member = bool(
@@ -370,6 +373,7 @@ def evaluate_drive_repair(
             "physical_identity_serial_last4": physical_identity_serial_last4 or None,
             "zfs_state": state or None,
             "capacity_bytes": failed_capacity,
+            "capacity_source": capacity_source or None,
         },
         gates=gates,
         replacement=replacement,
