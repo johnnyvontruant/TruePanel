@@ -35,6 +35,16 @@ _FLIGHT_MANUAL_TAG = (
     _FLIGHT_MANUAL_MARKER
     + b'\n<script src="/flight-manual.js" defer></script>\n'
 )
+_COCKPIT_POLISH_MARKER = b"<!-- truepanel-cockpit-polish -->"
+_COCKPIT_POLISH_TAG = (
+    _COCKPIT_POLISH_MARKER
+    + b'\n<script src="/cockpit-polish.js" defer></script>\n'
+)
+_COCKPIT_VARIANTS_MARKER = b"<!-- truepanel-cockpit-variants -->"
+_COCKPIT_VARIANTS_TAG = (
+    _COCKPIT_VARIANTS_MARKER
+    + b'\n<script src="/cockpit-variants.js" defer></script>\n'
+)
 _LIFELINE_MARKER = b"<!-- truepanel-lifeline -->"
 _LIFELINE_TAG = (
     _LIFELINE_MARKER
@@ -60,6 +70,12 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/flight-manual.js":
             self._static_script("flight-manual.js", "flight_manual_unavailable")
+            return
+        if parsed.path == "/cockpit-polish.js":
+            self._static_script("cockpit-polish.js", "cockpit_polish_unavailable")
+            return
+        if parsed.path == "/cockpit-variants.js":
+            self._static_script("cockpit-variants.js", "cockpit_variants_unavailable")
             return
         if parsed.path == "/lifeline.js":
             self._static_script("lifeline.js", "lifeline_unavailable")
@@ -94,6 +110,10 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
         tags = b""
         if _FLIGHT_MANUAL_MARKER not in body:
             tags += _FLIGHT_MANUAL_TAG
+        if _COCKPIT_POLISH_MARKER not in body:
+            tags += _COCKPIT_POLISH_TAG
+        if _COCKPIT_VARIANTS_MARKER not in body:
+            tags += _COCKPIT_VARIANTS_TAG
         if _LIFELINE_MARKER not in body:
             tags += _LIFELINE_TAG
         if _LIFELINE_ACTIONS_MARKER not in body:
