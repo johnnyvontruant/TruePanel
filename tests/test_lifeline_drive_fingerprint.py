@@ -256,9 +256,7 @@ def test_snapshot_uses_last_known_good_fingerprint_when_same_member_disappears(t
 
     assert repair["target"]["bay"] == 3
     assert repair["target"]["capacity_bytes"] == CAPACITY
-    assert repair["target"]["capacity_source"] == (
-        "TruePanel last-known-good healthy drive fingerprint"
-    )
+    assert repair["target"]["capacity_source"] == "historical_verified"
     assert repair["target"]["physical_identity_serial_last4"] == "MW6D"
     assert repair["can_identify_bay"] is True
     assert repair["can_execute_replacement"] is False
@@ -267,6 +265,9 @@ def test_snapshot_uses_last_known_good_fingerprint_when_same_member_disappears(t
     assert context["physical_identity"]["bay"] == 3
     assert context["historical_media"]["capacity_bytes"] == CAPACITY
     assert context["historical_media"]["model"] == "ST8000NE001-2M7101"
+    assert context["historical_media"]["source"] == (
+        "TruePanel last-known-good healthy drive fingerprint"
+    )
 
     assert payload["lifeline"]["drive_fingerprints"] == {
         "schema_version": 1,
