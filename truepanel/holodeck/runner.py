@@ -31,6 +31,13 @@ _PROTECTED_RUNTIME_ROOTS = tuple(
 )
 
 
+class _HoloDeckFingerprintProvider:
+    """Keep simulated snapshots from consulting live ZFS or udev state."""
+
+    def fingerprints(self):
+        return []
+
+
 def isolated_runtime_path(value: str | Path) -> Path:
     """Resolve and reject production-owned runtime locations."""
 
@@ -140,6 +147,9 @@ class HoloDeckScenarioRunner:
             fan_control_history_path=path / "fan-history.jsonl",
             thermal_observer_history_path=path / "thermal-history.jsonl",
             thermal_commissioning_history_path=path / "commissioning.jsonl",
+            lifeline_path=path / "lifeline.json",
+            drive_fingerprint_path=path / "drive-fingerprints.json",
+            drive_fingerprint_provider=_HoloDeckFingerprintProvider(),
             service_status_provider=_SimulatedServices(),
             fan_status_provider=self._fan_status,
             clock=provider.clock,

@@ -128,6 +128,7 @@ def support_bundle_contains_forbidden_keys(
         "serial",
         "serial_number",
         "wwid",
+        "wwn",
         "mac",
         "mac_address",
         "username",

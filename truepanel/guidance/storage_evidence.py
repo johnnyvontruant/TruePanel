@@ -30,19 +30,31 @@ def _counter(value: str) -> int:
         return 0
 
 
+def _historical_path(value: Any) -> str | None:
+    text = str(value or "").strip()
+    match = re.search(r"\bwas\s+(/dev/\S+)", text)
+    return match.group(1) if match else None
+
+
 def normalize_device(value: Any) -> str | None:
-    """Normalize a ZFS member path to a whole Linux block-device name."""
+    """Normalize a current ZFS member path to a whole Linux block device.
+
+    Stable aliases under ``/dev/disk`` are logical storage identifiers, not
+    Linux whole-device names. They deliberately remain unresolved here unless
+    ZFS also supplies a direct historical ``/dev/sdX``-style path. Physical bay
+    publication requires an independently present device in inventory.
+    """
 
     text = str(value or "").strip()
     if not text:
         return None
 
-    # `zpool status` can show a GUID followed by `was /dev/sdc2` after a
-    # removal. The historical device is useful evidence, but it still cannot
-    # produce a bay unless current inventory independently confirms it.
-    match = re.search(r"\bwas\s+(/dev/\S+)", text)
-    if match:
-        text = match.group(1)
+    historical = _historical_path(text)
+    if historical:
+        text = historical
+
+    if text.startswith("/dev/disk/"):
+        return None
 
     name = Path(text).name
     if not name or name.isdigit():
@@ -60,7 +72,7 @@ def normalize_device(value: Any) -> str | None:
     if disk:
         return disk.group(1)
 
-    return name if text.startswith("/dev/") else None
+    return None
 
 
 def _topology(name: str) -> str | None:
@@ -143,8 +155,6 @@ def parse_zpool_status(text: str) -> list[dict[str, Any]]:
             continue
 
         if section is not None:
-            # Once a non-data section starts, ignore its children. A later
-            # explicit data VDEV will clear the section below.
             if _VDEV.match(name):
                 section = None
             else:
@@ -165,24 +175,29 @@ def parse_zpool_status(text: str) -> list[dict[str, Any]]:
         tail = match.group("tail").strip()
         raw_identity = f"{name} {tail}".strip()
         device = normalize_device(raw_identity)
+        historical_path = _historical_path(raw_identity)
 
-        # Direct children of the pool are stripe/direct members. They have no
-        # meaningful redundancy contract, so topology/redundancy stay unknown.
+        common = {
+            "pool": pool,
+            "member_id": name,
+            "historical_path": historical_path,
+            "device": device,
+            "zfs_name": name,
+            "zfs_state": state,
+            "read_errors": _counter(match.group("read")),
+            "write_errors": _counter(match.group("write")),
+            "checksum_errors": _counter(match.group("cksum")),
+        }
+
         if active_vdev is None:
             if indent <= root_indent:
                 continue
             members.append(
                 {
-                    "pool": pool,
+                    **common,
                     "vdev": pool,
                     "vdev_topology": None,
                     "remaining_redundancy": None,
-                    "device": device,
-                    "zfs_name": name,
-                    "zfs_state": state,
-                    "read_errors": _counter(match.group("read")),
-                    "write_errors": _counter(match.group("write")),
-                    "checksum_errors": _counter(match.group("cksum")),
                 }
             )
             continue
@@ -192,21 +207,14 @@ def parse_zpool_status(text: str) -> list[dict[str, Any]]:
             continue
 
         record = {
-            "pool": pool,
+            **common,
             "vdev": active_vdev["name"],
             "vdev_topology": active_vdev["topology"],
             "remaining_redundancy": None,
-            "device": device,
-            "zfs_name": name,
-            "zfs_state": state,
-            "read_errors": _counter(match.group("read")),
-            "write_errors": _counter(match.group("write")),
-            "checksum_errors": _counter(match.group("cksum")),
         }
         active_vdev["members"].append(record)
         members.append(record)
 
-    # Compute remaining tolerance per VDEV after all members are known.
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for record in members:
         topology = record.get("vdev_topology")
@@ -214,7 +222,14 @@ def parse_zpool_status(text: str) -> list[dict[str, Any]]:
             continue
         grouped.setdefault((record["pool"], record["vdev"]), []).append(record)
 
-    unhealthy = {"DEGRADED", "FAULTED", "OFFLINE", "UNAVAIL", "UNAVAILABLE", "REMOVED"}
+    unhealthy = {
+        "DEGRADED",
+        "FAULTED",
+        "OFFLINE",
+        "UNAVAIL",
+        "UNAVAILABLE",
+        "REMOVED",
+    }
     for records in grouped.values():
         topology = records[0].get("vdev_topology")
         tolerance = _fault_tolerance(topology, len(records))
@@ -285,8 +300,6 @@ class StorageRecoveryEvidenceProvider:
             device = payload.get("device")
             item = attached.get(device) if device else None
 
-            # Never infer a bay from ZFS ordering. A physical bay is emitted
-            # only when current inventory confirms this exact whole device.
             payload.update(
                 {
                     "physical_bay": getattr(item, "physical_bay", None),
