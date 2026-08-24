@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 from typing import Any, Callable
 
 from truepanel.guidance.storage_evidence import normalize_device, parse_zpool_status
@@ -38,6 +39,12 @@ class BayMirrorProvider:
     This provider performs read-only discovery only. Public records deliberately
     omit Linux device names, serial numbers, WWNs, models, partition UUIDs, and
     capacity values. The UI receives only enough evidence to mirror bay lights.
+
+    When ``config_path`` is supplied, the provider resolves logical topology
+    from that exact TruePanel configuration instead of depending on the
+    process working directory. This matters for bays whose physical identity is
+    administrator-configured because Linux does not expose a usable enclosure
+    link for them.
     """
 
     def __init__(
@@ -45,17 +52,47 @@ class BayMirrorProvider:
         *,
         inventory=None,
         status_runner: Callable[[], str] | None = None,
+        config_path: str | Path | None = None,
     ) -> None:
         self._inventory = inventory
         self._status_runner = status_runner or _default_status_runner
+        self._config_path = Path(config_path) if config_path is not None else None
 
     def _inventory_service(self):
         if self._inventory is not None:
             return self._inventory
 
-        from truepanel.hardware.manager import HardwareManager
+        if self._config_path is None:
+            from truepanel.hardware.manager import HardwareManager
 
-        self._inventory = HardwareManager().inventory
+            self._inventory = HardwareManager().inventory
+            return self._inventory
+
+        from truepanel.config.loader import load_config
+        from truepanel.hardware.enclosure import EnclosureController
+        from truepanel.hardware.inventory import StorageInventory
+        from truepanel.hardware.topology import TopologyResolver
+
+        config = load_config(self._config_path)
+        hardware = config.get("hardware", {})
+        if not isinstance(hardware, dict):
+            hardware = {}
+
+        topology_config = hardware.get("topology", {})
+        if not isinstance(topology_config, dict):
+            topology_config = {}
+
+        inventory_config = hardware.get("inventory", {})
+        if not isinstance(inventory_config, dict):
+            inventory_config = {}
+
+        enclosure = EnclosureController()
+        topology = TopologyResolver(topology_config)
+        self._inventory = StorageInventory(
+            enclosure=enclosure,
+            topology=topology,
+            config=inventory_config,
+        )
         return self._inventory
 
     def snapshot(self) -> dict[str, Any]:
