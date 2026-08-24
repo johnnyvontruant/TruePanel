@@ -23,6 +23,13 @@ MAX_REPORT_STEPS = 1_000
 MAX_COMPILER_EVALUATIONS = 1_000
 
 
+class _HoloDeckFingerprintProvider:
+    """Prevent the Digital Twin from consulting live host storage."""
+
+    def fingerprints(self):
+        return []
+
+
 def _bounded_integer(value: str, *, maximum: int, label: str) -> int:
     parsed = int(value)
     if not 1 <= parsed <= maximum:
@@ -233,6 +240,9 @@ def handle_holodeck_command(args) -> int | None:
             fan_control_history_path=root / "fan-history.jsonl",
             thermal_observer_history_path=root / "thermal-history.jsonl",
             thermal_commissioning_history_path=root / "commissioning.jsonl",
+            lifeline_path=root / "lifeline.json",
+            drive_fingerprint_path=root / "drive-fingerprints.json",
+            drive_fingerprint_provider=_HoloDeckFingerprintProvider(),
             fan_status_provider=lambda: provider.update()["fans"],
             clock=provider.clock,
         )
