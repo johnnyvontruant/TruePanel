@@ -3,6 +3,7 @@
 
 const STATUS_URL="/api/v1/status";
 const POLL_MS=5000;
+let lastStatus=null;
 
 const GLYPHS={
 " ":["00000","00000","00000","00000","00000","00000","00000"],
@@ -220,6 +221,25 @@ function updatePools(data){
     }).join("")}</div>`;
 }
 
+function installPoolStabilityGuard(){
+    const target=document.getElementById("pools");
+    if(!target||target.dataset.cockpitPoolGuard==="true") return;
+    target.dataset.cockpitPoolGuard="true";
+
+    const restore=()=>{
+        const pools=Array.isArray(lastStatus?.storage?.pools)
+            ?lastStatus.storage.pools
+            :[];
+        if(!pools.length||target.querySelector(".cockpit-pool-grid")) return;
+        updatePools(lastStatus);
+    };
+
+    new MutationObserver(restore).observe(target,{
+        childList:true,
+        subtree:false,
+    });
+}
+
 function variantNodes(){
     return{
         grid:document.querySelector("main .grid"),
@@ -306,6 +326,7 @@ async function refreshStatus(){
         const response=await fetch(STATUS_URL,{cache:"no-store",headers:{Accept:"application/json"}});
         if(!response.ok) return;
         const data=await response.json();
+        lastStatus=data;
         updateBayStrip(data);
         updatePools(data);
     }catch(_error){
@@ -319,6 +340,7 @@ function install(){
     installMatrixLcd();
     installBayStrip();
     installVariantSwitcher();
+    installPoolStabilityGuard();
     refreshStatus();
     window.setInterval(refreshStatus,POLL_MS);
 }
