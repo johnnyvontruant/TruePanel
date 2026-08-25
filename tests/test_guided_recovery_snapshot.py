@@ -1,3 +1,4 @@
+from truepanel.guidance import guidance_for_snapshot
 from truepanel.web.snapshot import SnapshotService
 
 
@@ -39,6 +40,98 @@ def test_storage_payload_forwards_existing_smart_and_zfs_activity():
     assert payload["zfs_activity"] == state["zfs_activity"]
     assert payload["devices"] == []
     assert provider.calls == 0
+
+
+def test_smart_warning_resolves_exact_member_evidence_while_pool_is_online():
+    provider = EvidenceProvider(
+        [
+            {
+                "pool": "HDDs",
+                "vdev": "raidz1-0",
+                "vdev_topology": "RAIDZ1",
+                "remaining_redundancy": 1,
+                "physical_bay": 3,
+                "device": "sdc",
+                "model": "ST8000NE001",
+                "serial_last4": "MW6D",
+                "zfs_state": "ONLINE",
+                "present": True,
+            }
+        ]
+    )
+    snapshot = service(provider)
+
+    payload = snapshot._storage_payload(
+        {
+            "pools": [{"name": "HDDs", "health": "ONLINE"}],
+            "smart": [
+                {
+                    "drive": "sdc",
+                    "health": "PASSED",
+                    "pending": 1608,
+                    "offline_uncorrectable": 1608,
+                    "reallocated": 15952,
+                    "reported_uncorrect": 905,
+                    "critical_warning": "0x00",
+                }
+            ],
+        }
+    )
+
+    assert provider.calls == 1
+    assert payload["devices"][0]["device"] == "sdc"
+
+    smart = payload["smart"][0]
+    assert smart["pool"] == "HDDs"
+    assert smart["vdev"] == "raidz1-0"
+    assert smart["physical_bay"] == 3
+    assert smart["zfs_state"] == "ONLINE"
+    assert smart["serial_last4"] == "MW6D"
+
+    guidance = guidance_for_snapshot({"storage": payload})
+    smart_guidance = next(
+        item
+        for item in guidance
+        if item["code"] == "storage.smart_warning"
+    )
+    assert smart_guidance["runtime"]["evidence"]["bay"] == 3
+    assert smart_guidance["runtime"]["evidence"]["pool"] == "HDDs"
+    assert smart_guidance["runtime"]["action_gate"]["blocked_by"] == []
+
+
+def test_smart_warning_never_uses_unverified_physical_identity():
+    provider = EvidenceProvider(
+        [
+            {
+                "pool": "HDDs",
+                "vdev": "raidz1-0",
+                "physical_bay": None,
+                "device": "sdc",
+                "zfs_state": "ONLINE",
+                "present": False,
+            }
+        ]
+    )
+    snapshot = service(provider)
+
+    payload = snapshot._storage_payload(
+        {
+            "pools": [{"name": "HDDs", "health": "ONLINE"}],
+            "smart": [
+                {
+                    "drive": "sdc",
+                    "health": "PASSED",
+                    "pending": 1,
+                    "critical_warning": "0x00",
+                }
+            ],
+        }
+    )
+
+    assert provider.calls == 1
+    assert "pool" not in payload["smart"][0]
+    assert "physical_bay" not in payload["smart"][0]
+    assert "zfs_state" not in payload["smart"][0]
 
 
 def test_degraded_pool_resolves_member_evidence_lazily():

@@ -241,6 +241,17 @@ class HealthEvaluator:
         critical = []
         degraded = []
         attention = []
+        smart_critical = []
+        smart_attention = []
+
+        def smart_counter(
+            record: dict[str, Any],
+            key: str,
+        ) -> int:
+            try:
+                return int(record.get(key) or 0)
+            except (TypeError, ValueError):
+                return 0
 
         for pool in pools:
             name = str(pool.get("name") or "Unnamed pool")
@@ -255,12 +266,54 @@ class HealthEvaluator:
             else:
                 attention.append(f"{name} ({health})")
 
+        for drive in storage.get("smart", []):
+            if not isinstance(drive, dict):
+                continue
+
+            name = str(
+                drive.get("drive")
+                or drive.get("device")
+                or "Unknown drive"
+            )
+
+            health = str(drive.get("health") or "UNKNOWN").upper()
+            pending = smart_counter(drive, "pending")
+            offline = smart_counter(drive, "offline_uncorrectable")
+            media = smart_counter(drive, "media_errors")
+            reallocated = smart_counter(drive, "reallocated")
+            reported = smart_counter(drive, "reported_uncorrect")
+            warning = str(
+                drive.get("critical_warning") or ""
+            ).strip().lower()
+
+            if (
+                health == "FAILED"
+                or pending > 0
+                or offline > 0
+                or media > 0
+                or warning not in {"", "0", "0x0", "0x00"}
+            ):
+                smart_critical.append(name)
+            elif reallocated > 0 or reported > 0:
+                smart_attention.append(name)
+
         if critical:
             return HealthResult(
                 HealthState.CRITICAL,
                 "Storage critical",
                 "Critical pool state detected: " + ", ".join(critical) + ".",
                 "Open TrueNAS storage status immediately and investigate the affected pool.",
+            )
+
+        if smart_critical:
+            return HealthResult(
+                HealthState.CRITICAL,
+                "Drive health critical",
+                "Critical SMART evidence detected for: "
+                + ", ".join(smart_critical)
+                + ".",
+                "Confirm backup health, identify the physical drive, and "
+                "prepare a validated replacement.",
             )
 
         if degraded:
@@ -270,6 +323,11 @@ class HealthEvaluator:
                 "Degraded pool state detected: " + ", ".join(degraded) + ".",
                 "Review the affected pool and restore redundancy as soon as practical.",
             )
+
+        attention.extend(
+            f"{name} (SMART)"
+            for name in smart_attention
+        )
 
         if attention:
             return HealthResult(

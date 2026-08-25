@@ -34,7 +34,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from truepanel.guidance.storage_evidence import StorageRecoveryEvidenceProvider
+from truepanel.guidance.storage_evidence import (
+    StorageRecoveryEvidenceProvider,
+    normalize_device,
+)
 from truepanel.lifeline import (
     DriveFingerprintProvider,
     DriveFingerprintStore,
@@ -44,7 +47,6 @@ from truepanel.lifeline import (
 )
 
 from . import snapshot_base as _base
-
 
 get_fan_status = _base.get_fan_status
 
@@ -63,6 +65,38 @@ def _safe_list(value: Any) -> list:
 
 def _safe_dict(value: Any) -> dict:
     return value if isinstance(value, dict) else {}
+
+
+def _smart_counter(record: dict[str, Any], key: str) -> int:
+    try:
+        return int(record.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _smart_requires_evidence(record: Any) -> bool:
+    if not isinstance(record, dict):
+        return False
+
+    if str(record.get("health") or "").strip().upper() == "FAILED":
+        return True
+
+    if any(
+        _smart_counter(record, key) > 0
+        for key in (
+            "reallocated",
+            "pending",
+            "offline_uncorrectable",
+            "reported_uncorrect",
+            "media_errors",
+        )
+    ):
+        return True
+
+    warning = str(
+        record.get("critical_warning") or ""
+    ).strip().lower()
+    return warning not in {"", "0", "0x0", "0x00"}
 
 
 def _session_by_id(payload: dict[str, Any], session_id: str) -> dict[str, Any] | None:
@@ -373,18 +407,22 @@ class SnapshotService(_base.SnapshotService):
     ) -> dict[str, Any]:
         payload = super()._storage_payload(state)
 
-        payload["smart"] = _safe_list(state.get("smart"))
+        smart = [
+            dict(record)
+            if isinstance(record, dict)
+            else record
+            for record in _safe_list(state.get("smart"))
+        ]
+        payload["smart"] = smart
         payload["zfs_activity"] = _safe_dict(state.get("zfs_activity"))
 
         supplied_devices = state.get("storage_devices")
-        if isinstance(supplied_devices, list):
-            payload["devices"] = supplied_devices
-            return payload
-
-        payload["devices"] = []
+        supplied = isinstance(supplied_devices, list)
+        records = supplied_devices if supplied else []
+        payload["devices"] = records
 
         pools = _safe_list(payload.get("pools"))
-        needs_resolution = any(
+        unhealthy_pool = any(
             isinstance(pool, dict)
             and str(
                 pool.get("health")
@@ -394,18 +432,68 @@ class SnapshotService(_base.SnapshotService):
             in _UNHEALTHY_POOL_STATES
             for pool in pools
         )
+        actionable_smart = any(
+            _smart_requires_evidence(record)
+            for record in smart
+        )
 
-        if not needs_resolution:
+        if not supplied and (unhealthy_pool or actionable_smart):
+            try:
+                resolved = self.storage_evidence_provider.records()
+            except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+                resolved = []
+
+            if isinstance(resolved, list):
+                records = resolved
+                payload["devices"] = records
+
+        if not smart or not records:
             return payload
 
-        try:
-            records = self.storage_evidence_provider.records()
-        except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
-            records = []
+        evidence_by_device = {}
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            if record.get("present") is False:
+                continue
 
-        if isinstance(records, list):
-            payload["devices"] = records
+            device = normalize_device(record.get("device"))
+            if device:
+                evidence_by_device[device] = record
 
+        enriched = []
+        evidence_fields = (
+            "pool",
+            "vdev",
+            "vdev_topology",
+            "remaining_redundancy",
+            "physical_bay",
+            "model",
+            "serial_last4",
+            "zfs_state",
+        )
+
+        for record in smart:
+            if not isinstance(record, dict):
+                enriched.append(record)
+                continue
+
+            item = dict(record)
+            device = normalize_device(
+                item.get("device")
+                or item.get("drive")
+            )
+            evidence = evidence_by_device.get(device)
+
+            if evidence is not None:
+                for key in evidence_fields:
+                    value = evidence.get(key)
+                    if value is not None:
+                        item[key] = value
+
+            enriched.append(item)
+
+        payload["smart"] = enriched
         return payload
 
 

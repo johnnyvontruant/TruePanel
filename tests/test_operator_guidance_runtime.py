@@ -65,6 +65,37 @@ def test_smart_warning_does_not_become_zfs_disk_fault():
     assert runtime["evidence"]["pending"] == 2
     assert "zfs_membership_not_verified" in runtime["action_gate"]["blocked_by"]
     assert runtime["action_gate"]["destructive_actions_ready"] is False
+    assert guidance[0]["severity"] == "critical"
+    assert guidance[0]["title"] == "Critical drive-health evidence detected"
+    assert runtime["disposition"] == "prepare_replacement"
+    assert "storage.disk_faulted" not in guidance_codes(payload)
+
+
+def test_reallocated_only_smart_evidence_remains_cautionary():
+    payload = {
+        "storage": {
+            "pools": [{"name": "HDDs", "health": "ONLINE"}],
+            "smart": [
+                {
+                    "drive": "sdb",
+                    "health": "PASSED",
+                    "reallocated": 12,
+                    "pending": 0,
+                    "offline_uncorrectable": 0,
+                    "reported_uncorrect": 0,
+                    "critical_warning": "0x00",
+                }
+            ],
+        }
+    }
+
+    guidance = guidance_for_snapshot(payload)
+
+    assert [item["code"] for item in guidance] == [
+        "storage.smart_warning"
+    ]
+    assert guidance[0]["severity"] == "caution"
+    assert "disposition" not in guidance[0]["runtime"]
 
 
 def test_faulted_member_requires_exact_evidence_but_never_unlocks_destructive_action():

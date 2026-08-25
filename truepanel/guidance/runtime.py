@@ -12,7 +12,6 @@ from typing import Any
 
 from .catalog import guidance_payload
 
-
 _UNHEALTHY_POOL_STATES = {
     "DEGRADED",
     "FAULTED",
@@ -150,6 +149,22 @@ def _smart_warning(record: dict[str, Any]) -> bool:
     return warning not in {"", "0", "0x00", "0x0"}
 
 
+def _smart_runtime_severity(record: dict[str, Any]) -> str:
+    health = _text(record.get("health")).upper()
+    warning = _text(record.get("critical_warning")).lower()
+
+    if (
+        health == "FAILED"
+        or _integer(record.get("pending")) > 0
+        or _integer(record.get("offline_uncorrectable")) > 0
+        or _integer(record.get("media_errors")) > 0
+        or warning not in {"", "0", "0x00", "0x0"}
+    ):
+        return "critical"
+
+    return "caution"
+
+
 def _smart_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
 
@@ -184,14 +199,25 @@ def _smart_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
         if not evidence["zfs_state"]:
             blocked.append("zfs_state_not_verified")
 
-        results.append(
-            _active_payload(
-                "storage.smart_warning",
-                evidence=evidence,
-                phase="diagnose",
-                blocked_by=blocked,
-            )
+        severity = _smart_runtime_severity(record)
+        payload = _active_payload(
+            "storage.smart_warning",
+            evidence=evidence,
+            phase="diagnose",
+            blocked_by=blocked,
         )
+        payload["severity"] = severity
+
+        if severity == "critical":
+            payload["title"] = "Critical drive-health evidence detected"
+            payload["summary"] = (
+                "Raw SMART evidence indicates active media degradation even "
+                "if the vendor self-assessment and ZFS pool state still report "
+                "PASSED or ONLINE."
+            )
+            payload["runtime"]["disposition"] = "prepare_replacement"
+
+        results.append(payload)
 
     return results
 

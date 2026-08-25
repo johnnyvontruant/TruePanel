@@ -126,11 +126,16 @@ function calloutFor(item,evidence){
     const code=String(item.code||"");
     if(code.startsWith("storage.")){
         const exactBay=Boolean(evidence.bay&&evidence.device);
+        const critical=String(item.severity||"").toLowerCase()==="critical";
         return{
-            className:exactBay?"caution":"danger",
-            headline:exactBay
-                ?"Physical identity has been correlated, but removal remains locked until the service gates are satisfied."
-                :"DO NOT REMOVE A DISK. TruePanel has not verified an exact physical bay and device pair.",
+            className:critical||!exactBay?"danger":"caution",
+            headline:critical
+                ?(exactBay
+                    ?"CRITICAL DRIVE HEALTH. Prepare a validated replacement; removal remains locked until every service gate is satisfied."
+                    :"CRITICAL DRIVE HEALTH. DO NOT REMOVE A DISK until TruePanel verifies the exact physical bay and device.")
+                :(exactBay
+                    ?"Physical identity has been correlated, but removal remains locked until the service gates are satisfied."
+                    :"DO NOT REMOVE A DISK. TruePanel has not verified an exact physical bay and device pair."),
             detail:phaseNote(item),
         };
     }
@@ -214,7 +219,7 @@ function card(item){
     const disruptiveLabel=String(item.code||"").startsWith("storage.")
         ?"Destructive storage action"
         :"Disruptive action";
-    return `<article class="fm-card" data-guidance-code="${esc(item.code)}">
+    return `<article class="fm-card" data-guidance-code="${esc(item.code)}" data-guidance-severity="${esc(item.severity||"caution")}">
         <div class="fm-card-head">
             <div><span class="fm-kicker">${esc(item.code)}</span><h3>${esc(item.title||"Operator guidance")}</h3></div>
             <span class="fm-phase">${esc(phaseText(runtime.phase))}</span>

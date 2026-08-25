@@ -48,3 +48,17 @@ def test_existing_flight_manual_button_is_the_ui_entry_point():
     assert 'getElementById("openFlightManual")' in manual
     assert "physical_service_ready" in manual
     assert "destructive_actions_ready" in manual
+
+def test_flight_manual_renders_critical_storage_guidance_as_danger():
+    source = (
+        server.STATIC_DIR
+        / "flight-manual.js"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        'String(item.severity||"").toLowerCase()==="critical"'
+        in source
+    )
+    assert 'className:critical||!exactBay?"danger":"caution"' in source
+    assert "CRITICAL DRIVE HEALTH." in source
+    assert 'data-guidance-severity="${esc(item.severity||"caution")}"' in source

@@ -305,6 +305,76 @@ def test_unknown_pool_state_requires_attention_without_inventing_severity():
     assert payload["subsystems"]["storage"]["state"] == "ATTENTION"
 
 
+def test_pending_sectors_override_vendor_passed_and_online_pool():
+    payload = HealthEvaluator().evaluate(
+        storage={
+            "pools": [{"name": "HDDs", "health": "ONLINE"}],
+            "smart": [
+                {
+                    "drive": "sdc",
+                    "health": "PASSED",
+                    "pending": 1608,
+                    "offline_uncorrectable": 1608,
+                    "reallocated": 15952,
+                    "reported_uncorrect": 905,
+                    "critical_warning": "0x00",
+                }
+            ],
+        }
+    )
+
+    storage = payload["subsystems"]["storage"]
+    assert storage["state"] == "CRITICAL"
+    assert storage["summary"] == "Drive health critical"
+    assert "sdc" in storage["reason"]
+    assert payload["state"] == "CRITICAL"
+
+
+def test_reallocated_sectors_require_attention_without_critical_evidence():
+    payload = HealthEvaluator().evaluate(
+        storage={
+            "pools": [{"name": "HDDs", "health": "ONLINE"}],
+            "smart": [
+                {
+                    "drive": "sdb",
+                    "health": "PASSED",
+                    "pending": 0,
+                    "offline_uncorrectable": 0,
+                    "reallocated": 12,
+                    "reported_uncorrect": 0,
+                    "critical_warning": "0x00",
+                }
+            ],
+        }
+    )
+
+    storage = payload["subsystems"]["storage"]
+    assert storage["state"] == "ATTENTION"
+    assert "sdb (SMART)" in storage["reason"]
+
+
+def test_clean_smart_records_preserve_nominal_storage_health():
+    payload = HealthEvaluator().evaluate(
+        storage={
+            "pools": [{"name": "HDDs", "health": "ONLINE"}],
+            "smart": [
+                {
+                    "drive": "sda",
+                    "health": "PASSED",
+                    "pending": 0,
+                    "offline_uncorrectable": 0,
+                    "reallocated": 0,
+                    "reported_uncorrect": 0,
+                    "media_errors": 0,
+                    "critical_warning": "0x00",
+                }
+            ],
+        }
+    )
+
+    assert payload["subsystems"]["storage"]["state"] == "NOMINAL"
+
+
 def test_primary_network_link_down_is_degraded():
     payload = HealthEvaluator().evaluate(
         network=[
