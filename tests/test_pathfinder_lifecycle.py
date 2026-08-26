@@ -4,15 +4,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_startup_provisions_private_recovery_state_directories():
-    script = (ROOT / "start-truepanel.sh").read_text(encoding="utf-8")
+def test_install_and_startup_provision_private_recovery_state_directories():
+    for filename in ("install.sh", "start-truepanel.sh"):
+        script = (ROOT / filename).read_text(encoding="utf-8")
+
+        assert (
+            "StateDirectory=truepanel/lifeline truepanel/pathfinder"
+            in script
+        )
+        assert "StateDirectoryMode=0700" in script
+        assert "StateDirectory=truepanel\n" not in script
+
+
+def test_installer_documents_both_private_recovery_state_directories():
+    script = (ROOT / "install.sh").read_text(encoding="utf-8")
 
     assert (
-        "StateDirectory=truepanel/lifeline truepanel/pathfinder"
+        "Declare private persistent Lifeline state: "
+        "/var/lib/truepanel/lifeline (mode 0700)"
         in script
     )
-    assert "StateDirectoryMode=0700" in script
-    assert "StateDirectory=truepanel\n" not in script
+    assert (
+        "Declare private persistent Pathfinder state: "
+        "/var/lib/truepanel/pathfinder (mode 0700)"
+        in script
+    )
 
 
 def test_uninstall_cleans_private_recovery_state_only():
