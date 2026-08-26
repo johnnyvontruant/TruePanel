@@ -366,7 +366,13 @@ class RecoverySessionStore:
         target_rank = _STATE_ORDER.get(live_state, 1)
         current_rank = _STATE_ORDER.get(stored_state, 1)
         while current_rank < target_rank:
-            step = _FORWARD_PATH.get(_text(current.get("state")).lower())
+            current_state = _text(current.get("state")).lower()
+            # Entering RESOLVED is intentionally not a generic phase advance.
+            # Preserve the verified evidence and dedicated timeline event that
+            # proves why Pathfinder closed the incident.
+            if current_state == "verifying":
+                break
+            step = _FORWARD_PATH.get(current_state)
             if not step:
                 break
             current = transition_recovery(
