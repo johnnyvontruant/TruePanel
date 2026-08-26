@@ -145,10 +145,12 @@ def _pool_verification(card: dict[str, Any]) -> dict[str, Any]:
 
 def _network_verification(card: dict[str, Any]) -> dict[str, Any]:
     evidence = _dict(_dict(card.get("runtime")).get("evidence"))
+    address = _text(evidence.get("address"))
+    passed = evidence.get("link_up") is True and bool(address)
     return {
         "strategy": "primary_link_recheck",
         "automated": True,
-        "status": "passed" if evidence.get("link_up") is True else "pending",
+        "status": "passed" if passed else "pending",
         "criteria": (
             "The primary interface reports link up again and has a usable "
             "address before the incident is resolved."
@@ -243,6 +245,50 @@ def recovery_contract(card: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def transition_recovery(
+    contract: dict[str, Any],
+    next_state: str,
+    event: str,
+    *,
+    automated: bool = False,
+    evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Advance a recovery contract and append an immutable timeline event.
+
+    This function only records workflow state. It never performs the repair or
+    changes a safety gate. Callers must still satisfy hardware and storage
+    interlocks independently.
+    """
+
+    current = _text(contract.get("state")).lower()
+    target = _text(next_state).lower()
+    allowed = _TRANSITIONS.get(current)
+    if allowed is None:
+        raise ValueError(f"unknown recovery state: {current or '<empty>'}")
+    if target not in allowed:
+        raise ValueError(f"invalid recovery transition: {current} -> {target}")
+
+    updated = deepcopy(contract)
+    updated["state"] = target
+    updated["allowed_transitions"] = list(_TRANSITIONS[target])
+
+    timeline = [
+        deepcopy(item)
+        for item in _list(updated.get("timeline"))
+        if isinstance(item, dict)
+    ]
+    timeline_event: dict[str, Any] = {
+        "state": target,
+        "event": _text(event) or "state_changed",
+        "automated": bool(automated),
+    }
+    if evidence:
+        timeline_event["evidence"] = deepcopy(evidence)
+    timeline.append(timeline_event)
+    updated["timeline"] = timeline[-64:]
+    return updated
+
+
 def decorate_guidance(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Attach recovery contracts without changing existing card semantics."""
 
@@ -260,5 +306,6 @@ __all__ = [
     "RECOVERY_SCHEMA_VERSION",
     "decorate_guidance",
     "recovery_contract",
+    "transition_recovery",
     "verification_for_card",
 ]
