@@ -26,7 +26,8 @@ from .session import (
     ReplacementAssessment,
     evaluate_drive_repair,
 )
-from .store import DEFAULT_LIFELINE_PATH, LifelineSessionStore
+from .store import DEFAULT_LIFELINE_PATH
+from .smart_store import LifelineSessionStore
 
 __all__ = [
     "BayIdentificationService",
