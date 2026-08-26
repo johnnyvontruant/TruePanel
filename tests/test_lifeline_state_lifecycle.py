@@ -102,8 +102,9 @@ def test_uninstall_dry_run_discloses_metadata_removal():
     uninstaller = source("uninstall.sh")
 
     assert (
-        "Persistent Lifeline metadata that would be removed:"
+        "Persistent recovery metadata that would be removed:"
         in uninstaller
     )
     assert "$LIFELINE_STATE_DIR" in uninstaller
+    assert "$PATHFINDER_STATE_DIR" in uninstaller
     assert "$PERSISTENT_STATE_DIR (when empty)" in uninstaller
