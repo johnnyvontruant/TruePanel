@@ -14,6 +14,7 @@ from .recovery import (
     RECOVERY_SCHEMA_VERSION,
     decorate_guidance,
     recovery_contract,
+    transition_recovery,
     verification_for_card,
 )
 from .runtime import guidance_for_snapshot as _runtime_guidance_for_snapshot
@@ -38,5 +39,6 @@ __all__ = [
     "guidance_for_snapshot",
     "guidance_payload",
     "recovery_contract",
+    "transition_recovery",
     "verification_for_card",
 ]
