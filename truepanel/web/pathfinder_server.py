@@ -16,6 +16,7 @@ from truepanel.guidance.sessions import RecoverySessionStore
 
 from . import server as _server
 
+STATIC_DIR = _server.STATIC_DIR
 _RECOVERY_SCRIPT = "recovery-workflow.js"
 _RECOVERY_MARKER = b"<!-- truepanel-pathfinder-recovery -->"
 _RECOVERY_TAG = (
@@ -52,7 +53,7 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
 
     def _dashboard(self, parsed):
         del parsed
-        candidate = _server.STATIC_DIR / "index.html"
+        candidate = STATIC_DIR / "index.html"
         try:
             body = candidate.read_bytes()
         except OSError:
