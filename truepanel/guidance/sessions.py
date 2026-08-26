@@ -1,7 +1,7 @@
 """Persistent workflow memory for Project Pathfinder guided recovery.
 
 The live guidance contract remains authoritative for telemetry, verification,
-and every hardware/storage safety gate.  This store persists only workflow
+and every hardware/storage safety gate. This store persists only workflow
 progress and a bounded recovery timeline so an operator does not lose context
 when Mission Control refreshes or restarts.
 """
@@ -162,7 +162,7 @@ class RecoverySessionStore:
     ) -> dict[str, Any]:
         """Persist one legal workflow transition.
 
-        This records operator workflow only.  It cannot alter a live guidance
+        This records operator workflow only. It cannot alter a live guidance
         action gate, execute a repair, or manufacture verification evidence.
         """
 
@@ -212,8 +212,6 @@ class RecoverySessionStore:
         live_state = _text(live.get("state")).lower() or "reviewing"
         verification = _dict(live.get("verification"))
 
-        # A resolved workflow is reopened only when the same incident is
-        # actively present again and live verification no longer passes.
         if (
             stored_state == "resolved"
             and live_state != "resolved"
@@ -239,8 +237,6 @@ class RecoverySessionStore:
         current = deepcopy(stored)
         current["last_seen"] = float(seen_at)
 
-        # Live phase may safely move workflow forward, never backward.  Walk
-        # legal transitions so the timeline explains how the state advanced.
         target_rank = _STATE_ORDER.get(live_state, 1)
         current_rank = _STATE_ORDER.get(stored_state, 1)
         while current_rank < target_rank:
@@ -255,8 +251,6 @@ class RecoverySessionStore:
             )
             current_rank = _STATE_ORDER.get(step, current_rank)
 
-        # Verification remains machine-authoritative.  If telemetry proves the
-        # repair while workflow is verifying, close it automatically.
         if (
             _text(current.get("state")).lower() == "verifying"
             and _text(verification.get("status")).lower() == "passed"
@@ -308,33 +302,39 @@ class RecoverySessionStore:
     def _persist(self) -> None:
         if self.path is None:
             return
-        parent = self.path.parent
-        parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         try:
-            os.chmod(parent, 0o700)
-        except OSError:
-            pass
-
-        payload = self.snapshot()
-        data = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
-        fd, temporary = tempfile.mkstemp(
-            prefix=f".{self.path.name}.",
-            dir=str(parent),
-            text=True,
-        )
-        try:
-            os.fchmod(fd, 0o600)
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                handle.write(data)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary, self.path)
-            os.chmod(self.path, 0o600)
-        finally:
+            parent = self.path.parent
+            parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             try:
-                os.unlink(temporary)
-            except FileNotFoundError:
+                os.chmod(parent, 0o700)
+            except OSError:
                 pass
+
+            payload = self.snapshot()
+            data = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+            fd, temporary = tempfile.mkstemp(
+                prefix=f".{self.path.name}.",
+                dir=str(parent),
+                text=True,
+            )
+            try:
+                os.fchmod(fd, 0o600)
+                with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                    handle.write(data)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary, self.path)
+                os.chmod(self.path, 0o600)
+            finally:
+                try:
+                    os.unlink(temporary)
+                except FileNotFoundError:
+                    pass
+        except OSError:
+            # Workflow memory is a convenience layer. If persistence is
+            # unavailable, Mission Control must keep running from fresh live
+            # telemetry and the original safety gates.
+            return
 
     def _prune(self) -> bool:
         if len(self._sessions) <= self.maximum_sessions:
