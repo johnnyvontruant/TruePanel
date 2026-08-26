@@ -18,6 +18,7 @@ LEGACY_BIN_FILE="/usr/local/bin/truepanel"
 RUNTIME_DIR="/run/truepanel"
 PERSISTENT_STATE_DIR="/var/lib/truepanel"
 LIFELINE_STATE_DIR="$PERSISTENT_STATE_DIR/lifeline"
+PATHFINDER_STATE_DIR="$PERSISTENT_STATE_DIR/pathfinder"
 CUTOVER_MARKER_FILE="/run/truepanel/standalone-host-agent.enabled"
 HOST_OWNERSHIP_FILE="/run/truepanel/host-owner.lock"
 FAN_SOCKET_FILE="/run/truepanel/fan-control.sock"
@@ -92,8 +93,9 @@ Runtime state that would be removed:
   $HOST_OWNERSHIP_FILE
   $RUNTIME_DIR (when empty)
 
-Persistent Lifeline metadata that would be removed:
+Persistent recovery metadata that would be removed:
   $LIFELINE_STATE_DIR
+  $PATHFINDER_STATE_DIR
   $PERSISTENT_STATE_DIR (when empty)
 
 CLI/install paths that would be removed:
@@ -312,8 +314,8 @@ rm -f \
   "$HOST_OWNERSHIP_FILE"
 rmdir "$RUNTIME_DIR" 2>/dev/null || true
 
-echo "Removing persistent Lifeline metadata..."
-rm -rf -- "$LIFELINE_STATE_DIR"
+echo "Removing persistent recovery metadata..."
+rm -rf -- "$LIFELINE_STATE_DIR" "$PATHFINDER_STATE_DIR"
 rmdir "$PERSISTENT_STATE_DIR" 2>/dev/null || true
 
 echo "Removing CLI wrapper..."
