@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from truepanel.compatibility.models import CompatibilityCheck, CompatibilityReport
 
-PREFLIGHT_SCHEMA_VERSION = 2
+PREFLIGHT_SCHEMA_VERSION = 1
 
 _STATUS_RANK = {
     "PASS": 0,
@@ -30,11 +30,7 @@ def _section_id(check: CompatibilityCheck) -> str:
     if name == "safety authority":
         return "safety"
 
-    if (
-        name.startswith("fan ")
-        or "pwm" in name
-        or "cooling" in name
-    ):
+    if name.startswith("fan ") or "pwm" in name or "cooling" in name:
         return "cooling"
 
     if (
@@ -137,8 +133,7 @@ def build_preflight_payload(report: CompatibilityReport) -> dict:
     """Project a passive compatibility report into Mission Control UI data."""
 
     grouped: dict[str, list[dict[str, object]]] = {
-        section_id: []
-        for section_id, _label in _SECTION_ORDER
+        section_id: [] for section_id, _label in _SECTION_ORDER
     }
 
     counts = {
