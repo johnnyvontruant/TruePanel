@@ -18,12 +18,15 @@ from .recovery import (
     verification_for_card,
 )
 from .runtime import guidance_for_snapshot as _runtime_guidance_for_snapshot
+from .thermal import thermal_guidance_for_snapshot
 
 
 def guidance_for_snapshot(payload):
     """Return live guidance decorated with Pathfinder recovery contracts."""
 
-    return decorate_guidance(_runtime_guidance_for_snapshot(payload))
+    cards = _runtime_guidance_for_snapshot(payload)
+    cards.extend(thermal_guidance_for_snapshot(payload))
+    return decorate_guidance(cards)
 
 
 __all__ = [
@@ -39,6 +42,7 @@ __all__ = [
     "guidance_for_snapshot",
     "guidance_payload",
     "recovery_contract",
+    "thermal_guidance_for_snapshot",
     "transition_recovery",
     "verification_for_card",
 ]
