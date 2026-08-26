@@ -40,6 +40,16 @@ _FORWARD_PATH = {
     "verifying": "resolved",
 }
 
+_SUBSYSTEM_FOR_CODE = {
+    "cooling.fan_stall": "cooling",
+    "thermal.high_temperature": "thermal",
+    "storage.smart_warning": "storage",
+    "storage.pool_degraded": "storage",
+    "storage.disk_faulted": "storage",
+    "network.link_down": "network",
+    "front_panel.lcd_unavailable": "front_panel",
+}
+
 
 def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
@@ -66,6 +76,10 @@ def _allowed_for(state: str) -> list[str]:
 
 def _workflow_record(contract: dict[str, Any], *, seen_at: float) -> dict[str, Any]:
     state = _text(contract.get("state")).lower() or "reviewing"
+    try:
+        clear_observations = max(0, int(contract.get("clear_observations") or 0))
+    except (TypeError, ValueError):
+        clear_observations = 0
     return {
         "incident_id": _text(contract.get("incident_id")),
         "code": _text(contract.get("code")),
@@ -76,6 +90,7 @@ def _workflow_record(contract: dict[str, Any], *, seen_at: float) -> dict[str, A
             for item in _list(contract.get("timeline"))[-64:]
             if isinstance(item, dict)
         ],
+        "clear_observations": clear_observations,
         "last_seen": float(seen_at),
     }
 
@@ -98,6 +113,16 @@ def _merge_live_contract(
     return merged
 
 
+def _subsystem_state(payload: dict[str, Any], code: str) -> tuple[str, str]:
+    subsystem = _SUBSYSTEM_FOR_CODE.get(code, "")
+    if not subsystem:
+        return "", ""
+    health = _dict(payload.get("health"))
+    subsystems = _dict(health.get("subsystems"))
+    result = _dict(subsystems.get(subsystem))
+    return subsystem, _text(result.get("state")).upper()
+
+
 class RecoverySessionStore:
     """Persist Pathfinder workflow state without persisting telemetry evidence."""
 
@@ -107,16 +132,120 @@ class RecoverySessionStore:
         *,
         clock: Callable[[], float] = time.time,
         maximum_sessions: int = 256,
+        clear_observations_required: int = 2,
     ) -> None:
         self.path = Path(path) if path is not None else None
         self.clock = clock
         self.maximum_sessions = max(8, int(maximum_sessions))
+        self.clear_observations_required = max(2, int(clear_observations_required))
         self._sessions: dict[str, dict[str, Any]] = {}
         self._load()
 
     def observe(self, cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Attach durable workflow progress to freshly evaluated guidance."""
 
+        decorated, changed = self._observe_cards(cards)
+        if self._prune():
+            changed = True
+        if changed:
+            self._persist()
+        return decorated
+
+    def observe_snapshot(
+        self,
+        cards: list[dict[str, Any]],
+        payload: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        """Reconcile active cards and safely verify faults that disappeared.
+
+        Guidance cards normally disappear when their triggering condition
+        clears. Pathfinder therefore uses the already-normalized subsystem
+        health contract as a second, privacy-safe verification source. An
+        absent incident is closed only after repeated NOMINAL observations of
+        its mapped subsystem. UNKNOWN, missing, or non-nominal health can never
+        manufacture a successful repair.
+        """
+
+        decorated, changed = self._observe_cards(cards)
+        active_ids = {
+            _text(_dict(card.get("recovery")).get("incident_id"))
+            for card in decorated
+            if isinstance(card, dict)
+        }
+        now = float(self.clock())
+
+        for incident_id, stored in list(self._sessions.items()):
+            if incident_id in active_ids or not isinstance(stored, dict):
+                continue
+            state = _text(stored.get("state")).lower()
+            if state == "resolved":
+                continue
+
+            code = _text(stored.get("code"))
+            subsystem, health_state = _subsystem_state(payload, code)
+            current = deepcopy(stored)
+            current["last_seen"] = now
+
+            if health_state != "NOMINAL":
+                if int(current.get("clear_observations") or 0) != 0:
+                    current["clear_observations"] = 0
+                    self._sessions[incident_id] = _workflow_record(
+                        current,
+                        seen_at=now,
+                    )
+                    changed = True
+                continue
+
+            clear_count = int(current.get("clear_observations") or 0) + 1
+            current["clear_observations"] = clear_count
+            changed = True
+
+            if clear_count >= self.clear_observations_required:
+                while _text(current.get("state")).lower() != "verifying":
+                    current_state = _text(current.get("state")).lower()
+                    if current_state in {"resolved", "verifying"}:
+                        break
+                    step = _FORWARD_PATH.get(current_state)
+                    if not step:
+                        break
+                    current = transition_recovery(
+                        current,
+                        step,
+                        "fault_condition_cleared",
+                        automated=True,
+                        evidence={"subsystem": subsystem},
+                    )
+                    current["clear_observations"] = clear_count
+
+                if _text(current.get("state")).lower() == "verifying":
+                    current = transition_recovery(
+                        current,
+                        "resolved",
+                        "subsystem_health_verified",
+                        automated=True,
+                        evidence={
+                            "subsystem": subsystem,
+                            "state": "NOMINAL",
+                            "observations": clear_count,
+                        },
+                    )
+                    current["clear_observations"] = clear_count
+
+            self._sessions[incident_id] = _workflow_record(
+                current,
+                seen_at=now,
+            )
+
+        if self._prune():
+            changed = True
+        if changed:
+            self._persist()
+        return decorated
+
+    def _observe_cards(
+        self,
+        cards: list[dict[str, Any]],
+    ) -> tuple[list[dict[str, Any]], bool]:
         now = float(self.clock())
         decorated: list[dict[str, Any]] = []
         changed = False
@@ -138,6 +267,7 @@ class RecoverySessionStore:
             else:
                 stored = deepcopy(stored)
 
+            stored["clear_observations"] = 0
             stored = self._reconcile(stored, live, seen_at=now)
             if stored != self._sessions.get(incident_id):
                 changed = True
@@ -145,11 +275,7 @@ class RecoverySessionStore:
             item["recovery"] = _merge_live_contract(live, stored)
             decorated.append(item)
 
-        if self._prune():
-            changed = True
-        if changed:
-            self._persist()
-        return decorated
+        return decorated, changed
 
     def transition(
         self,
@@ -286,6 +412,13 @@ class RecoverySessionStore:
             state = _text(record.get("state")).lower()
             if not incident_id or state not in _STATE_ORDER:
                 continue
+            try:
+                clear_observations = max(
+                    0,
+                    int(record.get("clear_observations") or 0),
+                )
+            except (TypeError, ValueError):
+                clear_observations = 0
             self._sessions[incident_id] = {
                 "incident_id": incident_id,
                 "code": _text(record.get("code")),
@@ -296,6 +429,7 @@ class RecoverySessionStore:
                     for item in _list(record.get("timeline"))[-64:]
                     if isinstance(item, dict)
                 ],
+                "clear_observations": clear_observations,
                 "last_seen": float(record.get("last_seen") or 0.0),
             }
 
