@@ -12,6 +12,7 @@ def test_startup_provisions_private_recovery_state_directories():
         in script
     )
     assert "StateDirectoryMode=0700" in script
+    assert "StateDirectory=truepanel\n" not in script
 
 
 def test_uninstall_cleans_private_recovery_state_only():
@@ -30,4 +31,5 @@ def test_uninstall_cleans_private_recovery_state_only():
         in script
     )
     assert 'rm -rf -- "$PERSISTENT_STATE_DIR"' not in script
+    assert 'rmdir "$PERSISTENT_STATE_DIR" 2>/dev/null || true' in script
     assert 'chmod -R' not in script
