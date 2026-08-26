@@ -10,7 +10,7 @@ from pathlib import Path
 
 from truepanel.paths import installation_root
 
-from .server import serve
+from .pathfinder_server import serve
 
 
 class ServiceConfigurationError(ValueError):
