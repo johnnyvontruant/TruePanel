@@ -86,9 +86,7 @@ def test_live_phase_can_advance_but_not_rewind_operator_workflow(tmp_path):
     store.transition(incident_id, "reviewing", "operator_opened")
     store.transition(incident_id, "diagnosing", "checks_started")
 
-    advanced = store.observe([
-        _decorated(_card(phase="prepare_repair"))
-    ])[0]
+    advanced = store.observe([_decorated(_card(phase="prepare_repair"))])[0]
     assert advanced["recovery"]["state"] == "repairing"
     assert advanced["recovery"]["timeline"][-1]["event"] == "telemetry_phase_advanced"
 
@@ -184,6 +182,19 @@ def test_store_persists_metadata_only_without_live_evidence(tmp_path):
     assert '"pending"' not in raw
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
+
+
+def test_persistence_failure_does_not_break_live_recovery(monkeypatch, tmp_path):
+    store = RecoverySessionStore(tmp_path / "blocked" / "sessions.json")
+
+    def denied(*_args, **_kwargs):
+        raise PermissionError("blocked")
+
+    monkeypatch.setattr("pathlib.Path.mkdir", denied)
+    observed = store.observe([_decorated(_card())])[0]
+
+    assert observed["recovery"]["state"] == "detected"
+    assert observed["recovery"]["action_gate"]["destructive_actions_ready"] is False
 
 
 def test_invalid_manual_transition_remains_rejected(tmp_path):
