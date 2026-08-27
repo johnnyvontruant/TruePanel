@@ -2,9 +2,9 @@
 
 ## Current platform
 
-TruePanel 1.2.0 is the stable foundation. The accepted post-1.2 development line adds Pathfinder guided recovery, Lifeline handling for critical SMART evidence, and supported TrueNAS `i2c-dev` boot persistence.
+TruePanel 1.2.0 is the stable foundation. The accepted post-1.2 development line adds Pathfinder guided recovery, Lifeline handling for critical SMART evidence, supported TrueNAS `i2c-dev` boot persistence, ORACLE predictive health, and the first read-only AEGIS reliability increment.
 
-Draft PR #78 adds the first AEGIS reliability increment on top of that foundation.
+AEGIS passed formal review in PR #78 and remains undeployed on the reference NAS.
 
 The platform now includes:
 
@@ -20,18 +20,18 @@ The platform now includes:
 - HoloDeck Digital Twin and deterministic fault injection;
 - Black Box recording, replay, and incident compilation;
 - ORACLE adaptive baselines and developing-fault analysis;
-- AEGIS incident correlation and Recovery Coverage Matrix in review;
+- AEGIS incident correlation and a CI-enforced Recovery Coverage Matrix;
 - guarded install, upgrade, rollback, repair, verify, cleanup, and uninstall;
 - Project Stargate hardware research and Plugin API v1.
 
-## Immediate graduation gates
+## Promotion record and graduation gates
 
-### 1. Review and preserve AEGIS
+### 1. Preserve the accepted AEGIS baseline
 
-- review draft PR #78 as a fixed evidence baseline;
-- verify its six commits, Recovery Coverage Matrix, correlation semantics, mobile layout, and CI result;
-- keep later research and calibration on separate branches;
-- merge only after the review record is complete.
+- PR #78 passed formal review, 2,348 tests, and installed-wheel smoke;
+- request-independent predictive sampling and fail-closed SMART/ZFS verification have dedicated regressions;
+- the reviewed commit history remains preserved;
+- later research, calibration, and deployment evidence belong on separate branches.
 
 ### 2. Calibrate predictive behavior
 
