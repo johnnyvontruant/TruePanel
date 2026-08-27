@@ -26,6 +26,7 @@ FAN_STATUS_FILE="/run/truepanel/fan-control-status.json"
 LCD_COMMAND_SOCKET_FILE="/run/truepanel/lcd-command.sock"
 LCD_READER_STATUS_FILE="/run/truepanel/lcd-reader-status.json"
 LCD_DISPLAY_STATUS_FILE="/run/truepanel/lcd-display-status.json"
+I2C_LIFECYCLE_HELPER="$SCRIPT_DIR/truepanel/lifecycle/truenas_i2c.py"
 
 usage() {
   printf 'Usage: %s [--dry-run] --root /mnt/POOL/DATASET/TruePanel\n' "$0"
@@ -97,6 +98,9 @@ Persistent recovery metadata that would be removed:
   $LIFELINE_STATE_DIR
   $PATHFINDER_STATE_DIR
   $PERSISTENT_STATE_DIR (when empty)
+
+TrueNAS integration that would be removed:
+  TruePanel-managed i2c-dev POSTINIT task
 
 CLI/install paths that would be removed:
   $BIN_FILE
@@ -293,6 +297,9 @@ assert_host_ownership_released
 # configured channels actually returned to Automatic before deleting the
 # installed runtime needed for diagnosis or recovery.
 verify_fan_safety
+
+echo "Removing TruePanel-managed i2c-dev POSTINIT persistence..."
+python3 "$I2C_LIFECYCLE_HELPER" remove
 
 echo "Disabling installed services..."
 systemctl disable "$SERVICE_NAME" 2>/dev/null || true

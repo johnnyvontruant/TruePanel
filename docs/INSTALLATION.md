@@ -2,13 +2,15 @@
 
 ## Scope
 
-The native installer deploys TruePanel to an operator-selected persistent dataset path under `/mnt/`. The examples in this guide use `/mnt/POOL/DATASET/TruePanel`. The installer creates the CLI wrapper inside that installation root, installs the primary LCD and Mission Control service units, and lays down the dormant marker-gated standalone Host Agent unit without starting it.
+The native installer deploys TruePanel to an operator-selected persistent dataset path under `/mnt/`. The examples in this guide use `/mnt/POOL/DATASET/TruePanel`. The installer creates the CLI wrapper inside that installation root, installs the primary LCD and Mission Control service units, lays down the dormant marker-gated standalone Host Agent unit without starting it, and registers the reference SMBus driver through TrueNAS-managed boot configuration.
 
 The reference platform is TrueNAS SCALE on a QNAP TVS-671. The installer may also work on compatible Debian-based systems, but physical hardware support must be verified separately.
 
 ## TrueNAS support boundary
 
-TrueNAS warns that configuration changes should be made through its Web UI, CLI, or API. TruePanel therefore remains outside the operating system's officially supported application path. Persistent application state belongs under the explicitly selected `/mnt/...` installation root. System integration uses `/etc/systemd/system`, `/etc/default`, `/run/truepanel`, `/usr/local/bin`, and, for the reference POSTINIT deployment, transient `/opt` state.
+TrueNAS warns that configuration changes should be made through its Web UI, CLI, or API. TruePanel therefore remains outside the operating system's officially supported application path. Persistent application state belongs under the explicitly selected `/mnt/...` installation root. System integration uses `/etc/systemd/system`, `/etc/default`, `/run/truepanel`, `/usr/local/bin`, and the TrueNAS middleware API.
+
+The installer loads `i2c-dev` immediately and uses `initshutdownscript.create` or `initshutdownscript.update` to maintain an enabled `POSTINIT` command. This is the [TrueNAS-supported Init/Shutdown Scripts mechanism](https://www.truenas.com/docs/scale/systemsettings/advanced/manageinitshutdown/). It deliberately does not write `/etc/modules-load.d`, because appliance-generated operating-system state is not TruePanel's persistence boundary.
 
 Use TruePanel with a current configuration backup and expect major TrueNAS upgrades to require service verification or reinstallation.
 
@@ -18,6 +20,8 @@ Use TruePanel with a current configuration backup and expect major TrueNAS upgra
 - Python 3.11 or newer
 - `rsync`
 - `systemctl`
+- `midclt` (TrueNAS middleware client)
+- `modprobe`
 - `smartctl` for SMART telemetry
 - ZFS command-line tools
 - Access to the relevant serial, SMBus, and sysfs hardware paths
@@ -76,8 +80,9 @@ The installer:
 6. creates the CLI wrapper;
 7. creates the primary LCD and Mission Control service units;
 8. creates the dormant standalone Host Agent unit with its cutover-marker condition and no `[Install]` section;
-9. leaves all services stopped so activation remains an explicit operator action;
-10. runs `truepanel doctor`.
+9. loads `i2c-dev` for the current runtime and verifies an enabled TrueNAS `POSTINIT` task will load it on future boots;
+10. leaves all services stopped so activation remains an explicit operator action;
+11. runs `truepanel doctor`.
 
 ## Service management
 
@@ -161,6 +166,10 @@ sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel host readiness
 sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel host fan-safety \
   --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
 sudo /mnt/POOL/DATASET/TruePanel/bin/truepanel host cutover-plan
+sudo python3 \
+  /mnt/POOL/DATASET/TruePanel/truepanel/lifecycle/truenas_i2c.py \
+  verify
+test -d /sys/module/i2c_dev
 systemctl is-active truepanel.service
 sudo journalctl -u truepanel.service -n 80 --no-pager
 ```
@@ -183,7 +192,7 @@ The uninstaller stops the standalone Host Agent, primary LCD service, and Missio
 
 If fan restoration cannot be verified, uninstall fails closed and leaves the installation in place for diagnosis. Do not bypass that gate with manual file removal.
 
-After a successful safety check, uninstall removes all three TruePanel service units, the Mission Control environment file, known `/run/truepanel` marker/lock/socket/status artifacts, both current and legacy CLI wrapper paths, reloads systemd, and deletes `/mnt/POOL/DATASET/TruePanel`. Local repository clones, external firmware archives, and Git history are not removed.
+After a successful safety check, uninstall removes only the boot task carrying TruePanel's explicit ownership marker; an equivalent operator-owned task is preserved. It then removes all three TruePanel service units, the Mission Control environment file, known `/run/truepanel` marker/lock/socket/status artifacts, both current and legacy CLI wrapper paths, reloads systemd, and deletes `/mnt/POOL/DATASET/TruePanel`. The module is not forcibly unloaded from the running kernel. Local repository clones, external firmware archives, and Git history are not removed.
 
 For the full clean-room uninstall/reinstall and reboot validation procedure, see [Clean-install validation](CLEAN_INSTALL_VALIDATION.md).
 

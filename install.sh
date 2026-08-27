@@ -13,6 +13,7 @@ SERVICE_FILE="/etc/systemd/system/truepanel.service"
 HOST_AGENT_SERVICE_FILE="/etc/systemd/system/truepanel-host-agent.service"
 MISSION_CONTROL_SERVICE_FILE="/etc/systemd/system/truepanel-mission-control.service"
 MISSION_CONTROL_ENV_FILE="/etc/default/truepanel-mission-control"
+I2C_LIFECYCLE_HELPER="$SOURCE_ROOT/truepanel/lifecycle/truenas_i2c.py"
 PYTHON_BIN=""
 PIP_BOOTSTRAP_VERSION="26.2.1"
 PIP_BOOTSTRAP_URL="https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl"
@@ -79,6 +80,8 @@ Actions a real install would perform:
   Create/preserve Mission Control environment: $MISSION_CONTROL_ENV_FILE
   Install dormant Host Agent service: $HOST_AGENT_SERVICE_FILE
   Keep standalone Host Agent activation locked and do not start it
+  Load i2c-dev for the current runtime
+  Persist i2c-dev with a TrueNAS-managed POSTINIT task
   Reload systemd daemon state
   Run TruePanel Doctor from the installed tree
 
@@ -166,7 +169,7 @@ echo "  $INSTALL_DIR"
 echo
 
 echo "Checking prerequisites..."
-for command in python3 rsync systemctl; do
+for command in python3 rsync systemctl midclt modprobe; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Missing required command: $command"
     exit 1
@@ -412,6 +415,9 @@ SERVICE
 
 chmod 0644 "$HOST_AGENT_SERVICE_FILE"
 echo "Standalone Host Agent activation remains locked; unit was not enabled or started."
+
+echo "Loading i2c-dev and configuring TrueNAS POSTINIT persistence..."
+python3 "$I2C_LIFECYCLE_HELPER" ensure
 
 echo "Creating systemd service..."
 cat > "$SERVICE_FILE" <<SERVICE
