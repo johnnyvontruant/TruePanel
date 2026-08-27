@@ -130,6 +130,8 @@ Lifeline guides and verifies; it does not perform destructive pool operations or
 
 ORACLE maintains adaptive baselines, trend and anomaly state, and cross-signal correlations. Its predictive states identify developing behavior before a conventional threshold may fire.
 
+Baseline learning is request-independent: status handlers reuse a thread-safe cached outlook and admit at most one predictive sample per telemetry interval. Independently verified alerts can still update incident correlation immediately between predictive samples.
+
 ORACLE does not invent hard-fault authority. Statistical drift remains a hypothesis until supported by an independent detector.
 
 ### AEGIS
@@ -145,7 +147,7 @@ AEGIS:
 - reports Recovery Coverage Matrix gaps;
 - has no control-authority path.
 
-The current draft shared-cooling experiment identifies one correlated incident 27 samples before the first isolated lab threshold and reduces two terminal alerts to one operator incident.
+The accepted shared-cooling experiment identifies one correlated incident 27 samples before the first isolated lab threshold and reduces two terminal alerts to one operator incident. The AEGIS development increment remains undeployed on the reference NAS.
 
 ### Recovery Coverage Matrix
 
