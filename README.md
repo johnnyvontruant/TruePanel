@@ -85,7 +85,7 @@ Other QNAP systems may share portions of this design, but they remain unverified
 
 ## Check compatibility before installation
 
-Run the passive compatibility survey before installation on unknown hardware:
+Run the passive compatibility survey before TruePanel is installed on unknown hardware:
 
 ```bash
 git clone https://github.com/johnnyvontruant/TruePanel.git
