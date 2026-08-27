@@ -28,7 +28,7 @@ Some experimental branches and pull requests are preserved to keep a known test 
 - create a separately named follow-up branch;
 - state the dependency in the follow-up pull request.
 
-PR #78 and `feature/project-aegis` are the current preserved AEGIS baseline.
+PR #78 and `feature/project-aegis` were kept frozen until formal review completed. PR #78 was then promoted without rewriting its reviewed history; later calibration and ecosystem research remain separate follow-up work.
 
 ## Development workflow
 
