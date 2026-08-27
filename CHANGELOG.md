@@ -4,6 +4,72 @@ All notable TruePanel changes are recorded here.
 
 TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.MINOR.PATCH`; release-candidate tags use `vMAJOR.MINOR.PATCH-rcN`.
 
+## [Unreleased]
+
+The post-1.2 development line extends TruePanel from health visibility into
+guided, evidence-backed recovery and predictive reliability.
+
+### Added
+
+- Added Project Pathfinder's universal guided-recovery contract, durable
+  recovery sessions, Recovery Command Deck, machine-verification state, and
+  recovery timeline.
+- Added Project Lifeline's fail-closed recovery handoff for
+  replacement-worthy SMART evidence joined to verified storage identity.
+- Added supported TrueNAS `POSTINIT` persistence for the `i2c-dev` module,
+  with managed-task verification, uninstall ownership protection, and reboot
+  validation on BattleStation.
+- Added Project ORACLE adaptive baselines, trend and anomaly states,
+  cross-signal correlation, Ghost Mode primitives, and slow-degradation
+  HoloDeck scenarios.
+- Added Project AEGIS as a read-only reliability layer with a universal
+  Recovery Coverage Matrix, probable-cause correlation, request-independent
+  predictive sampling, verification rehearsals, Black Box evidence capture,
+  and a mobile-first Reliability view.
+- Added a current Mission Control and reliability operating guide and refreshed
+  the platform overview, architecture, documentation map, and roadmap.
+
+### Changed
+
+- Critical SMART findings now escalate into a storage-specific Lifeline path
+  rather than stopping at a generic warning.
+- Mission Control can present one probable shared cause while retaining every
+  contributing component alert and its evidence.
+- Recovery trust now requires a declared detector, complete guidance arc,
+  fault-specific verifier, deterministic regression coverage, and a passed
+  fault-present-to-recovered rehearsal.
+- Documentation now distinguishes stable 1.2.0 behavior, accepted post-release
+  changes, and capabilities that remain undeployed on the reference NAS.
+
+### Safety
+
+- Pathfinder, Lifeline, ORACLE, and AEGIS do not gain destructive storage or
+  hardware-control authority.
+- ORACLE statistical drift cannot invent a production hard fault.
+- AEGIS correlation cannot hide or delete contributing alerts and remains
+  explicitly read-only.
+- TrueNAS boot persistence uses the supported Init/Shutdown Scripts middleware
+  contract rather than generic appliance filesystem configuration.
+- ORACLE baseline learning is bounded to one sample per telemetry interval and
+  cannot be accelerated by dashboard request volume.
+- SMART recovery remains fail-closed until critical SMART evidence is clear
+  and the independently observed ZFS member state is explicitly `ONLINE`.
+
+### Validated
+
+- The supported `i2c-dev` POSTINIT task survived a full BattleStation reboot;
+  the module and `/dev/i2c-0` returned automatically while both application
+  services remained healthy and physical LCD buttons continued to work.
+- The AEGIS shared-cooling HoloDeck scenario identified the probable shared
+  cause 27 samples before the first isolated lab threshold, reduced two
+  terminal alerts to one operator incident, passed recovery rehearsal, and
+  preserved two privacy-sanitized Black Box frames.
+- PR #78 passed formal review and authoritative GitHub Actions run 1116:
+  2,348 tests passed, installed-wheel smoke passed, and regressions cover
+  request-independent sampling plus SMART/ZFS recovery verification.
+- The AEGIS increment was accepted into the post-1.2 development line without
+  deployment or live hardware access.
+
 ## [1.2.0] - 2026-08-19
 
 TruePanel 1.2.0 graduates the validated RC3 tree to a stable release and

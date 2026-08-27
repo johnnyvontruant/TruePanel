@@ -2,70 +2,137 @@
 
 ## Current platform
 
-TruePanel currently provides:
+TruePanel 1.2.0 is the stable foundation. The accepted post-1.2 development line adds Pathfinder guided recovery, Lifeline handling for critical SMART evidence, supported TrueNAS `i2c-dev` boot persistence, ORACLE predictive health, and the first read-only AEGIS reliability increment.
 
-- Mission Control and structured events
-- Flight Deck and AutoPilot
-- native A125 graphics and instruments
-- pool, SMART, thermal, ZFS, and storage health monitoring
-- physical TVS-671 bay fault indication
-- historical telemetry
-- plugin API v1
-- hardware abstraction and command services
-- Project Stargate laboratory and safety model
-- native TrueNAS SCALE installation
+AEGIS passed formal review in PR #78 and remains undeployed on the reference NAS.
 
-## Path to 1.0
+The platform now includes:
 
-### Stability
+- a physical 16x2 LCD Flight Deck and button dispatcher;
+- a responsive Mission Control cockpit and Virtual Front Panel;
+- structured health monitoring and historical telemetry;
+- physical-to-logical storage and bay awareness;
+- guarded fan profiles and thermal readiness;
+- passive compatibility, Host readiness, fan-safety, and acceptance checks;
+- Preflight readiness and privacy-safe support bundles;
+- Pathfinder recovery sessions and machine verification;
+- Lifeline critical-SMART recovery;
+- HoloDeck Digital Twin and deterministic fault injection;
+- Black Box recording, replay, and incident compilation;
+- ORACLE adaptive baselines and developing-fault analysis;
+- AEGIS incident correlation and a CI-enforced Recovery Coverage Matrix;
+- guarded install, upgrade, rollback, repair, verify, cleanup, and uninstall;
+- Project Stargate hardware research and Plugin API v1.
 
-- reconcile multiple simultaneous storage fault details on the LCD
-- complete service restart and upgrade recovery tests
-- harden configuration migration and validation
-- add release-grade logging and diagnostics summaries
-- define supported TrueNAS upgrade procedures
+## Promotion record and graduation gates
 
-### User experience
+### 1. Preserve the accepted AEGIS baseline
 
-- finalize dashboard page ordering and naming
-- add screenshots and hardware photographs
-- improve button navigation and acknowledgement flows
-- provide configuration examples for quiet, tactical, and night modes
-- expose clearer storage topology and bay labels
+- PR #78 passed formal review, 2,348 tests, and installed-wheel smoke;
+- request-independent predictive sampling and fail-closed SMART/ZFS verification have dedicated regressions;
+- the reviewed commit history remains preserved;
+- later research, calibration, and deployment evidence belong on separate branches.
 
-### Packaging
+### 2. Calibrate predictive behavior
 
-- add complete project metadata and console entry points
-- define reproducible releases
-- add changelog and release notes
-- test clean installs from tagged archives
-- document backup and rollback procedures
+- persist ORACLE baselines safely across Mission Control restarts;
+- replay normal workload changes and known incidents from sanitized Black Box recordings;
+- measure false-positive rate, detection lead, and root-cause stability;
+- tune confidence weights from evidence rather than intuition;
+- retain clear `NORMAL`, `WATCH`, `DEVELOPING`, and `FAULT` authority boundaries.
 
-### Hardware
+### 3. Improve localization
 
-- keep TVS-671 as the verified reference platform
-- create a formal model profile interface
-- validate additional QNAP models through Stargate
-- graduate status LED control only after production policy is defined
-- expand fan and thermal support without unsafe writes
+- move from aggregate fan and hottest-drive evidence toward fan-zone and drive-bay relationships;
+- correlate PWM effort, delivered RPM, thermal sensors, drive temperatures, and physical topology;
+- report which zone, fan, bay, or interface most likely explains the incident;
+- preserve uncertainty when topology evidence is incomplete.
 
-### Plugins
+### 4. Complete live read-only evaluation
 
-- publish stable capability contracts
-- expand example plugins
-- add compatibility checks and clearer isolation reports
-- document versioning and migration rules
+- deploy only after an explicit approval and rollback plan;
+- observe BattleStation telemetry without actuation;
+- verify normal workloads do not generate misleading incidents;
+- confirm Mission Control remains excellent on desktop and phone;
+- compare AEGIS evidence with the physical LCD, service state, and existing watchers;
+- retain the production fingerprint and rollback generation.
 
-## Beyond 1.0
+### 5. Finish the documentation and visual record
 
-- remote status API
-- richer historical analysis
-- event export and notifications
-- additional LCD and OLED backends
-- declarative dashboard layouts
-- community hardware profiles
-- signed or verified plugin packages
+- keep README, Mission Control, architecture, installation, lifecycle, recovery, and release documentation synchronized;
+- replace stale screenshots after the final cockpit layout is accepted;
+- document stable versus experimental features plainly;
+- publish the Prior-Art Field Report and adopted-code provenance before incorporating external work.
+
+## Wide-net ecosystem expedition
+
+TruePanel should not rebuild solved problems merely because they were solved elsewhere.
+
+The project will search GitHub and the wider software ecosystem for transferable work in:
+
+- TrueNAS, QNAP, NAS, and homelab monitoring;
+- SMART analysis and predictive disk health;
+- anomaly detection and multi-signal root-cause analysis;
+- digital twins, record/replay, and deterministic fault injection;
+- incident management, runbooks, and machine-verifiable recovery;
+- hardware telemetry, BMC/IPMI, dashboards, and notification systems.
+
+Candidates will be evaluated for capability, maintenance health, tests, dependency weight, security posture, license compatibility, attribution, and verified time saved.
+
+Strong external work may be adopted or adapted behind a TruePanel-owned interface with provenance, required notices, and replacement tests. Ambiguously licensed, insecure, abandoned-risk, or unnecessarily heavy dependencies will be rejected.
+
+## Compatibility expansion
+
+- formalize community hardware profiles;
+- make passive compatibility evidence easier to submit and compare;
+- validate additional QNAP models through Stargate and HoloDeck fixtures;
+- separate portable capabilities from model-specific controls;
+- build a privacy-safe compatibility replay corpus;
+- document explicit commissioning gates for LCD, fan, buzzer, and bay-LED hardware.
+
+## Recovery expansion
+
+- extend the Recovery Coverage Matrix as new guidance codes are added;
+- deepen drive replacement, pool recovery, thermal, network, LCD, service, and telemetry runbooks;
+- add clearer human-physical-verification checkpoints;
+- preserve resolution evidence and recovery timelines;
+- explore safe notification and escalation integrations;
+- keep destructive or security-sensitive actions manual and guarded.
+
+## Mission Control evolution
+
+- retain the cockpit priority of need-to-know before nice-to-know;
+- keep phone usability as a release contract;
+- improve incident localization and evidence comparison;
+- add calm history views for predictions, incidents, actions, and verified recoveries;
+- make degraded or unavailable data obvious without creating alert fatigue;
+- preserve the Virtual Front Panel appearance and ordered hardware ownership.
+
+## HoloDeck and Black Box evolution
+
+- expand deterministic recovery scenarios;
+- converge older chaos vocabulary with current channel-, bay-, interface-, and sensor-specific events;
+- grow the privacy-safe calibration corpus;
+- add compatibility replay across hardware profiles;
+- turn verified field failures into minimal regression fixtures;
+- keep all generated artifacts bounded, sanitized, data-only, and hardware-isolated.
+
+## Longer horizon
+
+Possible later work includes:
+
+- notification and event-export integrations;
+- additional LCD or OLED backends;
+- richer plugin isolation and signed packages;
+- declarative Mission Control layouts;
+- community-maintained hardware profiles;
+- optional authenticated remote access patterns;
+- carefully bounded self-healing for actions that are proven reversible and independently verified.
+
+Self-healing is not a shortcut around recovery evidence. No automatic action should graduate until detection, rollback, verification, failure containment, and model-specific authority have all been demonstrated.
 
 ## Guiding rule
 
-New features should make the front panel more useful without making the appliance less trustworthy. Calm information, exact hardware control, and reproducible evidence remain the compass.
+TruePanel should make old hardware more understandable, repairable, and useful without making the appliance less trustworthy.
+
+Explore aggressively. Test assumptions. Reuse good ideas wherever they come from. Preserve hard safety floors around production stability, destructive storage operations, security, and hardware authority. Every detected fault should lead toward an actionable, verifiable recovery path.
