@@ -152,6 +152,83 @@ def test_reliability_engine_keeps_nominal_payload_read_only():
     assert result["coverage_summary"] == {"total": 8, "trusted": 8, "gaps": 0}
 
 
+
+def test_reliability_sampling_is_independent_of_duplicate_browser_reads():
+    engine = AegisReliabilityEngine(sample_interval_seconds=5.0)
+    payload = {
+        "timestamp": 100.0,
+        "operator_guidance": [],
+        "fans": {
+            "channels": [
+                {"number": 1, "monitored": True, "rpm": 1500, "pwm": 180},
+            ],
+            "control": {"thermal_hottest_temperature_c": 51},
+        },
+        "storage": {
+            "temperatures": [{"temperature_c": 36}],
+            "smart": [{"reallocated": 0}],
+        },
+        "network": [],
+    }
+
+    first = engine.observe(payload)
+    duplicate_payload = copy.deepcopy(payload)
+    duplicate_payload["timestamp"] = 101.0
+    duplicate_payload["fans"]["channels"][0]["rpm"] = 100
+    duplicate_payload["storage"]["smart"][0]["reallocated"] = 7
+    duplicate = engine.observe(duplicate_payload)
+
+    assert first["sampling"]["fresh_sample"] is True
+    assert duplicate["sampling"]["fresh_sample"] is False
+    assert duplicate["oracle"] == first["oracle"]
+    assert duplicate["sampling"]["sampled_at"] == 100.0
+    assert duplicate["sampling"]["request_count"] == 2
+
+    next_payload = copy.deepcopy(duplicate_payload)
+    next_payload["timestamp"] = 105.0
+    sampled = engine.observe(next_payload)
+
+    assert sampled["sampling"]["fresh_sample"] is True
+    assert sampled["sampling"]["sampled_at"] == 105.0
+    assert sampled["oracle"]["metrics"]["fan.rpm"]["value"] == 100.0
+    assert sampled["oracle"]["metrics"]["drive.smart_reallocated"]["value"] == 7.0
+
+
+def test_verified_alert_correlation_is_immediate_between_oracle_samples():
+    engine = AegisReliabilityEngine(sample_interval_seconds=5.0)
+    baseline = {
+        "timestamp": 100.0,
+        "operator_guidance": [],
+        "fans": {
+            "channels": [
+                {"number": 1, "monitored": True, "rpm": 1500, "pwm": 180},
+            ],
+            "control": {},
+        },
+        "storage": {},
+        "network": [],
+    }
+    first = engine.observe(baseline)
+
+    fault = copy.deepcopy(baseline)
+    fault["timestamp"] = 101.0
+    fault["operator_guidance"] = [
+        _card(
+            "cooling.fan_stall",
+            evidence={"fan_channel": 1, "current_rpm": 0},
+        )
+    ]
+    result = engine.observe(fault)
+
+    assert result["sampling"]["fresh_sample"] is False
+    assert result["oracle"] == first["oracle"]
+    assert result["state"] == "INCIDENT"
+    assert result["active_incident"]["contributing_alerts"] == [
+        "cooling.fan_stall"
+    ]
+
+
+
 def test_cataloged_thermal_and_stale_faults_have_live_detection_adapters():
     thermal = guidance_for_snapshot(
         {
@@ -250,6 +327,9 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "Safest next action" in source
         assert "Supporting signals" in source
         assert "Recovery Coverage Matrix" in source
+        assert 'window.addEventListener("truepanel:status"' in source
+        assert "window.setInterval" not in source
+        assert 'new CustomEvent("truepanel:status"' in dashboard.decode("utf-8")
     finally:
         server.shutdown()
         server.server_close()
