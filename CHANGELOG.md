@@ -22,9 +22,10 @@ guided, evidence-backed recovery and predictive reliability.
 - Added Project ORACLE adaptive baselines, trend and anomaly states,
   cross-signal correlation, Ghost Mode primitives, and slow-degradation
   HoloDeck scenarios.
-- Added the draft Project AEGIS read-only reliability layer, universal
-  Recovery Coverage Matrix, probable-cause correlation, verification
-  rehearsals, Black Box evidence capture, and mobile-first Reliability view.
+- Added Project AEGIS as a read-only reliability layer with a universal
+  Recovery Coverage Matrix, probable-cause correlation, request-independent
+  predictive sampling, verification rehearsals, Black Box evidence capture,
+  and a mobile-first Reliability view.
 - Added a current Mission Control and reliability operating guide and refreshed
   the platform overview, architecture, documentation map, and roadmap.
 
@@ -38,7 +39,7 @@ guided, evidence-backed recovery and predictive reliability.
   fault-specific verifier, deterministic regression coverage, and a passed
   fault-present-to-recovered rehearsal.
 - Documentation now distinguishes stable 1.2.0 behavior, accepted post-release
-  changes, and the unmerged AEGIS review candidate.
+  changes, and capabilities that remain undeployed on the reference NAS.
 
 ### Safety
 
@@ -49,8 +50,10 @@ guided, evidence-backed recovery and predictive reliability.
   explicitly read-only.
 - TrueNAS boot persistence uses the supported Init/Shutdown Scripts middleware
   contract rather than generic appliance filesystem configuration.
-- PR #78 and `feature/project-aegis` remain a frozen review baseline; later
-  calibration and ecosystem research belong on separate follow-up branches.
+- ORACLE baseline learning is bounded to one sample per telemetry interval and
+  cannot be accelerated by dashboard request volume.
+- SMART recovery remains fail-closed until critical SMART evidence is clear
+  and the independently observed ZFS member state is explicitly `ONLINE`.
 
 ### Validated
 
@@ -61,9 +64,11 @@ guided, evidence-backed recovery and predictive reliability.
   cause 27 samples before the first isolated lab threshold, reduced two
   terminal alerts to one operator incident, passed recovery rehearsal, and
   preserved two privacy-sanitized Black Box frames.
-- Draft PR #78 passed 57 focused reliability and recovery tests, 2,342 locally
-  runnable repository tests, installed-wheel smoke testing, JavaScript syntax,
-  responsive-layout contracts, and the authoritative GitHub Actions CI run.
+- PR #78 passed formal review and authoritative GitHub Actions run 1116:
+  2,348 tests passed, installed-wheel smoke passed, and regressions cover
+  request-independent sampling plus SMART/ZFS recovery verification.
+- The AEGIS increment was accepted into the post-1.2 development line without
+  deployment or live hardware access.
 
 ## [1.2.0] - 2026-08-19
 
