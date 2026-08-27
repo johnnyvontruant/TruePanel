@@ -91,6 +91,27 @@ At widths below 760 px the header, evidence grid, confidence block, and signal
 rows collapse to one column. Controls are intentionally absent because AEGIS is
 an analysis surface, not a repair actuator.
 
+## Sampling and browser independence
+
+Mission Control may have several dashboard surfaces and several connected
+browsers reading the same status API. AEGIS therefore advances ORACLE at most
+once per five-second telemetry interval rather than once per HTTP request.
+
+The engine caches the most recent ORACLE outlook behind a thread-safe sampling
+gate. Duplicate reads reuse that outlook, while correlation still evaluates
+the current verified guidance cards immediately. A newly detected hard alert
+therefore appears without waiting for the next predictive sample, but opening
+another browser cannot train the learned baseline faster.
+
+The Reliability view consumes the primary dashboard's shared status event and
+uses only a one-time fallback request if the initial event was missed. It does
+not add another recurring status poll.
+
+SMART recovery verification also fails closed unless both the critical SMART
+evidence is clear and the affected member's ZFS state is explicitly `ONLINE`.
+The verifier no longer claims an independent ZFS recheck without evaluating
+that evidence.
+
 ## Failed or rejected approaches
 
 - **Stack directly on the ORACLE draft branch:** rejected because that branch
