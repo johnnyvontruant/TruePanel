@@ -135,11 +135,11 @@ Lifeline joins SMART evidence with verified ZFS and physical-bay identity, fails
 - the guarded replacement or recovery procedure;
 - post-action verification.
 
-The goal is to make hardware replacement approachable without encouraging blind disk removal or destructive pool commands.
+The goal is to make hardware replacement approachable without encouraging blind disk removal or destructive pool commands. SMART recovery remains in verification until critical SMART evidence is clear and the independently observed ZFS member state is explicitly `ONLINE`.
 
 ## ORACLE predictive health
 
-Project ORACLE learns a component's normal behavior and evaluates rolling statistics, trends, and cross-signal relationships.
+Project ORACLE learns a component's normal behavior and evaluates rolling statistics, trends, and cross-signal relationships. Baseline learning is limited to one sample per telemetry interval, independent of browser request volume; Mission Control reuses the primary status stream instead of adding a recurring reliability poll.
 
 ORACLE states such as `WATCH` or `DEVELOPING` are predictive observations, not production hard-fault authority. Statistical drift cannot invent a failed disk, stalled fan, or overheated system without an independent detector.
 
@@ -162,7 +162,7 @@ Confidence measures mutually supporting evidence, not causal certainty. User-fac
 
 AEGIS has no fan, LCD, bay LED, storage, network, service, boot-task, or configuration write path.
 
-The current AEGIS draft proved a shared-cooling scenario in HoloDeck:
+The accepted AEGIS development increment proved a shared-cooling scenario in HoloDeck:
 
 - probable shared cause identified at sample 19;
 - first isolated threshold at sample 46;
@@ -173,7 +173,7 @@ The current AEGIS draft proved a shared-cooling scenario in HoloDeck:
 - two privacy-sanitized Black Box frames preserved;
 - no production mutation.
 
-AEGIS remains a draft review candidate and has not been deployed to the reference NAS.
+AEGIS is accepted in the post-1.2 development line and has not been deployed to the reference NAS.
 
 ## Recovery Coverage Matrix
 
