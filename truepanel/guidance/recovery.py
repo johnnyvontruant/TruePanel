@@ -94,6 +94,7 @@ def _state_for_card(card: dict[str, Any]) -> str:
 
 def _smart_verification(card: dict[str, Any]) -> dict[str, Any]:
     evidence = _dict(_dict(card.get("runtime")).get("evidence"))
+    zfs_state = _text(evidence.get("zfs_state")).upper()
     healthy = (
         _text(evidence.get("smart_health")).upper() not in {"FAILED"}
         and _integer(evidence.get("pending")) == 0
@@ -101,6 +102,7 @@ def _smart_verification(card: dict[str, Any]) -> dict[str, Any]:
         and _integer(evidence.get("media_errors")) == 0
         and _text(evidence.get("critical_warning")).lower()
         in {"", "0", "0x00", "0x0"}
+        and zfs_state == "ONLINE"
     )
     return {
         "strategy": "smart_and_zfs_recheck",
