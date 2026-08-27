@@ -2,7 +2,6 @@
 "use strict";
 
 const STATUS_URL="/api/v1/status";
-const POLL_MS=5000;
 const esc=value=>String(value??"")
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
@@ -66,7 +65,7 @@ function render(view,payload){
     `;
 }
 
-async function refresh(view){
+async function refreshFallback(view){
     try{
         const response=await fetch(STATUS_URL,{cache:"no-store",headers:{Accept:"application/json"}});
         if(!response.ok) throw new Error(`status ${response.status}`);
@@ -98,8 +97,17 @@ function install(){
     if(health) health.insertAdjacentElement("afterend",view);
     else host.prepend(view);
 
-    refresh(view);
-    window.setInterval(()=>refresh(view),POLL_MS);
+    let receivedSharedStatus=false;
+    window.addEventListener("truepanel:status",event=>{
+        const payload=event?.detail;
+        if(!payload||typeof payload!=="object") return;
+        receivedSharedStatus=true;
+        render(view,payload);
+    });
+
+    window.setTimeout(()=>{
+        if(!receivedSharedStatus) refreshFallback(view);
+    },500);
 }
 
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",install,{once:true});
