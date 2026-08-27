@@ -230,7 +230,7 @@ bash install.sh \
   --root /mnt/POOL/DATASET/TruePanel
 ```
 
-Inspect the plan and confirm the source tree, persistent install root, configuration behavior, Python runtime setup, CLI wrapper, all three service units, Mission Control environment, systemd reload, and Doctor step are expected. The preview must report that no directories were created, no files were copied or written, no dependencies were installed, and no services were changed.
+Inspect the plan and confirm the source tree, persistent install root, configuration behavior, Python runtime setup, CLI wrapper, all three service units, Mission Control environment, TrueNAS-managed `i2c-dev` POSTINIT task, systemd reload, and Doctor step are expected. The preview must report that no directories were created, no files were copied or written, no dependencies were installed, and no services were changed.
 
 For a genuinely fresh target, the installer must **not** import `truepanel.yaml`, `.env`, virtual environments, caches, local history, or plugin state from the source checkout. Source-local state is excluded from synchronization. Because Phase 3 proved the target config is absent, the installer must create its generic safe `truepanel.yaml` rather than copying machine-specific source configuration.
 
@@ -252,6 +252,7 @@ A successful fresh install lays down:
 - `truepanel.service`;
 - `truepanel-mission-control.service` and its environment file;
 - the dormant, marker-gated `truepanel-host-agent.service`.
+- an enabled TrueNAS `POSTINIT` command that loads `i2c-dev`.
 
 The installer does not start the primary LCD service, Mission Control, or the standalone Host Agent. Start only the two application services explicitly:
 
@@ -286,6 +287,11 @@ sudo ./bin/truepanel host acceptance \
   --root / \
   --config /mnt/POOL/DATASET/TruePanel/truepanel.yaml
 sudo ./bin/truepanel host cutover-plan
+sudo python3 \
+  truepanel/lifecycle/truenas_i2c.py \
+  verify
+test -d /sys/module/i2c_dev
+test -e /dev/i2c-0
 ```
 
 Verify service state:
@@ -393,6 +399,11 @@ Reboot the NAS using the normal TrueNAS administrative mechanism. After the syst
 sudo systemctl is-active truepanel.service
 sudo systemctl is-active truepanel-mission-control.service
 sudo systemctl is-active truepanel-host-agent.service || true
+sudo python3 \
+  /mnt/POOL/DATASET/TruePanel/truepanel/lifecycle/truenas_i2c.py \
+  verify
+test -d /sys/module/i2c_dev
+test -e /dev/i2c-0
 
 cd /mnt/POOL/DATASET/TruePanel
 sudo ./bin/truepanel verify \
@@ -407,7 +418,7 @@ sudo ./bin/truepanel host acceptance \
 test ! -e /run/truepanel/standalone-host-agent.enabled
 ```
 
-Post-reboot `host acceptance` must report `Host acceptance: PASS`. Also re-check the physical LCD, front-panel buttons, Mission Control status API, and recent service logs.
+Post-reboot `host acceptance` must report `Host acceptance: PASS`. The lifecycle verifier must report `managed` or `external`, and both the loaded module and reference `/dev/i2c-0` device must be present. Also re-check the physical LCD, front-panel buttons, Mission Control status API, and recent service logs.
 
 The standalone Host Agent must still be dormant after reboot.
 
@@ -425,6 +436,7 @@ Record at least:
 - Host acceptance result;
 - primary and Mission Control service state before and after reboot;
 - standalone Host Agent state before and after reboot;
+- i2c-dev POSTINIT task, loaded-module, and `/dev/i2c-0` result before and after reboot;
 - LCD/button result;
 - Mission Control API result;
 - any warnings or deviations.
