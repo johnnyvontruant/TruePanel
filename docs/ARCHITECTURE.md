@@ -36,7 +36,7 @@ truepanel-host-agent.service
 
 The installed LCD service launches `/mnt/POOL/DATASET/TruePanel/bin/truepanel run`.
 
-Mission Control is independently restartable. HTTP handlers do not directly operate serial, I2C, fan sysfs, bay LEDs, storage, the buzzer, or network configuration.
+Mission Control is independently restartable. HTTP handlers do not directly operate serial, I2C, fan sysfs, bay LEDs, storage, the buzzer, or network configuration. Validated configuration writes remain disabled by default. Files are replaced atomically, and a timestamped backup is created before replacement.
 
 ## State flow
 
