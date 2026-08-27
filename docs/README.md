@@ -15,7 +15,7 @@ This directory is the operating manual for the current TruePanel platform.
 - [Clean-install validation](CLEAN_INSTALL_VALIDATION.md)
 - [Clean-install Run 3 results](CLEAN_INSTALL_RUN3_RESULTS.md)
 - [Historical telemetry](HISTORICAL_TELEMETRY.md)
-- [Project AEGIS](PROJECT_AEGIS.md) for the draft correlation layer, Recovery Coverage Matrix, experiment evidence, and remaining gates
+- [Project AEGIS](PROJECT_AEGIS.md) for the accepted correlation layer, Recovery Coverage Matrix, experiment evidence, and remaining deployment gates
 - [Project HoloDeck](HOLODECK.md) for the hardware-isolated Digital Twin, fault injection, Black Box replay, invariant checks, and Incident Compiler
 
 Project Pathfinder and Lifeline are documented in the [Mission Control guide](MISSION_CONTROL.md) because their primary contract is operator-facing guided recovery.
