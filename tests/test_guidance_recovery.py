@@ -74,10 +74,23 @@ def test_smart_verification_requires_critical_evidence_to_clear():
             "offline_uncorrectable": 0,
             "media_errors": 0,
             "critical_warning": "0x00",
+            "zfs_state": "ONLINE",
+        },
+    )
+    smart_only = _card(
+        "storage.smart_warning",
+        phase="verify",
+        evidence={
+            "smart_health": "PASSED",
+            "pending": 0,
+            "offline_uncorrectable": 0,
+            "media_errors": 0,
+            "critical_warning": "0x00",
         },
     )
 
     assert recovery_contract(failed)["state"] == "verifying"
+    assert recovery_contract(smart_only)["state"] == "verifying"
     resolved = recovery_contract(healthy)
     assert resolved["state"] == "resolved"
     assert resolved["verification"]["status"] == "passed"
