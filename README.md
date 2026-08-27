@@ -83,7 +83,7 @@ The production reference system is:
 
 Other QNAP systems may share portions of this design, but they remain unverified until their controller paths, telemetry, and command maps are reproduced safely.
 
-## Check compatibility first
+## Check compatibility before installation
 
 Run the passive compatibility survey before installation on unknown hardware:
 
@@ -95,7 +95,7 @@ python3 truepanel.py compatibility
 
 The survey does not open the LCD controller, change fan PWM, operate bay LEDs, modify pools, or grant hardware-control authority. Results are classified as `SUPPORTED`, `PARTIAL`, `REVIEW`, or `UNSUPPORTED`.
 
-A `SUPPORTED` result authorizes the documented observation-first workflow only. Active hardware control must still be commissioned separately.
+A `SUPPORTED` result means the system is suitable for the documented observation-first workflow. It does **not** authorize active fan, LED, LCD, or other hardware control. Hardware control remains locked until the relevant hardware has been separately verified and commissioned.
 
 Generate a privacy-safe support bundle when review is needed:
 
