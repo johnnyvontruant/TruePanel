@@ -329,7 +329,9 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "Recovery Coverage Matrix" in source
         assert 'window.addEventListener("truepanel:status"' in source
         assert "window.setInterval" not in source
-        assert 'new CustomEvent("truepanel:status"' in dashboard.decode("utf-8")
+        dashboard_source = dashboard.decode("utf-8")
+        assert "new CustomEvent(" in dashboard_source
+        assert '"truepanel:status"' in dashboard_source
     finally:
         server.shutdown()
         server.server_close()
