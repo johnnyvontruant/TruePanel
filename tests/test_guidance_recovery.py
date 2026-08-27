@@ -74,10 +74,23 @@ def test_smart_verification_requires_critical_evidence_to_clear():
             "offline_uncorrectable": 0,
             "media_errors": 0,
             "critical_warning": "0x00",
+            "zfs_state": "ONLINE",
+        },
+    )
+    smart_only = _card(
+        "storage.smart_warning",
+        phase="verify",
+        evidence={
+            "smart_health": "PASSED",
+            "pending": 0,
+            "offline_uncorrectable": 0,
+            "media_errors": 0,
+            "critical_warning": "0x00",
         },
     )
 
     assert recovery_contract(failed)["state"] == "verifying"
+    assert recovery_contract(smart_only)["state"] == "verifying"
     resolved = recovery_contract(healthy)
     assert resolved["state"] == "resolved"
     assert resolved["verification"]["status"] == "passed"
@@ -107,6 +120,33 @@ def test_fault_verifiers_cover_fan_pool_network_and_thermal():
     assert verification_for_card(network)["status"] == "passed"
     assert verification_for_card(network_no_address)["status"] == "pending"
     assert verification_for_card(thermal)["status"] == "passed"
+
+
+def test_fault_verifiers_cover_front_panel_and_stale_telemetry():
+    lcd = _card(
+        "front_panel.lcd_unavailable",
+        evidence={"reader_connected": True, "dispatcher_alive": True},
+    )
+    stale = _card(
+        "telemetry.stale",
+        evidence={
+            "telemetry_fresh": True,
+            "missing_domains": [],
+            "safety_hold": False,
+        },
+    )
+    stale_missing = _card(
+        "telemetry.stale",
+        evidence={
+            "telemetry_fresh": True,
+            "missing_domains": ["hwmon"],
+            "safety_hold": False,
+        },
+    )
+
+    assert verification_for_card(lcd)["status"] == "passed"
+    assert verification_for_card(stale)["status"] == "passed"
+    assert verification_for_card(stale_missing)["status"] == "pending"
 
 
 def test_decorate_guidance_does_not_mutate_source():

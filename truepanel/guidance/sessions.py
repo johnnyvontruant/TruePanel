@@ -48,6 +48,7 @@ _SUBSYSTEM_FOR_CODE = {
     "storage.disk_faulted": "storage",
     "network.link_down": "network",
     "front_panel.lcd_unavailable": "front_panel",
+    "telemetry.stale": "thermal",
 }
 
 

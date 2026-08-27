@@ -12,6 +12,7 @@ import json
 from http import HTTPStatus
 from urllib.parse import urlparse
 
+from truepanel.aegis import AegisReliabilityEngine
 from truepanel.guidance.sessions import RecoverySessionStore
 
 from . import server as _server
@@ -32,6 +33,12 @@ _RECOVERY_ACTIONS = {
     "begin_verification": ("verifying", "operator_began_verification"),
     "return_to_diagnosis": ("diagnosing", "operator_returned_to_diagnosis"),
 }
+_RELIABILITY_SCRIPT = "reliability-view.js"
+_RELIABILITY_MARKER = b"<!-- truepanel-aegis-reliability -->"
+_RELIABILITY_TAG = (
+    _RELIABILITY_MARKER
+    + b'\n<script src="/reliability-view.js" defer></script>\n'
+)
 
 
 class MissionControlRequestHandler(_server.MissionControlRequestHandler):
@@ -41,6 +48,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == f"/{_RECOVERY_SCRIPT}":
             self._static_script(_RECOVERY_SCRIPT, "pathfinder_recovery_unavailable")
+            return
+        if parsed.path == f"/{_RELIABILITY_SCRIPT}":
+            self._static_script(_RELIABILITY_SCRIPT, "aegis_reliability_unavailable")
             return
         super().do_GET()
 
@@ -76,6 +86,8 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
                 tags += tag
         if _RECOVERY_MARKER not in body:
             tags += _RECOVERY_TAG
+        if _RELIABILITY_MARKER not in body:
+            tags += _RELIABILITY_TAG
 
         if tags:
             if b"</body>" in body:
@@ -88,10 +100,7 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
     def _status(self, parsed):
         del parsed
         payload = self.snapshot_service.status()
-        if not isinstance(payload, dict):
-            payload = {}
-        else:
-            payload = dict(payload)
+        payload = {} if not isinstance(payload, dict) else dict(payload)
 
         guidance = payload.get("operator_guidance")
         cards = guidance if isinstance(guidance, list) else []
@@ -100,10 +109,7 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
         payload["pathfinder_recovery"] = store.snapshot()
 
         storage = payload.get("storage")
-        if not isinstance(storage, dict):
-            storage = {}
-        else:
-            storage = dict(storage)
+        storage = {} if not isinstance(storage, dict) else dict(storage)
 
         try:
             mirror = self.server.bay_mirror_provider.snapshot()
@@ -119,6 +125,18 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
 
         storage["bay_mirror"] = mirror
         payload["storage"] = storage
+        try:
+            payload["reliability"] = self.server.aegis_reliability.observe(payload)
+        except (TypeError, ValueError, ArithmeticError):
+            payload["reliability"] = {
+                "schema_version": 1,
+                "project": "AEGIS",
+                "read_only": True,
+                "production_mutation": False,
+                "state": "UNKNOWN",
+                "active_incident": None,
+                "unavailable": True,
+            }
         self._json(payload)
 
     def _read_recovery_json(self, maximum=2048):
@@ -239,6 +257,7 @@ class MissionControlServer(_server.MissionControlServer):
         snapshot_service=None,
         *,
         recovery_session_store=None,
+        aegis_reliability=None,
         **kwargs,
     ):
         super().__init__(
@@ -249,6 +268,7 @@ class MissionControlServer(_server.MissionControlServer):
         self.recovery_session_store = (
             recovery_session_store or RecoverySessionStore()
         )
+        self.aegis_reliability = aegis_reliability or AegisReliabilityEngine()
         self.RequestHandlerClass = MissionControlRequestHandler
 
 

@@ -82,7 +82,7 @@ def _identity(card: dict[str, Any]) -> str:
         if _text(evidence.get(field))
     )
     digest = sha256(
-        f"{_text(card.get('code'))}|{identity}".encode("utf-8")
+        f"{_text(card.get('code'))}|{identity}".encode()
     ).hexdigest()[:16]
     return f"recovery:{digest}"
 
@@ -94,6 +94,7 @@ def _state_for_card(card: dict[str, Any]) -> str:
 
 def _smart_verification(card: dict[str, Any]) -> dict[str, Any]:
     evidence = _dict(_dict(card.get("runtime")).get("evidence"))
+    zfs_state = _text(evidence.get("zfs_state")).upper()
     healthy = (
         _text(evidence.get("smart_health")).upper() not in {"FAILED"}
         and _integer(evidence.get("pending")) == 0
@@ -101,6 +102,7 @@ def _smart_verification(card: dict[str, Any]) -> dict[str, Any]:
         and _integer(evidence.get("media_errors")) == 0
         and _text(evidence.get("critical_warning")).lower()
         in {"", "0", "0x00", "0x0"}
+        and zfs_state == "ONLINE"
     )
     return {
         "strategy": "smart_and_zfs_recheck",
@@ -178,6 +180,42 @@ def _thermal_verification(card: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _front_panel_verification(card: dict[str, Any]) -> dict[str, Any]:
+    evidence = _dict(_dict(card.get("runtime")).get("evidence"))
+    passed = (
+        evidence.get("reader_connected") is True
+        and evidence.get("dispatcher_alive") is True
+    )
+    return {
+        "strategy": "lcd_transport_recheck",
+        "automated": True,
+        "status": "passed" if passed else "pending",
+        "criteria": (
+            "The LCD reader reconnects and its dispatcher remains alive before "
+            "the front-panel incident is resolved."
+        ),
+    }
+
+
+def _telemetry_verification(card: dict[str, Any]) -> dict[str, Any]:
+    evidence = _dict(_dict(card.get("runtime")).get("evidence"))
+    missing = _list(evidence.get("missing_domains"))
+    passed = (
+        evidence.get("telemetry_fresh") is True
+        and not missing
+        and evidence.get("safety_hold") is not True
+    )
+    return {
+        "strategy": "telemetry_freshness_recheck",
+        "automated": True,
+        "status": "passed" if passed else "pending",
+        "criteria": (
+            "All required telemetry domains report fresh data and the safety "
+            "hold is clear across the recovery observation window."
+        ),
+    }
+
+
 def verification_for_card(card: dict[str, Any]) -> dict[str, Any]:
     """Return the safe telemetry verifier attached to a guidance code."""
 
@@ -192,6 +230,10 @@ def verification_for_card(card: dict[str, Any]) -> dict[str, Any]:
         return _network_verification(card)
     if code == "thermal.high_temperature":
         return _thermal_verification(card)
+    if code == "front_panel.lcd_unavailable":
+        return _front_panel_verification(card)
+    if code == "telemetry.stale":
+        return _telemetry_verification(card)
     return {
         "strategy": "operator_and_telemetry_recheck",
         "automated": False,

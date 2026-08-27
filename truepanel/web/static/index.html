@@ -2208,6 +2208,13 @@ async function refresh(){
 
         const data=await response.json();
 
+        window.dispatchEvent(
+            new CustomEvent(
+                "truepanel:status",
+                {detail:data}
+            )
+        );
+
         render(data);
         renderThermalArmControls(data);
 
