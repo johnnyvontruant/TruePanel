@@ -26,6 +26,7 @@ _REHEARSAL_EVIDENCE: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {
             "offline_uncorrectable": 1,
             "media_errors": 0,
             "critical_warning": "0x00",
+            "zfs_state": "ONLINE",
         },
         {
             "smart_health": "PASSED",
@@ -33,6 +34,7 @@ _REHEARSAL_EVIDENCE: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {
             "offline_uncorrectable": 0,
             "media_errors": 0,
             "critical_warning": "0x00",
+            "zfs_state": "ONLINE",
         },
     ),
     "storage.disk_faulted": (
