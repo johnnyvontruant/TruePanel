@@ -109,6 +109,33 @@ def test_fault_verifiers_cover_fan_pool_network_and_thermal():
     assert verification_for_card(thermal)["status"] == "passed"
 
 
+def test_fault_verifiers_cover_front_panel_and_stale_telemetry():
+    lcd = _card(
+        "front_panel.lcd_unavailable",
+        evidence={"reader_connected": True, "dispatcher_alive": True},
+    )
+    stale = _card(
+        "telemetry.stale",
+        evidence={
+            "telemetry_fresh": True,
+            "missing_domains": [],
+            "safety_hold": False,
+        },
+    )
+    stale_missing = _card(
+        "telemetry.stale",
+        evidence={
+            "telemetry_fresh": True,
+            "missing_domains": ["hwmon"],
+            "safety_hold": False,
+        },
+    )
+
+    assert verification_for_card(lcd)["status"] == "passed"
+    assert verification_for_card(stale)["status"] == "passed"
+    assert verification_for_card(stale_missing)["status"] == "pending"
+
+
 def test_decorate_guidance_does_not_mutate_source():
     card = _card("cooling.fan_stall", evidence={"current_rpm": 0})
     cards = [card]

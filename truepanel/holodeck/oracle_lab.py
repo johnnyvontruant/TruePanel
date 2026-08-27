@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 from truepanel.oracle.engine import OracleEngine, OracleState
 
@@ -46,7 +46,7 @@ def fan_bearing_degradation() -> OracleLabScenario:
         steps.append(
             OracleLabStep(
                 {
-                    "fan.pwm": 180.0 + index * 2.5,
+                    "fan.pwm": min(255.0, 180.0 + index * 2.5),
                     "fan.rpm": rpm,
                     "drive.temperature_c": 35.0 + index * 0.20,
                     "cpu.temperature_c": 48.0,

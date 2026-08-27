@@ -11,13 +11,13 @@ from __future__ import annotations
 
 import math
 from collections import deque
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from statistics import fmean, pstdev
-from typing import Iterable, Mapping
 
 
-class OracleState(str, Enum):
+class OracleState(StrEnum):
     """Project ORACLE outlook states."""
 
     NORMAL = "NORMAL"

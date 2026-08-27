@@ -27,6 +27,32 @@ def thermal_guidance_for_snapshot(payload: dict[str, Any]) -> list[dict[str, Any
         in {"HOT", "HIGH", "CRITICAL", "OVER_TEMPERATURE"}
     )
     if not active:
+        control = _dict(_dict(payload.get("fans")).get("control"))
+        recommended = str(
+            control.get("thermal_recommended_profile")
+            or control.get("thermal_simulated_profile")
+            or ""
+        ).strip().lower()
+        active = (
+            control.get("thermal_telemetry_valid") is True
+            and recommended == "afterburners"
+            and control.get("thermal_hottest_temperature_c") is not None
+        )
+        if active:
+            thermal = {
+                "sensor_label": "hottest thermal sensor",
+                "current_temperature_c": control.get(
+                    "thermal_hottest_temperature_c"
+                ),
+                "recent_peak_c": control.get("thermal_hottest_temperature_c"),
+                "temperature_trend": "elevated",
+                "fan_rpm": None,
+                "ambient_context": None,
+                "recovery_threshold_c": control.get(
+                    "thermal_recovery_threshold_c"
+                ),
+            }
+    if not active:
         return []
 
     evidence = {

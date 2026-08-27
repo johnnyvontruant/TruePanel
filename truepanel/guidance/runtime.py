@@ -454,6 +454,39 @@ def _front_panel_guidance(lcd: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _stale_telemetry_guidance(fans: dict[str, Any]) -> list[dict[str, Any]]:
+    """Surface an explicit Host thermal freshness failure without inference."""
+
+    control = _dict(fans.get("control"))
+    reason = _text(
+        control.get("thermal_control_reason")
+        or control.get("last_reason")
+    )
+    stale = (
+        control.get("thermal_telemetry_valid") is False
+        and "stale" in reason.lower()
+    )
+    if not stale:
+        return []
+
+    evidence = {
+        "telemetry_fresh": False,
+        "missing_domains": ["thermal"],
+        "host_agent_state": control.get("thermal_control_state"),
+        "control_authority": control.get("control_authority"),
+        "safety_hold": control.get("safety_hold"),
+        "reason": reason,
+    }
+    return [
+        _active_payload(
+            "telemetry.stale",
+            evidence=evidence,
+            phase="diagnose",
+            blocked_by=("fresh_telemetry_required",),
+        )
+    ]
+
+
 def guidance_for_snapshot(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Return active operator guidance for an existing Mission Control snapshot.
 
@@ -475,6 +508,7 @@ def guidance_for_snapshot(payload: dict[str, Any]) -> list[dict[str, Any]]:
     guidance.extend(_pool_guidance(storage))
     guidance.extend(_smart_guidance(storage))
     guidance.extend(_fan_stall_guidance(fans))
+    guidance.extend(_stale_telemetry_guidance(fans))
     guidance.extend(_network_link_guidance(network))
     if "lcd" in payload:
         guidance.extend(_front_panel_guidance(lcd))
