@@ -16,7 +16,11 @@ def _dict(value: Any) -> dict[str, Any]:
 
 
 def _list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    return []
 
 
 def _text(value: Any) -> str:
@@ -120,8 +124,8 @@ def checklist_for_guidance(card: dict[str, Any]) -> dict[str, Any]:
             "total": len(preflight),
         },
         "sections": _sections(card),
-        "warnings": list(_list(session.get("warnings"))),
-        "blocked_by": list(_list(session.get("blocked_by"))),
+        "warnings": _list(session.get("warnings")),
+        "blocked_by": _list(session.get("blocked_by")),
         "capabilities": {
             "can_identify_bay": bool(session.get("can_identify_bay", False)),
             "can_begin_physical_service": bool(
