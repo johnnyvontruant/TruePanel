@@ -325,7 +325,6 @@ def checklist_for_guidance(card: dict[str, Any]) -> dict[str, Any]:
         "progress": {
             "verified": verified,
             "total": len(preflight),
-            "remaining": int(hold.get("remaining", 0) or 0),
         },
         "hold": hold,
         "sections": _sections(card),
