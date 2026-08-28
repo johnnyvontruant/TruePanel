@@ -1,10 +1,11 @@
-"""Add health intelligence, operator guidance, and Lifeline repair sessions."""
+"""Add health intelligence, operator guidance, CHECKLIST, and Lifeline state."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from truepanel.guidance import guidance_for_snapshot
+from truepanel.guidance.checklist import checklists_for_guidance
 from truepanel.lifeline import attach_repair_sessions
 
 from .intelligence import HealthEvaluator
@@ -18,8 +19,9 @@ def augment_status_snapshot(
     """Return an additive health-aware copy of a status snapshot.
 
     Existing top-level values are preserved exactly. Health Intelligence,
-    operator guidance, and Lifeline only consume those values and publish
-    additive objects. Lifeline remains planning-only in this slice.
+    operator guidance, CHECKLIST, and Lifeline only consume those values and
+    publish additive objects. Lifeline and CHECKLIST remain planning-only in
+    this slice.
     """
 
     result = dict(payload)
@@ -67,6 +69,9 @@ def augment_status_snapshot(
     result["operator_guidance"] = attach_repair_sessions(
         guidance,
         context=lifeline_context,
+    )
+    result["operator_checklists"] = checklists_for_guidance(
+        result["operator_guidance"]
     )
 
     return result
