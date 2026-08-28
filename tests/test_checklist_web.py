@@ -62,8 +62,8 @@ def test_checklist_mobile_layout_collapses_to_single_column():
     )
 
     assert "@media(max-width:760px)" in source
-    assert ".cl-mission-rail,.cl-grid{grid-template-columns:1fr}" in source
-    assert ".cl-status-rail,.cl-head{display:block}" in source
+    assert ".ll-grid,.cl-grid,.cl-mission-rail{grid-template-columns:1fr}" in source
+    assert ".ll-head,.ll-ledger-title,.cl-status-rail,.cl-head{display:block}" in source
 
 
 def test_checklist_procedure_sections_are_expandable_without_completion_buttons():
@@ -75,3 +75,24 @@ def test_checklist_procedure_sections_are_expandable_without_completion_buttons(
     assert "checklistSections" in source
     assert "checklistPreflight" in source
     assert "checklistCapabilities" in source
+
+
+def test_generic_checklists_do_not_show_drive_replacement_capabilities():
+    source = (server.STATIC_DIR / "lifeline.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'String(checklist.code||"")!=="storage.disk_faulted"' in source
+    assert '["Safe diagnostics",true]' in source
+    assert '["Disruptive execution",false]' in source
+    assert '["Bay identify",caps.can_identify_bay]' in source
+
+
+def test_summary_rail_uses_presented_status_not_raw_backend_status():
+    source = (server.STATIC_DIR / "lifeline.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert "const key=checklistStatus(item).className" in source
+    assert "counts.active" in source
+    assert "ACTIVE</span>" in source
