@@ -114,11 +114,7 @@ def test_live_four_of_seven_state_explains_current_holds_and_authority() -> None
     preflight = {item["key"]: item for item in checklist["preflight"]}
 
     assert checklist["status"] == "hold"
-    assert checklist["progress"] == {
-        "verified": 4,
-        "total": 7,
-        "remaining": 3,
-    }
+    assert checklist["progress"] == {"verified": 4, "total": 7}
     assert checklist["hold"]["remaining"] == 3
     assert checklist["hold"]["current"] == 2
     assert checklist["hold"]["authority_boundaries"] == 1
@@ -155,11 +151,8 @@ def test_only_future_confirmation_remaining_becomes_authority_hold() -> None:
     )
 
     assert checklist["status"] == "authority_hold"
-    assert checklist["progress"] == {
-        "verified": 6,
-        "total": 7,
-        "remaining": 1,
-    }
+    assert checklist["progress"] == {"verified": 6, "total": 7}
+    assert checklist["hold"]["remaining"] == 1
     assert checklist["hold"]["current"] == 0
     assert checklist["hold"]["authority_boundaries"] == 1
     assert checklist["hold"]["next_gate"]["key"] == "replacement_confirmation"
