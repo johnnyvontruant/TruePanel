@@ -164,7 +164,7 @@ function checklistSections(sections){
 }
 
 function capabilityRows(checklist){
-    if(String(checklist.code||"")!=="storage.disk_faulted"){
+    if(String(checklist.recovery_kind||"generic")!=="drive_replacement"){
         return [
             ["Safe diagnostics",true],
             ["Disruptive execution",false],
