@@ -117,6 +117,12 @@ def seed_legacy_aliases(path):
             evidence = smart_evidence(device)
             key = f"drive:HDDs:raidz1-0:{device}"
             ledger = store._new_smart_session(key, evidence, identity=None)
+            # Strip fields introduced by the new implementation so this file
+            # faithfully represents the device-keyed records already present
+            # on BattleStation before stable identity existed.
+            ledger.pop("device_history", None)
+            ledger.pop("current_device", None)
+            ledger.pop("drive_identity", None)
             ledger["updated_at"] = current_time[0]
             current_time[0] += 10.0
         store._save()
