@@ -1,49 +1,14 @@
-"""Project CHECKLIST: evidence-bound recovery procedure state.
+"""Project CHECKLIST cockpit procedure payloads.
 
-CHECKLIST converts an active operator-guidance card into a deterministic,
-read-only procedure model for Mission Control. It never performs hardware,
-storage, networking, or fan-control actions. In particular, a checklist may
-explain that a destructive step exists while keeping that step blocked until a
-separate authority layer explicitly permits it.
+CHECKLIST is a presentation/state adapter, not a second repair engine. Generic
+operator guidance supplies the procedure text, while Project Lifeline remains
+the authority for evidence-bound drive-repair phases and gates. This module
+never performs hardware, storage, network, or fan-control actions.
 """
 
 from __future__ import annotations
 
 from typing import Any
-
-_PHASE_ORDER = (
-    "identify",
-    "diagnose",
-    "prepare_repair",
-    "repair",
-    "monitor_recovery",
-    "verify",
-    "complete",
-)
-
-_DRIVE_PREFLIGHT = (
-    ("member_identity", "Failed member positively identified", "member_identity_not_verified"),
-    ("vdev_topology", "VDEV topology verified", "vdev_topology_not_verified"),
-    ("remaining_redundancy", "Remaining redundancy verified", "remaining_redundancy_not_verified"),
-    ("physical_bay", "Physical bay positively identified", "physical_bay_not_verified"),
-    ("device_identity", "Current Linux device verified", "device_not_verified"),
-    ("capacity", "Failed-member capacity verified", "capacity_not_verified"),
-    (
-        "service_procedure",
-        "Chassis service procedure verified",
-        "chassis_service_procedure_not_verified",
-    ),
-    (
-        "backup_acknowledgement",
-        "Current backup acknowledged",
-        "backup_acknowledgement_required",
-    ),
-    (
-        "replacement_candidate",
-        "Replacement candidate validated",
-        "replacement_candidate_not_validated",
-    ),
-)
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -58,92 +23,20 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _phase_index(phase: str) -> int:
-    try:
-        return _PHASE_ORDER.index(phase)
-    except ValueError:
-        return 0
-
-
-def _procedure_step(
-    step: dict[str, Any],
-    *,
-    section: str,
-    action_gate: dict[str, Any],
-) -> dict[str, Any]:
-    destructive = bool(step.get("destructive", False))
-    requires_shutdown = bool(step.get("requires_shutdown", False))
-    risk = _text(step.get("risk")) or "safe"
-
-    blocked_by: list[str] = []
-    if destructive and not action_gate.get("destructive_actions_ready", False):
-        blocked_by.append("destructive_action_authority_required")
-    if requires_shutdown:
-        blocked_by.append("shutdown_state_not_verified")
-
+def _procedure_step(step: dict[str, Any], *, section: str) -> dict[str, Any]:
     return {
         "section": section,
         "title": _text(step.get("title")),
         "detail": _text(step.get("detail")),
-        "risk": risk,
-        "destructive": destructive,
-        "requires_shutdown": requires_shutdown,
-        "state": "blocked" if blocked_by else "pending",
-        "blocked_by": blocked_by,
+        "risk": _text(step.get("risk")) or "safe",
+        "destructive": bool(step.get("destructive", False)),
+        "requires_shutdown": bool(step.get("requires_shutdown", False)),
+        "state": "pending",
     }
 
 
-def _drive_preflight(
-    runtime: dict[str, Any],
-    action_gate: dict[str, Any],
-) -> list[dict[str, Any]]:
-    blocked = {
-        _text(reason)
-        for reason in _list(action_gate.get("blocked_by"))
-        if _text(reason)
-    }
+def _sections(card: dict[str, Any]) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
-
-    for key, title, blocker in _DRIVE_PREFLIGHT:
-        is_blocked = blocker in blocked
-        results.append(
-            {
-                "key": key,
-                "title": title,
-                "state": "hold" if is_blocked else "verified",
-                "blocked_by": [blocker] if is_blocked else [],
-            }
-        )
-
-    activity = _dict(_dict(runtime.get("evidence")).get("resilver_state"))
-    recovery_running = bool(activity.get("resilver_running", False))
-    results.append(
-        {
-            "key": "recovery_activity",
-            "title": "Conflicting replacement activity clear",
-            "state": "monitor" if recovery_running else "verified",
-            "blocked_by": ["resilver_in_progress"] if recovery_running else [],
-        }
-    )
-    return results
-
-
-def checklist_for_guidance(card: dict[str, Any]) -> dict[str, Any]:
-    """Build a read-only checklist from one active guidance card.
-
-    The function deliberately does not infer completion of human actions from
-    their position in a procedure. Only facts represented by runtime evidence
-    or action gates may be marked ``verified``. Human remediation remains
-    ``pending`` or ``blocked`` until a future authority/acknowledgement layer
-    records explicit evidence.
-    """
-
-    runtime = _dict(card.get("runtime"))
-    action_gate = _dict(runtime.get("action_gate"))
-    phase = _text(runtime.get("phase")) or "identify"
-    code = _text(card.get("code"))
-
-    sections: list[dict[str, Any]] = []
     for field, label in (
         ("immediate_actions", "Immediate actions"),
         ("diagnosis", "Diagnosis"),
@@ -151,77 +44,105 @@ def checklist_for_guidance(card: dict[str, Any]) -> dict[str, Any]:
         ("verification", "Verification"),
     ):
         steps = [
-            _procedure_step(
-                step,
-                section=field,
-                action_gate=action_gate,
-            )
+            _procedure_step(step, section=field)
             for step in _list(card.get(field))
             if isinstance(step, dict)
         ]
         if steps:
-            sections.append({"key": field, "title": label, "steps": steps})
+            results.append({"key": field, "title": label, "steps": steps})
+    return results
 
-    preflight: list[dict[str, Any]] = []
-    if code == "storage.disk_faulted":
-        preflight = _drive_preflight(runtime, action_gate)
 
-    holds = [
-        item
-        for item in preflight
-        if item.get("state") in {"hold", "monitor"}
-    ]
-    blocked_steps = [
-        step
-        for section in sections
-        for step in section["steps"]
-        if step.get("state") == "blocked"
-    ]
+def _lifeline_preflight(session: dict[str, Any]) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for gate in _list(session.get("gates")):
+        if not isinstance(gate, dict):
+            continue
+        satisfied = bool(gate.get("satisfied", False))
+        results.append(
+            {
+                "key": _text(gate.get("code")),
+                "title": _text(gate.get("title")),
+                "detail": _text(gate.get("detail")),
+                "risk": _text(gate.get("risk")) or "safe",
+                "state": "verified" if satisfied else "hold",
+            }
+        )
+    return results
 
+
+def _status(session: dict[str, Any], preflight: list[dict[str, Any]]) -> str:
+    phase = _text(session.get("phase"))
     if phase == "complete":
-        status = "complete"
-    elif holds:
-        status = "hold"
-    elif blocked_steps:
-        status = "ready_with_gates"
-    else:
-        status = "ready"
+        return "complete"
+    if phase == "monitor_recovery":
+        return "monitor"
+    if session.get("write_preconditions_complete") is True:
+        return "authority_hold"
+    if any(item.get("state") == "hold" for item in preflight):
+        return "hold"
+    return "ready"
 
+
+def checklist_for_guidance(card: dict[str, Any]) -> dict[str, Any]:
+    """Build a read-only cockpit checklist from one active guidance card.
+
+    CHECKLIST never marks human procedure text complete merely because the
+    workflow advanced. For drive recovery, only Lifeline gates backed by
+    observed evidence or explicit acknowledgements may be marked verified.
+    """
+
+    runtime = _dict(card.get("runtime"))
+    session = _dict(card.get("repair_session"))
+    preflight = _lifeline_preflight(session)
     verified = sum(item.get("state") == "verified" for item in preflight)
-    total = len(preflight)
+
+    phase = _text(session.get("phase")) or _text(runtime.get("phase")) or "diagnose"
+    phase_index = session.get("phase_index")
+    phase_count = session.get("phase_count")
 
     return {
         "version": 1,
-        "code": code,
-        "title": _text(card.get("title")),
+        "code": _text(card.get("code")),
+        "title": _text(session.get("title")) or _text(card.get("title")),
+        "summary": _text(session.get("summary")) or _text(card.get("summary")),
         "severity": _text(card.get("severity")),
         "active": bool(runtime.get("active", False)),
         "phase": phase,
-        "phase_index": _phase_index(phase),
-        "status": status,
+        "phase_index": phase_index,
+        "phase_count": phase_count,
+        "status": _status(session, preflight),
+        "target": _dict(session.get("target")),
         "evidence": _dict(runtime.get("evidence")),
         "preflight": preflight,
         "progress": {
             "verified": verified,
-            "total": total,
+            "total": len(preflight),
         },
-        "sections": sections,
-        "action_gate": {
-            "safe_checks": bool(action_gate.get("safe_checks", False)),
-            "physical_service_ready": bool(
-                action_gate.get("physical_service_ready", False)
+        "sections": _sections(card),
+        "warnings": list(_list(session.get("warnings"))),
+        "blocked_by": list(_list(session.get("blocked_by"))),
+        "capabilities": {
+            "can_identify_bay": bool(session.get("can_identify_bay", False)),
+            "can_begin_physical_service": bool(
+                session.get("can_begin_physical_service", False)
             ),
-            "destructive_actions_ready": bool(
-                action_gate.get("destructive_actions_ready", False)
+            "can_prepare_replacement": bool(
+                session.get("can_prepare_replacement", False)
             ),
-            "blocked_by": list(_list(action_gate.get("blocked_by"))),
+            "write_preconditions_complete": bool(
+                session.get("write_preconditions_complete", False)
+            ),
+            "can_execute_replacement": bool(
+                session.get("can_execute_replacement", False)
+            ),
         },
         "read_only": True,
     }
 
 
 def checklists_for_guidance(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Build CHECKLIST procedure state for every active guidance card."""
+    """Build CHECKLIST payloads for active operator-guidance cards."""
 
     return [
         checklist_for_guidance(card)
