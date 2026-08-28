@@ -156,6 +156,11 @@ def _replacement_fault_for_session(session: dict[str, Any]) -> dict[str, Any]:
     """
 
     original = dict(_safe_dict(session.get("original_fault")))
+
+    drive_identity = _safe_dict(session.get("drive_identity"))
+    if drive_identity:
+        original["drive_identity"] = dict(drive_identity)
+
     repair = _safe_dict(session.get("last_session"))
     target = _safe_dict(repair.get("target"))
 

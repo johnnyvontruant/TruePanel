@@ -22,27 +22,43 @@ def _candidate_for(
     target_bay = target.get("bay")
     target_device = str(target.get("device") or "").strip()
 
-    # Prefer an explicitly selected candidate. If none is selected, only use
-    # the candidate automatically when exactly one unambiguous record exists.
-    selected = [
-        item for item in candidates
-        if isinstance(item, dict) and item.get("selected") is True
-    ]
-    if len(selected) == 1:
-        return selected[0]
-    if selected:
-        return {"ambiguous": True}
+    def prepare(value: dict[str, Any]) -> dict[str, Any]:
+        item = dict(value)
+        candidate_device = str(item.get("device") or "").strip()
 
-    usable = [item for item in candidates if isinstance(item, dict)]
-    if len(usable) == 1:
-        item = dict(usable[0])
-        # Same-slot replacement may legitimately use the failed bay, but a
-        # candidate claiming to be the failed logical device is suspicious.
-        if target_device and str(item.get("device") or "").strip() == target_device:
+        # A hot-swap may legitimately reuse the old /dev/sdX path. Permit
+        # that only when replacement discovery has independently proven that
+        # the attached hardware identity differs from the original disk.
+        if (
+            target_device
+            and candidate_device == target_device
+            and item.get("identity_verified_distinct") is not True
+        ):
             item["ambiguous"] = True
+
         if target_bay is not None and item.get("bay") is None:
             item["expected_bay"] = target_bay
         return item
+
+    # Prefer an explicitly selected candidate. If none is selected, only use
+    # the candidate automatically when exactly one record exists.
+    selected = [
+        item
+        for item in candidates
+        if isinstance(item, dict) and item.get("selected") is True
+    ]
+    if len(selected) == 1:
+        return prepare(selected[0])
+    if selected:
+        return {"ambiguous": True}
+
+    usable = [
+        item
+        for item in candidates
+        if isinstance(item, dict)
+    ]
+    if len(usable) == 1:
+        return prepare(usable[0])
     if len(usable) > 1:
         return {"ambiguous": True}
     return None
