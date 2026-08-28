@@ -6,6 +6,8 @@ from collections.abc import Iterable, Mapping
 from copy import deepcopy
 from typing import Any
 
+from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
+
 _PRIORITY = {
     "storage.disk_faulted": 0,
     "storage.pool_degraded": 1,
@@ -30,10 +32,16 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _signal_evidence(outlook: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _signal_evidence(
+    outlook: Mapping[str, Any],
+    *,
+    matched: set[str] | None = None,
+) -> list[dict[str, Any]]:
     results = []
     metrics = _dict(outlook.get("metrics"))
     for key in _list(outlook.get("active_signals")):
+        if matched is not None and f"signal:{key}" not in matched:
+            continue
         metric = _dict(metrics.get(str(key)))
         if not metric:
             continue
@@ -94,6 +102,8 @@ def _verification_state(cards: list[dict[str, Any]]) -> str:
 def correlate_incident(
     cards: Iterable[dict[str, Any]],
     oracle_outlook: Mapping[str, Any] | None = None,
+    *,
+    policy: CorrelationPolicy | None = None,
 ) -> dict[str, Any] | None:
     """Consolidate related evidence into one probable-cause hypothesis.
 
@@ -104,58 +114,44 @@ def correlate_incident(
     active_cards = [card for card in cards if isinstance(card, dict)]
     active_cards.sort(key=lambda item: _PRIORITY.get(_text(item.get("code")), 99))
     outlook = dict(oracle_outlook or {})
-    correlations = {
-        _text(item.get("key")): item
-        for item in _list(outlook.get("correlations"))
-        if isinstance(item, dict)
-    }
-    oracle_signals = set(str(item) for item in _list(outlook.get("active_signals")))
-    card_codes = {_text(card.get("code")) for card in active_cards}
+    active_policy = policy or DEFAULT_CORRELATION_POLICY
+    match = active_policy.evaluate(active_cards, outlook)
 
-    cooling_signals = oracle_signals & {
-        "fan.pwm",
-        "fan.rpm",
-        "drive.temperature_c",
-        "cpu.temperature_c",
-    }
-    cooling_correlations = {
-        key for key in correlations if key in {"cooling.efficiency", "chassis.airflow"}
-    }
-    cooling_cards = card_codes & {"cooling.fan_stall", "thermal.high_temperature"}
-    cooling_strength = len(cooling_signals) + len(cooling_correlations) + len(cooling_cards)
-
-    if cooling_strength >= 2:
-        confidence = min(0.98, 0.50 + 0.08 * cooling_strength)
-        cause = "Shared chassis cooling degradation"
-        summary = (
-            "Fan delivery, cooling effort, and temperature evidence point to one "
-            "shared airflow cause rather than independent fan and thermal incidents."
-        )
+    if match is not None:
+        matched_keys = set(match.evidence_keys)
         relevant = [
             card
             for card in active_cards
-            if _text(card.get("code")) in {"cooling.fan_stall", "thermal.high_temperature"}
+            if _text(card.get("code")) in match.matched_alerts
         ]
         return {
-            "incident_id": "aegis:shared-cooling",
+            "incident_id": f"aegis:{match.rule.key}",
             "state": "active",
-            "likely_cause": cause,
-            "hypothesis": summary,
-            "confidence": round(confidence, 2),
+            "likely_cause": match.rule.likely_cause,
+            "hypothesis": match.rule.summary,
+            "confidence": match.confidence,
             "confidence_basis": {
-                "independent_signals": len(cooling_signals) + len(cooling_cards),
-                "correlation_rules": sorted(cooling_correlations),
-                "hard_alerts": sorted(cooling_cards),
+                "matched_evidence": list(match.evidence_keys),
+                "required_evidence_groups": [list(group) for group in match.rule.evidence_groups],
+                "base_confidence": match.rule.base_confidence,
+                "confidence_cap": match.rule.confidence_cap,
             },
-            "supporting_signals": _signal_evidence(outlook) + _card_evidence(relevant),
-            "contributing_alerts": sorted(cooling_cards),
+            "supporting_signals": _signal_evidence(outlook, matched=matched_keys)
+            + _card_evidence(relevant),
+            "contributing_alerts": list(match.matched_alerts),
             "consolidated_alert_count": 1,
-            "suppressed_duplicate_count": max(0, len(relevant) - 1),
+            "suppressed_duplicate_count": len(match.inhibited_alerts),
+            "presentation": {
+                "group_by": list(match.rule.group_by),
+                "inhibited_alerts": list(match.inhibited_alerts),
+                "raw_alerts_retained": True,
+            },
             "safest_next_action": _safe_action(
                 relevant,
                 "Reduce avoidable thermal load, check external airflow, and compare fan RPM against PWM effort.",
             ),
             "verification_state": _verification_state(relevant),
+            "verification_scenario": match.rule.verification_scenario,
             "read_only": True,
             "control_authority": False,
         }

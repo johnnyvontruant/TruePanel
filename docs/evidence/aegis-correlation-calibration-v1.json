@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "scenario": "aegis-correlation-calibration-v1",
+  "simulation": true,
+  "hardware_isolated": true,
+  "production_mutation": false,
+  "corpus_size": 4,
+  "confusion_matrix": {
+    "true_positive": 1,
+    "false_positive": 0,
+    "true_negative": 3,
+    "false_negative": 0
+  },
+  "precision": 1.0,
+  "recall": 1.0,
+  "specificity": 1.0,
+  "legacy_false_positive_scenarios": 2,
+  "results": [
+    {
+      "scenario": "fan-bearing-degradation",
+      "expected_shared_cooling": true,
+      "first_policy_match_index": 19,
+      "first_legacy_match_index": 19,
+      "first_isolated_threshold_index": 46,
+      "lead_samples": 27,
+      "challenge": "fan delivery falls while effort and downstream heat rise",
+      "passed": true
+    },
+    {
+      "scenario": "ambient-temperature-rise",
+      "expected_shared_cooling": false,
+      "first_policy_match_index": null,
+      "first_legacy_match_index": 23,
+      "first_isolated_threshold_index": null,
+      "lead_samples": null,
+      "challenge": "two thermal signals alone are not proof of fan degradation",
+      "passed": true
+    },
+    {
+      "scenario": "transient-rpm-sensor-spike",
+      "expected_shared_cooling": false,
+      "first_policy_match_index": null,
+      "first_legacy_match_index": null,
+      "first_isolated_threshold_index": 12,
+      "lead_samples": null,
+      "challenge": "one sensor excursion lacks corroborating effort or thermal evidence",
+      "passed": true
+    },
+    {
+      "scenario": "workload-temperature-rise",
+      "expected_shared_cooling": false,
+      "first_policy_match_index": null,
+      "first_legacy_match_index": 19,
+      "first_isolated_threshold_index": null,
+      "lead_samples": null,
+      "challenge": "healthy rising fan delivery distinguishes load from cooling loss",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "small deterministic corpus, not a production false-positive estimate",
+    "aggregate chassis signals, not yet localized by fan zone or drive bay"
+  ],
+  "evidence_sha256": "01467b7539ae613880ab1edd17435364066b59c324a9c920726041bbbb753cd8"
+}

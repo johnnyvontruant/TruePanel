@@ -33,6 +33,7 @@ function render(view,payload){
     const incident=reliability?.active_incident||null;
     const matrix=reliability?.coverage_matrix||{};
     const summary=reliability?.coverage_summary||{};
+    const policy=reliability?.correlation_policy||{};
     const oracleConfidence=Number(reliability?.oracle?.confidence||0);
     const confidence=Math.round(Number(incident?.confidence??oracleConfidence)*100);
     const state=incident
@@ -50,7 +51,7 @@ function render(view,payload){
     view.innerHTML=`
         <div class="ag-head">
             <div><span class="ag-kicker">Project AEGIS · Reliability Engineer</span><h2>Reliability</h2></div>
-            <div class="ag-badges"><span>READ-ONLY</span><span class="${gaps?"gap":"trusted"}">${trusted}/${total} TRUSTED</span></div>
+            <div class="ag-badges"><span>READ-ONLY</span><span>${esc(policy?.policy_id||"AEGIS POLICY")}</span><span class="${gaps?"gap":"trusted"}">${trusted}/${total} TRUSTED</span></div>
         </div>
         <div class="ag-hero">
             <div><span class="ag-state">${esc(state)}</span><h3>${esc(cause)}</h3><p>${esc(hypothesis)}</p></div>
@@ -61,7 +62,7 @@ function render(view,payload){
             <section><h4>Safest next action</h4><p class="ag-action">${esc(action)}</p><div class="ag-verify"><span>Verification</span><strong>${esc(title(verification))}</strong></div></section>
         </div>
         <details class="ag-coverage"><summary>Recovery Coverage Matrix <span>${gaps?`${gaps} gap${gaps===1?"":"s"}`:"complete"}</span></summary>${gapRows(matrix)}</details>
-        <p class="ag-safety">Correlation summarizes evidence; it does not hide the underlying alerts, grant control authority, or perform a repair.</p>
+        <p class="ag-safety">Correlation uses ${esc(policy?.semantics||"evidence grouping")}; it retains raw alerts, grants no control authority, and performs no repair.</p>
     `;
 }
 

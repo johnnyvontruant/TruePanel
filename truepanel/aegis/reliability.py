@@ -12,6 +12,7 @@ from truepanel.oracle import OracleEngine
 
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
+from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 from .rehearsal import rehearse_recovery_paths
 
 
@@ -49,6 +50,7 @@ class AegisReliabilityEngine:
         self,
         *,
         oracle: OracleEngine | None = None,
+        correlation_policy: CorrelationPolicy | None = None,
         sample_interval_seconds: float = 5.0,
     ) -> None:
         interval = _number(sample_interval_seconds)
@@ -56,6 +58,7 @@ class AegisReliabilityEngine:
             raise ValueError("AEGIS sample interval must be finite and positive")
 
         self.oracle = oracle or OracleEngine()
+        self.correlation_policy = correlation_policy or DEFAULT_CORRELATION_POLICY
         self.sample_interval_seconds = interval
         self.rehearsals = rehearse_recovery_paths()
         self.matrix = coverage_matrix(self.rehearsals)
@@ -189,7 +192,7 @@ class AegisReliabilityEngine:
             metrics=metrics,
             hard_faults=self._hard_faults(cards),
         )
-        incident = correlate_incident(cards, outlook)
+        incident = correlate_incident(cards, outlook, policy=self.correlation_policy)
         return {
             "schema_version": 1,
             "project": "AEGIS",
@@ -206,6 +209,7 @@ class AegisReliabilityEngine:
                 "request_count": self._sequence,
             },
             "coverage_matrix": self.matrix,
+            "correlation_policy": self.correlation_policy.describe(),
             "coverage_summary": {
                 "total": self.matrix["total"],
                 "trusted": self.matrix["trusted"],
