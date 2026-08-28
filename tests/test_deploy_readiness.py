@@ -9,8 +9,11 @@ def test_restart_deploy_waits_for_mission_control_application_readiness():
     source = DEPLOY.read_text(encoding="utf-8")
 
     restart = source.index('"$DEPLOYED_ROOT/start-truepanel.sh"')
-    wait = source.index("wait_for_mission_control")
-    ready = source.index("TruePanel services restored and application-ready.")
+    wait = source.index("\n  wait_for_mission_control\n", restart)
+    ready = source.index(
+        "TruePanel services restored and application-ready.",
+        wait,
+    )
 
     assert restart < wait < ready
     assert "/healthz" in source
