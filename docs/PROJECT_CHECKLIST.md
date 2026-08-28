@@ -38,6 +38,21 @@ Human procedure text is never marked complete merely because the workflow has
 advanced. Only Lifeline gates backed by observed evidence or explicit operator
 acknowledgements can appear as verified.
 
+## Mission Control presentation
+
+CHECKLIST renders inside the existing Flight Manual guidance cards rather than
+creating a competing recovery panel. The cockpit surface shows current phase,
+target identity, procedure state, machine-verified preflight gates, capability
+locks, warnings, and expandable recovery sections.
+
+Generic fault procedures expose only generic authority such as safe diagnostics
+and disruptive-action locks. Storage-specific capability rows such as bay
+identification and replacement readiness appear only for faulted-drive recovery.
+
+Existing guarded Lifeline actions remain responsible for verified bay
+identification and backup-state acknowledgement. CHECKLIST does not duplicate
+those controls or their confirmation boundaries.
+
 ## Storage safety floor
 
 Project CHECKLIST has no authority to offline, remove, replace, wipe, partition,
@@ -74,9 +89,9 @@ The first CHECKLIST vertical slice covers:
 - replacement and acknowledgement gates;
 - resilver monitoring;
 - explicit write-authority separation;
-- generic pending procedures for non-storage guidance such as network faults.
+- generic pending procedures for non-storage guidance such as network faults;
+- responsive Mission Control cockpit rendering inside the Flight Manual.
 
-Future work may add Mission Control interaction, durable operator
-acknowledgements, recovery history, rehearsal against HoloDeck, and additional
-fault-specific state evaluators. None of those additions may weaken the storage
-safety boundary described above.
+Future work may add richer guarded workflow controls, recovery history,
+rehearsal against HoloDeck, and additional fault-specific state evaluators.
+None of those additions may weaken the storage safety boundary described above.
