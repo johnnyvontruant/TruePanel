@@ -13,6 +13,14 @@ It does not replace Health Intelligence, Operator Guidance, or Project Lifeline.
 
 CHECKLIST is additive. It does not create a competing recovery system.
 
+## One active recovery, one primary presentation
+
+When CHECKLIST is available for an active repair session, it owns the single full-size current-recovery presentation in Mission Control. Lifeline must not reopen the same active procedure as a second full card beneath CHECKLIST.
+
+The persistent Repair Ledger is an audit/history surface, not a second cockpit. Active ledger entries are represented compactly and completed attempts are placed in compact, collapsible history. Ledger entries are de-duplicated by persistent session identity before rendering.
+
+The legacy full Lifeline repair card remains a fail-safe presentation only when no matching CHECKLIST payload is available.
+
 ## UI states
 
 CHECKLIST uses explicit state language:
@@ -49,6 +57,7 @@ At the mobile breakpoint:
 - status and header rails stack vertically;
 - mission target, phase, and procedure state become one column;
 - preflight and capability sections become one column;
+- compact Repair Ledger rows become one column;
 - procedure steps remain readable without horizontal scrolling;
 - chips wrap instead of forcing the card wider than the viewport;
 - existing Flight Manual and Lifeline controls remain reachable.
