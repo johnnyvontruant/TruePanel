@@ -90,6 +90,7 @@ def _disk_card(*, phase: str = "prepare", all_gates: bool = False) -> dict:
             "target": {
                 "pool": "HDDs",
                 "vdev": "raidz1-0",
+                "member_id": "/dev/sdc1",
                 "bay": 4,
                 "device": "sdc",
             },
@@ -122,10 +123,43 @@ def test_checklist_uses_lifeline_gates_as_preflight_truth() -> None:
 
     assert checklist["read_only"] is True
     assert checklist["status"] == "hold"
+    assert checklist["recovery_kind"] == "drive_replacement"
     assert states["member_identity"] == "verified"
     assert states["physical_identity"] == "verified"
     assert states["service_procedure"] == "hold"
     assert states["replacement_candidate"] == "hold"
+
+
+def test_smart_prefailure_with_lifeline_session_is_drive_recovery() -> None:
+    card = _disk_card()
+    card["code"] = "storage.smart_warning"
+    card["title"] = "Critical drive-health evidence detected"
+    card["runtime"]["phase"] = "diagnose"
+    card["runtime"]["evidence"] = {
+        "pool": "HDDs",
+        "vdev": "raidz1-0",
+        "bay": 3,
+        "device": "sda",
+        "pending": 1608,
+        "offline_uncorrectable": 1608,
+    }
+    card["repair_session"]["target"] = {
+        "pool": "HDDs",
+        "vdev": "raidz1-0",
+        "member_id": "/dev/sda1",
+        "bay": 3,
+        "device": "sda",
+        "trigger": "critical_smart_prefailure",
+    }
+
+    checklist = checklist_for_guidance(card)
+
+    assert checklist["code"] == "storage.smart_warning"
+    assert checklist["recovery_kind"] == "drive_replacement"
+    assert checklist["target"]["bay"] == 3
+    assert checklist["target"]["device"] == "sda"
+    assert checklist["capabilities"]["can_identify_bay"] is True
+    assert checklist["progress"]["total"] == 6
 
 
 def test_human_procedure_text_is_never_auto_completed() -> None:
@@ -186,6 +220,7 @@ def test_generic_guidance_remains_a_read_only_pending_procedure() -> None:
     assert checklist["preflight"] == []
     assert checklist["sections"][0]["steps"][0]["state"] == "pending"
     assert checklist["progress"] == {"verified": 0, "total": 0}
+    assert checklist["recovery_kind"] == "generic"
     assert checklist["read_only"] is True
 
 
