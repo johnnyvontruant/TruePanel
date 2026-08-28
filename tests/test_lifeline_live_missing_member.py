@@ -67,7 +67,11 @@ def test_missing_logical_member_opens_identify_session_without_fake_device(tmp_p
 
     assert len(sessions) == 1
     session = sessions[0]
-    assert session["fault_key"] == "drive:HDDs:raidz1-0:15571478626791065431"
+    assert session["fault_key"].startswith("drive:HDDs:raidz1-0:zfs:")
+    assert "15571478626791065431" not in session["fault_key"]
+    assert session["drive_identity"]["mode"] == "zfs_member"
+    assert session["drive_identity"]["raw_serial_exposed"] is False
+    assert session["drive_identity"]["raw_wwn_exposed"] is False
     assert session["original_fault"]["member_id"] == "15571478626791065431"
     assert session["original_fault"]["device"] is None
     assert session["original_fault"]["bay"] is None
