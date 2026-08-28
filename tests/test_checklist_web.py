@@ -82,10 +82,14 @@ def test_generic_checklists_do_not_show_drive_replacement_capabilities():
         encoding="utf-8"
     )
 
-    assert 'String(checklist.code||"")!=="storage.disk_faulted"' in source
+    assert (
+        'String(checklist.recovery_kind||"generic")!=="drive_replacement"'
+        in source
+    )
     assert '["Safe diagnostics",true]' in source
     assert '["Disruptive execution",false]' in source
     assert '["Bay identify",caps.can_identify_bay]' in source
+    assert 'String(checklist.code||"")!=="storage.disk_faulted"' not in source
 
 
 def test_summary_rail_uses_presented_status_not_raw_backend_status():
