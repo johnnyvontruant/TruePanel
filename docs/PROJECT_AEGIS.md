@@ -1,5 +1,11 @@
 # Project AEGIS
 
+The next calibration increment and its ecosystem decisions are recorded in the
+[AEGIS Prior-Art Field Report](AEGIS_PRIOR_ART_FIELD_REPORT.md). It leaves the
+accepted PR #78 baseline frozen and adds a replaceable declarative correlation
+policy, adversarial HoloDeck cases, and explicit provenance on a separate
+follow-up branch.
+
 Project AEGIS is TruePanel's read-only reliability-intelligence layer. It
 connects existing systems without replacing their authority:
 
@@ -136,6 +142,8 @@ that evidence.
   a larger corpus of sanitized Black Box recordings.
 - Current telemetry extraction uses aggregate monitored-fan and hottest-drive
   values; per-zone and per-bay correlations would improve localization.
+- The first policy calibration has a small deterministic corpus; its perfect
+  synthetic score is not a production false-positive estimate.
 - AEGIS has not been deployed or evaluated against live BattleStation data.
 
 The strongest next step is a Black Box calibration campaign: replay normal
