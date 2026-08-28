@@ -73,6 +73,95 @@ def _payload():
     }
 
 
+def _smart_lifeline_payload():
+    card = {
+        "code": "storage.smart_warning",
+        "title": "Critical drive-health evidence detected",
+        "summary": "Critical SMART evidence requires guided recovery.",
+        "severity": "critical",
+        "immediate_actions": [],
+        "diagnosis": [],
+        "remediation": [],
+        "verification": [],
+        "runtime": {
+            "active": True,
+            "phase": "diagnose",
+            "evidence": {
+                "pool": "HDDs",
+                "vdev": "raidz1-0",
+                "bay": 3,
+                "device": "sda",
+                "pending": 1608,
+                "offline_uncorrectable": 1608,
+            },
+        },
+        "repair_session": {
+            "phase": "prepare",
+            "phase_index": 3,
+            "phase_count": 9,
+            "title": "Guided drive recovery",
+            "summary": "Verify service prerequisites before physical service.",
+            "target": {
+                "pool": "HDDs",
+                "vdev": "raidz1-0",
+                "member_id": "/dev/sda1",
+                "bay": 3,
+                "device": "sda",
+                "trigger": "critical_smart_prefailure",
+            },
+            "gates": [
+                {
+                    "code": "member_identity",
+                    "title": "Faulted member identified",
+                    "detail": "Storage identity is verified.",
+                    "risk": "safe",
+                    "satisfied": True,
+                },
+                {
+                    "code": "physical_identity",
+                    "title": "Physical bay independently verified",
+                    "detail": "Bay 3 is independently verified.",
+                    "risk": "safe",
+                    "satisfied": True,
+                },
+                {
+                    "code": "replacement_candidate",
+                    "title": "Replacement candidate validated",
+                    "detail": "No replacement candidate is installed yet.",
+                    "risk": "destructive",
+                    "satisfied": False,
+                },
+            ],
+            "can_identify_bay": True,
+            "can_begin_physical_service": False,
+            "can_prepare_replacement": False,
+            "write_preconditions_complete": False,
+            "can_execute_replacement": False,
+            "blocked_by": ["replacement_candidate"],
+            "warnings": [],
+        },
+    }
+    return {
+        "operator_guidance": [card],
+        # Deliberately stale CHECKLIST state mirrors the live ordering bug that
+        # BattleStation exposed after SMART Lifeline enriched guidance.
+        "operator_checklists": [
+            {
+                "code": "storage.smart_warning",
+                "active": True,
+                "status": "ready",
+                "target": {},
+                "preflight": [],
+                "progress": {"verified": 0, "total": 0},
+                "capabilities": {"can_identify_bay": False},
+                "read_only": True,
+            }
+        ],
+        "health": {"subsystems": {"storage": {"state": "CRITICAL"}}},
+        "storage": {},
+    }
+
+
 def _request(server, method, path, *, body=None, headers=None):
     host, port = server.server_address
     connection = http.client.HTTPConnection(host, port, timeout=3)
@@ -91,10 +180,10 @@ def _request(server, method, path, *, body=None, headers=None):
         connection.close()
 
 
-def _server(tmp_path):
+def _server(tmp_path, payload=None):
     server = pathfinder_server.MissionControlServer(
         ("127.0.0.1", 0),
-        snapshot_service=_SnapshotService(_payload()),
+        snapshot_service=_SnapshotService(payload or _payload()),
         recovery_session_store=RecoverySessionStore(None),
         bay_mirror_provider=_BayMirror(),
         lifeline_identify_service=object(),
@@ -124,6 +213,30 @@ def test_status_publishes_durable_recovery_metadata(tmp_path):
         assert recovery["sessions"][0]["state"] == "detected"
         assert "interface" not in recovery["sessions"][0]
         assert "evidence" not in recovery["sessions"][0]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+
+
+def test_status_rebuilds_checklist_from_final_lifeline_guidance(tmp_path):
+    server, thread = _server(tmp_path, _smart_lifeline_payload())
+    try:
+        status, _, raw = _request(server, "GET", "/api/v1/status")
+        assert status == 200
+        payload = json.loads(raw)
+
+        guidance = payload["operator_guidance"][0]
+        checklist = payload["operator_checklists"][0]
+
+        assert guidance["repair_session"]["target"]["bay"] == 3
+        assert checklist["code"] == "storage.smart_warning"
+        assert checklist["recovery_kind"] == "drive_replacement"
+        assert checklist["target"]["bay"] == 3
+        assert checklist["target"]["device"] == "sda"
+        assert checklist["capabilities"]["can_identify_bay"] is True
+        assert checklist["progress"] == {"verified": 2, "total": 3}
+        assert checklist["status"] == "hold"
     finally:
         server.shutdown()
         server.server_close()

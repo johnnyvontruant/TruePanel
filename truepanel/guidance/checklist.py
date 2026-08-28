@@ -88,6 +88,25 @@ def _status(session: dict[str, Any], preflight: list[dict[str, Any]]) -> str:
     return "ready"
 
 
+def _recovery_kind(session: dict[str, Any]) -> str:
+    """Describe the recovery authority represented by a Lifeline session.
+
+    CHECKLIST presentation must not infer drive-replacement controls from one
+    particular fault code. SMART pre-failure and ZFS-faulted-member guidance can
+    both converge on the same evidence-bound drive-recovery session.
+    """
+
+    if not session:
+        return "generic"
+
+    target = _dict(session.get("target"))
+    has_storage_identity = bool(target.get("pool") or target.get("member_id"))
+    has_physical_identity = bool(target.get("device") or target.get("bay"))
+    if has_storage_identity and has_physical_identity:
+        return "drive_replacement"
+    return "lifeline"
+
+
 def checklist_for_guidance(card: dict[str, Any]) -> dict[str, Any]:
     """Build a read-only cockpit checklist from one active guidance card.
 
@@ -116,6 +135,7 @@ def checklist_for_guidance(card: dict[str, Any]) -> dict[str, Any]:
         "phase_index": phase_index,
         "phase_count": phase_count,
         "status": _status(session, preflight),
+        "recovery_kind": _recovery_kind(session),
         "target": _dict(session.get("target")),
         "evidence": _dict(runtime.get("evidence")),
         "preflight": preflight,
