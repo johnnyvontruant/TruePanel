@@ -2,7 +2,9 @@
 
 This extension preserves the established ZFS-fault repair contract while
 allowing replacement-worthy SMART evidence to open a metadata-only Lifeline
-session before ZFS marks the member unhealthy.  It adds no storage mutation
+session before ZFS marks the member unhealthy. Linux ``sdX`` names are treated
+as runtime addresses only; persistent incidents use privacy-safe stable drive
+identity whenever sufficient evidence exists. It adds no storage mutation
 authority.
 """
 
@@ -11,12 +13,20 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from .identity import DriveIdentity, DriveIdentityResolver
 from .store import LifelineSessionStore as _BaseLifelineSessionStore
 
 
 _DISK_FAULT_CODE = "storage.disk_faulted"
 _SMART_WARNING_CODE = "storage.smart_warning"
 _REQUIRED_HEALTHY_OBSERVATIONS = 3
+_IDENTITY_STRENGTH = {
+    "legacy_runtime_address": 0,
+    "correlated_evidence": 1,
+    "zfs_member": 2,
+    "serial_model": 3,
+    "wwn": 4,
+}
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -38,7 +48,7 @@ def _integer(value: Any) -> int:
         return 0
 
 
-def _fault_key(evidence: dict[str, Any]) -> str | None:
+def _legacy_fault_key(evidence: dict[str, Any]) -> str | None:
     pool = _text(evidence.get("pool"))
     vdev = _text(evidence.get("vdev"))
     device = _text(evidence.get("device"))
@@ -47,6 +57,39 @@ def _fault_key(evidence: dict[str, Any]) -> str | None:
     if not pool or not vdev or not identity:
         return None
     return f"drive:{pool}:{vdev}:{identity}"
+
+
+def _stable_fault_key(
+    evidence: dict[str, Any],
+    identity: DriveIdentity | None,
+) -> str | None:
+    pool = _text(evidence.get("pool"))
+    vdev = _text(evidence.get("vdev"))
+    if not pool or not vdev:
+        return None
+    if identity is None or identity.mode == "legacy_runtime_address":
+        return _legacy_fault_key(evidence)
+    return f"drive:{pool}:{vdev}:{identity.stable_key}"
+
+
+def _models_compatible(left: Any, right: Any) -> bool:
+    left_text = _text(left).upper()
+    right_text = _text(right).upper()
+    if not left_text or not right_text:
+        return True
+    return (
+        left_text == right_text
+        or left_text.startswith(right_text)
+        or right_text.startswith(left_text)
+    )
+
+
+def _identity_strength(value: Any) -> int:
+    return _IDENTITY_STRENGTH.get(_text(_dict(value).get("mode")), -1)
+
+
+def _device_from(value: dict[str, Any]) -> str:
+    return _text(value.get("device") or value.get("drive"))
 
 
 def _pool_state(payload: dict[str, Any], pool_name: str) -> str:
@@ -175,6 +218,46 @@ def _same_target(
     )
 
 
+def _strict_metadata_match(
+    evidence: dict[str, Any],
+    original: dict[str, Any],
+) -> bool:
+    """Correlate legacy aliases only with independent physical evidence."""
+
+    if not _text(evidence.get("pool")) or not _text(evidence.get("vdev")):
+        return False
+    if _text(evidence.get("pool")) != _text(original.get("pool")):
+        return False
+    if _text(evidence.get("vdev")) != _text(original.get("vdev")):
+        return False
+
+    try:
+        evidence_bay = int(evidence.get("bay") or evidence.get("physical_bay"))
+        original_bay = int(original.get("bay") or original.get("physical_bay"))
+    except (TypeError, ValueError):
+        return False
+    if evidence_bay <= 0 or evidence_bay != original_bay:
+        return False
+
+    evidence_serial = _text(evidence.get("serial_last4"))
+    original_serial = _text(original.get("serial_last4"))
+    if not evidence_serial or evidence_serial != original_serial:
+        return False
+
+    evidence_model = _text(evidence.get("model"))
+    original_model = _text(original.get("model"))
+    if not evidence_model or not original_model:
+        return False
+    if not _models_compatible(evidence_model, original_model):
+        return False
+
+    evidence_capacity = _integer(evidence.get("capacity_bytes"))
+    original_capacity = _integer(original.get("capacity_bytes"))
+    if evidence_capacity and original_capacity and evidence_capacity != original_capacity:
+        return False
+    return True
+
+
 def _smart_warning_present(
     guidance: list[Any],
     original: dict[str, Any],
@@ -240,12 +323,22 @@ def _replacement_identity_observed(
 
 
 class LifelineSessionStore(_BaseLifelineSessionStore):
-    """Add a fail-closed critical-SMART route beside the ZFS-fault route."""
+    """Add critical-SMART recovery plus stable physical-drive identity."""
+
+    def __init__(self, path=None, *, clock=None, identity_resolver=None) -> None:
+        super().__init__(path=path, clock=clock)
+        self.identity_resolver = identity_resolver or DriveIdentityResolver()
+
+    @staticmethod
+    def _public_identity(identity: DriveIdentity | None) -> dict[str, Any] | None:
+        return identity.to_public_dict() if identity is not None else None
 
     def _new_smart_session(
         self,
         key: str,
         evidence: dict[str, Any],
+        *,
+        identity: DriveIdentity | None = None,
     ) -> dict[str, Any]:
         ledger = super()._new_session(key, evidence)
         ledger["trigger_code"] = _SMART_WARNING_CODE
@@ -255,11 +348,322 @@ class LifelineSessionStore(_BaseLifelineSessionStore):
             "severity": "critical",
             "disposition": "prepare_replacement",
         }
+        self._record_identity(ledger, identity, evidence)
         return ledger
 
     @staticmethod
     def _trigger_code(ledger: dict[str, Any]) -> str:
         return _text(ledger.get("trigger_code")) or _DISK_FAULT_CODE
+
+    @staticmethod
+    def _session_evidence(ledger: dict[str, Any]) -> dict[str, Any]:
+        evidence = dict(_dict(ledger.get("original_fault")))
+        target = _dict(_dict(ledger.get("last_session")).get("target"))
+        for key, value in target.items():
+            if evidence.get(key) in (None, "") and value not in (None, ""):
+                evidence[key] = value
+        return evidence
+
+    @staticmethod
+    def _record_device_history(
+        ledger: dict[str, Any],
+        *devices: Any,
+    ) -> bool:
+        existing = [
+            _text(item)
+            for item in _list(ledger.get("device_history"))
+            if _text(item)
+        ]
+        changed = False
+        for value in devices:
+            device = _text(value)
+            if not device or device in existing:
+                continue
+            existing.append(device)
+            changed = True
+        if ledger.get("device_history") != existing:
+            ledger["device_history"] = existing
+            changed = True
+        return changed
+
+    def _record_identity(
+        self,
+        ledger: dict[str, Any],
+        identity: DriveIdentity | None,
+        evidence: dict[str, Any],
+    ) -> bool:
+        changed = False
+        device = _device_from(evidence)
+        if self._record_device_history(
+            ledger,
+            _device_from(_dict(ledger.get("original_fault"))),
+            device,
+        ):
+            changed = True
+        if device and ledger.get("current_device") != device:
+            ledger["current_device"] = device
+            changed = True
+
+        current_identity = _dict(ledger.get("drive_identity"))
+        current_strength = _identity_strength(current_identity)
+        incoming = self._public_identity(identity)
+        incoming_strength = _identity_strength(incoming)
+        same_identity = bool(
+            incoming
+            and _text(current_identity.get("stable_key"))
+            == _text(incoming.get("stable_key"))
+        )
+        if incoming and (
+            not current_identity
+            or same_identity
+            or incoming_strength > current_strength
+        ):
+            if current_identity != incoming:
+                ledger["drive_identity"] = incoming
+                changed = True
+        return changed
+
+    @staticmethod
+    def _identity_conflicts(
+        ledger: dict[str, Any],
+        identity: DriveIdentity | None,
+    ) -> bool:
+        if identity is None:
+            return False
+        existing = _dict(ledger.get("drive_identity"))
+        if not existing:
+            return False
+        existing_key = _text(existing.get("stable_key"))
+        if not existing_key or existing_key == identity.stable_key:
+            return False
+        existing_strength = _identity_strength(existing)
+        incoming_strength = _IDENTITY_STRENGTH.get(identity.mode, -1)
+        return bool(
+            existing_strength == incoming_strength
+            and existing_strength >= _IDENTITY_STRENGTH["zfs_member"]
+        )
+
+    def _matching_active_sessions(
+        self,
+        evidence: dict[str, Any],
+        identity: DriveIdentity | None,
+    ) -> list[dict[str, Any]]:
+        matches: list[dict[str, Any]] = []
+        for ledger in self._state["sessions"].values():
+            if not isinstance(ledger, dict) or ledger.get("status") != "active":
+                continue
+            existing_identity = _dict(ledger.get("drive_identity"))
+            if (
+                identity is not None
+                and _text(existing_identity.get("stable_key"))
+                == identity.stable_key
+            ):
+                matches.append(ledger)
+                continue
+            if self._identity_conflicts(ledger, identity):
+                continue
+            if _strict_metadata_match(evidence, self._session_evidence(ledger)):
+                matches.append(ledger)
+        return matches
+
+    @staticmethod
+    def _canonical_session(
+        candidates: list[dict[str, Any]],
+        evidence: dict[str, Any],
+        preferred_key: str,
+    ) -> dict[str, Any] | None:
+        if not candidates:
+            return None
+        for ledger in candidates:
+            if _text(ledger.get("fault_key")) == preferred_key:
+                return ledger
+        device = _device_from(evidence)
+        if device:
+            current = [
+                ledger
+                for ledger in candidates
+                if _device_from(_dict(ledger.get("original_fault"))) == device
+                or _text(ledger.get("current_device")) == device
+            ]
+            if current:
+                return max(
+                    current,
+                    key=lambda item: float(item.get("updated_at", 0.0) or 0.0),
+                )
+        return max(
+            candidates,
+            key=lambda item: float(item.get("updated_at", 0.0) or 0.0),
+        )
+
+    def _effective_fault_key(
+        self,
+        ledger: dict[str, Any],
+        proposed_key: str,
+        identity: DriveIdentity | None,
+    ) -> str:
+        existing_identity = _dict(ledger.get("drive_identity"))
+        existing_strength = _identity_strength(existing_identity)
+        incoming_strength = (
+            _IDENTITY_STRENGTH.get(identity.mode, -1)
+            if identity is not None
+            else -1
+        )
+        existing_key = _text(ledger.get("fault_key"))
+        if existing_identity and existing_strength > incoming_strength and existing_key:
+            return existing_key
+        return proposed_key
+
+    def _rekey_session(
+        self,
+        ledger: dict[str, Any],
+        key: str,
+    ) -> bool:
+        sessions = self._state["sessions"]
+        old_id = _text(ledger.get("id"))
+        old_key = _text(ledger.get("fault_key"))
+        if old_key == key and old_id in sessions:
+            return False
+
+        attempt = int(ledger.get("attempt", 1) or 1)
+        new_id = f"{key}:attempt-{attempt}"
+        collision = sessions.get(new_id)
+        if collision is not None and collision is not ledger:
+            attempt = self._next_attempt(key)
+            ledger["attempt"] = attempt
+            new_id = f"{key}:attempt-{attempt}"
+
+        legacy_ids = [
+            _text(value)
+            for value in _list(ledger.get("legacy_ids"))
+            if _text(value)
+        ]
+        legacy_keys = [
+            _text(value)
+            for value in _list(ledger.get("legacy_fault_keys"))
+            if _text(value)
+        ]
+        if old_id and old_id != new_id and old_id not in legacy_ids:
+            legacy_ids.append(old_id)
+        if old_key and old_key != key and old_key not in legacy_keys:
+            legacy_keys.append(old_key)
+
+        if old_id and sessions.get(old_id) is ledger:
+            sessions.pop(old_id)
+        ledger["id"] = new_id
+        ledger["fault_key"] = key
+        ledger["legacy_ids"] = legacy_ids
+        ledger["legacy_fault_keys"] = legacy_keys
+        sessions[new_id] = ledger
+        return True
+
+    def _merge_alias_sessions(
+        self,
+        canonical: dict[str, Any],
+        candidates: list[dict[str, Any]],
+        *,
+        key: str,
+        identity: DriveIdentity | None,
+        evidence: dict[str, Any],
+        now: float,
+    ) -> bool:
+        changed = False
+        ordered = sorted(
+            candidates,
+            key=lambda item: (
+                float(item.get("created_at", 0.0) or 0.0),
+                _text(item.get("id")),
+            ),
+        )
+        for ledger in ordered:
+            original = self._session_evidence(ledger)
+            if self._record_device_history(
+                canonical,
+                *_list(ledger.get("device_history")),
+                _device_from(original),
+            ):
+                changed = True
+
+        effective_key = self._effective_fault_key(canonical, key, identity)
+        if self._rekey_session(canonical, effective_key):
+            changed = True
+        if self._record_identity(canonical, identity, evidence):
+            changed = True
+
+        original = _dict(canonical.get("original_fault"))
+        current_device = _device_from(evidence)
+        if current_device and original.get("device") != current_device:
+            original["device"] = current_device
+            changed = True
+        member_id = evidence.get("member_id") or evidence.get("zfs_name")
+        if member_id not in (None, "") and original.get("member_id") != member_id:
+            original["member_id"] = member_id
+            changed = True
+        canonical["original_fault"] = original
+
+        canonical_id = _text(canonical.get("id"))
+        legacy_ids = [
+            _text(value)
+            for value in _list(canonical.get("legacy_ids"))
+            if _text(value)
+        ]
+        legacy_keys = [
+            _text(value)
+            for value in _list(canonical.get("legacy_fault_keys"))
+            if _text(value)
+        ]
+        for ledger in ordered:
+            if ledger is canonical:
+                continue
+            alias_id = _text(ledger.get("id"))
+            alias_key = _text(ledger.get("fault_key"))
+            if alias_id and alias_id not in legacy_ids:
+                legacy_ids.append(alias_id)
+            if alias_key and alias_key not in legacy_keys:
+                legacy_keys.append(alias_key)
+            if ledger.get("status") != "superseded":
+                ledger["status"] = "superseded"
+                changed = True
+            if ledger.get("superseded_by") != canonical_id:
+                ledger["superseded_by"] = canonical_id
+                changed = True
+            ledger["superseded_at"] = now
+            ledger["updated_at"] = now
+        if canonical.get("legacy_ids") != legacy_ids:
+            canonical["legacy_ids"] = legacy_ids
+            changed = True
+        if canonical.get("legacy_fault_keys") != legacy_keys:
+            canonical["legacy_fault_keys"] = legacy_keys
+            changed = True
+        return changed
+
+    def _resolve_active_session(
+        self,
+        evidence: dict[str, Any],
+        identity: DriveIdentity | None,
+        *,
+        now: float,
+    ) -> tuple[dict[str, Any] | None, str | None, bool]:
+        proposed_key = _stable_fault_key(evidence, identity)
+        if proposed_key is None:
+            return None, None, False
+
+        candidates = self._matching_active_sessions(evidence, identity)
+        exact = self._active_for_fault(proposed_key)
+        if exact is not None and all(item is not exact for item in candidates):
+            candidates.append(exact)
+        canonical = self._canonical_session(candidates, evidence, proposed_key)
+        if canonical is None:
+            return None, proposed_key, False
+
+        changed = self._merge_alias_sessions(
+            canonical,
+            candidates,
+            key=proposed_key,
+            identity=identity,
+            evidence=evidence,
+            now=now,
+        )
+        return canonical, _text(canonical.get("fault_key")), changed
 
     def _evaluate(
         self,
@@ -346,17 +750,26 @@ class LifelineSessionStore(_BaseLifelineSessionStore):
                 if is_smart_fault:
                     evidence = _device_evidence(result, evidence)
 
-                key = _fault_key(evidence)
+                identity = self.identity_resolver.resolve(evidence)
+                ledger, key, migrated = self._resolve_active_session(
+                    evidence,
+                    identity,
+                    now=now,
+                )
+                changed = changed or migrated
                 if key is None:
                     continue
 
-                seen_faults.add(key)
-                ledger = self._active_for_fault(key)
                 if ledger is None:
                     if is_smart_fault:
-                        ledger = self._new_smart_session(key, evidence)
+                        ledger = self._new_smart_session(
+                            key,
+                            evidence,
+                            identity=identity,
+                        )
                     else:
                         ledger = super()._new_session(key, evidence)
+                        self._record_identity(ledger, identity, evidence)
                     changed = True
                 elif (
                     is_disk_fault
@@ -371,6 +784,9 @@ class LifelineSessionStore(_BaseLifelineSessionStore):
                     # An established ZFS fault remains authoritative.
                     continue
 
+                if self._record_identity(ledger, identity, evidence):
+                    changed = True
+                seen_faults.add(_text(ledger.get("fault_key")))
                 if ledger.get("healthy_observations") != 0:
                     ledger["healthy_observations"] = 0
                     changed = True
