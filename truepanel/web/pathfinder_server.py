@@ -13,6 +13,7 @@ from http import HTTPStatus
 from urllib.parse import urlparse
 
 from truepanel.aegis import AegisReliabilityEngine
+from truepanel.guidance.checklist import checklists_for_guidance
 from truepanel.guidance.sessions import RecoverySessionStore
 
 from . import server as _server
@@ -105,7 +106,13 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
         guidance = payload.get("operator_guidance")
         cards = guidance if isinstance(guidance, list) else []
         store = self.server.recovery_session_store
-        payload["operator_guidance"] = store.observe_snapshot(cards, payload)
+        cards = store.observe_snapshot(cards, payload)
+        payload["operator_guidance"] = cards
+        # Persistent SMART Lifeline and Pathfinder enrich guidance after the
+        # core health snapshot first materializes CHECKLIST. Rebuild CHECKLIST
+        # from the final guidance cards so both API surfaces describe the same
+        # evidence-bound repair session in the same response.
+        payload["operator_checklists"] = checklists_for_guidance(cards)
         payload["pathfinder_recovery"] = store.snapshot()
 
         storage = payload.get("storage")
@@ -194,7 +201,7 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             self._json(
                 {
                     "error": "pathfinder_transition_rejected",
-                    "message": "Recovery workflow accepts only incident_id and a named workflow action.",
+                    "message": "Pathfinder workflow accepts only incident_id and a named workflow action.",
                 },
                 status=HTTPStatus.UNPROCESSABLE_ENTITY,
             )

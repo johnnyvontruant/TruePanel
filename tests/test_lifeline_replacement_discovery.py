@@ -1,6 +1,7 @@
 import json
 from types import SimpleNamespace
 
+from truepanel.lifeline.identity import DriveIdentityResolver
 from truepanel.lifeline.replacement import (
     ReplacementCandidateProvider,
     parse_block_signatures,
@@ -32,6 +33,12 @@ class Inventory:
 
     def devices(self):
         return list(self._items)
+
+    def find_device(self, name):
+        for item in self._items:
+            if item.device == name:
+                return item
+        return None
 
 
 def signatures(*nodes):
@@ -113,16 +120,13 @@ def test_same_slot_new_serial_can_be_replacement_candidate():
     assert candidate["ambiguous"] is False
 
 
-def test_same_path_without_serial_change_is_ambiguous():
+def test_same_path_without_serial_change_is_not_a_replacement():
     provider = ReplacementCandidateProvider(
         inventory=Inventory(device("sdc", serial="OLD00001")),
         signature_runner=lambda: signatures(clean_disk()),
     )
 
-    candidate = provider.candidates(fault())[0]
-
-    assert candidate["ambiguous"] is True
-    assert candidate["same_slot_replacement"] is False
+    assert provider.candidates(fault()) == []
 
 
 def test_existing_partition_signature_is_preserve_data_risk():
@@ -197,3 +201,108 @@ def test_online_zfs_member_is_not_recommended_as_free_media():
     )[0]
 
     assert candidate["member_of_pool"] is True
+
+
+
+def _stable_identity(name, serial):
+    inventory = Inventory(device(name, serial=serial))
+    resolver = DriveIdentityResolver(
+        inventory=inventory,
+        udev_runner=lambda unused_device: "",
+    )
+    identity = resolver.resolve(
+        {
+            "device": name,
+            "bay": 3,
+            "model": "ST8000NE001",
+            "serial_last4": serial[-4:],
+            "capacity_bytes": 8_000_000_000_000,
+        }
+    )
+    assert identity is not None
+    return identity.to_public_dict()
+
+
+def test_original_disk_renamed_is_excluded_by_stable_identity():
+    original_identity = _stable_identity("sdc", "OLD00001")
+    inventory = Inventory(device("sda", serial="OLD00001"))
+    resolver = DriveIdentityResolver(
+        inventory=inventory,
+        udev_runner=lambda unused_device: "",
+    )
+    provider = ReplacementCandidateProvider(
+        inventory=inventory,
+        identity_resolver=resolver,
+        signature_runner=lambda: signatures(clean_disk("sda")),
+    )
+
+    candidates = provider.candidates(
+        fault(
+            device="sdc",
+            serial_last4=None,
+            drive_identity=original_identity,
+        ),
+        storage_devices=[
+            {
+                "device": "sda",
+                "zfs_state": "FAULTED",
+            }
+        ],
+    )
+
+    assert candidates == []
+
+
+def test_new_disk_can_reuse_failed_runtime_path_when_identity_differs():
+    original_identity = _stable_identity("sdc", "OLD00001")
+    inventory = Inventory(device("sdc", serial="NEW00002"))
+    resolver = DriveIdentityResolver(
+        inventory=inventory,
+        udev_runner=lambda unused_device: "",
+    )
+    provider = ReplacementCandidateProvider(
+        inventory=inventory,
+        identity_resolver=resolver,
+        signature_runner=lambda: signatures(clean_disk("sdc")),
+    )
+
+    candidates = provider.candidates(
+        fault(
+            serial_last4=None,
+            drive_identity=original_identity,
+        ),
+        storage_devices=[
+            {
+                "device": "sdc",
+                "zfs_state": "FAULTED",
+            }
+        ],
+    )
+
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate["device"] == "sdc"
+    assert candidate["identity_verified_distinct"] is True
+    assert candidate["same_slot_replacement"] is True
+    assert candidate["member_of_pool"] is False
+    assert candidate["ambiguous"] is False
+
+
+def test_unknown_identity_does_not_fabricate_replacement_candidate():
+    inventory = Inventory(device("sdc", serial=""))
+    resolver = DriveIdentityResolver(
+        inventory=inventory,
+        udev_runner=lambda unused_device: "",
+    )
+    provider = ReplacementCandidateProvider(
+        inventory=inventory,
+        identity_resolver=resolver,
+        signature_runner=lambda: signatures(clean_disk("sdc")),
+    )
+
+    assert provider.candidates(
+        fault(
+            serial_last4=None,
+            drive_identity=None,
+        )
+    ) == []

@@ -153,3 +153,58 @@ def test_resilver_forces_monitor_recovery_even_with_context():
     repair = session(result)
     assert repair["phase"] == "monitor_recovery"
     assert repair["can_execute_replacement"] is False
+
+
+
+def test_identity_verified_replacement_may_reuse_failed_runtime_path():
+    result = attach_repair_sessions(
+        [disk_guidance()],
+        context={
+            "service_procedure_verified": True,
+            "bay_identity_verified": True,
+            "acknowledgements": {"backup_state": True},
+            "replacement_candidates": [
+                {
+                    "device": "sdc",
+                    "bay": 3,
+                    "capacity_bytes": 8_000_000_000_000,
+                    "member_of_pool": False,
+                    "contains_preserved_data": False,
+                    "identity_verified_distinct": True,
+                }
+            ],
+        },
+    )
+
+    repair = session(result)
+
+    assert repair["replacement"]["device"] == "sdc"
+    assert repair["replacement"]["valid"] is True
+    assert repair["phase"] == "replacement_ready"
+
+
+def test_unverified_replacement_reusing_failed_path_remains_ambiguous():
+    result = attach_repair_sessions(
+        [disk_guidance()],
+        context={
+            "service_procedure_verified": True,
+            "bay_identity_verified": True,
+            "acknowledgements": {"backup_state": True},
+            "replacement_candidates": [
+                {
+                    "device": "sdc",
+                    "bay": 3,
+                    "capacity_bytes": 8_000_000_000_000,
+                    "member_of_pool": False,
+                    "contains_preserved_data": False,
+                }
+            ],
+        },
+    )
+
+    repair = session(result)
+
+    assert repair["replacement"]["valid"] is False
+    assert "replacement_identity_ambiguous" in (
+        repair["replacement"]["reasons"]
+    )

@@ -88,6 +88,43 @@ def test_lifeline_renders_repair_prerequisites_and_replacement_validation():
     assert "can_execute_replacement" in source
 
 
+def test_checklist_owns_primary_active_recovery_presentation():
+    source = (server.STATIC_DIR / "lifeline.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert "CHECKLIST is the primary current-recovery presentation" in source
+    assert "if(checklistCodes.has(code)||renderedFallback.has(code)) continue" in source
+    assert "Active recovery is presented once in Project CHECKLIST above." in source
+    assert "The ledger keeps identity and progress without opening another full recovery card." in source
+
+
+def test_lifeline_ledger_deduplicates_by_persistent_session_identity():
+    source = (server.STATIC_DIR / "lifeline.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert "function ledgerIdentity(item)" in source
+    assert 'if(item&&item.id) return `id:${item.id}`' in source
+    assert "function dedupeLedger(items)" in source
+    assert "const ledger=dedupeLedger" in source
+    assert 'data-lifeline-session-id=' in source
+
+
+def test_repair_ledger_uses_compact_rows_instead_of_reopening_full_cards():
+    source = (server.STATIC_DIR / "lifeline.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert "function ledgerRow(item)" in source
+    assert 'class="ll-ledger-row' in source
+    assert "Recent repair history" in source
+    assert "active.map(ledgerRow)" in source
+    assert "recentCompleted.map(ledgerRow)" in source
+    assert "[...active,...completed.slice(-3)]" not in source
+    assert "visible.map(item=>item&&item.last_session?sessionCard" not in source
+
+
 def test_lifeline_python_session_has_no_subprocess_or_storage_write_client():
     session = Path("truepanel/lifeline/session.py").read_text(encoding="utf-8")
     store = Path("truepanel/lifeline/store.py").read_text(encoding="utf-8")
