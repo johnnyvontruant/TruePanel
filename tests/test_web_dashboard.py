@@ -801,3 +801,69 @@ def test_dashboard_collapses_history_and_diagnostics_by_default():
         not in source
     )
     assert ".diagnostics-drawer[open]>summary" in source
+
+
+
+def test_advanced_thermal_controls_use_collapsed_drawer():
+    source = dashboard_source()
+
+    drawer = (
+        '<details id="thermalAdvancedControls" '
+        'class="diagnostics-drawer thermal-controls-drawer">'
+    )
+
+    assert drawer in source
+    assert (
+        '<small id="thermalAdvancedSummary">'
+        'Checking thermal-control state'
+        '</small>'
+    ) in source
+    assert (
+        '<details id="thermalAdvancedControls" '
+        'class="diagnostics-drawer thermal-controls-drawer" open>'
+    ) not in source
+
+    start = source.index(drawer)
+    end = source.index(
+        "</details>",
+        start,
+    )
+
+    for control_id in (
+        "thermalArm",
+        "thermalSupervisedLive",
+        "thermalAutomaticLease",
+        "thermalRenewAutomatic",
+        "thermalCancelAutomatic",
+        "thermalDisarm",
+        "thermalArmMessage",
+    ):
+        position = source.index(
+            f'id="{control_id}"'
+        )
+        assert start < position < end
+
+    assert (
+        'q("thermalAdvancedSummary").textContent='
+        in source
+    )
+    assert (
+        'advancedModeLabel="Observe only";'
+        in source
+    )
+    assert (
+        'advancedModeLabel="Stage 3 automatic";'
+        in source
+    )
+    assert (
+        'advancedModeLabel="Supervised live";'
+        in source
+    )
+    assert (
+        'const advancedDrawer=q('
+        in source
+    )
+    assert (
+        "advancedDrawer.open=true;"
+        in source
+    )
