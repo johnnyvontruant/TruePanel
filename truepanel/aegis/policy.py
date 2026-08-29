@@ -128,6 +128,12 @@ class DeclarativeCorrelationPolicy:
             "replaceable": True,
             "rule_count": len(self.rules),
             "verification_scenarios": [rule.verification_scenario for rule in self.rules],
+            "calibration": {
+                "corpus_id": "aegis-black-box-corpus-v1",
+                "scope": "deterministic_fixture",
+                "production_validated": False,
+                "evidence": "docs/evidence/aegis-black-box-corpus-v1.json",
+            },
             "provenance": {
                 "project": "Prometheus Alertmanager",
                 "license": "Apache-2.0",
@@ -200,7 +206,7 @@ SHARED_COOLING_RULE = HypothesisRule(
     ),
     group_by=("physical_domain", "probable_cause"),
     inhibits=("thermal.high_temperature",),
-    verification_scenario="aegis-correlation-calibration-v1",
+    verification_scenario="aegis-black-box-corpus-v1",
 )
 
 DEFAULT_CORRELATION_POLICY = DeclarativeCorrelationPolicy((SHARED_COOLING_RULE,))

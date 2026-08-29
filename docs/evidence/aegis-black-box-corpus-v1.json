@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "corpus_id": "aegis-black-box-corpus-v1",
+  "corpus_sha256": "c5086044e7a23a83a59b870b6396e73e165400bca9a520e7b2aa6321219f27e5",
+  "source": "deterministic-synthetic",
+  "privacy": "sanitized",
+  "simulation": true,
+  "hardware_isolated": true,
+  "production_mutation": false,
+  "corpus_size": 6,
+  "frame_count": 193,
+  "confusion_matrix": {
+    "true_positive": 1,
+    "false_positive": 0,
+    "true_negative": 5,
+    "false_negative": 0
+  },
+  "precision": 1.0,
+  "recall": 1.0,
+  "specificity": 1.0,
+  "negative_frame_false_positive_rate": 0.0,
+  "results": [
+    {
+      "case_id": "fan-bearing-degradation",
+      "challenge": "shared-cause-positive",
+      "expected_shared_cooling": true,
+      "first_policy_match_index": 19,
+      "first_isolated_threshold_index": 46,
+      "lead_samples": 27,
+      "incident_frame_count": 33,
+      "root_cause_stability": 1.0,
+      "confidence_mean": 0.94,
+      "confidence_pstdev": 0.057,
+      "passed": true
+    },
+    {
+      "case_id": "ambient-temperature-rise",
+      "challenge": "ambient-shift",
+      "expected_shared_cooling": false,
+      "first_policy_match_index": null,
+      "first_isolated_threshold_index": null,
+      "lead_samples": null,
+      "incident_frame_count": 0,
+      "root_cause_stability": 0.0,
+      "confidence_mean": null,
+      "confidence_pstdev": null,
+      "passed": true
+    },
+    {
+      "case_id": "workload-temperature-rise",
+      "challenge": "workload-shift",
+      "expected_shared_cooling": false,
+      "first_policy_match_index": null,
+      "first_isolated_threshold_index": null,
+      "lead_samples": null,
+      "incident_frame_count": 0,
+      "root_cause_stability": 0.0,
+      "confidence_mean": null,
+      "confidence_pstdev": null,
+      "passed": true
+    },
+    {
+      "case_id": "transient-rpm-sensor-spike",
+      "challenge": "transient-sensor-error",
+      "expected_shared_cooling": false,
+      "first_policy_match_index": null,
+      "first_isolated_threshold_index": 12,
+      "lead_samples": null,
+      "incident_frame_count": 0,
+      "root_cause_stability": 0.0,
+      "confidence_mean": null,
+      "confidence_pstdev": null,
+      "passed": true
+    },
+    {
+      "case_id": "telemetry-dropout",
+      "challenge": "telemetry-dropout",
+      "expected_shared_cooling": false,
+      "first_policy_match_index": null,
+      "first_isolated_threshold_index": null,
+      "lead_samples": null,
+      "incident_frame_count": 0,
+      "root_cause_stability": 0.0,
+      "confidence_mean": null,
+      "confidence_pstdev": null,
+      "passed": true
+    },
+    {
+      "case_id": "fan-sensor-noise",
+      "challenge": "sensor-noise",
+      "expected_shared_cooling": false,
+      "first_policy_match_index": null,
+      "first_isolated_threshold_index": null,
+      "lead_samples": null,
+      "incident_frame_count": 0,
+      "root_cause_stability": 0.0,
+      "confidence_mean": null,
+      "confidence_pstdev": null,
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "synthetic fixture recordings are not a production false-positive estimate",
+    "aggregate chassis signals are not localized by fan zone or drive bay",
+    "confidence weights require calibration against opt-in real incident recordings"
+  ],
+  "evidence_sha256": "d139db86da317c33d507ddae06c676e4d87c68c09026176aeaf9f2171ac8592d"
+}

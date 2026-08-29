@@ -44,6 +44,23 @@ def main() -> int:
         )
         assert "site-packages" in import_check.stdout
 
+        corpus_check = run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                (
+                    "from truepanel.holodeck.aegis_corpus import "
+                    "run_black_box_corpus; "
+                    "report = run_black_box_corpus(); "
+                    "assert report['corpus_size'] == 6; "
+                    "assert report['confusion_matrix']['false_positive'] == 0"
+                ),
+            ],
+            cwd=outside,
+        )
+        assert corpus_check.returncode == 0
+
         reported = run([str(executable), "version"], cwd=outside)
         assert f"Version: {version('truepanel')}" in reported.stdout
 
@@ -155,7 +172,7 @@ def main() -> int:
         assert manifest["minimized_frame_count"] == 1
         assert manifest["executable_code_generated"] is False
 
-    print("PASS: installed TruePanel wheel and HoloDeck CLI smoke")
+    print("PASS: installed TruePanel wheel, HoloDeck CLI, and AEGIS corpus smoke")
     return 0
 
 
