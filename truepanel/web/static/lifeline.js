@@ -4,6 +4,17 @@
 const STATUS_URL="/api/v1/status";
 const POLL_MS=5000;
 
+const stableInnerMarkup=new WeakMap();
+const checklistMarkupByCard=new WeakMap();
+const lifelineMarkupByCard=new WeakMap();
+
+function setStableInnerHTML(node,markup){
+    if(stableInnerMarkup.get(node)===markup) return false;
+    node.innerHTML=markup;
+    stableInnerMarkup.set(node,markup);
+    return true;
+}
+
 const esc=value=>String(value??"")
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
@@ -233,26 +244,74 @@ function checklistSummary(checklists){
     for(const item of checklists){const key=checklistStatus(item).className;counts[key]=(counts[key]||0)+1;}
     const dominant=counts.hold?"hold":counts.monitor?"monitor":counts.authority?"authority":counts.verified===checklists.length?"verified":"active";
     rail.className=`cl-status-rail ${dominant}`;
-    rail.innerHTML=`<div><span class="cl-kicker">CHECKLIST STATUS</span><strong>${esc(checklists.length)} active procedure${checklists.length===1?"":"s"}</strong></div><div class="cl-rail-counts">${counts.hold?`<span class="hold">${counts.hold} HOLD</span>`:""}${counts.monitor?`<span class="monitor">${counts.monitor} MONITOR</span>`:""}${counts.authority?`<span class="authority">${counts.authority} AUTHORITY HOLD</span>`:""}${counts.ready?`<span class="ready">${counts.ready} READY</span>`:""}${counts.active?`<span class="active">${counts.active} ACTIVE</span>`:""}${counts.verified?`<span class="verified">${counts.verified} VERIFIED</span>`:""}</div>`;
+    const markup=`<div><span class="cl-kicker">CHECKLIST STATUS</span><strong>${esc(checklists.length)} active procedure${checklists.length===1?"":"s"}</strong></div><div class="cl-rail-counts">${counts.hold?`<span class="hold">${counts.hold} HOLD</span>`:""}${counts.monitor?`<span class="monitor">${counts.monitor} MONITOR</span>`:""}${counts.authority?`<span class="authority">${counts.authority} AUTHORITY HOLD</span>`:""}${counts.ready?`<span class="ready">${counts.ready} READY</span>`:""}${counts.active?`<span class="active">${counts.active} ACTIVE</span>`:""}${counts.verified?`<span class="verified">${counts.verified} VERIFIED</span>`:""}</div>`;
+    setStableInnerHTML(rail,markup);
 }
 
 function renderChecklists(payload){
     const checklists=dedupeChecklists(payload.operator_checklists);
-    document.querySelectorAll(".fm-card .cl-panel").forEach(node=>node.remove());
     checklistSummary(checklists);
-    if(!checklists.length) return;
+
+    const cards=[
+        ...document.querySelectorAll(
+            ".fm-card[data-guidance-code]"
+        ),
+    ];
+
     const buckets=new Map();
-    document.querySelectorAll(".fm-card[data-guidance-code]").forEach(card=>{
+
+    for(const card of cards){
         const code=String(card.dataset.guidanceCode||"");
         if(!buckets.has(code)) buckets.set(code,[]);
         buckets.get(code).push(card);
-    });
+    }
+
+    const desired=new Map();
+
     for(const checklist of checklists){
-        const cards=buckets.get(String(checklist.code||""))||[];
-        const card=cards.shift();
+        const cardsForCode=
+            buckets.get(String(checklist.code||""))||[];
+        const card=cardsForCode.shift();
+
         if(!card) continue;
-        const callout=card.querySelector(".fm-callout");
-        if(callout) callout.insertAdjacentHTML("afterend",checklistCard(checklist)); else card.insertAdjacentHTML("afterbegin",checklistCard(checklist));
+
+        desired.set(
+            card,
+            checklistCard(checklist),
+        );
+    }
+
+    for(const card of cards){
+        const markup=desired.get(card)||"";
+
+        if(checklistMarkupByCard.get(card)===markup){
+            continue;
+        }
+
+        card.querySelectorAll(
+            ".cl-panel"
+        ).forEach(node=>node.remove());
+
+        if(markup){
+            const callout=card.querySelector(".fm-callout");
+
+            if(callout){
+                callout.insertAdjacentHTML(
+                    "afterend",
+                    markup,
+                );
+            }else{
+                card.insertAdjacentHTML(
+                    "afterbegin",
+                    markup,
+                );
+            }
+        }
+
+        checklistMarkupByCard.set(
+            card,
+            markup,
+        );
     }
 }
 
@@ -308,38 +367,129 @@ function ledgerContainer(){
 }
 
 function renderLifeline(payload){
-    const guidance=Array.isArray(payload.operator_guidance)?payload.operator_guidance:[];
-    const checklists=dedupeChecklists(payload.operator_checklists);
-    const checklistCodes=new Set(checklists.map(item=>String(item.code||"")));
-    document.querySelectorAll(".fm-card .ll-session").forEach(node=>node.remove());
+    const guidance=Array.isArray(
+        payload.operator_guidance
+    )?payload.operator_guidance:[];
 
-    // CHECKLIST is the primary current-recovery presentation. Keep the legacy
-    // Lifeline full card only as a fallback when no matching CHECKLIST exists.
-    const renderedFallback=new Set();
-    for(const item of guidance.filter(entry=>entry&&entry.repair_session)){
-        const code=String(item.code||"");
-        if(checklistCodes.has(code)||renderedFallback.has(code)) continue;
-        const safeCode=code.replaceAll('"','\\"');
-        const card=document.querySelector(`.fm-card[data-guidance-code="${safeCode}"]`);
-        if(card){
-            card.insertAdjacentHTML("beforeend",sessionCard(item.repair_session));
-            renderedFallback.add(code);
+    const checklists=dedupeChecklists(
+        payload.operator_checklists
+    );
+
+    const checklistCodes=new Set(
+        checklists.map(
+            item=>String(item.code||"")
+        )
+    );
+
+    const cards=[
+        ...document.querySelectorAll(
+            ".fm-card[data-guidance-code]"
+        ),
+    ];
+
+    const cardsByCode=new Map();
+
+    for(const card of cards){
+        const code=String(
+            card.dataset.guidanceCode||""
+        );
+
+        if(!cardsByCode.has(code)){
+            cardsByCode.set(code,[]);
         }
+
+        cardsByCode.get(code).push(card);
     }
 
-    const ledger=dedupeLedger(payload.lifeline&&payload.lifeline.sessions);
-    const container=ledgerContainer();
-    if(!container) return;
-    if(!ledger.length){container.innerHTML="";container.style.display="none";return;}
+    /*
+     * CHECKLIST is the primary current-recovery presentation.
+     * Keep the legacy Lifeline full card only as a fallback
+     * when no matching CHECKLIST exists.
+     */
+    const desiredFallback=new Map();
+    const renderedFallback=new Set();
 
-    const active=ledger.filter(item=>item.status==="active");
-    const completed=ledger.filter(item=>item.status==="completed");
-    const recentCompleted=completed.slice(-3).reverse();
-    container.style.display="block";
-    container.innerHTML=`
+    for(
+        const item of guidance.filter(
+            entry=>entry&&entry.repair_session
+        )
+    ){
+        const code=String(item.code||"");
+
+        if(checklistCodes.has(code)||renderedFallback.has(code)) continue;
+
+        const candidates=cardsByCode.get(code)||[];
+        const card=candidates[0];
+
+        if(!card) continue;
+
+        desiredFallback.set(
+            card,
+            sessionCard(item.repair_session),
+        );
+
+        renderedFallback.add(code);
+    }
+
+    for(const card of cards){
+        const markup=desiredFallback.get(card)||"";
+
+        if(lifelineMarkupByCard.get(card)===markup){
+            continue;
+        }
+
+        card.querySelectorAll(
+            ".ll-session"
+        ).forEach(node=>node.remove());
+
+        if(markup){
+            card.insertAdjacentHTML(
+                "beforeend",
+                markup,
+            );
+        }
+
+        lifelineMarkupByCard.set(
+            card,
+            markup,
+        );
+    }
+
+    const ledger=dedupeLedger(
+        payload.lifeline&&payload.lifeline.sessions
+    );
+
+    const container=ledgerContainer();
+
+    if(!container) return;
+
+    if(!ledger.length){
+        setStableInnerHTML(container,"");
+        container.style.display="none";
+        return;
+    }
+
+    const active=ledger.filter(
+        item=>item.status==="active"
+    );
+
+    const completed=ledger.filter(
+        item=>item.status==="completed"
+    );
+
+    const recentCompleted=
+        completed.slice(-3).reverse();
+
+    const markup=`
         <div class="ll-ledger-title"><div><span class="ll-kicker">REPAIR LEDGER</span><h3>Persistent repair sessions</h3></div><span>${esc(active.length)} active · ${esc(completed.length)} completed</span></div>
         ${active.length?`<div class="ll-ledger-note"><strong>Active recovery is presented once in Project CHECKLIST above.</strong><span>The ledger keeps identity and progress without opening another full recovery card.</span></div><div class="ll-ledger-rows">${active.map(ledgerRow).join("")}</div>`:""}
         ${recentCompleted.length?`<details class="ll-ledger-history"><summary>Recent repair history <strong>${esc(completed.length)} completed</strong></summary><div class="ll-ledger-rows">${recentCompleted.map(ledgerRow).join("")}</div></details>`:""}`;
+
+    container.style.display="block";
+    setStableInnerHTML(
+        container,
+        markup,
+    );
 }
 
 function installStyles(){

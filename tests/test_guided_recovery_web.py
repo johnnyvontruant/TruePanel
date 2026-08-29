@@ -85,3 +85,44 @@ def test_flight_manual_refresh_preserves_reader_scroll_position():
         'cards.innerHTML=guidance.map(card).join("");'
         not in source
     )
+
+
+def test_lifeline_refresh_does_not_rebuild_unchanged_dom():
+    source = (
+        server.STATIC_DIR
+        / "lifeline.js"
+    ).read_text(encoding="utf-8")
+
+    assert "const stableInnerMarkup=new WeakMap();" in source
+    assert "const checklistMarkupByCard=new WeakMap();" in source
+    assert "const lifelineMarkupByCard=new WeakMap();" in source
+    assert "function setStableInnerHTML(node,markup)" in source
+
+    assert (
+        "if(checklistMarkupByCard.get(card)===markup)"
+        in source
+    )
+    assert (
+        "if(lifelineMarkupByCard.get(card)===markup)"
+        in source
+    )
+
+    # Polling must not blindly tear down the entire
+    # CHECKLIST or Lifeline card population.
+    assert (
+        'document.querySelectorAll(".fm-card .cl-panel")'
+        not in source
+    )
+    assert (
+        'document.querySelectorAll(".fm-card .ll-session")'
+        not in source
+    )
+
+    # Stable status and ledger markup should also remain
+    # physically untouched between identical refreshes.
+    assert "rail.innerHTML=" not in source
+    assert "container.innerHTML=" not in source
+
+    # The volatile backend timestamp that triggered this
+    # investigation is not part of visible rendering.
+    assert "updated_at" not in source
