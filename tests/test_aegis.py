@@ -419,6 +419,7 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "Supporting signals" in source
         assert "Recovery Coverage Matrix" in source
         assert "correlation_policy" in source
+        assert "LAB CALIBRATED · NOT LIVE VALIDATED" in source
         assert "raw alerts" in source
         assert 'window.addEventListener("truepanel:status"' in source
         assert "window.setInterval" not in source

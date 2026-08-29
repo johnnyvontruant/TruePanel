@@ -1,6 +1,6 @@
 # AEGIS Prior-Art Field Report
 
-Research date: 2026-08-28
+Research dates: 2026-08-28 through 2026-08-29
 
 This report records the public-software survey behind the first AEGIS
 calibration follow-up. It is a dependency and provenance decision record, not
@@ -107,6 +107,25 @@ added. The incorporated work is an attributed architectural adaptation of
 Apache-2.0 semantics expressed in original TruePanel code. Existing MIT
 project licensing is unchanged. The policy has no I/O or execution capability,
 and all tests use deterministic in-memory telemetry.
+
+## Corpus/versioning follow-up
+
+The second survey focused on the missing evidence-data contract rather than a
+new detector:
+
+| Candidate | What was inspected | Decision and license |
+| --- | --- | --- |
+| [DVC](https://dvc.org/doc/user-guide/project-structure/dvc-files) | Small tracked descriptors carry paths, hashes, sizes, and file counts while content remains addressable. | **Adapt the content-addressed manifest idea.** Full DVC and remote/cache machinery are disproportionate for 193 small committed frames. Apache-2.0; no code incorporated. |
+| [River progressive validation](https://riverml.xyz/dev/api/evaluate/progressive-val-score/) | Ordered streaming evaluation measures the prediction before later truth/update, with optional label delay. | **Adapt ordered frame-by-frame scoring now; benchmark River later.** The corpus records first detection, frame false positives, confidence variance, and post-detection stability without adding River. BSD-3-Clause; no code incorporated. |
+| [Frictionless Data Package](https://specs.frictionlessdata.io/data-package/) | A central descriptor enumerates resources plus dataset-level metadata, paths, and schemas. | **Adapt the compact package shape.** TruePanel's domain-specific manifest is smaller and adds privacy/challenge assertions. Specification ideas only; no library or source incorporated. |
+| [Great Expectations](https://docs.greatexpectations.io/docs/core/run_validations/create_a_validation_definition/) | Validation definitions bind a batch to an expectation suite and preserve structured results. | **Adapt expectations/results separation.** The runtime and dependency graph are too heavy for six appliance fixtures. Apache-2.0; no code incorporated. |
+| [MLCommons Croissant](https://docs.mlcommons.org/croissant/docs/croissant-spec-1.0.html) | Rich dataset/resource metadata emphasizes portability, reproducibility, provenance, and responsible-use context. | **Defer adoption.** It is valuable when the corpus becomes publishable/interoperable ML data; it is excessive for private JSONL regression fixtures. Metadata concepts only; no package or schema copied. |
+
+The resulting `aegis-black-box-corpus-v1` uses original TruePanel code and
+MIT-licensed synthetic fixture data. Its manifest identifies provenance,
+privacy state, license, generator, limitations, resource hashes, labels, and
+challenge classes. CI verifies both the corpus and its preserved validation
+report. No third-party notice-bearing artifact was added.
 
 ## Most promising collaboration
 
