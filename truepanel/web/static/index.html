@@ -308,6 +308,11 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <div class="row"><span class="label">Estimated expiration</span><span id="thermalAutomaticLeaseExpires" class="value">Not scheduled</span></div>
 <div class="row"><span class="label">Commissioned safety gate</span><span id="thermalFingerprintState" class="value">Checking</span></div>
 <div class="row"><span class="label">Automatic profile envelope</span><span id="thermalAutomaticEnvelope" class="value">Balanced · Cooling Boost</span></div>
+<details id="thermalAdvancedControls" class="diagnostics-drawer thermal-controls-drawer">
+<summary>
+<span>Advanced Thermal Controls</span>
+<small id="thermalAdvancedSummary">Checking thermal-control state</small>
+</summary>
 <div class="control-actions">
 <button id="thermalArm" class="primary" disabled>Arm Dry Run<span class="profile-target">Requires confirmation</span></button>
 <button id="thermalSupervisedLive" class="danger" disabled>Engage Supervised Live<span class="profile-target">Balanced only · 120 seconds</span></button>
@@ -317,6 +322,7 @@ footer{text-align:center;color:var(--muted);padding:2rem;font-size:.8rem}
 <button id="thermalDisarm" class="danger" disabled>Disarm<span class="profile-target">Return control to Automatic</span></button>
 </div>
 <div id="thermalArmMessage" class="control-message">Checking automatic-control readiness</div>
+</details>
 </div>
 </div>
 <details id="historyDiagnostics" class="diagnostics-drawer">
@@ -1659,6 +1665,51 @@ function renderThermalArmControls(data){
             && !automaticLeaseActive
         )
     );
+
+    let advancedModeLabel;
+
+    if(automaticLeaseActive){
+        advancedModeLabel="Stage 3 automatic";
+    }else if(supervisedActive){
+        advancedModeLabel="Supervised live";
+    }else if(mode==="observe_only"){
+        advancedModeLabel="Observe only";
+    }else if(mode==="automatic_control"){
+        advancedModeLabel=(
+            dryRun
+                ?"Automatic control · Dry run"
+                :"Automatic control · Live"
+        );
+    }else{
+        advancedModeLabel=mode.replaceAll(
+            "_",
+            " "
+        );
+    }
+
+    q("thermalAdvancedSummary").textContent=
+        advancedModeLabel+" · "+
+        (armed?"Armed":"Disarmed")+" · "+
+        (
+            fingerprintMatch
+                ?"Commissioned"
+                :"Commissioning required"
+        );
+
+    const advancedDrawer=q(
+        "thermalAdvancedControls"
+    );
+
+    if(
+        advancedDrawer
+        && (
+            armed
+            || supervisedActive
+            || automaticLeaseActive
+        )
+    ){
+        advancedDrawer.open=true;
+    }
 
     q("thermalLeaseState").textContent=
         supervisedActive
