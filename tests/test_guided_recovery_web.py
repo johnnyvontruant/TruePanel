@@ -62,3 +62,26 @@ def test_flight_manual_renders_critical_storage_guidance_as_danger():
     assert 'className:critical||!exactBay?"danger":"caution"' in source
     assert "CRITICAL DRIVE HEALTH." in source
     assert 'data-guidance-severity="${esc(item.severity||"caution")}"' in source
+
+
+def test_flight_manual_refresh_preserves_reader_scroll_position():
+    source = (
+        server.STATIC_DIR
+        / "flight-manual.js"
+    ).read_text(encoding="utf-8")
+
+    assert "let renderedCards=null;" in source
+    assert "const nextCards=guidance.map(card).join" in source
+    assert "if(nextCards!==renderedCards)" in source
+    assert "const scrollY=window.scrollY;" in source
+    assert (
+        "window.scrollTo(scrollX,scrollY)"
+        in source
+    )
+
+    # Do not unconditionally destroy and recreate the
+    # guidance DOM on every five-second status refresh.
+    assert (
+        'cards.innerHTML=guidance.map(card).join("");'
+        not in source
+    )
