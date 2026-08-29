@@ -342,6 +342,8 @@ function install(){
         panel.scrollIntoView({behavior:"smooth",block:"start"});
     });
 
+    let renderedCards=null;
+
     async function refresh(){
         try{
             const response=await fetch(STATUS_URL,{cache:"no-store",headers:{Accept:"application/json"}});
@@ -355,12 +357,29 @@ function install(){
             const cards=panel.querySelector("#flightManualCards");
             if(!guidance.length){
                 status.textContent="No active guided-recovery procedure is required.";
-                cards.innerHTML="";
+                if(renderedCards!==""){
+                    cards.innerHTML="";
+                    renderedCards="";
+                }
                 panel.classList.remove("show");
                 return;
             }
             status.textContent=`${guidance.length} active recovery procedure${guidance.length===1?"":"s"}. Safe diagnostic guidance is available; locked actions remain unavailable.`;
-            cards.innerHTML=guidance.map(card).join("");
+
+            const nextCards=guidance.map(card).join("");
+            if(nextCards!==renderedCards){
+                const scrollX=window.scrollX;
+                const scrollY=window.scrollY;
+
+                cards.innerHTML=nextCards;
+                renderedCards=nextCards;
+
+                if(panel.classList.contains("show")){
+                    window.requestAnimationFrame(
+                        ()=>window.scrollTo(scrollX,scrollY)
+                    );
+                }
+            }
         }catch(_error){
             button.disabled=true;
             panel.querySelector(".fm-status").textContent="Flight Manual telemetry is temporarily unavailable.";
