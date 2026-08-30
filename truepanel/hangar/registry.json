@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.08.30.1",
+  "registry_version": "2026.08.30.2",
   "updated_at": "2026-08-30",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
@@ -160,6 +160,25 @@
       "reproduction": ["python -c \"from truepanel.aegis.flight_director import run_flight_director_proof as run; print(run()['measurements'])\""],
       "revisit_conditions": ["field topology or recovery evidence becomes available"], "strongest_follow_up": "Bind passive enclosure topology and real recovery observations through Lifeline.",
       "freshness": {"reviewed_at": "2026-08-30", "review_after": "2026-10-31"}
+    },
+    {
+      "id": "TP-EXP-0014", "title": "GLASS COCKPIT evidence-led Mission Control", "state": "COMPLETED",
+      "hypothesis": "A calm incident-first command strip and causal-domain grouping will reduce structural interaction cost without weakening phone usability or hiding safety state.",
+      "value": "Makes the working reliability system faster to orient, legible, and durable without a framework rewrite.",
+      "prior_art": ["100-interface public benchmark", "WCAG 2.2", "Carbon dashboards", "GOV.UK disclosure", "FAA and FDA human factors"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/glass-cockpit-benchmark", "pr": null, "commits": ["8877e64"]},
+      "protocol": ["audit accepted DOM and shared stream", "inspect exactly 100 public interfaces", "render three candidates with one deterministic incident", "exercise eight tasks at eight widths", "select smallest supported architecture"],
+      "fixtures": ["truepanel/glass_cockpit/candidates/a.html", "truepanel/glass_cockpit/candidates/b.html", "truepanel/glass_cockpit/candidates/c.html"],
+      "success_criteria": ["all eight task paths available", "no horizontal overflow from 320 through 1920 CSS pixels", "active incident action and proof never hidden", "no new polling", "WCAG 2.2 AA structural contracts"],
+      "abort_criteria": ["phone regression", "invented telemetry", "safety state hidden", "framework dependency outweighs verified benefit"],
+      "evidence": [{"path": "docs/evidence/glass-cockpit-v1.json", "sha256": "0d0ddf42f5ec62ec21b6fe03702b6586ec78aff90f0c62f2909773f9045651d7"}],
+      "outcome": {"conclusion": "Candidate B consolidated eleven competing surfaces into four decision domains with eight above-fold task facts and a structural interaction cost of 8; the denser candidate was rejected despite one lower cost unit because it added 75% more visual competition."},
+      "invalidated_assumptions": ["an aviation look requires aviation density", "every sensor benefits from a full graph", "secondary details and active safety state can share one drawer"],
+      "reproduction": ["pytest -q tests/test_glass_cockpit.py", "node development/glass_cockpit_browser_check.mjs"],
+      "revisit_conditions": ["human task testing contradicts the structural result", "new Mission Control decision domain is added"],
+      "strongest_follow_up": "Run moderated think-aloud tests with one new and one experienced operator on lab fixtures, then tune only measured friction.",
+      "freshness": {"reviewed_at": "2026-08-30", "review_after": "2026-11-30"}
     }
   ]
 }

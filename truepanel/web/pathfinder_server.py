@@ -78,6 +78,7 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
         inherited = (
             (_server._FLIGHT_MANUAL_MARKER, _server._FLIGHT_MANUAL_TAG),
             (_server._COCKPIT_POLISH_MARKER, _server._COCKPIT_POLISH_TAG),
+            (_server._GLASS_COCKPIT_MARKER, _server._GLASS_COCKPIT_TAG),
             (_server._COCKPIT_VARIANTS_MARKER, _server._COCKPIT_VARIANTS_TAG),
             (_server._LIFELINE_MARKER, _server._LIFELINE_TAG),
             (_server._LIFELINE_ACTIONS_MARKER, _server._LIFELINE_ACTIONS_TAG),

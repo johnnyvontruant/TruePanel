@@ -22,7 +22,7 @@ def test_hangar_registry_is_packaged_valid_and_uses_exact_states():
     assert status_summary(registry) == {
         "FUTURE": 2,
         "IN_PROGRESS": 0,
-        "COMPLETED": 9,
+        "COMPLETED": 10,
         "FAILED": 2,
     }
 

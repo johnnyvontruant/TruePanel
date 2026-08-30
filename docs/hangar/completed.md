@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.08.30.1 · refreshed 2026-08-30 · 9 experiment(s)
+Registry version 2026.08.30.2 · refreshed 2026-08-30 · 10 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -75,3 +75,11 @@ The slice identifies one shared cause 27 samples early, forecasts the fixture cr
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Bind passive enclosure topology and real recovery observations through Lifeline.
 - Revisit when: field topology or recovery evidence becomes available
+
+## TP-EXP-0014 · GLASS COCKPIT evidence-led Mission Control
+
+Candidate B consolidated eleven competing surfaces into four decision domains with eight above-fold task facts and a structural interaction cost of 8; the denser candidate was rejected despite one lower cost unit because it added 75% more visual competition.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Run moderated think-aloud tests with one new and one experienced operator on lab fixtures, then tune only measured friction.
+- Revisit when: human task testing contradicts the structural result; new Mission Control decision domain is added
