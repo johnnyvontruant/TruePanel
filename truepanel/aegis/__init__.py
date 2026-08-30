@@ -6,6 +6,12 @@ ORACLE outlooks, Pathfinder recovery contracts, and HoloDeck rehearsals.
 
 from .correlation import correlate_incident
 from .coverage import coverage_matrix, validate_recovery_coverage
+from .evidence_gate import (
+    EvidencePromotionPolicy,
+    evaluate_evidence_gate,
+    validate_field_manifest,
+    wilson_interval,
+)
 from .policy import (
     DEFAULT_CORRELATION_POLICY,
     CorrelationPolicy,
@@ -21,10 +27,14 @@ __all__ = [
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",
     "DeclarativeCorrelationPolicy",
+    "EvidencePromotionPolicy",
     "HypothesisRule",
     "correlate_incident",
     "coverage_matrix",
+    "evaluate_evidence_gate",
     "rehearse_recovery_paths",
     "validate_recovery_coverage",
     "validate_correlation_policy",
+    "validate_field_manifest",
+    "wilson_interval",
 ]

@@ -12,6 +12,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from .evidence_gate import builtin_lab_evidence_status
+
 
 @dataclass(frozen=True)
 class HypothesisRule:
@@ -133,6 +135,7 @@ class DeclarativeCorrelationPolicy:
                 "scope": "deterministic_fixture",
                 "production_validated": False,
                 "evidence": "docs/evidence/aegis-black-box-corpus-v1.json",
+                "evidence_gate": builtin_lab_evidence_status(),
             },
             "provenance": {
                 "project": "Prometheus Alertmanager",

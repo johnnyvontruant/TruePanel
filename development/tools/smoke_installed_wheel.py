@@ -54,7 +54,12 @@ def main() -> int:
                     "run_black_box_corpus; "
                     "report = run_black_box_corpus(); "
                     "assert report['corpus_size'] == 6; "
-                    "assert report['confusion_matrix']['false_positive'] == 0"
+                    "assert report['confusion_matrix']['false_positive'] == 0; "
+                    "from truepanel.aegis.evidence_gate import "
+                    "builtin_lab_evidence_status; "
+                    "gate = builtin_lab_evidence_status(); "
+                    "assert gate['stage'] == 'lab_calibrated'; "
+                    "assert gate['production_validated'] is False"
                 ),
             ],
             cwd=outside,

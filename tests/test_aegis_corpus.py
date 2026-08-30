@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from truepanel.aegis.evidence_gate import builtin_lab_evidence_status
 from truepanel.aegis.policy import DEFAULT_CORRELATION_POLICY
 from truepanel.holodeck.aegis_corpus import (
     CORPUS_ID,
@@ -63,6 +64,7 @@ def test_correlation_policy_requires_the_versioned_corpus():
         "scope": "deterministic_fixture",
         "production_validated": False,
         "evidence": "docs/evidence/aegis-black-box-corpus-v1.json",
+        "evidence_gate": builtin_lab_evidence_status(),
     }
 
 

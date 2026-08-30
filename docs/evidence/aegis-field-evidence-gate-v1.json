@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "gate_id": "aegis-field-evidence-gate-v1",
+  "stage": "lab_calibrated",
+  "eligible_for_field_validation": false,
+  "production_validated": false,
+  "release_review_required": true,
+  "confidence_level": 0.95,
+  "measurements": {
+    "false_positive_frames": 0,
+    "negative_frames": 141,
+    "false_positive_rate": 0.0,
+    "false_positive_rate_wilson_upper": 0.026522,
+    "true_positive_recordings": 1,
+    "positive_recordings": 1,
+    "recall": 1.0,
+    "recall_wilson_lower": 0.206549,
+    "system_profiles": 0,
+    "workload_classes": 0
+  },
+  "policy": {
+    "max_false_positive_rate_upper": 0.01,
+    "min_recall_lower": 0.8,
+    "min_positive_recordings": 5,
+    "min_negative_recordings": 20,
+    "min_system_profiles": 2,
+    "min_workload_classes": 4
+  },
+  "gaps": [
+    "source must be operator-opt-in-field",
+    "dataset_card is required",
+    "positive recording floor not met",
+    "negative recording floor not met",
+    "system-profile diversity floor not met",
+    "workload diversity floor not met",
+    "false-positive upper confidence bound exceeds policy",
+    "recall lower confidence bound is below policy"
+  ],
+  "authority": "evidence_assessment_only",
+  "control_authority": false
+}
