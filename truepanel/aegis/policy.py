@@ -136,6 +136,14 @@ class DeclarativeCorrelationPolicy:
                 "production_validated": False,
                 "evidence": "docs/evidence/aegis-black-box-corpus-v1.json",
                 "evidence_gate": builtin_lab_evidence_status(),
+                "field_workflow": {
+                    "workflow_id": "aegis-field-corpus-workflow-v1",
+                    "state": "not_started",
+                    "stages": ["consent", "intake", "review", "freeze", "assess"],
+                    "next_action": "initialize an opt-in, sanitized field corpus",
+                    "live_capture": False,
+                    "control_authority": False,
+                },
             },
             "provenance": {
                 "project": "Prometheus Alertmanager",

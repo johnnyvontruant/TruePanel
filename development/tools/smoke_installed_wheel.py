@@ -66,6 +66,21 @@ def main() -> int:
         )
         assert corpus_check.returncode == 0
 
+        field_smoke = run(
+            [
+                str(executable),
+                "holodeck",
+                "field-smoke",
+                str(outside / "field-workflow"),
+            ],
+            cwd=outside,
+        )
+        field_receipt = json.loads(field_smoke.stdout)
+        assert field_receipt["stage"] == "lab_calibrated"
+        assert field_receipt["production_validated"] is False
+        assert field_receipt["hardware_isolated"] is True
+        assert field_receipt["control_authority"] is False
+
         reported = run([str(executable), "version"], cwd=outside)
         assert f"Version: {version('truepanel')}" in reported.stdout
 
