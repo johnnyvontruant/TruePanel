@@ -1,0 +1,34 @@
+{
+  "control_authority": false,
+  "corpus_id": "aegis-field-workflow-smoke-v1",
+  "corpus_sha256": "146a2f60349a8569c456ad5345305a6bdf9ab841297d7217aa12b258d7e9a43b",
+  "eligible_for_field_validation": false,
+  "gaps": [
+    "positive recording floor not met",
+    "negative recording floor not met",
+    "system-profile diversity floor not met",
+    "false-positive upper confidence bound exceeds policy",
+    "recall lower confidence bound is below policy"
+  ],
+  "hardware_isolated": true,
+  "measurements": {
+    "false_positive_frames": 0,
+    "false_positive_rate": 0.0,
+    "false_positive_rate_wilson_upper": 0.026522,
+    "negative_frames": 141,
+    "positive_recordings": 1,
+    "recall": 1.0,
+    "recall_wilson_lower": 0.206549,
+    "system_profiles": 1,
+    "true_positive_recordings": 1,
+    "workload_classes": 6
+  },
+  "production_validated": false,
+  "receipt_id": "aegis-field-assessment-v1",
+  "receipt_sha256": "5a21b414ce16b25172d2fa435014bdbad60c123119c47fa3f7f2e05d7e7bf7a5",
+  "release_review_required": true,
+  "report_sha256": "6b62818b6696a00c0c2fe718d171a7678a5b837fa8a434806f16ebac45affe05",
+  "schema_version": 1,
+  "simulation": true,
+  "stage": "lab_calibrated"
+}
