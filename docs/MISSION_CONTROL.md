@@ -158,6 +158,11 @@ AEGIS can group related evidence into one probable root-cause hypothesis while r
 - verification state;
 - Recovery Coverage Matrix gaps.
 
+Correlation rules are declarative and replaceable. The active policy is shown
+in the Reliability view. A hypothesis must satisfy every independent evidence
+group declared by its rule; downstream symptom alerts may be inhibited only in
+the consolidated presentation count and remain present in raw evidence.
+
 Confidence measures mutually supporting evidence, not causal certainty. User-facing language must continue to say “likely cause” or “hypothesis.”
 
 AEGIS has no fan, LCD, bay LED, storage, network, service, boot-task, or configuration write path.

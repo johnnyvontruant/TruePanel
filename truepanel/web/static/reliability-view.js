@@ -28,11 +28,58 @@ function gapRows(matrix){
     return gaps.map(item=>`<div class="ag-gap"><strong>${esc(item?.code||"unknown")}</strong><span>${esc((item?.gaps||[]).join(" · ")||"Coverage incomplete")}</span></div>`).join("");
 }
 
+function evidenceGateRows(gate){
+    const measurements=gate?.measurements||{};
+    const gaps=Array.isArray(gate?.gaps)?gate.gaps:[];
+    const metrics=`95% FPR upper ${Math.round(Number(measurements.false_positive_rate_wilson_upper||0)*10000)/100}% · recall lower ${Math.round(Number(measurements.recall_wilson_lower||0)*100)}%`;
+    const gapList=gaps.slice(0,4).map(item=>`<div class="ag-gap"><strong>HOLD</strong><span>${esc(item)}</span></div>`).join("");
+    return `<div class="ag-evidence-metric">${esc(metrics)}</div>${gapList}${gaps.length>4?`<div class="ag-gap"><strong>HOLD</strong><span>${gaps.length-4} additional evidence gaps</span></div>`:""}`;
+}
+
+function fieldWorkflowRows(workflow){
+    const stages=Array.isArray(workflow?.stages)?workflow.stages:[];
+    const state=title(workflow?.state||"not started");
+    const stageList=stages.map(item=>`<span>${esc(title(item))}</span>`).join("");
+    return `<div class="ag-workflow-state"><strong>${esc(state)}</strong><small>${esc(workflow?.next_action||"Awaiting explicit operator consent")}</small></div><div class="ag-workflow-steps">${stageList}</div>`;
+}
+
+function flightDirectorView(flight){
+    if(!flight?.scenario) return "";
+    const incident=flight.incident||{};
+    const forecast=flight.forecast||{};
+    const measurements=flight.measurements||{};
+    const timeline=(Array.isArray(flight.timeline)?flight.timeline:[]).map(item=>`<li><strong>${esc(item.sample)}</strong><span>${esc(item.event)}</span></li>`).join("");
+    const unknowns=(Array.isArray(flight.topology?.nodes)?flight.topology.nodes:[]).filter(item=>item?.certainty==="unknown");
+    const rehearsals=(Array.isArray(flight.rehearsals)?flight.rehearsals:[]).map(item=>`<article><strong>${esc(title(item.choice))}</strong><span>${esc(item.result)}</span><small>${item.projected_threshold_crossing_sample===null?"no crossing in window":`crossing sample ${esc(item.projected_threshold_crossing_sample)}`}</small></article>`).join("");
+    const observations=Array.isArray(flight.recovery_plan?.expected_recovery_observations)?flight.recovery_plan.expected_recovery_observations:[];
+    return `<section class="fd-shell" aria-label="Flight Director lab proof">
+        <div class="fd-head"><div><span class="ag-kicker">Project Flight Director · Lab Proof</span><h3>Now / Next / Why / Proof</h3></div><span class="fd-hold">SIMULATION · CONTROL AUTHORITY FALSE</span></div>
+        <div class="fd-command">
+            <article><small>NOW</small><strong>${esc(incident.likely_cause||"Shared cooling proof")}</strong><span>Detected ${esc(measurements.detection_lead_samples||0)} samples before isolated thresholds.</span></article>
+            <article><small>NEXT</small><strong>Verify identity and external airflow</strong><span>${esc(flight.recovery_plan?.safest_action||"")}</span></article>
+            <article><small>WHY</small><strong>Independent fan + thermal evidence</strong><span>${esc(measurements.timeline_clarity||"")}</span></article>
+            <article><small>PROOF</small><strong>${esc(title(flight.verification?.outcome||"pending"))}</strong><span>${esc(observations.join(" · "))}</span></article>
+        </div>
+        <div class="fd-instruments">
+            <article><h4>Incident Time Machine</h4><ol class="fd-timeline">${timeline}</ol></article>
+            <article><h4>Safe Operating Envelope</h4><strong class="fd-number">${esc(forecast.estimated_crossing_sample??"—")}</strong><span>estimated warning sample · ±${esc(forecast.uncertainty_samples??"—")} lab samples</span><small>${esc(forecast.precision_disclosure||"")}</small></article>
+            <article><h4>Causal Hardware Map</h4><strong class="fd-number">${esc(flight.topology?.nodes?.length||0)}</strong><span>nodes · ${unknowns.length} identity gaps explicitly unknown</span><small>No bay, drive, VDEV, pool, or fan channel is inferred.</small></article>
+        </div>
+        <div class="fd-rehearsals"><h4>HoloDeck What-If Rehearsals</h4><div>${rehearsals}</div></div>
+        <p class="ag-safety">Evidence maturity: deterministic lab fixture, not field or production validation · SHA-256 ${esc(String(flight.evidence_sha256||"").slice(0,16))}…</p>
+    </section>`;
+}
+
 function render(view,payload){
     const reliability=payload?.reliability||{};
     const incident=reliability?.active_incident||null;
     const matrix=reliability?.coverage_matrix||{};
     const summary=reliability?.coverage_summary||{};
+    const policy=reliability?.correlation_policy||{};
+    const calibration=policy?.calibration||{};
+    const evidenceGate=calibration?.evidence_gate||{};
+    const fieldWorkflow=calibration?.field_workflow||{};
+    const flightDirector=reliability?.flight_director||{};
     const oracleConfidence=Number(reliability?.oracle?.confidence||0);
     const confidence=Math.round(Number(incident?.confidence??oracleConfidence)*100);
     const state=incident
@@ -50,7 +97,7 @@ function render(view,payload){
     view.innerHTML=`
         <div class="ag-head">
             <div><span class="ag-kicker">Project AEGIS · Reliability Engineer</span><h2>Reliability</h2></div>
-            <div class="ag-badges"><span>READ-ONLY</span><span class="${gaps?"gap":"trusted"}">${trusted}/${total} TRUSTED</span></div>
+            <div class="ag-badges"><span>READ-ONLY</span><span>${esc(policy?.policy_id||"AEGIS POLICY")}</span><span class="${calibration?.production_validated?"trusted":"lab"}">${calibration?.production_validated?"FIELD VALIDATED":"LAB CALIBRATED · NOT LIVE VALIDATED"}</span><span class="${gaps?"gap":"trusted"}">${trusted}/${total} TRUSTED</span></div>
         </div>
         <div class="ag-hero">
             <div><span class="ag-state">${esc(state)}</span><h3>${esc(cause)}</h3><p>${esc(hypothesis)}</p></div>
@@ -60,8 +107,11 @@ function render(view,payload){
             <section><h4>Supporting signals</h4><div class="ag-signals">${signalRows(incident?.supporting_signals)}</div></section>
             <section><h4>Safest next action</h4><p class="ag-action">${esc(action)}</p><div class="ag-verify"><span>Verification</span><strong>${esc(title(verification))}</strong></div></section>
         </div>
+        ${flightDirectorView(flightDirector)}
         <details class="ag-coverage"><summary>Recovery Coverage Matrix <span>${gaps?`${gaps} gap${gaps===1?"":"s"}`:"complete"}</span></summary>${gapRows(matrix)}</details>
-        <p class="ag-safety">Correlation summarizes evidence; it does not hide the underlying alerts, grant control authority, or perform a repair.</p>
+        <details class="ag-coverage ag-evidence"><summary>Evidence Promotion Gate <span>${evidenceGate?.eligible_for_field_validation?"field candidate":`${Number(evidenceGate?.gaps?.length||0)} holds`}</span></summary>${evidenceGateRows(evidenceGate)}</details>
+        <details class="ag-coverage ag-field-workflow"><summary>Field Evidence Workflow <span>${esc(title(fieldWorkflow?.state||"not started"))}</span></summary>${fieldWorkflowRows(fieldWorkflow)}</details>
+        <p class="ag-safety">Correlation uses ${esc(policy?.semantics||"evidence grouping")}; it retains raw alerts, grants no control authority, and performs no repair.</p>
     `;
 }
 
@@ -83,7 +133,7 @@ function install(){
 
     const style=document.createElement("style");
     style.textContent=`
-#aegisReliabilityView{grid-column:1/-1;padding:1.15rem 1.25rem;border-color:rgba(80,205,137,.34);background:linear-gradient(120deg,rgba(6,28,28,.95),rgba(7,14,22,.98) 62%)}#aegisReliabilityView.incident{border-color:rgba(255,200,87,.5);background:linear-gradient(120deg,rgba(58,40,9,.38),rgba(7,14,22,.98) 62%)}.ag-head,.ag-hero{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}.ag-head h2{margin:.2rem 0 0}.ag-kicker{color:var(--good);font-size:.65rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.incident .ag-kicker{color:var(--warn)}.ag-badges{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.4rem}.ag-badges span{padding:.3rem .48rem;border:1px solid var(--edge);border-radius:999px;color:var(--muted);font-size:.6rem;font-weight:900}.ag-badges .trusted{color:var(--good);border-color:rgba(80,205,137,.35)}.ag-badges .gap{color:var(--warn);border-color:rgba(255,200,87,.4)}.ag-hero{margin-top:1rem;padding:1rem;border:1px solid rgba(143,164,184,.14);border-radius:10px;background:rgba(3,8,13,.42)}.ag-state{color:var(--good);font-size:.65rem;font-weight:900;letter-spacing:.12em}.incident .ag-state{color:var(--warn)}.ag-hero h3{margin:.3rem 0;font-size:1.25rem}.ag-hero p{max-width:760px;margin:0;color:var(--muted);font-size:.82rem;line-height:1.5}.ag-confidence{text-align:right}.ag-confidence strong{display:block;color:var(--good);font-size:1.75rem}.incident .ag-confidence strong{color:var(--warn)}.ag-confidence span{color:var(--muted);font-size:.64rem}.ag-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:.8rem;margin-top:.8rem}.ag-grid section{padding:.8rem;border:1px solid rgba(143,164,184,.14);border-radius:10px}.ag-grid h4{margin:0 0 .55rem;color:var(--muted);font-size:.67rem;letter-spacing:.1em;text-transform:uppercase}.ag-signals{display:grid;gap:.3rem}.ag-signal{display:grid;grid-template-columns:80px minmax(0,1fr) auto;gap:.45rem;font-size:.7rem}.ag-signal span,.ag-signal small{color:var(--muted)}.ag-signal span{font-size:.58rem;font-weight:900;text-transform:uppercase}.ag-action{margin:.1rem 0 .8rem;font-size:.82rem;line-height:1.5}.ag-verify{display:flex;justify-content:space-between;gap:.6rem;padding-top:.6rem;border-top:1px solid rgba(143,164,184,.14);font-size:.7rem}.ag-verify span{color:var(--muted)}.ag-verify strong{color:var(--good)}.ag-coverage{margin-top:.8rem;padding:.65rem .8rem;border:1px solid rgba(143,164,184,.14);border-radius:8px}.ag-coverage summary{cursor:pointer;font-size:.72rem;font-weight:800}.ag-coverage summary span{float:right;color:var(--muted)}.ag-gap,.ag-gap-clear{display:grid;gap:.2rem;padding:.55rem 0;border-bottom:1px solid rgba(143,164,184,.1);font-size:.7rem}.ag-gap span{color:var(--muted)}.ag-gap-clear{color:var(--good)}.ag-empty,.ag-safety{color:var(--muted);font-size:.68rem}.ag-safety{margin:.7rem 0 0;line-height:1.45}@media(max-width:760px){#aegisReliabilityView{padding:1rem}.ag-head,.ag-hero{display:block}.ag-badges{justify-content:flex-start;margin-top:.6rem}.ag-confidence{margin-top:.7rem;text-align:left}.ag-grid{grid-template-columns:1fr}.ag-signal{grid-template-columns:70px minmax(0,1fr)}.ag-signal small{grid-column:2}.ag-coverage summary span{display:block;float:none;margin-top:.25rem}}
+#aegisReliabilityView{grid-column:1/-1;padding:1.15rem 1.25rem;border-color:rgba(80,205,137,.34);background:linear-gradient(120deg,rgba(6,28,28,.95),rgba(7,14,22,.98) 62%)}#aegisReliabilityView.incident{border-color:rgba(255,200,87,.5);background:linear-gradient(120deg,rgba(58,40,9,.38),rgba(7,14,22,.98) 62%)}.ag-head,.ag-hero,.fd-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}.ag-head h2,.fd-head h3{margin:.2rem 0 0}.ag-kicker{color:var(--good);font-size:.65rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.incident .ag-kicker{color:var(--warn)}.ag-badges{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.4rem}.ag-badges span,.fd-hold{padding:.3rem .48rem;border:1px solid var(--edge);border-radius:999px;color:var(--muted);font-size:.6rem;font-weight:900}.ag-badges .trusted{color:var(--good);border-color:rgba(80,205,137,.35)}.ag-badges .lab,.fd-hold{color:var(--warn);border-color:rgba(255,200,87,.35)}.ag-badges .gap{color:var(--warn);border-color:rgba(255,200,87,.4)}.ag-hero{margin-top:1rem;padding:1rem;border:1px solid rgba(143,164,184,.14);border-radius:10px;background:rgba(3,8,13,.42)}.ag-state{color:var(--good);font-size:.65rem;font-weight:900;letter-spacing:.12em}.incident .ag-state{color:var(--warn)}.ag-hero h3{margin:.3rem 0;font-size:1.25rem}.ag-hero p{max-width:760px;margin:0;color:var(--muted);font-size:.82rem;line-height:1.5}.ag-confidence{text-align:right}.ag-confidence strong{display:block;color:var(--good);font-size:1.75rem}.incident .ag-confidence strong{color:var(--warn)}.ag-confidence span{color:var(--muted);font-size:.64rem}.ag-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:.8rem;margin-top:.8rem}.ag-grid section{padding:.8rem;border:1px solid rgba(143,164,184,.14);border-radius:10px}.ag-grid h4,.fd-shell h4{margin:0 0 .55rem;color:var(--muted);font-size:.67rem;letter-spacing:.1em;text-transform:uppercase}.ag-signals{display:grid;gap:.3rem}.ag-signal{display:grid;grid-template-columns:80px minmax(0,1fr) auto;gap:.45rem;font-size:.7rem}.ag-signal span,.ag-signal small{color:var(--muted)}.ag-signal span{font-size:.58rem;font-weight:900;text-transform:uppercase}.ag-action{margin:.1rem 0 .8rem;font-size:.82rem;line-height:1.5}.ag-verify{display:flex;justify-content:space-between;gap:.6rem;padding-top:.6rem;border-top:1px solid rgba(143,164,184,.14);font-size:.7rem}.ag-verify span{color:var(--muted)}.ag-verify strong{color:var(--good)}.fd-shell{margin-top:.9rem;padding:.85rem;border:1px solid rgba(94,190,255,.24);border-radius:10px;background:rgba(7,20,31,.68)}.fd-command,.fd-instruments{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;margin-top:.75rem}.fd-instruments{grid-template-columns:repeat(3,minmax(0,1fr))}.fd-command article,.fd-instruments article,.fd-rehearsals article{display:grid;align-content:start;gap:.3rem;padding:.7rem;border:1px solid rgba(143,164,184,.14);border-radius:8px}.fd-command small,.fd-instruments small,.fd-rehearsals small,.fd-command span,.fd-instruments span,.fd-rehearsals span{color:var(--muted);font-size:.65rem;line-height:1.45}.fd-number{color:var(--warn);font-size:1.45rem}.fd-timeline{display:grid;gap:.35rem;margin:0;padding:0;list-style:none}.fd-timeline li{display:grid;grid-template-columns:28px 1fr;gap:.4rem;font-size:.66rem}.fd-timeline strong{color:var(--warn)}.fd-rehearsals{margin-top:.75rem}.fd-rehearsals>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}.ag-coverage{margin-top:.8rem;padding:.65rem .8rem;border:1px solid rgba(143,164,184,.14);border-radius:8px}.ag-coverage summary{cursor:pointer;font-size:.72rem;font-weight:800}.ag-coverage summary span{float:right;color:var(--muted)}.ag-evidence-metric{padding:.55rem 0;color:var(--muted);font-size:.7rem}.ag-workflow-state{display:grid;gap:.2rem;padding:.65rem 0}.ag-workflow-state small{color:var(--muted)}.ag-workflow-steps{display:flex;flex-wrap:wrap;gap:.35rem}.ag-workflow-steps span{padding:.3rem .45rem;border:1px solid rgba(143,164,184,.2);border-radius:999px;color:var(--muted);font-size:.62rem}.ag-gap,.ag-gap-clear{display:grid;gap:.2rem;padding:.55rem 0;border-bottom:1px solid rgba(143,164,184,.1);font-size:.7rem}.ag-gap span{color:var(--muted)}.ag-gap-clear{color:var(--good)}.ag-empty,.ag-safety{color:var(--muted);font-size:.68rem}.ag-safety{margin:.7rem 0 0;line-height:1.45}@media(max-width:760px){#aegisReliabilityView{padding:1rem}.ag-head,.ag-hero,.fd-head{display:block}.ag-badges{justify-content:flex-start;margin-top:.6rem}.fd-hold{display:inline-block;margin-top:.6rem}.ag-confidence{margin-top:.7rem;text-align:left}.ag-grid,.fd-command,.fd-instruments,.fd-rehearsals>div{grid-template-columns:1fr}.ag-signal{grid-template-columns:70px minmax(0,1fr)}.ag-signal small{grid-column:2}.ag-coverage summary span{display:block;float:none;margin-top:.25rem}.ag-workflow-steps{display:grid;grid-template-columns:1fr 1fr}.ag-workflow-steps span:last-child{grid-column:1/-1}}
 `;
     document.head.appendChild(style);
 

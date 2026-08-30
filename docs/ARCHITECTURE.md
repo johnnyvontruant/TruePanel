@@ -138,6 +138,13 @@ ORACLE does not invent hard-fault authority. Statistical drift remains a hypothe
 
 AEGIS is the read-only reliability-intelligence layer. It combines related ORACLE signals and verified alerts into one probable root-cause hypothesis with explicit confidence and supporting evidence.
 
+Correlation is supplied through a TruePanel-owned policy interface. The
+default declarative policy adapts Alertmanager-style grouping and inhibition
+semantics without importing third-party runtime code: rules require distinct
+evidence groups, carry explicit confidence weights and a HoloDeck verification
+scenario, and may consolidate downstream symptoms while retaining every raw
+alert. The policy contract is independently replaceable and CI-validated.
+
 AEGIS:
 
 - retains every contributing alert;

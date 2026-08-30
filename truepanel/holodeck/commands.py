@@ -163,6 +163,54 @@ def add_holodeck_subcommands(subcommands: _SubParsersAction) -> None:
         default=MAX_COMPILER_EVALUATIONS,
     )
 
+    field_init = actions.add_parser(
+        "field-init", help="Initialize an opt-in AEGIS field evidence workflow"
+    )
+    field_init.add_argument("path", type=Path)
+    field_init.add_argument("--corpus-id", required=True)
+    field_init.add_argument("--retention-policy", required=True)
+    field_init.add_argument("--confirm", required=True)
+
+    field_ingest = actions.add_parser(
+        "field-ingest", help="Import one already-sanitized Black Box recording"
+    )
+    field_ingest.add_argument("path", type=Path)
+    field_ingest.add_argument("recording", type=Path)
+    field_ingest.add_argument("--case-id", required=True)
+    field_ingest.add_argument("--challenge", required=True)
+    field_ingest.add_argument("--system-profile", required=True)
+    field_ingest.add_argument("--workload-class", required=True)
+    expected = field_ingest.add_mutually_exclusive_group(required=True)
+    expected.add_argument(
+        "--shared-cooling", action="store_true", dest="expected_shared_cooling"
+    )
+    expected.add_argument(
+        "--normal", action="store_false", dest="expected_shared_cooling"
+    )
+    field_ingest.add_argument("--first-isolated-threshold", type=int)
+
+    field_review = actions.add_parser(
+        "field-review", help="Confirm one human-reviewed incident outcome"
+    )
+    field_review.add_argument("path", type=Path)
+    field_review.add_argument("case_id")
+    field_review.add_argument("--confirm", required=True)
+
+    for action, help_text in (
+        ("field-freeze", "Freeze the reviewed, content-addressed field corpus"),
+        ("field-assess", "Replay and assess a frozen field corpus"),
+        ("field-status", "Show privacy-safe field workflow progress"),
+    ):
+        command = actions.add_parser(action, help=help_text)
+        command.add_argument("path", type=Path)
+        if action == "field-freeze":
+            command.add_argument("--confirm", required=True)
+
+    field_smoke = actions.add_parser(
+        "field-smoke", help="Smoke-test the complete workflow with packaged fixtures"
+    )
+    field_smoke.add_argument("path", type=Path)
+
 
 def _coerce(value: str):
     lowered = value.lower()
@@ -207,6 +255,9 @@ def handle_holodeck_command(args) -> int | None:
 
     if args.holodeck_action == "compile-incident":
         return _compile_incident(args)
+
+    if args.holodeck_action.startswith("field-"):
+        return _field_workflow(args)
 
     if args.holodeck_action == "replay":
         from .replay import BlackBoxHoloDeckProvider
@@ -264,6 +315,54 @@ def handle_holodeck_command(args) -> int | None:
                     f"HoloDeck {args.host} t={provider.clock():.1f}s "
                     f"health={payload.get('health', {}).get('state', 'unknown')}"
                 )
+    return 0
+
+
+def _field_workflow(args) -> int:
+    from truepanel.aegis.field_workflow import (
+        assess_field_workflow,
+        freeze_field_workflow,
+        ingest_field_recording,
+        initialize_field_workflow,
+        review_field_case,
+        run_field_workflow_smoke,
+        workflow_status,
+    )
+
+    action = args.holodeck_action
+    if action == "field-init":
+        result = initialize_field_workflow(
+            args.path,
+            corpus_id=args.corpus_id,
+            retention_policy=args.retention_policy,
+            confirmation=args.confirm,
+        )
+    elif action == "field-ingest":
+        result = ingest_field_recording(
+            args.path,
+            args.recording,
+            case_id=args.case_id,
+            challenge=args.challenge,
+            system_profile=args.system_profile,
+            workload_class=args.workload_class,
+            expected_shared_cooling=args.expected_shared_cooling,
+            first_isolated_threshold_index=args.first_isolated_threshold,
+        )
+    elif action == "field-review":
+        result = review_field_case(
+            args.path, case_id=args.case_id, confirmation=args.confirm
+        )
+    elif action == "field-freeze":
+        result = freeze_field_workflow(args.path, confirmation=args.confirm)
+    elif action == "field-assess":
+        result = assess_field_workflow(args.path)
+    elif action == "field-status":
+        result = workflow_status(args.path)
+    elif action == "field-smoke":
+        result = run_field_workflow_smoke(args.path)
+    else:  # pragma: no cover - parser enforces this boundary
+        raise ValueError(f"unsupported field workflow action: {action}")
+    print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
 

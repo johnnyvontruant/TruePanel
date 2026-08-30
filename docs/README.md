@@ -5,6 +5,8 @@ This directory is the operating manual for the current TruePanel platform.
 ## Start here
 
 - [Mission Control and reliability](MISSION_CONTROL.md) for the cockpit, Preflight, Health Intelligence, Pathfinder, Lifeline, ORACLE, AEGIS, mobile behavior, and access boundaries
+- [AEGIS Black Box calibration corpus](AEGIS_BLACK_BOX_CORPUS.md) for versioned privacy-safe replay evidence and calibration limits
+- [AEGIS field-evidence gate](AEGIS_FIELD_EVIDENCE_GATE.md) for opt-in admission, uncertainty bounds, and promotion holds
 - [Installation](INSTALLATION.md) for compatibility checks, native deployment, service activation, configuration, and removal
 - [Upgrade and rollback](UPGRADING.md) for guarded staging, promotion, verification, cleanup, repair, and recovery
 - [CLI reference](CLI.md) for diagnostics, lifecycle, simulation, plugins, hardware, and laboratory commands
@@ -16,7 +18,10 @@ This directory is the operating manual for the current TruePanel platform.
 - [Clean-install Run 3 results](CLEAN_INSTALL_RUN3_RESULTS.md)
 - [Historical telemetry](HISTORICAL_TELEMETRY.md)
 - [Project AEGIS](PROJECT_AEGIS.md) for the accepted correlation layer, Recovery Coverage Matrix, experiment evidence, and remaining deployment gates
+- [AEGIS Prior-Art Field Report](AEGIS_PRIOR_ART_FIELD_REPORT.md) for ecosystem comparisons, licensing decisions, the declarative policy adaptation, and calibration evidence
 - [Project HoloDeck](HOLODECK.md) for the hardware-isolated Digital Twin, fault injection, Black Box replay, invariant checks, and Incident Compiler
+- [Project HANGAR](PROJECT_HANGAR.md) for the canonical experiment registry, generated status views, evidence contracts, and contributor workflow
+- [Flight Director Prior-Art Field Report](FLIGHT_DIRECTOR_PRIOR_ART.md) for NAS comparisons, adopted semantics, licensing, and rejected routes
 
 Project Pathfinder and Lifeline are documented in the [Mission Control guide](MISSION_CONTROL.md) because their primary contract is operator-facing guided recovery.
 

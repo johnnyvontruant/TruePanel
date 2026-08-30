@@ -28,7 +28,6 @@ from truepanel.lifeline import BayIdentificationService
 from . import server_base as _base
 from .bay_mirror import BayMirrorProvider
 
-
 STATIC_DIR = _base.STATIC_DIR
 collect_compatibility = _base.collect_compatibility
 _FLIGHT_MANUAL_MARKER = b"<!-- truepanel-flight-manual -->"
@@ -45,6 +44,11 @@ _COCKPIT_VARIANTS_MARKER = b"<!-- truepanel-cockpit-variants -->"
 _COCKPIT_VARIANTS_TAG = (
     _COCKPIT_VARIANTS_MARKER
     + b'\n<script src="/cockpit-variants.js" defer></script>\n'
+)
+_GLASS_COCKPIT_MARKER = b"<!-- truepanel-glass-cockpit -->"
+_GLASS_COCKPIT_TAG = (
+    _GLASS_COCKPIT_MARKER
+    + b'\n<script src="/glass-cockpit.js" defer></script>\n'
 )
 _LIFELINE_MARKER = b"<!-- truepanel-lifeline -->"
 _LIFELINE_TAG = (
@@ -77,6 +81,9 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             return
         if parsed.path == "/cockpit-variants.js":
             self._static_script("cockpit-variants.js", "cockpit_variants_unavailable")
+            return
+        if parsed.path == "/glass-cockpit.js":
+            self._static_script("glass-cockpit.js", "glass_cockpit_unavailable")
             return
         if parsed.path == "/lifeline.js":
             self._static_script("lifeline.js", "lifeline_unavailable")
@@ -113,6 +120,8 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             tags += _FLIGHT_MANUAL_TAG
         if _COCKPIT_POLISH_MARKER not in body:
             tags += _COCKPIT_POLISH_TAG
+        if _GLASS_COCKPIT_MARKER not in body:
+            tags += _GLASS_COCKPIT_TAG
         if _COCKPIT_VARIANTS_MARKER not in body:
             tags += _COCKPIT_VARIANTS_TAG
         if _LIFELINE_MARKER not in body:
@@ -139,10 +148,7 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             payload = {}
 
         storage = payload.get("storage")
-        if not isinstance(storage, dict):
-            storage = {}
-        else:
-            storage = dict(storage)
+        storage = {} if not isinstance(storage, dict) else dict(storage)
 
         try:
             mirror = self.server.bay_mirror_provider.snapshot()

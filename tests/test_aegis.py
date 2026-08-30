@@ -4,18 +4,21 @@ import copy
 import http.client
 import json
 import threading
+from pathlib import Path
 
 from truepanel.aegis import (
     AegisReliabilityEngine,
     correlate_incident,
     coverage_matrix,
     rehearse_recovery_paths,
+    validate_correlation_policy,
     validate_recovery_coverage,
 )
 from truepanel.guidance import guidance_for_snapshot
 from truepanel.guidance.catalog import guidance_codes
 from truepanel.guidance.recovery import recovery_contract
 from truepanel.guidance.sessions import RecoverySessionStore
+from truepanel.holodeck.aegis_calibration import run_correlation_calibration
 from truepanel.holodeck.aegis_lab import run_shared_cooling_experiment
 from truepanel.web import pathfinder_server
 
@@ -52,6 +55,7 @@ def test_recovery_coverage_contract_is_complete_and_ci_enforceable():
     matrix = coverage_matrix(rehearsals)
 
     assert validate_recovery_coverage() == ()
+    assert validate_correlation_policy() == ()
     assert {item["code"] for item in matrix["entries"]} == set(guidance_codes())
     assert matrix["total"] == 8
     assert matrix["trusted"] == matrix["total"]
@@ -104,6 +108,91 @@ def test_shared_cooling_incident_consolidates_alerts_and_keeps_evidence():
     assert len(incident["supporting_signals"]) == 4
     assert incident["read_only"] is True
     assert incident["control_authority"] is False
+    assert incident["presentation"] == {
+        "group_by": ["physical_domain", "probable_cause"],
+        "inhibited_alerts": ["thermal.high_temperature"],
+        "raw_alerts_retained": True,
+    }
+
+
+def test_declarative_policy_requires_fan_delivery_evidence():
+    thermal_only = {
+        "active_signals": ["drive.temperature_c", "cpu.temperature_c"],
+        "metrics": {
+            "drive.temperature_c": {"state": "WATCH", "value": 41},
+            "cpu.temperature_c": {"state": "WATCH", "value": 62},
+        },
+        "correlations": [],
+    }
+
+    assert correlate_incident([], thermal_only) is None
+
+
+def test_correlation_policy_is_replaceable_without_changing_composition():
+    class NeverCorrelatePolicy:
+        def evaluate(self, cards, outlook):
+            return None
+
+        def describe(self):
+            return {"policy_id": "test-never", "replaceable": True}
+
+        def validate(self, *, known_alerts=()):
+            return ()
+
+    engine = AegisReliabilityEngine(correlation_policy=NeverCorrelatePolicy())
+    result = engine.observe(
+        {
+            "timestamp": 1,
+            "operator_guidance": [],
+            "fans": {"channels": []},
+            "storage": {},
+            "network": [],
+        }
+    )
+
+    assert result["active_incident"] is None
+    assert result["correlation_policy"] == {
+        "policy_id": "test-never",
+        "replaceable": True,
+    }
+
+
+def test_holodeck_correlation_calibration_rejects_adversarial_negatives():
+    report = run_correlation_calibration()
+
+    assert report["simulation"] is True
+    assert report["hardware_isolated"] is True
+    assert report["production_mutation"] is False
+    assert report["corpus_size"] == 4
+    assert report["confusion_matrix"] == {
+        "true_positive": 1,
+        "false_positive": 0,
+        "true_negative": 3,
+        "false_negative": 0,
+    }
+    assert report["precision"] == 1.0
+    assert report["recall"] == 1.0
+    assert report["specificity"] == 1.0
+    assert report["legacy_false_positive_scenarios"] >= 1
+    assert all(item["passed"] for item in report["results"])
+    shared = report["results"][0]
+    assert shared["first_policy_match_index"] == 19
+    assert shared["first_isolated_threshold_index"] == 46
+    assert shared["lead_samples"] == 27
+    assert len(report["evidence_sha256"]) == 64
+
+
+def test_preserved_calibration_evidence_matches_the_deterministic_runner():
+    evidence_path = (
+        Path(__file__).resolve().parents[1]
+        / "docs"
+        / "evidence"
+        / "aegis-correlation-calibration-v1.json"
+    )
+
+    assert json.loads(evidence_path.read_text(encoding="utf-8")) == (
+        run_correlation_calibration()
+    )
 
 
 def test_holodeck_shared_cooling_proof_is_earlier_and_clearer():
@@ -150,6 +239,8 @@ def test_reliability_engine_keeps_nominal_payload_read_only():
     assert result["production_mutation"] is False
     assert result["active_incident"] is None
     assert result["coverage_summary"] == {"total": 8, "trusted": 8, "gaps": 0}
+    assert result["correlation_policy"]["replaceable"] is True
+    assert result["correlation_policy"]["provenance"]["license"] == "Apache-2.0"
 
 
 
@@ -327,6 +418,11 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "Safest next action" in source
         assert "Supporting signals" in source
         assert "Recovery Coverage Matrix" in source
+        assert "correlation_policy" in source
+        assert "LAB CALIBRATED · NOT LIVE VALIDATED" in source
+        assert "Evidence Promotion Gate" in source
+        assert "false_positive_rate_wilson_upper" in source
+        assert "raw alerts" in source
         assert 'window.addEventListener("truepanel:status"' in source
         assert "window.setInterval" not in source
         dashboard_source = dashboard.decode("utf-8")

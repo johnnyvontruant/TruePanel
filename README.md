@@ -201,6 +201,8 @@ See the [CLI Reference](docs/CLI.md), [Upgrade and Rollback Guide](docs/UPGRADIN
 - [CLI reference](docs/CLI.md)
 - [Project HoloDeck](docs/HOLODECK.md)
 - [Project AEGIS](docs/PROJECT_AEGIS.md)
+- [Project HANGAR](docs/PROJECT_HANGAR.md)
+- [Flight Director Prior-Art Field Report](docs/FLIGHT_DIRECTOR_PRIOR_ART.md)
 - [Project Stargate](docs/STARGATE.md)
 - [A125 protocol](docs/A125_PROTOCOL.md)
 - [Plugin API](docs/PLUGIN_API.md)

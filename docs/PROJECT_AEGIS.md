@@ -1,5 +1,11 @@
 # Project AEGIS
 
+The next calibration increment and its ecosystem decisions are recorded in the
+[AEGIS Prior-Art Field Report](AEGIS_PRIOR_ART_FIELD_REPORT.md). It leaves the
+accepted PR #78 baseline frozen and adds a replaceable declarative correlation
+policy, adversarial HoloDeck cases, and explicit provenance on a separate
+follow-up branch.
+
 Project AEGIS is TruePanel's read-only reliability-intelligence layer. It
 connects existing systems without replacing their authority:
 
@@ -132,13 +138,27 @@ that evidence.
 ## Remaining risks and next gate
 
 - ORACLE baselines are in-memory and restart with Mission Control.
-- Confidence weights are deterministic heuristics and need calibration against
-  a larger corpus of sanitized Black Box recordings.
+- Confidence weights are deterministic heuristics calibrated only against the
+  versioned synthetic Black Box corpus described below.
 - Current telemetry extraction uses aggregate monitored-fan and hottest-drive
   values; per-zone and per-bay correlations would improve localization.
+- The current six-recording, 193-frame corpus includes adversarial shifts and
+  faults, but its perfect synthetic score is not a production false-positive
+  estimate.
 - AEGIS has not been deployed or evaluated against live BattleStation data.
 
-The strongest next step is a Black Box calibration campaign: replay normal
-workload changes and known incidents through AEGIS, measure false positives and
-root-cause stability, then promote only calibrated rules into a production
-release candidate. Live deployment remains a separate explicit gate.
+The current correlation policy is calibrated against the versioned
+[`aegis-black-box-corpus-v1`](AEGIS_BLACK_BOX_CORPUS.md). Mission Control labels
+that evidence as lab-only until a separately governed, opt-in field corpus
+exists; deterministic fixture success must never be presented as production
+accuracy.
+
+The [field-evidence gate](AEGIS_FIELD_EVIDENCE_GATE.md) separately evaluates
+dataset provenance, reviewed labels, workload/system diversity, and 95% Wilson
+confidence bounds. Synthetic point estimates cannot clear that gate, and an
+automatically eligible corpus still requires explicit release review.
+
+The strongest next step is an opt-in Black Box field-evidence campaign: replay
+sanitized normal workloads and reviewed incidents through this same interface,
+measure false positives and confidence stability, and keep live deployment as
+a separate explicit gate.

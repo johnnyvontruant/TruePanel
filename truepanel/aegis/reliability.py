@@ -12,6 +12,8 @@ from truepanel.oracle import OracleEngine
 
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
+from .flight_director import run_flight_director_proof
+from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 from .rehearsal import rehearse_recovery_paths
 
 
@@ -49,6 +51,7 @@ class AegisReliabilityEngine:
         self,
         *,
         oracle: OracleEngine | None = None,
+        correlation_policy: CorrelationPolicy | None = None,
         sample_interval_seconds: float = 5.0,
     ) -> None:
         interval = _number(sample_interval_seconds)
@@ -56,9 +59,26 @@ class AegisReliabilityEngine:
             raise ValueError("AEGIS sample interval must be finite and positive")
 
         self.oracle = oracle or OracleEngine()
+        self.correlation_policy = correlation_policy or DEFAULT_CORRELATION_POLICY
         self.sample_interval_seconds = interval
         self.rehearsals = rehearse_recovery_paths()
         self.matrix = coverage_matrix(self.rehearsals)
+        proof = run_flight_director_proof()
+        self.flight_director = {
+            "scenario": proof["scenario"],
+            "simulation": True,
+            "field_validated": False,
+            "control_authority": False,
+            "incident": proof["active_incident"],
+            "timeline": proof["incident_time_machine"]["landmarks"],
+            "topology": proof["causal_hardware_map"],
+            "forecast": proof["safe_operating_envelope"],
+            "rehearsals": proof["what_if_rehearsals"],
+            "recovery_plan": proof["recovery_flight_plan"],
+            "verification": proof["repair_verification_signature"],
+            "measurements": proof["measurements"],
+            "evidence_sha256": proof["evidence_sha256"],
+        }
         self._sequence = 0
         self._last_sample_timestamp: float | None = None
         self._last_outlook: dict[str, Any] | None = None
@@ -189,7 +209,7 @@ class AegisReliabilityEngine:
             metrics=metrics,
             hard_faults=self._hard_faults(cards),
         )
-        incident = correlate_incident(cards, outlook)
+        incident = correlate_incident(cards, outlook, policy=self.correlation_policy)
         return {
             "schema_version": 1,
             "project": "AEGIS",
@@ -206,11 +226,13 @@ class AegisReliabilityEngine:
                 "request_count": self._sequence,
             },
             "coverage_matrix": self.matrix,
+            "correlation_policy": self.correlation_policy.describe(),
             "coverage_summary": {
                 "total": self.matrix["total"],
                 "trusted": self.matrix["trusted"],
                 "gaps": self.matrix["gaps"],
             },
+            "flight_director": self.flight_director,
         }
 
 

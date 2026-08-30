@@ -37,12 +37,78 @@ def main() -> int:
                     "import pathlib, truepanel, truepanel.cli; "
                     "path = pathlib.Path(truepanel.__file__).resolve(); "
                     "assert 'site-packages' in str(path), path; "
+                    "import sys; "
+                    "assert 'truepanel.holodeck.host_agent' not in sys.modules; "
+                    "assert 'truepanel.holodeck.runner' not in sys.modules; "
                     "print(path)"
                 ),
             ],
             cwd=outside,
         )
         assert "site-packages" in import_check.stdout
+
+        corpus_check = run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                (
+                    "from truepanel.holodeck.aegis_corpus import "
+                    "run_black_box_corpus; "
+                    "report = run_black_box_corpus(); "
+                    "assert report['corpus_size'] == 6; "
+                    "assert report['confusion_matrix']['false_positive'] == 0; "
+                    "from truepanel.aegis.evidence_gate import "
+                    "builtin_lab_evidence_status; "
+                    "gate = builtin_lab_evidence_status(); "
+                    "assert gate['stage'] == 'lab_calibrated'; "
+                    "assert gate['production_validated'] is False"
+                ),
+            ],
+            cwd=outside,
+        )
+        assert corpus_check.returncode == 0
+
+        hangar_flight_check = run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                (
+                    "from truepanel.hangar import load_registry, validate_registry; "
+                    "registry = load_registry(); "
+                    "assert validate_registry(registry) == (); "
+                    "assert len(registry['experiments']) == 14; "
+                    "from truepanel.glass_cockpit import "
+                    "benchmark, validate_corpus; "
+                    "assert validate_corpus() == (); "
+                    "assert benchmark()['winner'] == 'B'; "
+                    "from truepanel.aegis.flight_director import "
+                    "run_flight_director_proof; "
+                    "proof = run_flight_director_proof(); "
+                    "assert proof['measurements']['detection_lead_samples'] == 27; "
+                    "assert proof['repair_verification_signature']['outcome'] == 'passed'; "
+                    "assert proof['control_authority'] is False"
+                ),
+            ],
+            cwd=outside,
+        )
+        assert hangar_flight_check.returncode == 0
+
+        field_smoke = run(
+            [
+                str(executable),
+                "holodeck",
+                "field-smoke",
+                str(outside / "field-workflow"),
+            ],
+            cwd=outside,
+        )
+        field_receipt = json.loads(field_smoke.stdout)
+        assert field_receipt["stage"] == "lab_calibrated"
+        assert field_receipt["production_validated"] is False
+        assert field_receipt["hardware_isolated"] is True
+        assert field_receipt["control_authority"] is False
 
         reported = run([str(executable), "version"], cwd=outside)
         assert f"Version: {version('truepanel')}" in reported.stdout
@@ -155,7 +221,7 @@ def main() -> int:
         assert manifest["minimized_frame_count"] == 1
         assert manifest["executable_code_generated"] is False
 
-    print("PASS: installed TruePanel wheel and HoloDeck CLI smoke")
+    print("PASS: installed wheel, HoloDeck, AEGIS, HANGAR, and Flight Director smoke")
     return 0
 
 

@@ -22,6 +22,21 @@ the native TruePanel deployment, whose managed wrapper runs alongside
 
 Use `truepanel --help` and each command's `--help` output as the source of truth for the exact options supported by the current checkout.
 
+## Project HANGAR
+
+HANGAR is intentionally available as a dependency-light Python module so CI and an
+installed wheel can validate experiment memory without starting TruePanel services:
+
+```bash
+python -m truepanel.hangar status
+python -m truepanel.hangar validate --root .
+python -m truepanel.hangar render --output docs/hangar
+```
+
+`status` and `validate` are read-only. `render` writes only the four generated
+documentation views under the selected output directory and never touches hardware,
+services, or production configuration.
+
 ## Runtime
 
 ```bash
