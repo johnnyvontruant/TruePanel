@@ -153,6 +153,11 @@ that evidence as lab-only until a separately governed, opt-in field corpus
 exists; deterministic fixture success must never be presented as production
 accuracy.
 
+The [field-evidence gate](AEGIS_FIELD_EVIDENCE_GATE.md) separately evaluates
+dataset provenance, reviewed labels, workload/system diversity, and 95% Wilson
+confidence bounds. Synthetic point estimates cannot clear that gate, and an
+automatically eligible corpus still requires explicit release review.
+
 The strongest next step is an opt-in Black Box field-evidence campaign: replay
 sanitized normal workloads and reviewed incidents through this same interface,
 measure false positives and confidence stability, and keep live deployment as

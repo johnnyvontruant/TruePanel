@@ -6,6 +6,7 @@ This directory is the operating manual for the current TruePanel platform.
 
 - [Mission Control and reliability](MISSION_CONTROL.md) for the cockpit, Preflight, Health Intelligence, Pathfinder, Lifeline, ORACLE, AEGIS, mobile behavior, and access boundaries
 - [AEGIS Black Box calibration corpus](AEGIS_BLACK_BOX_CORPUS.md) for versioned privacy-safe replay evidence and calibration limits
+- [AEGIS field-evidence gate](AEGIS_FIELD_EVIDENCE_GATE.md) for opt-in admission, uncertainty bounds, and promotion holds
 - [Installation](INSTALLATION.md) for compatibility checks, native deployment, service activation, configuration, and removal
 - [Upgrade and rollback](UPGRADING.md) for guarded staging, promotion, verification, cleanup, repair, and recovery
 - [CLI reference](CLI.md) for diagnostics, lifecycle, simulation, plugins, hardware, and laboratory commands

@@ -127,6 +127,24 @@ privacy state, license, generator, limitations, resource hashes, labels, and
 challenge classes. CI verifies both the corpus and its preserved validation
 report. No third-party notice-bearing artifact was added.
 
+## Field-evidence and statistical-promotion follow-up
+
+Research on 2026-08-30 challenged the remaining assumption that an observed
+perfect score can authorize trust:
+
+| Candidate | Useful result | Decision and provenance |
+| --- | --- | --- |
+| [NIST confidence-interval guidance](https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm) | NIST describes Wilson score intervals as a robust proportion interval across values of `p` and `n`, unlike a naive point estimate. | **Adapt the published formula** in original, dependency-free TruePanel code. Mathematical method only; no source copied. |
+| [Datasheets for Datasets](https://arxiv.org/abs/1803.09010) | Documents motivation, composition, collection, uses, distribution, and maintenance so consumers can evaluate data beyond its bytes. | **Adapt factual provenance questions** to a small field-corpus manifest. Paper is architectural inspiration; no template or text copied. |
+| [Google Data Cards Playbook](https://sites.research.google/datacardsplaybook/) | Emphasizes purposeful, people-centered dataset transparency and context that cannot be inferred automatically. | **Adapt the admission-versus-validation split.** CC BY-SA playbook content is not copied; original field names are used. |
+| [Evidently](https://github.com/evidentlyai/evidently) | Mature Apache-2.0 offline/production evaluation with extensible metrics, tests, monitoring, and drift detection. | **Defer the dependency.** Its broad stack is excessive before real field data exists; benchmark later behind `IncidentDetector`. No code incorporated. |
+
+The resulting evidence gate adds no package, model, service, listener, data, or
+credential. Wilson calculations use the Python standard library. Field-data
+admission requires operator opt-in, sanitized-at-rest evidence, reviewed labels,
+declared allowed use, and retention policy. Automated success can produce only
+a field candidate; it cannot issue a production-validation receipt.
+
 ## Most promising collaboration
 
 The highest-value outreach target is **AnalogJ/Scrutiny**: compare its
