@@ -73,6 +73,7 @@ exclude = [
 "truepanel.web" = ["static/*.html", "static/*.js"]
 "truepanel.holodeck" = ["corpus/v1/*.json", "corpus/v1/*.jsonl"]
 "truepanel.hangar" = ["registry.json"]
+"truepanel.glass_cockpit" = ["candidates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

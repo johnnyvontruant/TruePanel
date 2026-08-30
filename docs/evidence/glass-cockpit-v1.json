@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "experiment_id": "TP-EXP-0014",
+  "inspected_at": "2026-08-30",
+  "corpus": {"total": 100, "cohorts": {"TRAFFIC": 25, "OPS": 20, "NAS": 15, "DESIGN": 15, "DATAVIZ": 10, "HIGH_STAKES": 10, "PUBLIC": 5}},
+  "disclosure": "Automated structural and browser heuristics are not human usability results.",
+  "candidate_results": [
+    {"id": "A", "primary_elements": 11, "above_fold_facts": 5, "interaction_cost": 26, "decision_domains": 8, "selected": false},
+    {"id": "B", "primary_elements": 4, "above_fold_facts": 8, "interaction_cost": 8, "decision_domains": 4, "selected": true},
+    {"id": "C", "primary_elements": 7, "above_fold_facts": 8, "interaction_cost": 7, "decision_domains": 6, "selected": false}
+  ],
+  "widths_css_px": [320, 360, 390, 430, 760, 1024, 1440, 1920],
+  "acceptance": {"horizontal_overflow": false, "minimum_disclosure_target_css_px": 44, "keyboard_focus_visible": true, "reduced_motion": true, "chart_text_alternatives": true, "shared_stream_only": true},
+  "winner": "B",
+  "production_validation": false,
+  "control_authority": false
+}
