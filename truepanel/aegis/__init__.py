@@ -12,6 +12,7 @@ from .evidence_gate import (
     validate_field_manifest,
     wilson_interval,
 )
+from .flight_director import run_flight_director_proof
 from .policy import (
     DEFAULT_CORRELATION_POLICY,
     CorrelationPolicy,
@@ -33,6 +34,7 @@ __all__ = [
     "coverage_matrix",
     "evaluate_evidence_gate",
     "rehearse_recovery_paths",
+    "run_flight_director_proof",
     "validate_recovery_coverage",
     "validate_correlation_policy",
     "validate_field_manifest",

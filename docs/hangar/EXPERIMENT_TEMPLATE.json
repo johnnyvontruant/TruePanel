@@ -1,0 +1,21 @@
+{
+  "id": "TP-EXP-NNNN",
+  "title": "Short experiment title",
+  "state": "FUTURE",
+  "hypothesis": "A falsifiable statement.",
+  "value": "Why learning this matters.",
+  "prior_art": [],
+  "safety_class": "SIMULATION_ONLY",
+  "development": {"branch": null, "pr": null, "commits": []},
+  "protocol": [],
+  "fixtures": [],
+  "success_criteria": [],
+  "abort_criteria": [],
+  "evidence": [],
+  "outcome": {},
+  "invalidated_assumptions": [],
+  "reproduction": [],
+  "revisit_conditions": [],
+  "strongest_follow_up": "The next bounded experiment.",
+  "freshness": {"reviewed_at": "YYYY-MM-DD", "review_after": "YYYY-MM-DD"}
+}

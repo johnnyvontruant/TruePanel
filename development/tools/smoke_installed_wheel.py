@@ -37,6 +37,9 @@ def main() -> int:
                     "import pathlib, truepanel, truepanel.cli; "
                     "path = pathlib.Path(truepanel.__file__).resolve(); "
                     "assert 'site-packages' in str(path), path; "
+                    "import sys; "
+                    "assert 'truepanel.holodeck.host_agent' not in sys.modules; "
+                    "assert 'truepanel.holodeck.runner' not in sys.modules; "
                     "print(path)"
                 ),
             ],
@@ -65,6 +68,28 @@ def main() -> int:
             cwd=outside,
         )
         assert corpus_check.returncode == 0
+
+        hangar_flight_check = run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                (
+                    "from truepanel.hangar import load_registry, validate_registry; "
+                    "registry = load_registry(); "
+                    "assert validate_registry(registry) == (); "
+                    "assert len(registry['experiments']) == 13; "
+                    "from truepanel.aegis.flight_director import "
+                    "run_flight_director_proof; "
+                    "proof = run_flight_director_proof(); "
+                    "assert proof['measurements']['detection_lead_samples'] == 27; "
+                    "assert proof['repair_verification_signature']['outcome'] == 'passed'; "
+                    "assert proof['control_authority'] is False"
+                ),
+            ],
+            cwd=outside,
+        )
+        assert hangar_flight_check.returncode == 0
 
         field_smoke = run(
             [
@@ -192,7 +217,7 @@ def main() -> int:
         assert manifest["minimized_frame_count"] == 1
         assert manifest["executable_code_generated"] is False
 
-    print("PASS: installed TruePanel wheel, HoloDeck CLI, and AEGIS corpus smoke")
+    print("PASS: installed wheel, HoloDeck, AEGIS, HANGAR, and Flight Director smoke")
     return 0
 
 

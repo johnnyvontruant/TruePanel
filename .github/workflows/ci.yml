@@ -35,6 +35,15 @@ jobs:
       - name: Run test suite
         run: python -m pytest -q
 
+      - name: Validate HANGAR registry and generated views
+        run: |
+          python -m truepanel.hangar validate --root .
+          output="$(mktemp -d)"
+          python -m truepanel.hangar render --output "$output"
+          for state in future in_progress completed failed; do
+            diff -u "docs/hangar/$state.md" "$output/$state.md"
+          done
+
   installed-wheel-smoke:
     runs-on: ubuntu-latest
 

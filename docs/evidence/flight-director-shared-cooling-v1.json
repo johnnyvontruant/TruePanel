@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "project": "FLIGHT_DIRECTOR",
+  "scenario": "fan-degradation-shared-cooling-v1",
+  "simulation": true,
+  "hardware_isolated": true,
+  "field_validated": false,
+  "production_validated": false,
+  "control_authority": false,
+  "source": "truepanel.aegis.flight_director.run_flight_director_proof",
+  "incident_time_machine": {
+    "sample_count": 52,
+    "landmarks": {
+      "baseline_begins": 0,
+      "shared_cooling_identified": 19,
+      "first_isolated_threshold": 46,
+      "terminal_observation": 51
+    }
+  },
+  "causal_hardware_map": {
+    "node_count": 13,
+    "unknown_identity_count": 6,
+    "unknowns_are_explicit": true
+  },
+  "forecast": {
+    "metric": "drive.temperature_c",
+    "trajectory_c_per_sample": 0.2,
+    "estimated_threshold_crossing_sample": 46,
+    "observed_threshold_crossing_sample": 46,
+    "absolute_error_samples": 0,
+    "uncertainty_samples": 2,
+    "calibration_maturity": "deterministic_lab_only"
+  },
+  "what_if_rehearsals": [
+    "workload_returns_to_idle",
+    "fan_degrades_further",
+    "airflow_restored"
+  ],
+  "measurements": {
+    "detection_lead_samples": 27,
+    "root_cause_stability": 1.0,
+    "alert_reduction_percent": 50,
+    "repair_verification_outcome": "passed"
+  },
+  "failed_paths": [
+    "exact fan channel inference from aggregate telemetry",
+    "bay, drive, VDEV, and pool inference without identity evidence",
+    "field confidence claim from a deterministic fixture"
+  ],
+  "replay_command": "python -c \"from truepanel.aegis.flight_director import run_flight_director_proof; print(run_flight_director_proof()['evidence_sha256'])\"",
+  "report_evidence_sha256": "99e7cabd18069f64ec43aea0650fa4a84559fb75f5e4984e867a094a369aedc5"
+}
