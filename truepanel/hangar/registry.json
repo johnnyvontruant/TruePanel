@@ -150,7 +150,7 @@
       "hypothesis": "A replay, causal map, bounded forecast, what-if rehearsal, and recovery signature make one incident clearer and safer than isolated thresholds.",
       "value": "Turns AEGIS evidence into an operator-ready Now/Next/Why/Proof flight plan.",
       "prior_art": ["OpenTelemetry causal context", "digital-twin what-if analysis", "guided recovery runbooks"], "safety_class": "SIMULATION_ONLY",
-      "development": {"branch": "feature/hangar-flight-director-v1", "pr": null, "commits": ["bc24e21"]},
+      "development": {"branch": "feature/hangar-flight-director-v1", "pr": null, "commits": ["404abed5cecaff7a5fb27072af7302de29e244dd"]},
       "protocol": ["replay 52 samples", "identify cause", "forecast threshold", "rehearse three branches", "verify restored airflow"],
       "fixtures": ["fan-bearing-degradation"], "success_criteria": ["positive detection lead", "bounded forecast", "passing repair signature"],
       "abort_criteria": ["unknown topology inferred as fact", "synthetic evidence presented as field validation"],
