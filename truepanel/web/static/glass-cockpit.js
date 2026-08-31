@@ -142,6 +142,79 @@ function installHealthAnnunciatorNavigation(){
     annotate();
 }
 
+function installRefractionExperiment(){
+    const params=new URLSearchParams(window.location.search);
+    if(params.get("refraction")!=="1") return;
+
+    const pane=document.getElementById("healthSubsystems");
+    if(!pane?.classList.contains("gc-health-annunciators")) return;
+
+    if(window.matchMedia?.("(forced-colors: active)")?.matches===true){
+        document.body.dataset.gcRefraction="fallback";
+        return;
+    }
+
+    const filterValue='url("#gcRefraction") blur(18px) saturate(120%)';
+    const supported=(
+        window.CSS?.supports?.("backdrop-filter",filterValue)===true
+        ||window.CSS?.supports?.("-webkit-backdrop-filter",filterValue)===true
+    );
+    if(!supported){
+        document.body.dataset.gcRefraction="fallback";
+        return;
+    }
+
+    if(!document.getElementById("gcRefractionDefs")){
+        const ns="http://www.w3.org/2000/svg";
+        const svg=document.createElementNS(ns,"svg");
+        svg.id="gcRefractionDefs";
+        svg.setAttribute("aria-hidden","true");
+        svg.setAttribute("focusable","false");
+        svg.setAttribute("width","0");
+        svg.setAttribute("height","0");
+        svg.style.position="fixed";
+        svg.style.width="0";
+        svg.style.height="0";
+        svg.style.pointerEvents="none";
+
+        const defs=document.createElementNS(ns,"defs");
+        const filter=document.createElementNS(ns,"filter");
+        filter.id="gcRefraction";
+        filter.setAttribute("x","-12%");
+        filter.setAttribute("y","-45%");
+        filter.setAttribute("width","124%");
+        filter.setAttribute("height","190%");
+        filter.setAttribute("color-interpolation-filters","sRGB");
+
+        const turbulence=document.createElementNS(ns,"feTurbulence");
+        turbulence.setAttribute("type","fractalNoise");
+        turbulence.setAttribute("baseFrequency","0.012 0.035");
+        turbulence.setAttribute("numOctaves","1");
+        turbulence.setAttribute("seed","11");
+        turbulence.setAttribute("result","gcNoise");
+
+        const soften=document.createElementNS(ns,"feGaussianBlur");
+        soften.setAttribute("in","gcNoise");
+        soften.setAttribute("stdDeviation","0.35");
+        soften.setAttribute("result","gcSoftNoise");
+
+        const displacement=document.createElementNS(ns,"feDisplacementMap");
+        displacement.setAttribute("in","SourceGraphic");
+        displacement.setAttribute("in2","gcSoftNoise");
+        displacement.setAttribute("scale","6");
+        displacement.setAttribute("xChannelSelector","R");
+        displacement.setAttribute("yChannelSelector","G");
+
+        filter.append(turbulence,soften,displacement);
+        defs.append(filter);
+        svg.append(defs);
+        document.body.append(svg);
+    }
+
+    pane.classList.add("gc-refraction-enabled");
+    document.body.dataset.gcRefraction="svg";
+}
+
 function install(){
     const grid=document.querySelector("main .grid");
     if(!grid){setTimeout(install,50);return;}
@@ -179,9 +252,14 @@ body.gc-health-nav .topbar-title{margin-right:0;flex:0 1 260px}
 @media(prefers-reduced-motion:reduce){.gc-health-target-focus{animation:none}}
 @media(max-width:760px){body.gc-health-nav .topbar{flex-wrap:wrap;gap:.45rem .6rem}body.gc-health-nav .topbar-title{flex:1 1 calc(100% - 8rem)}.gc-health-annunciators{order:4;flex:1 0 100%;max-width:none;margin-left:0;padding-bottom:.1rem}.gc-health-annunciators .health-subsystem{min-height:36px}}
 /* gc-health-nav-end */
+/* gc-refraction-start: opt-in static SVG displacement; v1 glass is the fallback */
+.gc-refraction-enabled .health-subsystem{backdrop-filter:url("#gcRefraction") blur(18px) saturate(120%);-webkit-backdrop-filter:url("#gcRefraction") blur(18px) saturate(120%)}
+@media(forced-colors:active){.gc-refraction-enabled .health-subsystem{backdrop-filter:blur(18px) saturate(120%);-webkit-backdrop-filter:blur(18px) saturate(120%)}}
+/* gc-refraction-end */
 #glassCockpitSituation{grid-column:1/-1;padding:1rem 1.15rem;border-color:var(--gc-border);background:linear-gradient(120deg,color-mix(in srgb,var(--panel-solid) 58%,transparent),color-mix(in srgb,var(--panel-solid) 58%,transparent));backdrop-filter:blur(32px) saturate(132%) contrast(103%);-webkit-backdrop-filter:blur(32px) saturate(132%) contrast(103%)}.gc-now{display:grid;grid-template-columns:.55fr 1.2fr 1.4fr .75fr;gap:.7rem}.gc-now>div,.gc-domains section,.gc-activity{display:grid;align-content:start;gap:.3rem;min-width:0;padding:.7rem;border:1px solid var(--gc-border);border-radius:8px}.gc-now small,.gc-domains small,.gc-activity small{color:var(--muted);font-size:.62rem;font-weight:850;letter-spacing:.1em}.gc-now strong,.gc-domains strong,.gc-activity strong{overflow-wrap:anywhere}.gc-state{color:var(--warn)}.gc-activity{margin-top:.7rem;grid-template-columns:minmax(0,1fr);background:color-mix(in srgb,var(--panel-solid) 70%,transparent)}.gc-activity-active{background:color-mix(in srgb,var(--accent-soft) 36%,transparent)}.gc-activity-idle,.gc-activity-unavailable{border-color:color-mix(in srgb,var(--edge) 18%,transparent);background:color-mix(in srgb,var(--panel-solid) 48%,transparent)}.gc-activity span{color:var(--muted);font-size:.68rem}.gc-domains{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem;margin-top:.7rem}.gc-domains span,.gc-trend{color:var(--muted);font-size:.68rem}.gc-domains svg{width:100%;height:30px}.gc-domains polyline{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}#glassCockpitSituation details{margin-top:.65rem}#glassCockpitSituation summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--muted)}:focus-visible{outline:3px solid var(--gc-focus)!important;outline-offset:3px}@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}@media(max-width:760px){.gc-now,.gc-domains{grid-template-columns:1fr}.gc-now>div,.gc-domains section,.gc-activity{padding:.75rem}#glassCockpitSituation{padding:.85rem}}`;
     document.head.appendChild(style);
     installHealthAnnunciatorNavigation();
+    installRefractionExperiment();
     const view=document.createElement("article");
     view.id="glassCockpitSituation"; view.className="card";
     view.setAttribute("aria-label","Mission Control situation summary");
