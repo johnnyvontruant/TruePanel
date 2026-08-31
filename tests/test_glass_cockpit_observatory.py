@@ -13,6 +13,11 @@ def test_glass_cockpit_renders_observatory_from_shared_status_stream():
     assert "item.progress" in source
     assert "NO OBSERVED ACTIVITY" in source
     assert "ACTIVITY UNAVAILABLE" in source
+    assert 'tone:"active"' in source
+    assert 'tone:"idle"' in source
+    assert 'tone:"unavailable"' in source
+    assert "gc-activity-active" in source
+    assert ".gc-activity-idle,.gc-activity-unavailable" in source
     assert "fetch(" not in source
 
 
