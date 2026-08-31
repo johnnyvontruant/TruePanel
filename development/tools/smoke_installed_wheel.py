@@ -78,7 +78,10 @@ def main() -> int:
                     "from truepanel.hangar import load_registry, validate_registry; "
                     "registry = load_registry(); "
                     "assert validate_registry(registry) == (); "
-                    "assert len(registry['experiments']) == 14; "
+                    "assert len(registry['experiments']) == 15; "
+                    "checkride = next(item for item in registry['experiments'] "
+                    "if item['id'] == 'TP-EXP-0015'); "
+                    "assert checkride['state'] == 'IN_PROGRESS'; "
                     "from truepanel.glass_cockpit import "
                     "benchmark, validate_corpus; "
                     "assert validate_corpus() == (); "
@@ -88,7 +91,12 @@ def main() -> int:
                     "proof = run_flight_director_proof(); "
                     "assert proof['measurements']['detection_lead_samples'] == 27; "
                     "assert proof['repair_verification_signature']['outcome'] == 'passed'; "
-                    "assert proof['control_authority'] is False"
+                    "assert proof['control_authority'] is False; "
+                    "from truepanel.aegis.checkride import "
+                    "run_storage_recovery_rehearsals; "
+                    "rehearsals = run_storage_recovery_rehearsals(); "
+                    "assert len(rehearsals) == 6; "
+                    "assert all(item['hardware_isolated'] for item in rehearsals)"
                 ),
             ],
             cwd=outside,
