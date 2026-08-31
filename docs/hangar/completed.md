@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.08.30.2 · refreshed 2026-08-30 · 10 experiment(s)
+Registry version 2026.08.31.1 · refreshed 2026-08-31 · 10 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 

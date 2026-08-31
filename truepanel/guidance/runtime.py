@@ -189,6 +189,10 @@ def _smart_guidance(storage: dict[str, Any]) -> list[dict[str, Any]]:
             "media_errors": _integer(record.get("media_errors")),
             "critical_warning": record.get("critical_warning"),
             "zfs_state": record.get("zfs_state"),
+            "vdev_topology": record.get("vdev_topology"),
+            "remaining_redundancy": record.get("remaining_redundancy"),
+            "capacity_bytes": record.get("capacity_bytes"),
+            "present": record.get("present"),
         }
 
         blocked = []

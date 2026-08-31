@@ -10,6 +10,7 @@ from typing import Any
 
 from truepanel.oracle import OracleEngine
 
+from .checkride import compose_storage_checkride
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
 from .flight_director import run_flight_director_proof
@@ -218,6 +219,7 @@ class AegisReliabilityEngine:
             hard_faults=self._hard_faults(cards),
         )
         incident = correlate_incident(cards, outlook, policy=self.correlation_policy)
+        active_flight_director = compose_storage_checkride(payload, incident)
         return {
             "schema_version": 1,
             "project": "AEGIS",
@@ -240,7 +242,7 @@ class AegisReliabilityEngine:
                 "trusted": self.matrix["trusted"],
                 "gaps": self.matrix["gaps"],
             },
-            "flight_director": self.flight_director,
+            "flight_director": active_flight_director or self.flight_director,
         }
 
 

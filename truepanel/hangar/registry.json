@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.08.30.2",
-  "updated_at": "2026-08-30",
+  "registry_version": "2026.08.31.1",
+  "updated_at": "2026-08-31",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -179,6 +179,31 @@
       "revisit_conditions": ["human task testing contradicts the structural result", "new Mission Control decision domain is added"],
       "strongest_follow_up": "Run moderated think-aloud tests with one new and one experienced operator on lab fixtures, then tune only measured friction.",
       "freshness": {"reviewed_at": "2026-08-30", "review_after": "2026-11-30"}
+    },
+    {
+      "id": "TP-EXP-0015", "title": "CHECKRIDE live storage recovery", "state": "IN_PROGRESS",
+      "hypothesis": "A verified SMART incident can be composed into an identity-bound advisory flight plan and later closed by a machine-verifiable repair signature.",
+      "value": "Turns a deceptive PASSED/ONLINE drive failure into safe, personalized guidance while preserving the first governed real repair lesson.",
+      "prior_art": ["aviation checkrides", "storage FRU identity workflows", "guided runbooks", "deterministic fault injection"],
+      "safety_class": "READ_ONLY_EVIDENCE",
+      "development": {
+        "branch": "feature/checkride-storage-recovery",
+        "pr": null,
+        "commits": [],
+        "next_test": "Reconfirm backup, bay, serial, pool, VDEV, and replacement fit immediately before external service.",
+        "exit_criteria": "Capture an evidence-backed passing or failing repair-verification signature after an externally performed replacement."
+      },
+      "protocol": ["bind exact incident identity", "rehearse success and abort branches", "hold physical service", "observe external repair", "compare recovery signature"],
+      "fixtures": ["tests/test_checkride.py", "storage-smart-recovery-v1"],
+      "success_criteria": ["exact incident binding", "unknown facts remain explicit", "all unsafe branches fail closed", "post-repair signature is machine verifiable"],
+      "abort_criteria": ["identity mismatch", "backup unconfirmed", "redundancy worsens", "replacement fit fails", "resilver stalls or accumulates errors"],
+      "evidence": [{"path": "docs/evidence/checkride-storage-recovery-v1.json", "sha256": "739c00fae2f4d2a60d99ef4fc813aabde17b0f3fc0bb1d5456cc68746be093c8"}],
+      "outcome": {"status": "Software composition and six hardware-isolated branches are proven; external repair and field verification remain open."},
+      "invalidated_assumptions": ["conversation history is equivalent to machine-verifiable backup evidence", "SMART PASSED plus ZFS ONLINE means a drive is healthy"],
+      "reproduction": ["pytest -q tests/test_checkride.py", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["a compatible replacement drive is available", "backup and identity can be freshly reconfirmed"],
+      "strongest_follow_up": "Acquire a compatible replacement, then capture the real repair through the same rehearsed verification contract.",
+      "freshness": {"reviewed_at": "2026-08-31", "review_after": "2026-10-31"}
     }
   ]
 }
