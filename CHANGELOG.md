@@ -26,8 +26,31 @@ guided, evidence-backed recovery and predictive reliability.
   Recovery Coverage Matrix, probable-cause correlation, request-independent
   predictive sampling, verification rehearsals, Black Box evidence capture,
   and a mobile-first Reliability view.
-- Added a current Mission Control and reliability operating guide and refreshed
-  the platform overview, architecture, documentation map, and roadmap.
+- Added Project HANGAR as TruePanel's permanent experiment archive: a
+  packaged `registry.json`, CI-enforced dossier completeness, and four
+  generated states (`FUTURE`, `IN_PROGRESS`, `COMPLETED`, `FAILED`) covering
+  every experiment run to date.
+- Added the first Project FLIGHT DIRECTOR vertical slice around the
+  fan-degradation shared-cooling scenario: an Incident Time Machine, a
+  causal hardware map, a safe-operating-envelope forecast, deterministic
+  what-if HoloDeck rehearsals, a repair-verification signature, and
+  automatic HANGAR dossier generation.
+- Added Project GLASS COCKPIT, an evidence-led Mission Control layout
+  informed by a 100-interface benchmark study (consumer, operations
+  console, NAS, design-system, visualization, and human-factors sources).
+  Mission Control now leads with a persistent Now / Why / Safest Move /
+  Proof command strip, groups cooling/storage/redundancy telemetry by
+  operator decision rather than by data source, and moves secondary
+  evidence into disclosure while keeping active safety information visible.
+- Added an Apple Human Interface Guidelines-inspired visual system for
+  Mission Control: a light/dark mode toggle (system-preference aware, with
+  a manual override), translucent blurred "glass" cards over a fixed
+  mesh-gradient backdrop, and a restructured Flight Manual card that leads
+  with diagnosis and the immediate-action checklist and moves raw SMART
+  evidence and readiness gates behind a collapsed technical-details drawer.
+  No element ids, classes, or JavaScript behavior changed — only the
+  stylesheet and a small number of hardcoded colors that now resolve
+  through the shared theme variables.
 
 ### Changed
 
@@ -38,8 +61,18 @@ guided, evidence-backed recovery and predictive reliability.
 - Recovery trust now requires a declared detector, complete guidance arc,
   fault-specific verifier, deterministic regression coverage, and a passed
   fault-present-to-recovered rehearsal.
-- Documentation now distinguishes stable 1.2.0 behavior, accepted post-release
-  changes, and capabilities that remain undeployed on the reference NAS.
+- AEGIS, HANGAR, Flight Director, and GLASS COCKPIT are now deployed and
+  live-validated on the reference BattleStation installation. Documentation
+  previously described AEGIS as accepted but undeployed; that is no longer
+  the case as of this line.
+- Flight Director's HoloDeck reference-rehearsal evidence is now explicitly
+  scoped away from any real active incident. A live BattleStation incident
+  (critical SMART evidence on a front-bay drive) surfaced a defect where
+  deterministic lab-fixture guidance could be read as if it applied to that
+  incident; the fix requires an exact active-incident ID match before
+  Flight Director guidance presents itself as operationally relevant, and
+  synthetic evidence now labels itself "HoloDeck reference rehearsal — Not
+  this incident."
 
 ### Safety
 
@@ -48,6 +81,10 @@ guided, evidence-backed recovery and predictive reliability.
 - ORACLE statistical drift cannot invent a production hard fault.
 - AEGIS correlation cannot hide or delete contributing alerts and remains
   explicitly read-only.
+- HANGAR and Flight Director are documentation, correlation, and rehearsal
+  surfaces only; neither gains hardware, storage, or service-control
+  authority, and Flight Director's `control_authority` field is verified
+  `false` in the live deployment.
 - TrueNAS boot persistence uses the supported Init/Shutdown Scripts middleware
   contract rather than generic appliance filesystem configuration.
 - ORACLE baseline learning is bounded to one sample per telemetry interval and
@@ -67,8 +104,20 @@ guided, evidence-backed recovery and predictive reliability.
 - PR #78 passed formal review and authoritative GitHub Actions run 1116:
   2,348 tests passed, installed-wheel smoke passed, and regressions cover
   request-independent sampling plus SMART/ZFS recovery verification.
-- The AEGIS increment was accepted into the post-1.2 development line without
-  deployment or live hardware access.
+- HANGAR, Flight Director, and GLASS COCKPIT were merged to `main` (PR #93,
+  #94, #95) and deployed to BattleStation through the guarded upgrade
+  lifecycle: staged, validated, promoted, with a retained rollback
+  generation and zero post-promotion service errors.
+- Post-deployment live smoke confirmed both services active, the packaged
+  HANGAR registry loading with 14 experiments and zero validation gaps, the
+  Recovery Coverage Matrix at 8/8 trusted with 0 gaps, and Mission Control
+  serving the GLASS COCKPIT and Flight Director assets.
+- A genuine live incident (critical SMART evidence on BattleStation bay 3)
+  became the deployment's first real-world validation: Mission Control
+  correctly kept the incident prominent despite SMART reporting `PASSED`
+  and ZFS reporting `ONLINE`, and the incident inspection directly surfaced
+  the reference-rehearsal scoping defect fixed in PR #96 (main at
+  `43dca73`).
 
 ## [1.2.0] - 2026-08-19
 
