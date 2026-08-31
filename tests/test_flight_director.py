@@ -60,7 +60,15 @@ def test_mission_control_payload_and_mobile_view_expose_flight_director():
     assert flight["scenario"] == "fan-degradation-shared-cooling-v1"
     assert flight["field_validated"] is False
     assert flight["control_authority"] is False
+    assert flight["presentation_scope"] == "reference_rehearsal"
+    assert flight["evidence_maturity"] == "deterministic_lab_fixture"
+    assert flight["incident_id"] is None
+    assert flight["applies_to_active_incident"] is False
     for label in ("NOW", "NEXT", "WHY", "PROOF", "Incident Time Machine", "Causal Hardware Map", "HoloDeck What-If Rehearsals"):
         assert label in source
+    assert "Not this incident" in source
+    assert 'flight?.presentation_scope==="active_incident"' in source
+    assert "boundIncidentId===activeIncidentId" in source
+    assert "flightDirectorView(flightDirector,incident)" in source
     assert "@media(max-width:760px)" in source
     assert "setInterval" not in source
