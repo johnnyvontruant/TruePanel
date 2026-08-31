@@ -69,6 +69,14 @@ class AegisReliabilityEngine:
             "simulation": True,
             "field_validated": False,
             "control_authority": False,
+            # This proof is a packaged HoloDeck reference scenario, not a
+            # diagnosis of whichever incident happens to be active live.
+            # Presentation must fail closed until a future Flight Director
+            # result explicitly binds itself to an incident ID.
+            "presentation_scope": "reference_rehearsal",
+            "evidence_maturity": "deterministic_lab_fixture",
+            "incident_id": None,
+            "applies_to_active_incident": False,
             "incident": proof["active_incident"],
             "timeline": proof["incident_time_machine"]["landmarks"],
             "topology": proof["causal_hardware_map"],
