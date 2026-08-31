@@ -52,6 +52,11 @@ def test_production_dashboard_serves_effective_theme_toggle_sync(tmp_path):
         status, content_type, dashboard = _request(server, "/")
         assert status == 200
         assert content_type.startswith("text/html")
+        assert b"<!-- truepanel-theme-bootstrap -->" in dashboard
+        assert b"localStorage.getItem('truepanel-theme')" in dashboard
+        assert dashboard.index(b"<!-- truepanel-theme-bootstrap -->") < dashboard.index(
+            b"</head>"
+        )
         assert b"<!-- truepanel-theme-toggle-sync -->" in dashboard
         assert b'<script src="/theme-toggle-sync.js" defer></script>' in dashboard
 
@@ -59,12 +64,12 @@ def test_production_dashboard_serves_effective_theme_toggle_sync(tmp_path):
         assert status == 200
         assert content_type.startswith("application/javascript")
         source = script.decode("utf-8")
-        assert 'root.dataset.theme' in source
-        assert 'prefers-color-scheme: dark' in source
+        assert "root.dataset.theme" in source
+        assert "prefers-color-scheme: dark" in source
         assert 'darkPreference.addEventListener("change", syncThemeToggle)' in source
-        assert 'new MutationObserver(syncThemeToggle)' in source
-        assert 'Switch to light mode' in source
-        assert 'Switch to dark mode' in source
+        assert "new MutationObserver(syncThemeToggle)" in source
+        assert "Switch to light mode" in source
+        assert "Switch to dark mode" in source
     finally:
         server.shutdown()
         server.server_close()
