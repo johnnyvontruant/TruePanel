@@ -59,6 +59,8 @@ def test_ambient_background_is_static_and_semantically_neutral():
     assert "stroke-opacity='.17'" in ambient
     assert "background-size:144px 83px" in ambient
     assert "background-attachment:fixed" in ambient
+    assert "--gc-ambient-a:#e3e6ed" in ambient
+    assert "--gc-ambient-b:#cfd4de" in ambient
     assert "animation:" not in ambient
     assert "fetch(" not in ambient
 
@@ -78,12 +80,14 @@ def test_liquid_glass_is_static_additive_and_semantically_neutral():
     end = source.index("/* gc-liquid-glass-end */", start)
     glass = source[start:end]
 
-    assert "blur(24px)" in glass
-    assert "saturate(142%)" in glass
-    assert "contrast(104%)" in glass
+    assert "blur(32px)" in glass
+    assert "saturate(132%)" in glass
+    assert "contrast(103%)" in glass
+    assert "--gc-glass-shadow" in glass
     assert ".card::after" in glass
     assert "pointer-events:none" in glass
-    assert "box-shadow:inset" in glass
+    assert "radial-gradient(120% 86% at 0% 0%" in glass
+    assert "0 12px 28px var(--gc-glass-shadow)" in glass
     assert "forced-colors:active" in glass
     assert "animation:" not in glass
     assert "fetch(" not in glass
