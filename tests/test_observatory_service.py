@@ -16,6 +16,15 @@ def test_production_launcher_injects_observatory_snapshot(monkeypatch):
         classmethod(lambda cls: settings),
     )
 
+    loaded_config = {"loaded": "from configured path"}
+    loaded_paths = []
+
+    def load_config(path):
+        loaded_paths.append(path)
+        return loaded_config
+
+    monkeypatch.setattr(service, "load_config", load_config)
+
     status_provider = object()
     monkeypatch.setattr(service, "ServiceStatusProvider", lambda: status_provider)
 
@@ -40,9 +49,10 @@ def test_production_launcher_injects_observatory_snapshot(monkeypatch):
 
     service.main()
 
+    assert loaded_paths == [settings.config_path]
     assert created == {
         "service_status_provider": status_provider,
-        "config_path": settings.config_path,
+        "config": loaded_config,
         "activity_providers": (plex_provider,),
     }
     assert served == {
