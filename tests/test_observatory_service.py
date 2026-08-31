@@ -19,6 +19,13 @@ def test_production_launcher_injects_observatory_snapshot(monkeypatch):
     status_provider = object()
     monkeypatch.setattr(service, "ServiceStatusProvider", lambda: status_provider)
 
+    plex_provider = object()
+    monkeypatch.setattr(
+        service,
+        "activity_providers_from_environment",
+        lambda: (plex_provider,),
+    )
+
     created = {}
     snapshot_service = object()
 
@@ -36,6 +43,7 @@ def test_production_launcher_injects_observatory_snapshot(monkeypatch):
     assert created == {
         "service_status_provider": status_provider,
         "config_path": settings.config_path,
+        "activity_providers": (plex_provider,),
     }
     assert served == {
         "host": settings.host,
