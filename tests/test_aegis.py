@@ -432,3 +432,91 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         server.shutdown()
         server.server_close()
         thread.join(timeout=3)
+
+
+def test_topology_reports_hottest_drive_bay_when_localized():
+    engine = AegisReliabilityEngine()
+    payload = {
+        "timestamp": 1,
+        "operator_guidance": [],
+        "fans": {"channels": [], "control": {}},
+        "storage": {
+            "temperatures": [
+                {"device": "sda", "temperature_c": 34, "bay": 1},
+                {"device": "sdc", "temperature_c": 45, "bay": 3},
+                {"device": "sde", "temperature_c": 33, "bay": 5},
+            ]
+        },
+        "network": [],
+    }
+
+    result = engine.observe(payload)
+
+    assert result["topology"] == {
+        "hottest_drive_temperature_c": 45,
+        "hottest_drive_bay": 3,
+        "hottest_drive_localized": True,
+        "drives_with_known_bay": 3,
+        "drives_observed": 3,
+    }
+
+
+def test_topology_preserves_uncertainty_when_bay_is_unresolved():
+    """A drive that could not be localized must report bay: None, not a
+    guessed bay and not a silently omitted field."""
+    engine = AegisReliabilityEngine()
+    payload = {
+        "timestamp": 1,
+        "operator_guidance": [],
+        "fans": {"channels": [], "control": {}},
+        "storage": {
+            "temperatures": [
+                {"device": "sda", "temperature_c": 45, "bay": None},
+            ]
+        },
+        "network": [],
+    }
+
+    result = engine.observe(payload)
+
+    assert result["topology"]["hottest_drive_bay"] is None
+    assert result["topology"]["hottest_drive_localized"] is False
+    assert result["topology"]["hottest_drive_temperature_c"] == 45
+    assert result["topology"]["drives_with_known_bay"] == 0
+
+
+def test_topology_handles_no_drives_observed():
+    engine = AegisReliabilityEngine()
+    payload = {
+        "timestamp": 1,
+        "operator_guidance": [],
+        "fans": {"channels": [], "control": {}},
+        "storage": {"temperatures": []},
+        "network": [],
+    }
+
+    result = engine.observe(payload)
+
+    assert result["topology"] == {
+        "hottest_drive_temperature_c": None,
+        "hottest_drive_bay": None,
+        "hottest_drive_localized": False,
+        "drives_with_known_bay": 0,
+        "drives_observed": 0,
+    }
+
+
+def test_topology_never_mutates_input_payload():
+    engine = AegisReliabilityEngine()
+    payload = {
+        "timestamp": 1,
+        "operator_guidance": [],
+        "fans": {"channels": [], "control": {}},
+        "storage": {"temperatures": [{"device": "sda", "temperature_c": 40, "bay": 2}]},
+        "network": [],
+    }
+    before = copy.deepcopy(payload)
+
+    engine.observe(payload)
+
+    assert payload == before

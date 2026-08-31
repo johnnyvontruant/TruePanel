@@ -159,3 +159,62 @@ def test_bay_mirror_defaults_to_installed_truepanel_config(monkeypatch, tmp_path
     )
 
     assert provider._config_path == tmp_path / "truepanel.yaml"
+
+
+def test_device_bay_map_returns_internal_device_to_bay_mapping():
+    provider = BayMirrorProvider(
+        inventory=Inventory(
+            [
+                bay(1, "sda"),
+                bay(2, "sdb"),
+                bay(3, "sdc"),
+            ]
+        ),
+        status_runner=lambda: STATUS,
+    )
+
+    mapping = provider.device_bay_map()
+
+    assert mapping == {"sda": 1, "sdb": 2, "sdc": 3}
+
+
+def test_device_bay_map_excludes_empty_bays_and_missing_devices():
+    provider = BayMirrorProvider(
+        inventory=Inventory(
+            [
+                bay(1, "sda"),
+                bay(2, "", installed=False),
+                bay(0, "sdz"),
+            ]
+        ),
+        status_runner=lambda: STATUS,
+    )
+
+    mapping = provider.device_bay_map()
+
+    assert mapping == {"sda": 1}
+
+
+def test_device_bay_map_never_raises_on_inventory_failure():
+    class BrokenInventory:
+        def front_bays(self):
+            raise RuntimeError("enclosure unavailable")
+
+    provider = BayMirrorProvider(
+        inventory=BrokenInventory(),
+        status_runner=lambda: STATUS,
+    )
+
+    assert provider.device_bay_map() == {}
+
+
+def test_device_bay_map_is_not_privacy_scrubbed_unlike_snapshot():
+    """device_bay_map is explicitly for internal joins only, never sent to a
+    client directly; snapshot() remains the privacy-safe public contract."""
+    provider = BayMirrorProvider(
+        inventory=Inventory([bay(1, "sda")]),
+        status_runner=lambda: STATUS,
+    )
+
+    assert provider.device_bay_map() == {"sda": 1}
+    assert "device" not in provider.snapshot()["bays"][0]

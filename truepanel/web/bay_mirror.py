@@ -101,6 +101,28 @@ class BayMirrorProvider:
         )
         return self._inventory
 
+    def device_bay_map(self) -> dict[str, int]:
+        """Return a device-to-physical-bay mapping for internal joins only.
+
+        Unlike :meth:`snapshot`, this result is not privacy-scrubbed and must
+        never be sent to a client directly. It exists so other read-only
+        telemetry (for example, drive temperatures) can be localized to a
+        physical bay without a second, independent topology resolution.
+        """
+
+        try:
+            front_bays = list(self._inventory_service().front_bays())
+        except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+            return {}
+
+        mapping: dict[str, int] = {}
+        for bay in front_bays:
+            device = _text(getattr(bay, "device", ""))
+            number = int(getattr(bay, "physical_bay", 0) or 0)
+            if device and number > 0:
+                mapping[device] = number
+        return mapping
+
     def snapshot(self) -> dict[str, Any]:
         try:
             front_bays = list(self._inventory_service().front_bays())
