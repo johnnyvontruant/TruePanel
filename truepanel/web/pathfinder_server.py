@@ -40,6 +40,12 @@ _RELIABILITY_TAG = (
     _RELIABILITY_MARKER
     + b'\n<script src="/reliability-view.js" defer></script>\n'
 )
+_THEME_TOGGLE_SYNC_SCRIPT = "theme-toggle-sync.js"
+_THEME_TOGGLE_SYNC_MARKER = b"<!-- truepanel-theme-toggle-sync -->"
+_THEME_TOGGLE_SYNC_TAG = (
+    _THEME_TOGGLE_SYNC_MARKER
+    + b'\n<script src="/theme-toggle-sync.js" defer></script>\n'
+)
 
 
 class MissionControlRequestHandler(_server.MissionControlRequestHandler):
@@ -52,6 +58,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             return
         if parsed.path == f"/{_RELIABILITY_SCRIPT}":
             self._static_script(_RELIABILITY_SCRIPT, "aegis_reliability_unavailable")
+            return
+        if parsed.path == f"/{_THEME_TOGGLE_SYNC_SCRIPT}":
+            self._static_script(_THEME_TOGGLE_SYNC_SCRIPT, "theme_toggle_sync_unavailable")
             return
         super().do_GET()
 
@@ -90,6 +99,8 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             tags += _RECOVERY_TAG
         if _RELIABILITY_MARKER not in body:
             tags += _RELIABILITY_TAG
+        if _THEME_TOGGLE_SYNC_MARKER not in body:
+            tags += _THEME_TOGGLE_SYNC_TAG
 
         if tags:
             if b"</body>" in body:
