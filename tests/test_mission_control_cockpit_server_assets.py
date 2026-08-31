@@ -54,3 +54,13 @@ def test_bay_mirror_status_path_adds_no_write_route():
     assert "acknowledge(" not in status
     assert "fan_command" not in status
     assert "lcd_command" not in status
+
+
+def test_status_localizes_drive_temperatures_to_a_physical_bay():
+    source = text()
+
+    assert "from truepanel.hardware.drive_localization import localize_drive_readings" in source
+    assert 'storage["temperatures"] = localize_drive_readings(' in source
+    assert "self._device_bay_map()" in source
+    assert "def _device_bay_map(self)" in source
+    assert "self.server.bay_mirror_provider.device_bay_map()" in source
