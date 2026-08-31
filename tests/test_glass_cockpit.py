@@ -109,7 +109,7 @@ def test_liquid_glass_is_static_additive_and_semantically_neutral():
 def test_health_annunciators_reuse_live_health_node_in_persistent_header():
     source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
     start = source.index("function installHealthAnnunciatorNavigation()")
-    end = source.index("function install(){", start)
+    end = source.index("function installRefractionExperiment()", start)
     nav = source[start:end]
 
     assert 'document.getElementById("healthSubsystems")' in nav
@@ -156,6 +156,34 @@ def test_health_annunciators_are_keyboard_mobile_and_reduced_motion_safe():
     assert "scrollbar-width:none" in styles
     assert "flex:1 0 100%" in styles
     assert "min-height:36px" in styles
+
+
+def test_svg_refraction_is_opt_in_static_and_fails_back_to_v1_glass():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    start = source.index("function installRefractionExperiment()")
+    end = source.index("function install(){", start)
+    refraction = source[start:end]
+    style_start = source.index("/* gc-refraction-start")
+    style_end = source.index("/* gc-refraction-end */", style_start)
+    styles = source[style_start:style_end]
+
+    assert 'params.get("refraction")!=="1"' in refraction
+    assert 'document.getElementById("healthSubsystems")' in refraction
+    assert 'window.CSS?.supports?.("backdrop-filter",filterValue)' in refraction
+    assert 'document.body.dataset.gcRefraction="fallback"' in refraction
+    assert 'document.body.dataset.gcRefraction="svg"' in refraction
+    assert 'document.createElementNS(ns,"svg")' in refraction
+    assert 'document.createElementNS(ns,"feTurbulence")' in refraction
+    assert 'document.createElementNS(ns,"feGaussianBlur")' in refraction
+    assert 'document.createElementNS(ns,"feDisplacementMap")' in refraction
+    assert 'displacement.setAttribute("scale","6")' in refraction
+    assert 'turbulence.setAttribute("numOctaves","1")' in refraction
+    assert 'pane.classList.add("gc-refraction-enabled")' in refraction
+    assert 'url("#gcRefraction") blur(18px)' in styles
+    assert "requestAnimationFrame" not in refraction
+    assert "setInterval" not in refraction
+    assert "fetch(" not in refraction
+    assert "animation:" not in styles
 
 
 def test_server_exposes_glass_cockpit_asset_in_full_stack():
