@@ -56,7 +56,8 @@ def test_ambient_background_is_static_and_semantically_neutral():
 
     assert "--gc-ambient-grid" in ambient
     assert "data:image/svg+xml" in ambient
-    assert "background-size:156px 90px" in ambient
+    assert "stroke-opacity='.17'" in ambient
+    assert "background-size:144px 83px" in ambient
     assert "background-attachment:fixed" in ambient
     assert "animation:" not in ambient
     assert "fetch(" not in ambient
@@ -69,6 +70,33 @@ def test_ambient_background_is_static_and_semantically_neutral():
         "var(--accent-soft)",
     ):
         assert semantic_color not in ambient
+
+
+def test_liquid_glass_is_static_additive_and_semantically_neutral():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    start = source.index("/* gc-liquid-glass-start")
+    end = source.index("/* gc-liquid-glass-end */", start)
+    glass = source[start:end]
+
+    assert "blur(24px)" in glass
+    assert "saturate(142%)" in glass
+    assert "contrast(104%)" in glass
+    assert ".card::after" in glass
+    assert "pointer-events:none" in glass
+    assert "box-shadow:inset" in glass
+    assert "forced-colors:active" in glass
+    assert "animation:" not in glass
+    assert "fetch(" not in glass
+    assert "transform:" not in glass
+
+    for semantic_color in (
+        "var(--good)",
+        "var(--warn)",
+        "var(--bad)",
+        "var(--accent)",
+        "var(--accent-soft)",
+    ):
+        assert semantic_color not in glass
 
 
 def test_server_exposes_glass_cockpit_asset_in_full_stack():
