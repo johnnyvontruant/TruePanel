@@ -131,6 +131,14 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
                 "bays": [],
             }
 
+        # Pathfinder owns the final /api/v1/status composition and therefore
+        # cannot rely on the parent handler's _status() enrichment. Localize
+        # drive telemetry here with the same pure join and inherited bay-map
+        # resolver before AEGIS observes the payload.
+        storage["temperatures"] = _server.localize_drive_readings(
+            storage.get("temperatures"),
+            self._device_bay_map(),
+        )
         storage["bay_mirror"] = mirror
         payload["storage"] = storage
         try:
