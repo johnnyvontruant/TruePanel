@@ -48,6 +48,29 @@ def test_production_candidate_reuses_shared_stream_and_has_no_polling():
     assert 'role="img"' in source
 
 
+def test_ambient_background_is_static_and_semantically_neutral():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    start = source.index("/* gc-ambient-start")
+    end = source.index("/* gc-ambient-end */", start)
+    ambient = source[start:end]
+
+    assert "--gc-ambient-grid" in ambient
+    assert "data:image/svg+xml" in ambient
+    assert "background-size:156px 90px" in ambient
+    assert "background-attachment:fixed" in ambient
+    assert "animation:" not in ambient
+    assert "fetch(" not in ambient
+
+    for semantic_color in (
+        "var(--good)",
+        "var(--warn)",
+        "var(--bad)",
+        "var(--accent)",
+        "var(--accent-soft)",
+    ):
+        assert semantic_color not in ambient
+
+
 def test_server_exposes_glass_cockpit_asset_in_full_stack():
     server = (ROOT / "truepanel/web/server.py").read_text()
     pathfinder = (ROOT / "truepanel/web/pathfinder_server.py").read_text()
