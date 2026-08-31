@@ -46,10 +46,12 @@ def test_mission_control_activity_exposes_normalized_zfs_scrub():
             "kind": "zfs.scrub",
             "state": "active",
             "title": "ZFS scrub",
-            "subtitle": "Storage integrity maintenance",
             "confidence": 1.0,
             "intensity": "moderate",
+            "subtitle": "Storage integrity maintenance",
             "progress": 0.6,
+            "started_at": None,
+            "context": {},
             "evidence": ["storage.zfs_activity.scrub_running"],
         }
     ]
