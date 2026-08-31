@@ -84,8 +84,11 @@ def test_liquid_glass_is_static_additive_and_semantically_neutral():
     assert "saturate(132%)" in glass
     assert "contrast(103%)" in glass
     assert "--gc-glass-shadow" in glass
+    assert "--gc-glass-wash:rgba(255,255,255,.065)" in glass
+    assert "--gc-glass-wash:rgba(255,255,255,.012)" in glass
     assert ".card::after" in glass
     assert "pointer-events:none" in glass
+    assert "linear-gradient(var(--gc-glass-wash),var(--gc-glass-wash))" in glass
     assert "radial-gradient(120% 86% at 0% 0%" in glass
     assert "0 12px 28px var(--gc-glass-shadow)" in glass
     assert "forced-colors:active" in glass
@@ -101,6 +104,58 @@ def test_liquid_glass_is_static_additive_and_semantically_neutral():
         "var(--accent-soft)",
     ):
         assert semantic_color not in glass
+
+
+def test_health_annunciators_reuse_live_health_node_in_persistent_header():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    start = source.index("function installHealthAnnunciatorNavigation()")
+    end = source.index("function install(){", start)
+    nav = source[start:end]
+
+    assert 'document.getElementById("healthSubsystems")' in nav
+    assert 'document.querySelector(".health-command")' in nav
+    assert 'document.querySelector(".topbar")' in nav
+    assert 'topbar.insertBefore(subsystems,connection)' in nav
+    assert 'subsystems.classList.add("gc-health-annunciators")' in nav
+    assert 'subsystems.setAttribute("role","navigation")' in nav
+    assert 'subsystems.setAttribute("aria-label","System health navigation")' in nav
+    assert "healthCard.hidden=true" in nav
+    assert "cloneNode" not in nav
+
+
+def test_health_annunciators_map_all_six_domains_to_real_cockpit_targets():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    start = source.index("function healthTarget(label)")
+    end = source.index("function installHealthAnnunciatorNavigation()", start)
+    mapping = source[start:end]
+
+    assert 'cooling:document.getElementById("fanActiveProfile")?.closest("article")' in mapping
+    assert 'thermal:document.getElementById("fanThermalTemperature")?.closest("article")' in mapping
+    assert 'storage:document.getElementById("pools")?.closest("article")' in mapping
+    assert 'network:document.getElementById("network")?.closest("article")' in mapping
+    assert '"front panel":document.querySelector(".lcd-panel")' in mapping
+    assert 'services:document.getElementById("configMode")?.closest("article")' in mapping
+
+
+def test_health_annunciators_are_keyboard_mobile_and_reduced_motion_safe():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    start = source.index("/* gc-health-nav-start")
+    end = source.index("/* gc-health-nav-end */", start)
+    styles = source[start:end]
+
+    assert 'item.setAttribute("role","button")' in source
+    assert "item.tabIndex=0" in source
+    assert 'event.key!=="Enter"&&event.key!==" "' in source
+    assert "event.preventDefault()" in source
+    assert 'parent.tagName==="DETAILS"' in source
+    assert "parent.open=true" in source
+    assert 'window.matchMedia?.("(prefers-reduced-motion: reduce)")' in source
+    assert 'target.scrollIntoView({behavior:reduced?"auto":"smooth",block:"center"})' in source
+    assert "new MutationObserver(annotate).observe(subsystems" in source
+    assert "overflow-x:auto" in styles
+    assert "scrollbar-width:none" in styles
+    assert "flex:1 0 100%" in styles
+    assert "min-height:36px" in styles
 
 
 def test_server_exposes_glass_cockpit_asset_in_full_stack():
