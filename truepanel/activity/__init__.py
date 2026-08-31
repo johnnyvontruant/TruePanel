@@ -15,14 +15,22 @@ from .model import (
 )
 from .plex import PlexActivityProvider, parse_plex_sessions
 from .provider import ActivityProvider
+from .registry import (
+    REGISTRY_SCHEMA_VERSION,
+    ActivityRegistry,
+    ActivityRegistrySnapshot,
+)
 from .zfs import ZfsActivityProvider, normalize_zfs_activity
 
 __all__ = [
     "SCHEMA_VERSION",
+    "REGISTRY_SCHEMA_VERSION",
     "ActivityIntensity",
     "ActivityObservation",
     "ActivityProvider",
     "ActivityProviderStatus",
+    "ActivityRegistry",
+    "ActivityRegistrySnapshot",
     "ActivitySnapshot",
     "ActivityState",
     "PlexActivityProvider",
