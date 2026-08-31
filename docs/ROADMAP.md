@@ -2,9 +2,11 @@
 
 ## Current platform
 
-TruePanel 1.2.0 is the stable foundation. The accepted post-1.2 development line adds Pathfinder guided recovery, Lifeline handling for critical SMART evidence, supported TrueNAS `i2c-dev` boot persistence, ORACLE predictive health, and the first read-only AEGIS reliability increment.
+TruePanel 1.2.0 is the stable foundation. The accepted post-1.2 development line adds Pathfinder guided recovery, Lifeline handling for critical SMART evidence, supported TrueNAS `i2c-dev` boot persistence, ORACLE predictive health, AEGIS reliability correlation, Project HANGAR's experiment archive, the first Project FLIGHT DIRECTOR vertical slice, and the GLASS COCKPIT evidence-led Mission Control layout.
 
-AEGIS passed formal review in PR #78 and remains undeployed on the reference NAS.
+AEGIS, HANGAR, Flight Director, and GLASS COCKPIT (PRs #78, #80, #90–#96) are merged to `main` and deployed to BattleStation. Live validation included a genuine active incident (critical SMART evidence on a front-bay drive), which the deployment correctly kept prominent and which directly surfaced and led to fixing a real defect in how lab-rehearsal evidence was scoped.
+
+A further Apple Human Interface Guidelines-inspired visual pass (light/dark mode, translucent glass cards, a restructured Flight Manual card) is deployed on BattleStation's static assets but is **not yet committed back into this repository** — reconciling that is an open 1.3.0 item, tracked below.
 
 The platform now includes:
 
@@ -21,19 +23,22 @@ The platform now includes:
 - Black Box recording, replay, and incident compilation;
 - ORACLE adaptive baselines and developing-fault analysis;
 - AEGIS incident correlation and a CI-enforced Recovery Coverage Matrix;
+- Project HANGAR's packaged, CI-validated experiment registry (14 experiments: 10 completed, 2 failed, 2 future);
+- Project FLIGHT DIRECTOR's Time Machine, causal map, forecast, what-if rehearsal, and recovery-verification signature;
+- GLASS COCKPIT's evidence-led Mission Control command strip and disclosure layout;
 - guarded install, upgrade, rollback, repair, verify, cleanup, and uninstall;
 - Project Stargate hardware research and Plugin API v1.
 
 ## Promotion record and graduation gates
 
-### 1. Preserve the accepted AEGIS baseline
+### 1. Preserve the accepted AEGIS baseline — done
 
 - PR #78 passed formal review, 2,348 tests, and installed-wheel smoke;
 - request-independent predictive sampling and fail-closed SMART/ZFS verification have dedicated regressions;
 - the reviewed commit history remains preserved;
 - later research, calibration, and deployment evidence belong on separate branches.
 
-### 2. Calibrate predictive behavior
+### 2. Calibrate predictive behavior — in progress
 
 - persist ORACLE baselines safely across Mission Control restarts;
 - replay normal workload changes and known incidents from sanitized Black Box recordings;
@@ -41,28 +46,64 @@ The platform now includes:
 - tune confidence weights from evidence rather than intuition;
 - retain clear `NORMAL`, `WATCH`, `DEVELOPING`, and `FAULT` authority boundaries.
 
-### 3. Improve localization
+AEGIS's field-evidence gate (PR #91) formalized this: the current synthetic
+corpus verdict is explicitly "lab calibrated," not field-eligible or
+production-validated, until a separately governed, opt-in corpus of real
+recordings is collected.
+
+### 3. Improve localization — open, targeted for 1.3.0
 
 - move from aggregate fan and hottest-drive evidence toward fan-zone and drive-bay relationships;
 - correlate PWM effort, delivered RPM, thermal sensors, drive temperatures, and physical topology;
 - report which zone, fan, bay, or interface most likely explains the incident;
 - preserve uncertainty when topology evidence is incomplete.
 
-### 4. Complete live read-only evaluation
+### 4. Complete live read-only evaluation — done
 
-- deploy only after an explicit approval and rollback plan;
-- observe BattleStation telemetry without actuation;
-- verify normal workloads do not generate misleading incidents;
-- confirm Mission Control remains excellent on desktop and phone;
-- compare AEGIS evidence with the physical LCD, service state, and existing watchers;
-- retain the production fingerprint and rollback generation.
+- deployed to BattleStation through the guarded upgrade lifecycle with a
+  retained rollback generation and zero post-promotion service errors;
+- a genuine live incident (critical SMART evidence, bay 3, pool `HDDs`,
+  `raidz1-0`) validated that Mission Control keeps real faults prominent
+  even when SMART self-assessment and ZFS state both still report healthy;
+- that same live incident surfaced a real defect — HoloDeck reference-
+  rehearsal evidence could be read as applying to the active incident — which
+  was fixed and reverified live (PR #96, main at `43dca73`);
+- Mission Control was confirmed on desktop and phone against a real
+  incident, not only fixtures;
+- the production fingerprint and rollback generation remain retained.
 
-### 5. Finish the documentation and visual record
+### 5. Finish the documentation and visual record — in progress
 
 - keep README, Mission Control, architecture, installation, lifecycle, recovery, and release documentation synchronized;
 - replace stale screenshots after the final cockpit layout is accepted;
 - document stable versus experimental features plainly;
-- publish the Prior-Art Field Report and adopted-code provenance before incorporating external work.
+- publish the Prior-Art Field Report and adopted-code provenance before incorporating external work;
+- **new:** commit the deployed Apple HIG-inspired Mission Control visual
+  system (light/dark mode, glass cards, restructured Flight Manual card)
+  back into this repository — it currently exists only on BattleStation's
+  static assets, deployed by hand rather than through the guarded upgrade
+  lifecycle, which is a real gap between the repository and the running
+  system that should close before 1.3.0.
+
+## Toward 1.3.0
+
+With gates 1 and 4 closed and gate 5 nearly closed by this changelog and
+roadmap update, the remaining work for a `v1.3.0` tag is:
+
+1. Commit the Mission Control visual redesign into this repository (gate 5),
+   reconciling it with `claude/mission-control-apple-redesign-oitcxc`, an
+   independent unmerged branch covering similar ground.
+2. Close gate 3 (localization) — move fan and drive-temperature evidence
+   from aggregate to per-bay/per-zone.
+3. Scope the diagnostic half of Project CHECKRIDE: bind a real storage
+   incident to a personalized, staged replacement checklist and HoloDeck
+   rehearsals (correct bay, wrong bay, undersized replacement, stalled
+   resilver, and so on). Actual replacement execution stays manual and
+   guarded — CHECKRIDE's automation stops at guidance and rehearsal, not
+   storage mutation, by explicit decision.
+4. Repository hygiene: prune branches already merged into `main`, and
+   decide the disposition of long-diverged experiment branches.
+5. Tag `v1.3.0-rc1` once 1–4 land, following the existing RC pattern.
 
 ## Wide-net ecosystem expedition
 
@@ -97,7 +138,14 @@ Strong external work may be adopted or adapted behind a TruePanel-owned interfac
 - add clearer human-physical-verification checkpoints;
 - preserve resolution evidence and recovery timelines;
 - explore safe notification and escalation integrations;
-- keep destructive or security-sensitive actions manual and guarded.
+- keep destructive or security-sensitive actions manual and guarded;
+- Project CHECKRIDE will bind a real storage incident to a personalized
+  replacement runbook and HoloDeck rehearsals; by explicit product decision,
+  it stops at guidance and verification and does not gain authority to
+  execute `zpool`/`zfs` replacement or any other destructive storage
+  operation. An "advanced" operator mode has been deliberately deferred
+  rather than built, specifically to avoid a new user reaching for
+  read-write automation before they understand the guardrails it removes.
 
 ## Mission Control evolution
 
