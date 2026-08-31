@@ -44,7 +44,7 @@ TruePanel began by adapting earlier QNAP LCD utilities, but the current project 
 - Project AEGIS correlation of related signals into an evidence-backed probable cause
 - A Recovery Coverage Matrix that requires guidance, a fault-specific verifier, deterministic regression coverage, and a passed safe rehearsal
 
-AEGIS is accepted in the post-1.2 development line. It remains read-only, has not been deployed to the reference NAS, and does not replace the underlying component alerts.
+AEGIS is deployed and live-validated on the reference NAS. It remains read-only, preserves the underlying component alerts and evidence, and does not gain hardware or destructive storage authority.
 
 ### Safe development and operations
 
@@ -221,7 +221,7 @@ TruePanel's reliability systems are designed to explain and verify recovery. The
 
 ## Release status
 
-TruePanel 1.2.0 is the current stable release. The accepted post-1.2 development line adds Pathfinder guided recovery, Lifeline critical-SMART handling, supported TrueNAS `i2c-dev` boot persistence, ORACLE predictive health, and the read-only AEGIS reliability layer. These development capabilities have not yet been deployed to the reference NAS.
+TruePanel 1.3.0 is the release candidate line for the current reliability and guided-recovery stack. It includes Pathfinder, Lifeline, ORACLE, AEGIS, HANGAR, Flight Director, GLASS COCKPIT, supported TrueNAS `i2c-dev` boot persistence, and physical-bay localization for drive-temperature reliability evidence. The major post-1.2 capabilities have been deployed and live-validated on the reference BattleStation while preserving their documented safety boundaries.
 
 Every promoted change is expected to pass focused regression coverage, the complete GitHub Actions suite, installed-wheel smoke testing, and the applicable HoloDeck or physical-hardware validation gate.
 
