@@ -40,6 +40,21 @@ _RELIABILITY_TAG = (
     _RELIABILITY_MARKER
     + b'\n<script src="/reliability-view.js" defer></script>\n'
 )
+_THEME_BOOTSTRAP_MARKER = b"<!-- truepanel-theme-bootstrap -->"
+_THEME_BOOTSTRAP_TAG = (
+    _THEME_BOOTSTRAP_MARKER
+    + b"\n<script>"
+    + b"(function(){try{var t=localStorage.getItem('truepanel-theme');"
+    + b"if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;}}"
+    + b"catch(e){}}());"
+    + b"</script>\n"
+)
+_THEME_TOGGLE_SYNC_SCRIPT = "theme-toggle-sync.js"
+_THEME_TOGGLE_SYNC_MARKER = b"<!-- truepanel-theme-toggle-sync -->"
+_THEME_TOGGLE_SYNC_TAG = (
+    _THEME_TOGGLE_SYNC_MARKER
+    + b'\n<script src="/theme-toggle-sync.js" defer></script>\n'
+)
 
 
 class MissionControlRequestHandler(_server.MissionControlRequestHandler):
@@ -52,6 +67,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             return
         if parsed.path == f"/{_RELIABILITY_SCRIPT}":
             self._static_script(_RELIABILITY_SCRIPT, "aegis_reliability_unavailable")
+            return
+        if parsed.path == f"/{_THEME_TOGGLE_SYNC_SCRIPT}":
+            self._static_script(_THEME_TOGGLE_SYNC_SCRIPT, "theme_toggle_sync_unavailable")
             return
         super().do_GET()
 
@@ -74,6 +92,16 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             )
             return
 
+        if _THEME_BOOTSTRAP_MARKER not in body:
+            if b"</head>" in body:
+                body = body.replace(
+                    b"</head>",
+                    _THEME_BOOTSTRAP_TAG + b"</head>",
+                    1,
+                )
+            else:
+                body = _THEME_BOOTSTRAP_TAG + body
+
         tags = b""
         inherited = (
             (_server._FLIGHT_MANUAL_MARKER, _server._FLIGHT_MANUAL_TAG),
@@ -90,6 +118,8 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             tags += _RECOVERY_TAG
         if _RELIABILITY_MARKER not in body:
             tags += _RELIABILITY_TAG
+        if _THEME_TOGGLE_SYNC_MARKER not in body:
+            tags += _THEME_TOGGLE_SYNC_TAG
 
         if tags:
             if b"</body>" in body:
@@ -131,6 +161,14 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
                 "bays": [],
             }
 
+        # Pathfinder owns the final /api/v1/status composition and therefore
+        # cannot rely on the parent handler's _status() enrichment. Localize
+        # drive telemetry here with the same pure join and inherited bay-map
+        # resolver before AEGIS observes the payload.
+        storage["temperatures"] = _server.localize_drive_readings(
+            storage.get("temperatures"),
+            self._device_bay_map(),
+        )
         storage["bay_mirror"] = mirror
         payload["storage"] = storage
         try:

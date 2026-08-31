@@ -205,6 +205,44 @@ class AegisReliabilityEngine:
                 fresh,
             )
 
+    @staticmethod
+    def _topology(payload: dict[str, Any]) -> dict[str, Any]:
+        """Summarize physical-topology evidence available this sample.
+
+        This never invents a bay: a drive that could not be resolved to a
+        physical bay by :mod:`truepanel.hardware.drive_localization` is
+        reported as ``hottest_drive_bay: None`` and
+        ``hottest_drive_localized: False`` rather than guessed, matching the
+        project's existing rule that uncertainty must be preserved, not
+        hidden, when topology evidence is incomplete.
+        """
+
+        storage = _dict(payload.get("storage"))
+        entries = [
+            item for item in _list(storage.get("temperatures")) if isinstance(item, dict)
+        ]
+
+        hottest: dict[str, Any] | None = None
+        hottest_value: float | None = None
+        for item in entries:
+            value = _number(item.get("temperature_c", item.get("temp")))
+            if value is None:
+                continue
+            if hottest_value is None or value > hottest_value:
+                hottest_value = value
+                hottest = item
+
+        bay = hottest.get("bay") if hottest else None
+        known_bays = sum(1 for item in entries if item.get("bay") is not None)
+
+        return {
+            "hottest_drive_temperature_c": hottest_value,
+            "hottest_drive_bay": bay,
+            "hottest_drive_localized": bay is not None,
+            "drives_with_known_bay": known_bays,
+            "drives_observed": len(entries),
+        }
+
     def observe(self, payload: dict[str, Any]) -> dict[str, Any]:
         source_timestamp = _number(payload.get("timestamp"))
         cards = [
@@ -242,6 +280,7 @@ class AegisReliabilityEngine:
                 "trusted": self.matrix["trusted"],
                 "gaps": self.matrix["gaps"],
             },
+            "topology": self._topology(payload),
             "flight_director": active_flight_director or self.flight_director,
         }
 

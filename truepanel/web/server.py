@@ -23,6 +23,7 @@ import json
 from http import HTTPStatus
 from urllib.parse import urlparse
 
+from truepanel.hardware.drive_localization import localize_drive_readings
 from truepanel.lifeline import BayIdentificationService
 
 from . import server_base as _base
@@ -162,10 +163,21 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
                 "bays": [],
             }
 
+        storage["temperatures"] = localize_drive_readings(
+            storage.get("temperatures"),
+            self._device_bay_map(),
+        )
+
         storage["bay_mirror"] = mirror
         payload = dict(payload)
         payload["storage"] = storage
         self._json(payload)
+
+    def _device_bay_map(self) -> dict:
+        try:
+            return self.server.bay_mirror_provider.device_bay_map()
+        except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+            return {}
 
     def _static_script(self, filename, error_code):
         candidate = STATIC_DIR / filename
