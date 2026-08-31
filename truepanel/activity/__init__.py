@@ -15,6 +15,7 @@ from .model import (
 )
 from .plex import PlexActivityProvider, parse_plex_sessions
 from .provider import ActivityProvider
+from .zfs import ZfsActivityProvider, normalize_zfs_activity
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -25,5 +26,7 @@ __all__ = [
     "ActivitySnapshot",
     "ActivityState",
     "PlexActivityProvider",
+    "ZfsActivityProvider",
+    "normalize_zfs_activity",
     "parse_plex_sessions",
 ]
