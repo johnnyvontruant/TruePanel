@@ -8,8 +8,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from truepanel.health import ServiceStatusProvider
 from truepanel.paths import installation_root
 
+from .observatory_snapshot import ObservatorySnapshotService
 from .pathfinder_server import serve
 
 
@@ -119,10 +121,15 @@ def main():
         MissionControlServiceSettings
         .from_environment()
     )
+    snapshot_service = ObservatorySnapshotService(
+        service_status_provider=ServiceStatusProvider(),
+        config_path=settings.config_path,
+    )
 
     serve(
         host=settings.host,
         port=settings.port,
+        snapshot_service=snapshot_service,
         allow_config_writes=(
             settings.allow_config_writes
         ),
