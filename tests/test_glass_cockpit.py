@@ -158,7 +158,7 @@ def test_health_annunciators_are_keyboard_mobile_and_reduced_motion_safe():
     assert "min-height:36px" in styles
 
 
-def test_svg_refraction_is_opt_in_static_and_fails_back_to_v1_glass():
+def test_svg_refraction_v2_distorts_a_copied_substrate_and_falls_back_to_v1_glass():
     source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
     start = source.index("function installRefractionExperiment()")
     end = source.index("function install(){", start)
@@ -169,17 +169,23 @@ def test_svg_refraction_is_opt_in_static_and_fails_back_to_v1_glass():
 
     assert 'params.get("refraction")!=="1"' in refraction
     assert 'document.getElementById("healthSubsystems")' in refraction
-    assert 'window.CSS?.supports?.("backdrop-filter",filterValue)' in refraction
+    assert 'window.CSS?.supports?.("filter",filterValue)' in refraction
     assert 'document.body.dataset.gcRefraction="fallback"' in refraction
-    assert 'document.body.dataset.gcRefraction="svg"' in refraction
+    assert 'document.body.dataset.gcRefraction="substrate"' in refraction
     assert 'document.createElementNS(ns,"svg")' in refraction
     assert 'document.createElementNS(ns,"feTurbulence")' in refraction
     assert 'document.createElementNS(ns,"feGaussianBlur")' in refraction
     assert 'document.createElementNS(ns,"feDisplacementMap")' in refraction
-    assert 'displacement.setAttribute("scale","6")' in refraction
+    assert 'displacement.setAttribute("scale","14")' in refraction
+    assert 'turbulence.setAttribute("baseFrequency","0.010 0.028")' in refraction
     assert 'turbulence.setAttribute("numOctaves","1")' in refraction
-    assert 'pane.classList.add("gc-refraction-enabled")' in refraction
-    assert 'url("#gcRefraction") blur(18px)' in styles
+    assert 'pane.classList.add("gc-refraction-substrate")' in refraction
+    assert '.gc-refraction-substrate .health-subsystem::before' in styles
+    assert "background:var(--gc-ambient-grid)" in styles
+    assert "background-attachment:fixed,fixed" in styles
+    assert 'filter:url("#gcRefraction") contrast(108%) saturate(104%)' in styles
+    assert "opacity:.52" in styles
+    assert 'backdrop-filter:url("#gcRefraction")' not in styles
     assert "requestAnimationFrame" not in refraction
     assert "setInterval" not in refraction
     assert "fetch(" not in refraction
