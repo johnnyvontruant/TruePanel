@@ -1,4 +1,9 @@
-from truepanel.activity import ActivityProviderStatus, ActivitySnapshot
+from truepanel.activity import (
+    ActivityObservation,
+    ActivityProviderStatus,
+    ActivitySnapshot,
+    ActivityState,
+)
 from truepanel.activity.web import mission_control_activity
 
 
@@ -16,6 +21,27 @@ class DuplicateZfsProvider:
         return ActivitySnapshot(
             source=self.source,
             status=ActivityProviderStatus.AVAILABLE,
+        )
+
+
+class PrivatePlexProvider:
+    source = "plex"
+
+    def snapshot(self):
+        return ActivitySnapshot(
+            source=self.source,
+            status=ActivityProviderStatus.AVAILABLE,
+            observations=(
+                ActivityObservation(
+                    source="plex",
+                    kind="episode",
+                    state=ActivityState.PLAYING,
+                    title="The Inner Light",
+                    subtitle="Star Trek: TNG · Season 5",
+                    progress=0.5,
+                    evidence=("plex.status.sessions",),
+                ),
+            ),
         )
 
 
@@ -56,6 +82,27 @@ def test_mission_control_activity_exposes_normalized_zfs_scrub():
         }
     ]
     assert "raw_status" not in str(activity)
+
+
+def test_mission_control_activity_redacts_plex_media_identity():
+    activity = mission_control_activity({}, providers=[PrivatePlexProvider()])
+
+    assert "The Inner Light" not in repr(activity)
+    assert "Star Trek" not in repr(activity)
+    plex = next(
+        item for item in activity["observations"]
+        if item["source"] == "plex"
+    )
+    assert plex["title"] == "Plex playback"
+    assert plex["subtitle"] == "Media workload"
+    assert plex["progress"] == 0.5
+
+    provider = next(
+        item for item in activity["providers"]
+        if item["source"] == "plex"
+    )
+    assert provider["observations"][0]["title"] == "Plex playback"
+    assert "The Inner Light" not in repr(provider)
 
 
 def test_mission_control_activity_contains_optional_provider_failure():
