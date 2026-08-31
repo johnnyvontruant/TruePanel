@@ -40,6 +40,15 @@ _RELIABILITY_TAG = (
     _RELIABILITY_MARKER
     + b'\n<script src="/reliability-view.js" defer></script>\n'
 )
+_THEME_BOOTSTRAP_MARKER = b"<!-- truepanel-theme-bootstrap -->"
+_THEME_BOOTSTRAP_TAG = (
+    _THEME_BOOTSTRAP_MARKER
+    + b"\n<script>"
+    + b"(function(){try{var t=localStorage.getItem('truepanel-theme');"
+    + b"if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;}}"
+    + b"catch(e){}}());"
+    + b"</script>\n"
+)
 _THEME_TOGGLE_SYNC_SCRIPT = "theme-toggle-sync.js"
 _THEME_TOGGLE_SYNC_MARKER = b"<!-- truepanel-theme-toggle-sync -->"
 _THEME_TOGGLE_SYNC_TAG = (
@@ -82,6 +91,16 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
                 status=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
             return
+
+        if _THEME_BOOTSTRAP_MARKER not in body:
+            if b"</head>" in body:
+                body = body.replace(
+                    b"</head>",
+                    _THEME_BOOTSTRAP_TAG + b"</head>",
+                    1,
+                )
+            else:
+                body = _THEME_BOOTSTRAP_TAG + body
 
         tags = b""
         inherited = (
