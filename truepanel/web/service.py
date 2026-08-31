@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from truepanel.activity.runtime import activity_providers_from_environment
 from truepanel.health import ServiceStatusProvider
 from truepanel.paths import installation_root
 
@@ -124,6 +125,7 @@ def main():
     snapshot_service = ObservatorySnapshotService(
         service_status_provider=ServiceStatusProvider(),
         config_path=settings.config_path,
+        activity_providers=activity_providers_from_environment(),
     )
 
     serve(
