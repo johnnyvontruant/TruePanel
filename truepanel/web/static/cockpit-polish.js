@@ -24,6 +24,23 @@ function installStyle(){
 .cockpit-maintenance-drawer{grid-column:1/-1;margin:0;padding:0 1rem;border:1px solid var(--edge);border-radius:14px;background:linear-gradient(145deg,color-mix(in srgb,var(--panel-solid) 62%,transparent),color-mix(in srgb,var(--panel-solid) 68%,transparent));backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%)}.cockpit-maintenance-drawer>summary{display:flex;align-items:center;gap:.8rem;padding:1rem 0;cursor:pointer;list-style:none}.cockpit-maintenance-drawer>summary::-webkit-details-marker{display:none}.cockpit-maintenance-drawer>summary::before{content:"▸";color:var(--muted);font-size:.72rem}.cockpit-maintenance-drawer[open]>summary::before{content:"▾"}.cockpit-maintenance-title{font-size:.76rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.cockpit-maintenance-state{margin-left:auto;color:var(--muted);font-size:.72rem;text-align:right}.cockpit-maintenance-state.good{color:var(--good)}.cockpit-maintenance-state.warn{color:var(--warn)}.cockpit-maintenance-drawer[open]>summary{border-bottom:1px solid color-mix(in srgb,var(--edge) 14%,transparent)}.cockpit-maintenance-drawer>.card{margin:1rem 0;grid-column:auto}.cockpit-maintenance-drawer>.card+ .card{margin-top:0}
 .cockpit-final-lcd-first #cockpitOverview{margin-top:-.28rem}
 @media(max-width:640px){.cockpit-drawer>summary,.cockpit-maintenance-drawer>summary{align-items:flex-start}.cockpit-drawer-state,.cockpit-maintenance-state{max-width:55%}}
+.health-command{display:none}
+.gc-health-annunciators{position:sticky;z-index:38;display:flex;gap:.4rem;overflow-x:auto;padding:.55rem 1.4rem;background:color-mix(in srgb,var(--panel-solid) 55%,transparent);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border-bottom:1px solid var(--edge);scrollbar-width:none}
+.gc-health-annunciators::-webkit-scrollbar{display:none}
+.gc-annunciator{flex:0 0 auto;display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .7rem;border:1px solid var(--edge);border-radius:999px;background:color-mix(in srgb,var(--panel-solid) 42%,transparent);color:var(--muted);font:inherit;font-size:.76rem;font-weight:650;cursor:pointer}
+.gc-annunciator:hover{border-color:var(--edge-strong);color:var(--text)}
+.gc-annunciator:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gc-annunciator-dot{width:.5rem;height:.5rem;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.gc-annunciator.nominal{color:var(--good)}
+.gc-annunciator.nominal .gc-annunciator-dot{background:var(--good);box-shadow:0 0 6px var(--good)}
+.gc-annunciator.attention{color:var(--warn)}
+.gc-annunciator.attention .gc-annunciator-dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+.gc-annunciator.degraded,.gc-annunciator.critical{color:var(--bad)}
+.gc-annunciator.degraded .gc-annunciator-dot,.gc-annunciator.critical .gc-annunciator-dot{background:var(--bad);box-shadow:0 0 6px var(--bad)}
+.gc-jump-focus{animation:gcJumpFocus 1.3s ease-out}
+@keyframes gcJumpFocus{0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}100%{box-shadow:var(--shadow)}}
+@media(prefers-reduced-motion:reduce){.gc-jump-focus{animation:none}.gc-health-annunciators{scroll-behavior:auto}}
+@media(max-width:640px){.gc-health-annunciators{padding:.5rem 1rem}}
 `;
     document.head.appendChild(style);
 }
@@ -348,6 +365,85 @@ function cleanFooter(){
     if(footer) footer.textContent="TruePanel Mission Control";
 }
 
+function installHealthAnnunciators(){
+    if(document.getElementById("gcHealthAnnunciators")) return;
+    const topbar=document.querySelector(".topbar");
+    if(!topbar) return;
+
+    const ORDER=["cooling","thermal","storage","network","front_panel","services"];
+    const TARGETS={
+        cooling:"#cardCooling",
+        thermal:"#cardCooling",
+        storage:"#cardStorage",
+        network:"#cardNetwork",
+        front_panel:"#cardFrontPanel",
+        services:"#cockpitMaintenance,#cardMissionControlStatus",
+    };
+
+    const row=el("div","gc-health-annunciators");
+    row.id="gcHealthAnnunciators";
+    row.setAttribute("role","group");
+    row.setAttribute("aria-label","System health, jump to section");
+
+    const pills={};
+    ORDER.forEach(name=>{
+        const label=(typeof HEALTH_SUBSYSTEM_LABELS!=="undefined"&&HEALTH_SUBSYSTEM_LABELS[name])||name;
+        const pill=el("button","gc-annunciator");
+        pill.type="button";
+        pill.dataset.gcHealthTarget=name;
+        pill.setAttribute("aria-label",`${label}: unknown. Jump to ${label}.`);
+        pill.innerHTML=`<span class="gc-annunciator-dot"></span><span class="gc-annunciator-label">${label}</span>`;
+        row.appendChild(pill);
+        pills[name]=pill;
+    });
+
+    topbar.insertAdjacentElement("afterend",row);
+
+    const reduceMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function jumpTo(name){
+        const selector=TARGETS[name];
+        if(!selector) return;
+        let target=null;
+        for(const part of selector.split(",")){
+            target=document.querySelector(part.trim());
+            if(target) break;
+        }
+        if(!target) return;
+        if(target.tagName==="DETAILS") target.open=true;
+        target.classList.add("gc-jump-focus");
+        window.requestAnimationFrame(()=>{
+            target.scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"center"});
+        });
+        window.setTimeout(()=>target.classList.remove("gc-jump-focus"),1300);
+    }
+
+    row.addEventListener("click",event=>{
+        const pill=event.target.closest(".gc-annunciator");
+        if(pill) jumpTo(pill.dataset.gcHealthTarget);
+    });
+    row.addEventListener("keydown",event=>{
+        if(!["Enter"," "].includes(event.key)) return;
+        const pill=event.target.closest(".gc-annunciator");
+        if(!pill) return;
+        event.preventDefault();
+        jumpTo(pill.dataset.gcHealthTarget);
+    });
+
+    window.addEventListener("truepanel:status",event=>{
+        const subsystems=(event?.detail?.health&&event.detail.health.subsystems)||{};
+        ORDER.forEach(name=>{
+            const pill=pills[name];
+            const result=subsystems[name]||{};
+            const state=typeof normalizedHealthState==="function"?normalizedHealthState(result.state):"UNKNOWN";
+            const desiredClass=`gc-annunciator ${state.toLowerCase()}`;
+            if(pill.className!==desiredClass) pill.className=desiredClass;
+            const label=(typeof HEALTH_SUBSYSTEM_LABELS!=="undefined"&&HEALTH_SUBSYSTEM_LABELS[name])||name;
+            pill.setAttribute("aria-label",`${label}: ${state.toLowerCase()}. Jump to ${label}.`);
+        });
+    });
+}
+
 function install(){
     installStyle();
     installLcdTransportDrawer();
@@ -355,6 +451,7 @@ function install(){
     installThermalReadinessSemantics();
     installPreflightReviewNavigation();
     installMaintenanceDrawer();
+    installHealthAnnunciators();
     promoteLcdFirstBaseline();
     cleanFooter();
     document.body.classList.add("cockpit-polished");

@@ -392,7 +392,7 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 </article>
 <article class="card"><h2>CPU</h2><div id="cpu" class="metric">--</div><div id="load" class="detail">Awaiting telemetry</div></article>
 <article class="card"><h2>Memory</h2><div id="ram" class="metric">--</div></article>
-<article class="card lcd-panel">
+<article class="card lcd-panel" id="cardFrontPanel">
 <h2>Virtual Front Panel</h2>
 <div class="lcd-faceplate">
 <div>
@@ -432,7 +432,7 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 </div>
 </div>
 </article>
-<article class="card wide"><h2>Cooling</h2>
+<article class="card wide" id="cardCooling"><h2>Cooling</h2>
 <div class="cooling-instruments" aria-label="Current cooling operation">
 <div class="cooling-instrument"><span class="label">Hottest temperature</span><span id="fanThermalTemperature" class="value">--</span></div>
 <div class="cooling-instrument"><span class="label">Active profile</span><span id="fanActiveProfile" class="value">Automatic</span></div>
@@ -503,9 +503,9 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 </div>
 </details>
 </article>
-<article class="card wide"><h2>Storage Pools</h2><div id="pools" class="detail">Awaiting pool telemetry</div></article>
+<article class="card wide" id="cardStorage"><h2>Storage Pools</h2><div id="pools" class="detail">Awaiting pool telemetry</div></article>
 <article class="card"><h2>Drive Temperatures</h2><div id="temps" class="detail">Awaiting temperature telemetry</div></article>
-<article class="card"><h2>Network</h2><div id="network" class="detail">Awaiting network telemetry</div></article>
+<article class="card" id="cardNetwork"><h2>Network</h2><div id="network" class="detail">Awaiting network telemetry</div></article>
 <article class="card wide"><h2>Night Mode Configuration</h2>
 <div class="form-grid">
 <div class="field"><label for="idleAfter">Idle delay, seconds</label><input id="idleAfter" type="number" min="60" max="86400" step="60"></div>
@@ -518,7 +518,7 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 <div id="policyNotice" class="notice"></div>
 <div id="policyDiff" class="diff"></div>
 </article>
-<article class="card wide"><h2>Mission Control Status</h2><div class="row"><span class="label">Host</span><span id="hostname" class="value">--</span></div><div class="row"><span class="label">Configuration mode</span><span id="configMode" class="value">Checking</span></div><div class="row"><span class="label">Fan commands</span><span class="value">Guarded socket only</span></div><div class="row"><span class="label">Direct hardware access</span><span class="value good">Disabled</span></div><div class="row"><span class="label">Last refresh</span><span id="updated" class="value">--</span></div></article>
+<article class="card wide" id="cardMissionControlStatus"><h2>Mission Control Status</h2><div class="row"><span class="label">Host</span><span id="hostname" class="value">--</span></div><div class="row"><span class="label">Configuration mode</span><span id="configMode" class="value">Checking</span></div><div class="row"><span class="label">Fan commands</span><span class="value">Guarded socket only</span></div><div class="row"><span class="label">Direct hardware access</span><span class="value good">Disabled</span></div><div class="row"><span class="label">Last refresh</span><span id="updated" class="value">--</span></div></article>
 </section></main>
 <footer>TruePanel v1.1 Mission Control</footer>
 <script>
