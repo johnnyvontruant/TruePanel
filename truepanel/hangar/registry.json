@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.08.31.1",
-  "updated_at": "2026-08-31",
+  "registry_version": "2026.09.01.1",
+  "updated_at": "2026-09-01",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -203,7 +203,26 @@
       "reproduction": ["pytest -q tests/test_checkride.py", "python -m truepanel.hangar validate --root ."],
       "revisit_conditions": ["a compatible replacement drive is available", "backup and identity can be freshly reconfirmed"],
       "strongest_follow_up": "Acquire a compatible replacement, then capture the real repair through the same rehearsed verification contract.",
-      "freshness": {"reviewed_at": "2026-08-31", "review_after": "2026-10-31"}
+      "freshness": {"reviewed_at": "2026-09-01", "review_after": "2026-10-31"}
+    },
+    {
+      "id": "TP-EXP-0016", "title": "CHECKRIDE pre-service clearance receipts", "state": "COMPLETED",
+      "hypothesis": "Fresh identity, redundancy, backup-restore, procedure, candidate-fit, and recovery-state evidence can be reconciled into one expiring advisory receipt without granting repair authority.",
+      "value": "Prevents a collection of individually plausible facts from being mistaken for a safe service decision.",
+      "prior_art": ["TrueNAS serial and replacement-capacity guidance", "OpenZFS replacement semantics", "NIST tested-backup guidance", "aviation-style expiring clearances"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/checkride-pre-service-clearance", "pr": null, "commits": []},
+      "protocol": ["bind one SMART incident", "reconcile six independent gates", "expire evidence after 15 minutes", "digest canonical receipt", "replay negative paths"],
+      "fixtures": ["tests/test_checkride.py", "storage-pre-service-clearance-v1"],
+      "success_criteria": ["6/6 gates pass only on mutually consistent fresh evidence", "every negative path holds", "receipt is deterministic", "physical and storage-write authority remain false"],
+      "abort_criteria": ["operator acknowledgement treated as restore proof", "stale evidence remains ready", "device path treated as durable identity", "READY grants execution authority"],
+      "evidence": [{"path": "docs/evidence/checkride-pre-service-clearance-v1.json", "sha256": "2ab460e70d10bd2432dc34cd737e3a9d798fd2072813ff935123f7c21836ccf4"}],
+      "outcome": {"conclusion": "The deterministic positive fixture passes all six gates and produces a digest-bound 15-minute receipt, while absent or stale backup/candidate evidence fails closed and both physical-service and storage-write authority remain false."},
+      "invalidated_assumptions": ["a backup checkbox proves recoverability", "nominal candidate capacity is sufficient service evidence", "a READY label may persist without expiry"],
+      "reproduction": ["pytest -q tests/test_checkride.py", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["a governed live backup evidence provider exists", "a real replacement candidate is passively observed", "service-time evidence needs a different expiry policy"],
+      "strongest_follow_up": "Bind a governed backup/restore attestation provider and passively discovered replacement candidate to the live incident, then capture the external repair signature.",
+      "freshness": {"reviewed_at": "2026-09-01", "review_after": "2026-11-30"}
     }
   ]
 }

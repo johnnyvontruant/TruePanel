@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.08.31.1 · refreshed 2026-08-31 · 10 experiment(s)
+Registry version 2026.09.01.1 · refreshed 2026-09-01 · 11 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -83,3 +83,11 @@ Candidate B consolidated eleven competing surfaces into four decision domains wi
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Run moderated think-aloud tests with one new and one experienced operator on lab fixtures, then tune only measured friction.
 - Revisit when: human task testing contradicts the structural result; new Mission Control decision domain is added
+
+## TP-EXP-0016 · CHECKRIDE pre-service clearance receipts
+
+The deterministic positive fixture passes all six gates and produces a digest-bound 15-minute receipt, while absent or stale backup/candidate evidence fails closed and both physical-service and storage-write authority remain false.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Bind a governed backup/restore attestation provider and passively discovered replacement candidate to the live incident, then capture the external repair signature.
+- Revisit when: a governed live backup evidence provider exists; a real replacement candidate is passively observed; service-time evidence needs a different expiry policy

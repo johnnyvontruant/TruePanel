@@ -10,7 +10,10 @@ from __future__ import annotations
 import hashlib
 import json
 from copy import deepcopy
+from datetime import datetime
 from typing import Any
+
+_CLEARANCE_MAX_AGE_SECONDS = 15 * 60
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -23,6 +26,201 @@ def _list(value: Any) -> list[Any]:
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _timestamp(value: Any) -> float | None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    text = _text(value)
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        pass
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def _fresh(observed_at: Any, now: float | None) -> tuple[bool, float | None]:
+    observed = _timestamp(observed_at)
+    if observed is None or now is None:
+        return False, None
+    age = max(0.0, now - observed)
+    return age <= _CLEARANCE_MAX_AGE_SECONDS, age
+
+
+def _selected_candidate(context: dict[str, Any]) -> dict[str, Any]:
+    candidates = [
+        item
+        for item in _list(context.get("replacement_candidates"))
+        if isinstance(item, dict)
+    ]
+    selected = [item for item in candidates if item.get("selected") is True]
+    if len(selected) == 1:
+        return selected[0]
+    if len(selected) == 0 and len(candidates) == 1:
+        return candidates[0]
+    return {}
+
+
+def _matching_lifeline_session(
+    payload: dict[str, Any],
+    identity: dict[str, Any],
+) -> dict[str, Any]:
+    sessions = _list(_dict(payload.get("lifeline")).get("sessions"))
+    for session in sessions:
+        if not isinstance(session, dict) or session.get("status") != "active":
+            continue
+        original = _dict(session.get("original_fault"))
+        compared = ("pool", "vdev", "device", "bay", "serial_last4")
+        if all(
+            original.get(field) is None
+            or identity.get(field) is None
+            or str(original.get(field)) == str(identity.get(field))
+            for field in compared
+        ) and any(original.get(field) is not None for field in compared):
+            return session
+    return {}
+
+
+def evaluate_pre_service_clearance(
+    payload: dict[str, Any],
+    *,
+    incident_id: str,
+    identity: dict[str, Any],
+    topology: dict[str, Any],
+) -> dict[str, Any]:
+    """Compose a digest-bound, advisory-only physical-service clearance.
+
+    ``READY_FOR_OPERATOR_REVIEW`` never means that TruePanel may mutate
+    storage. It means only that the passive evidence needed for a human to
+    review the external service procedure is mutually consistent and fresh.
+    """
+
+    now = _timestamp(payload.get("timestamp"))
+    snapshot_fresh, snapshot_age = _fresh(payload.get("timestamp"), now)
+    session = _matching_lifeline_session(payload, identity)
+    context = _dict(session.get("context"))
+    last_session = _dict(session.get("last_session"))
+    candidate = _selected_candidate(context)
+    replacement = _dict(last_session.get("replacement"))
+    backup = _dict(payload.get("backup_context"))
+
+    session_fresh, session_age = _fresh(session.get("updated_at"), now)
+    backup_fresh, backup_age = _fresh(backup.get("verified_at"), now)
+    candidate_fresh, candidate_age = _fresh(
+        candidate.get("observed_at", session.get("updated_at")),
+        now,
+    )
+
+    complete_identity = identity.get("verified_from_passive_evidence") is True
+    redundancy = topology.get("remaining_redundancy")
+    safe_margin = (
+        topology.get("vdev_topology") is not None
+        and isinstance(redundancy, int)
+        and not isinstance(redundancy, bool)
+        and redundancy > 0
+        and _text(topology.get("zfs_state")).upper() in {"ONLINE", "DEGRADED"}
+    )
+    backup_proven = bool(
+        backup.get("independent_backup_confirmed") is True
+        and backup.get("restore_tested") is True
+        and _text(backup.get("source"))
+        and backup_fresh
+    )
+    distinct_candidate = bool(
+        candidate.get("identity_verified_distinct") is True
+        or (
+            _text(candidate.get("serial_last4"))
+            and _text(candidate.get("serial_last4"))
+            != _text(identity.get("serial_last4"))
+        )
+    )
+    replacement_valid = bool(
+        session_fresh
+        and candidate_fresh
+        and replacement.get("valid") is True
+        and distinct_candidate
+    )
+    service_procedure = bool(
+        context.get("service_procedure_verified") is True
+        and _text(context.get("service_profile"))
+        and _text(context.get("service_source"))
+    )
+    zfs_activity = _dict(_dict(payload.get("storage")).get("zfs_activity"))
+    no_recovery_active = zfs_activity.get("resilver_running") is not True
+
+    gates = [
+        {
+            "code": "incident_identity",
+            "satisfied": bool(incident_id and complete_identity and snapshot_fresh),
+            "evidence_age_seconds": snapshot_age,
+            "detail": "Incident, bay, device, model, serial suffix, pool, and VDEV must be present in the current passive snapshot.",
+        },
+        {
+            "code": "redundancy_margin",
+            "satisfied": safe_margin,
+            "evidence_age_seconds": snapshot_age,
+            "detail": "Current topology must retain at least one additional member of fault tolerance.",
+        },
+        {
+            "code": "backup_restore_evidence",
+            "satisfied": backup_proven,
+            "evidence_age_seconds": backup_age,
+            "detail": "An independent backup with a tested restore and named source must be attested within 15 minutes.",
+        },
+        {
+            "code": "service_procedure",
+            "satisfied": service_procedure,
+            "evidence_age_seconds": session_age,
+            "detail": "The service procedure must match a known chassis profile and retain its source provenance.",
+        },
+        {
+            "code": "replacement_fit_and_identity",
+            "satisfied": replacement_valid,
+            "evidence_age_seconds": candidate_age,
+            "detail": "One fresh, distinct, equal-or-larger candidate must be outside every pool and free of preserved-data risk.",
+        },
+        {
+            "code": "recovery_quiescent",
+            "satisfied": no_recovery_active,
+            "evidence_age_seconds": snapshot_age,
+            "detail": "No resilver may be active while a physical-service plan is reviewed.",
+        },
+    ]
+    blocked_by = [item["code"] for item in gates if item["satisfied"] is not True]
+    status = "READY_FOR_OPERATOR_REVIEW" if not blocked_by else "HOLD"
+    receipt = {
+        "schema_version": 1,
+        "incident_id": incident_id,
+        "status": status,
+        "generated_at": payload.get("timestamp"),
+        "expires_after_seconds": _CLEARANCE_MAX_AGE_SECONDS,
+        "gates": gates,
+        "source_identity": {
+            field: identity.get(field)
+            for field in ("pool", "vdev", "bay", "device", "model", "serial_last4")
+        },
+        "replacement_identity": {
+            field: candidate.get(field)
+            for field in ("device", "bay", "model", "serial_last4", "capacity_bytes")
+        },
+        "backup_evidence": {
+            "source": backup.get("source"),
+            "verified_at": backup.get("verified_at"),
+            "restore_tested": backup.get("restore_tested") is True,
+        },
+        "blocked_by": blocked_by,
+        "operator_review_ready": not blocked_by,
+        "physical_service_authority": False,
+        "storage_write_authority": False,
+    }
+    canonical = json.dumps(receipt, sort_keys=True, separators=(",", ":")).encode()
+    receipt["receipt_sha256"] = hashlib.sha256(canonical).hexdigest()
+    return receipt
 
 
 def _storage_evidence(incident: dict[str, Any]) -> dict[str, Any] | None:
@@ -197,9 +395,37 @@ def compose_storage_checkride(
             "claim": "Live passive diagnosis; repair outcome not yet observed.",
         },
     }
+    plan["pre_service_clearance"] = evaluate_pre_service_clearance(
+        payload,
+        incident_id=incident_id,
+        identity=identity,
+        topology=topology,
+    )
+    plan["action_gate"]["operator_review_ready"] = plan[
+        "pre_service_clearance"
+    ]["operator_review_ready"]
+    structural_blockers = [
+        item
+        for item in blockers
+        if item
+        in {
+            "physical_and_logical_identity_incomplete",
+            "redundancy_context_incomplete",
+        }
+    ]
+    plan["action_gate"]["blocked_by"] = list(
+        dict.fromkeys(
+            structural_blockers
+            + plan["pre_service_clearance"]["blocked_by"]
+        )
+    )
     canonical = json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
     plan["evidence_sha256"] = hashlib.sha256(canonical).hexdigest()
     return plan
 
 
-__all__ = ["compose_storage_checkride", "run_storage_recovery_rehearsals"]
+__all__ = [
+    "compose_storage_checkride",
+    "evaluate_pre_service_clearance",
+    "run_storage_recovery_rehearsals",
+]
