@@ -25,7 +25,7 @@ function installStyle(){
 .cockpit-final-lcd-first #cockpitOverview{margin-top:-.28rem}
 @media(max-width:640px){.cockpit-drawer>summary,.cockpit-maintenance-drawer>summary{align-items:flex-start}.cockpit-drawer-state,.cockpit-maintenance-state{max-width:55%}}
 .health-command{display:none}
-.gc-health-annunciators{position:sticky;z-index:38;display:flex;gap:.4rem;overflow-x:auto;padding:.55rem 1.4rem;background:color-mix(in srgb,var(--panel-solid) 55%,transparent);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border-bottom:1px solid var(--edge);scrollbar-width:none}
+.gc-health-annunciators{display:flex;align-items:center;gap:.4rem;overflow-x:auto;scrollbar-width:none;flex:0 1 auto;min-width:0;max-width:46vw}
 .gc-health-annunciators::-webkit-scrollbar{display:none}
 .gc-annunciator{flex:0 0 auto;display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .7rem;border:1px solid var(--edge);border-radius:999px;background:color-mix(in srgb,var(--panel-solid) 42%,transparent);color:var(--muted);font:inherit;font-size:.76rem;font-weight:650;cursor:pointer}
 .gc-annunciator:hover{border-color:var(--edge-strong);color:var(--text)}
@@ -40,7 +40,7 @@ function installStyle(){
 .gc-jump-focus{animation:gcJumpFocus 1.3s ease-out}
 @keyframes gcJumpFocus{0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}100%{box-shadow:var(--shadow)}}
 @media(prefers-reduced-motion:reduce){.gc-jump-focus{animation:none}.gc-health-annunciators{scroll-behavior:auto}}
-@media(max-width:640px){.gc-health-annunciators{padding:.5rem 1rem}}
+@media(max-width:640px){.gc-health-annunciators{max-width:100%;gap:.3rem}}
 `;
     document.head.appendChild(style);
 }
@@ -397,7 +397,12 @@ function installHealthAnnunciators(){
         pills[name]=pill;
     });
 
-    topbar.insertAdjacentElement("afterend",row);
+    const badge=document.getElementById("connection");
+    if(badge&&badge.parentNode===topbar){
+        topbar.insertBefore(row,badge);
+    }else{
+        topbar.appendChild(row);
+    }
 
     const reduceMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
