@@ -40,7 +40,7 @@ function installStyle(){
 .gc-jump-focus{animation:gcJumpFocus 1.3s ease-out}
 @keyframes gcJumpFocus{0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}100%{box-shadow:var(--shadow)}}
 @media(prefers-reduced-motion:reduce){.gc-jump-focus{animation:none}.gc-health-annunciators{scroll-behavior:auto}}
-@media(max-width:640px){.gc-health-annunciators{max-width:100%;gap:.3rem}}
+@media(max-width:640px){.topbar{flex-wrap:wrap}.topbar-title{flex:1 1 auto;min-width:0}.gc-health-annunciators{order:10;flex:1 1 100%;max-width:100%;gap:.3rem;margin-top:.4rem}}
 `;
     document.head.appendChild(style);
 }
