@@ -25,12 +25,14 @@ function installStyle(){
 .cockpit-final-lcd-first #cockpitOverview{margin-top:-.28rem}
 @media(max-width:640px){.cockpit-drawer>summary,.cockpit-maintenance-drawer>summary{align-items:flex-start}.cockpit-drawer-state,.cockpit-maintenance-state{max-width:55%}}
 .health-command{display:none}
-.gc-health-annunciators{display:flex;align-items:center;gap:.4rem;overflow-x:auto;scrollbar-width:none;flex:0 1 auto;min-width:0;max-width:46vw}
+.topbar{flex-wrap:wrap}
+.gc-health-annunciators{display:flex;align-items:center;order:10;gap:.4rem;overflow-x:visible;scrollbar-width:none;flex:1 1 100%;min-width:0;max-width:100%;flex-wrap:wrap}
 .gc-health-annunciators::-webkit-scrollbar{display:none}
-.gc-annunciator{flex:0 0 auto;display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .7rem;border:1px solid var(--edge);border-radius:999px;background:color-mix(in srgb,var(--panel-solid) 42%,transparent);color:var(--muted);font:inherit;font-size:.76rem;font-weight:650;cursor:pointer}
+.gc-annunciator{flex:0 0 auto;display:inline-flex;align-items:center;gap:.4rem;min-height:44px;padding:.4rem .7rem;border:1px solid var(--edge);border-radius:999px;background:color-mix(in srgb,var(--panel-solid) 42%,transparent);color:var(--muted);font:inherit;font-size:.76rem;font-weight:650;cursor:pointer}
 .gc-annunciator:hover{border-color:var(--edge-strong);color:var(--text)}
 .gc-annunciator:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .gc-annunciator-dot{width:.5rem;height:.5rem;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.gc-annunciator-state{font-size:.56rem;font-weight:850;letter-spacing:.05em}
 .gc-annunciator.nominal{color:var(--good)}
 .gc-annunciator.nominal .gc-annunciator-dot{background:var(--good);box-shadow:0 0 6px var(--good)}
 .gc-annunciator.attention{color:var(--warn)}
@@ -40,7 +42,7 @@ function installStyle(){
 .gc-jump-focus{animation:gcJumpFocus 1.3s ease-out}
 @keyframes gcJumpFocus{0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}100%{box-shadow:var(--shadow)}}
 @media(prefers-reduced-motion:reduce){.gc-jump-focus{animation:none}.gc-health-annunciators{scroll-behavior:auto}}
-@media(max-width:640px){.topbar{flex-wrap:wrap}.topbar-title{flex:1 1 auto;min-width:0;overflow:hidden}.topbar-title h1,.topbar-title .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gc-health-annunciators{order:10;flex:1 1 100%;max-width:100%;gap:.3rem;margin-top:.4rem}}
+@media(max-width:1024px){.topbar-title{flex:1 1 auto;min-width:0;overflow:hidden}.topbar-title h1,.topbar-title .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gc-health-annunciators{gap:.3rem;margin-top:.4rem}.gc-annunciator{flex:1 1 auto;justify-content:center}}
 `;
     document.head.appendChild(style);
 }
@@ -392,7 +394,7 @@ function installHealthAnnunciators(){
         pill.type="button";
         pill.dataset.gcHealthTarget=name;
         pill.setAttribute("aria-label",`${label}: unknown. Jump to ${label}.`);
-        pill.innerHTML=`<span class="gc-annunciator-dot"></span><span class="gc-annunciator-label">${label}</span>`;
+        pill.innerHTML=`<span class="gc-annunciator-dot"></span><span class="gc-annunciator-label">${label}</span><span class="gc-annunciator-state">UNKNOWN</span>`;
         row.appendChild(pill);
         pills[name]=pill;
     });
@@ -427,25 +429,26 @@ function installHealthAnnunciators(){
         const pill=event.target.closest(".gc-annunciator");
         if(pill) jumpTo(pill.dataset.gcHealthTarget);
     });
-    row.addEventListener("keydown",event=>{
-        if(!["Enter"," "].includes(event.key)) return;
-        const pill=event.target.closest(".gc-annunciator");
-        if(!pill) return;
-        event.preventDefault();
-        jumpTo(pill.dataset.gcHealthTarget);
-    });
-
     window.addEventListener("truepanel:status",event=>{
         const subsystems=(event?.detail?.health&&event.detail.health.subsystems)||{};
+        const states={};
         ORDER.forEach(name=>{
             const pill=pills[name];
             const result=subsystems[name]||{};
             const state=typeof normalizedHealthState==="function"?normalizedHealthState(result.state):"UNKNOWN";
+            states[name]=state;
             const desiredClass=`gc-annunciator ${state.toLowerCase()}`;
             if(pill.className!==desiredClass) pill.className=desiredClass;
+            const stateNode=pill.querySelector(".gc-annunciator-state");
+            if(stateNode&&stateNode.textContent!==state) stateNode.textContent=state;
             const label=(typeof HEALTH_SUBSYSTEM_LABELS!=="undefined"&&HEALTH_SUBSYSTEM_LABELS[name])||name;
             pill.setAttribute("aria-label",`${label}: ${state.toLowerCase()}. Jump to ${label}.`);
         });
+        const priority={CRITICAL:0,DEGRADED:1,ATTENTION:2,UNKNOWN:3,NOMINAL:4};
+        ORDER.slice().sort((left,right)=>
+            priority[states[left]]-priority[states[right]]
+            ||ORDER.indexOf(left)-ORDER.indexOf(right)
+        ).forEach(name=>row.appendChild(pills[name]));
     });
 }
 

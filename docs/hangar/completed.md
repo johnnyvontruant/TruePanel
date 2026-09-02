@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.01.1 · refreshed 2026-09-01 · 11 experiment(s)
+Registry version 2026.09.02.1 · refreshed 2026-09-02 · 12 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -91,3 +91,11 @@ The deterministic positive fixture passes all six gates and produces a digest-bo
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Bind a governed backup/restore attestation provider and passively discovered replacement candidate to the live incident, then capture the external repair signature.
 - Revisit when: a governed live backup evidence provider exists; a real replacement candidate is passively observed; service-time evidence needs a different expiry policy
+
+## TP-EXP-0017 · AEGIS recovery ground-truth attestations
+
+The deterministic valid path accepts two provider statements, while mutated, expired, identity-reused, ungoverned, missing, and ambiguous evidence produces 6/6 HOLD decisions with zero unsafe false-ready outcomes.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Implement supported passive local backup and replacement-inventory adapters, then compare their statements with the HoloDeck contract before lifting the live CHECKRIDE evidence HOLD.
+- Revisit when: supported passive TrueNAS backup or block-inventory provider is available; local provider-authentication trust root is defined; real replacement candidate can be observed without actuation

@@ -4,6 +4,12 @@ AEGIS is an additive, read-only layer over TruePanel's existing detectors,
 ORACLE outlooks, Pathfinder recovery contracts, and HoloDeck rehearsals.
 """
 
+from .attestations import (
+    collect_recovery_attestations,
+    issue_recovery_attestation,
+    reconcile_recovery_attestations,
+    validate_recovery_attestation,
+)
 from .checkride import (
     compose_storage_checkride,
     evaluate_pre_service_clearance,
@@ -36,15 +42,19 @@ __all__ = [
     "EvidencePromotionPolicy",
     "HypothesisRule",
     "compose_storage_checkride",
+    "collect_recovery_attestations",
     "evaluate_pre_service_clearance",
+    "issue_recovery_attestation",
     "correlate_incident",
     "coverage_matrix",
     "evaluate_evidence_gate",
     "rehearse_recovery_paths",
     "run_flight_director_proof",
     "run_storage_recovery_rehearsals",
+    "reconcile_recovery_attestations",
     "validate_recovery_coverage",
     "validate_correlation_policy",
     "validate_field_manifest",
+    "validate_recovery_attestation",
     "wilson_interval",
 ]

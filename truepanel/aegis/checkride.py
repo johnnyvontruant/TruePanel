@@ -13,6 +13,13 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
+from .attestations import (
+    BACKUP_KIND,
+    CANDIDATE_KIND,
+    collect_recovery_attestations,
+    reconcile_recovery_attestations,
+)
+
 _CLEARANCE_MAX_AGE_SECONDS = 15 * 60
 
 
@@ -117,6 +124,19 @@ def evaluate_pre_service_clearance(
     )
 
     complete_identity = identity.get("verified_from_passive_evidence") is True
+    attestations = collect_recovery_attestations(
+        payload,
+        incident_id=incident_id,
+        source_identity_sha256=_text(identity.get("identity_sha256")) or None,
+    )
+    evidence_ledger = reconcile_recovery_attestations(
+        attestations,
+        incident_id=incident_id,
+        now=now,
+    )
+    accepted_kinds = {
+        item.get("kind") for item in _list(evidence_ledger.get("accepted"))
+    }
     redundancy = topology.get("remaining_redundancy")
     safe_margin = (
         topology.get("vdev_topology") is not None
@@ -130,6 +150,7 @@ def evaluate_pre_service_clearance(
         and backup.get("restore_tested") is True
         and _text(backup.get("source"))
         and backup_fresh
+        and BACKUP_KIND in accepted_kinds
     )
     distinct_candidate = bool(
         candidate.get("identity_verified_distinct") is True
@@ -144,6 +165,7 @@ def evaluate_pre_service_clearance(
         and candidate_fresh
         and replacement.get("valid") is True
         and distinct_candidate
+        and CANDIDATE_KIND in accepted_kinds
     )
     service_procedure = bool(
         context.get("service_procedure_verified") is True
@@ -190,6 +212,12 @@ def evaluate_pre_service_clearance(
             "evidence_age_seconds": snapshot_age,
             "detail": "No resilver may be active while a physical-service plan is reviewed.",
         },
+        {
+            "code": "provider_attestation_integrity",
+            "satisfied": evidence_ledger["status"] == "EVIDENCE_READY",
+            "evidence_age_seconds": snapshot_age,
+            "detail": "Backup and candidate evidence must be fresh, incident-bound, digest-intact, independently sourced, and free of contradictions.",
+        },
     ]
     blocked_by = [item["code"] for item in gates if item["satisfied"] is not True]
     status = "READY_FOR_OPERATOR_REVIEW" if not blocked_by else "HOLD"
@@ -213,6 +241,7 @@ def evaluate_pre_service_clearance(
             "verified_at": backup.get("verified_at"),
             "restore_tested": backup.get("restore_tested") is True,
         },
+        "evidence_ledger": evidence_ledger,
         "blocked_by": blocked_by,
         "operator_review_ready": not blocked_by,
         "physical_service_authority": False,
@@ -296,6 +325,7 @@ def compose_storage_checkride(
     identity_fields = ("pool", "vdev", "bay", "device", "model", "serial_last4")
     missing_identity = [field for field in identity_fields if not evidence.get(field)]
     identity = {field: evidence.get(field) for field in identity_fields}
+    identity["identity_sha256"] = evidence.get("identity_sha256")
     identity["verified_from_passive_evidence"] = not missing_identity
     identity["missing"] = missing_identity
 

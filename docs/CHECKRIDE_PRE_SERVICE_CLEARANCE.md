@@ -11,7 +11,7 @@ either `HOLD` or `READY_FOR_OPERATOR_REVIEW`. The latter means only that a
 human may review the external service procedure; it never means that TruePanel
 may offline, remove, replace, wipe, or reconfigure a disk.
 
-The receipt fails closed unless all six gates pass:
+The receipt fails closed unless all seven gates pass:
 
 1. The live incident and complete bay/device/model/serial/pool/VDEV identity
    are bound to the current snapshot.
@@ -21,9 +21,13 @@ The receipt fails closed unless all six gates pass:
 5. One fresh replacement is distinct, equal-or-larger, outside every pool,
    and free of preserved-data risk.
 6. No resilver is active.
+7. Provider statements are fresh, incident-bound, digest-intact, strongly
+   identified, governed, and free of ambiguity or contradiction.
 
 Evidence expires after 15 minutes. The canonical receipt has a SHA-256 digest,
 so later screenshots or reports can be reconciled to the exact gate inputs.
+The embedded evidence ledger separately discloses that its SHA-256 proves
+mutation resistance, not provider authenticity.
 Mission Control keeps failed gates visible and preserves single-column phone
 reflow. It uses the existing shared status event and adds no polling.
 
@@ -55,11 +59,11 @@ python -m truepanel.hangar validate --root .
 ```
 
 The preserved deterministic artifact is
-`docs/evidence/checkride-pre-service-clearance-v1.json`. The successful fixture
-passes 6/6 gates while both physical-service and storage-write authority remain
-false. Negative paths cover absent or expired backup proof, stale replacement
-evidence, identity mismatch, exhausted redundancy, invalid candidate fit, and
-an active resilver.
+`docs/evidence/checkride-pre-service-clearance-v1.json`. That original fixture
+passed 6/6 gates. The ground-truth follow-up adds a seventh provider-integrity
+gate while both physical-service and storage-write authority remain false.
+Negative paths now also cover mutated statements, ungoverned providers, reused
+identities, and ambiguous duplicates.
 
 ## Rejected paths
 

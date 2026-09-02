@@ -19,6 +19,7 @@ def storage_incident(*, complete=True):
         "device": "sda",
         "model": "ST8000NE001-2M71",
         "serial_last4": "MW6D" if complete else None,
+        "identity_sha256": "a" * 64 if complete else None,
         "zfs_state": "ONLINE",
         "vdev_topology": "RAIDZ1",
         "remaining_redundancy": 1,
@@ -69,6 +70,13 @@ def clearance_payload(*, now=1_000.0):
             "restore_tested": True,
             "source": "fixture:offline-restore-report",
             "verified_at": now - 60,
+            "provider_id": "fixture.restore-verifier",
+            "provider_mode": "deterministic_fixture",
+            "evidence_sha256": "c" * 64,
+            "evidence_reference": "fixture://restore/report-001",
+            "evidence_maturity": "deterministic_lab_fixture",
+            "restore_test_id": "restore-001",
+            "scope": "HDDs-critical-datasets",
         },
         "lifeline": {
             "sessions": [
@@ -98,6 +106,11 @@ def clearance_payload(*, now=1_000.0):
                                 "member_of_pool": False,
                                 "contains_preserved_data": False,
                                 "identity_verified_distinct": True,
+                                "identity_sha256": "b" * 64,
+                                "provider_id": "fixture.passive-block-inventory",
+                                "provider_mode": "deterministic_fixture",
+                                "evidence_reference": "fixture://inventory/candidate-001",
+                                "evidence_maturity": "deterministic_lab_fixture",
                                 "observed_at": now - 30,
                             }
                         ],
@@ -158,6 +171,7 @@ def test_pre_service_clearance_requires_all_fresh_independent_evidence():
         field: evidence.get(field)
         for field in ("pool", "vdev", "bay", "device", "model", "serial_last4")
     }
+    identity["identity_sha256"] = evidence["identity_sha256"]
     identity["verified_from_passive_evidence"] = True
     topology = {
         field: evidence.get(field)
@@ -177,6 +191,9 @@ def test_pre_service_clearance_requires_all_fresh_independent_evidence():
     assert receipt["storage_write_authority"] is False
     assert receipt["blocked_by"] == []
     assert all(gate["satisfied"] is True for gate in receipt["gates"])
+    assert receipt["evidence_ledger"]["status"] == "EVIDENCE_READY"
+    assert len(receipt["evidence_ledger"]["accepted"]) == 2
+    assert receipt["evidence_ledger"]["digest_authenticates_provider"] is False
     assert len(receipt["receipt_sha256"]) == 64
 
 
@@ -192,6 +209,7 @@ def test_pre_service_clearance_holds_expired_backup_and_candidate():
         field: evidence.get(field)
         for field in ("pool", "vdev", "bay", "device", "model", "serial_last4")
     }
+    identity["identity_sha256"] = evidence["identity_sha256"]
     identity["verified_from_passive_evidence"] = True
     topology = {
         field: evidence.get(field)
@@ -209,6 +227,7 @@ def test_pre_service_clearance_holds_expired_backup_and_candidate():
     assert receipt["operator_review_ready"] is False
     assert set(receipt["blocked_by"]) == {
         "backup_restore_evidence",
+        "provider_attestation_integrity",
         "replacement_fit_and_identity",
     }
 
@@ -308,6 +327,8 @@ def test_mission_control_exposes_storage_plan_without_hiding_abort_conditions():
         "Abort conditions",
         "HoloDeck Recovery Rehearsals",
         "Keep the drive installed",
+        "Ground Truth Evidence",
+        "digest authenticates provider: NO",
     ):
         assert label in reliability_source
     assert 'flight?.incident_id===incident?.incident_id' in cockpit_source

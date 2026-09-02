@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.01.1",
-  "updated_at": "2026-09-01",
+  "registry_version": "2026.09.02.1",
+  "updated_at": "2026-09-02",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -223,6 +223,25 @@
       "revisit_conditions": ["a governed live backup evidence provider exists", "a real replacement candidate is passively observed", "service-time evidence needs a different expiry policy"],
       "strongest_follow_up": "Bind a governed backup/restore attestation provider and passively discovered replacement candidate to the live incident, then capture the external repair signature.",
       "freshness": {"reviewed_at": "2026-09-01", "review_after": "2026-11-30"}
+    },
+    {
+      "id": "TP-EXP-0017", "title": "AEGIS recovery ground-truth attestations", "state": "COMPLETED",
+      "hypothesis": "Incident-bound, fresh, digest-intact provider statements can prevent plausible but stale, ambiguous, or weakly identified recovery facts from producing a review-ready clearance.",
+      "value": "Turns recovery evidence from loose payload fields into a replaceable, auditable trust boundary without granting control authority.",
+      "prior_art": ["in-toto Statement v1", "W3C PROV-DM", "Sigstore attestation verification", "restic repository checks", "OpenZFS replacement semantics"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-ground-truth-attestations", "pr": null, "commits": []},
+      "protocol": ["issue backup and candidate statements", "bind each subject and incident", "validate provider, freshness, semantics, and digest", "reconcile missing and contradictory evidence", "exercise one valid and six unsafe HoloDeck paths"],
+      "fixtures": ["aegis-recovery-ground-truth-v1", "tests/test_aegis_attestations.py", "tests/test_aegis_attestation_rehearsal.py"],
+      "success_criteria": ["complete valid evidence becomes review-ready", "all six unsafe paths hold", "no digest is presented as provider authentication", "phone safety state remains visible", "control authority remains false"],
+      "abort_criteria": ["weak serial suffix treated as strong identity", "expired or mutated evidence accepted", "ambiguous providers selected silently", "cryptographic authenticity overclaimed", "live hardware or storage mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-recovery-ground-truth-v1.json", "sha256": "c9b07507192fc9ec53daa0dd1405384312eed175413a646985059f2b5d6ef8f5"}, {"path": "docs/evidence/aegis-ground-truth-ui/browser-results.json", "sha256": "f3bbedf94077271083b448535cd353894547423d317f42d2b158898d96630c18"}],
+      "outcome": {"conclusion": "The deterministic valid path accepts two provider statements, while mutated, expired, identity-reused, ungoverned, missing, and ambiguous evidence produces 6/6 HOLD decisions with zero unsafe false-ready outcomes."},
+      "invalidated_assumptions": ["a SHA-256 digest authenticates its provider", "a masked serial suffix is sufficient replacement identity", "multiple valid statements may be selected implicitly", "a repository check alone proves restorability"],
+      "reproduction": ["pytest -q tests/test_aegis_attestations.py tests/test_aegis_attestation_rehearsal.py tests/test_checkride.py", "python -c \"from truepanel.holodeck.aegis_attestations import run_recovery_attestation_rehearsal as run; print(run()['measurements'])\"", "PLAYWRIGHT_ROOT=<playwright-package> PLAYWRIGHT_BROWSERS_PATH=<chromium-cache> node development/aegis_ground_truth_browser_check.mjs", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["supported passive TrueNAS backup or block-inventory provider is available", "local provider-authentication trust root is defined", "real replacement candidate can be observed without actuation"],
+      "strongest_follow_up": "Implement supported passive local backup and replacement-inventory adapters, then compare their statements with the HoloDeck contract before lifting the live CHECKRIDE evidence HOLD.",
+      "freshness": {"reviewed_at": "2026-09-02", "review_after": "2026-12-31"}
     }
   ]
 }

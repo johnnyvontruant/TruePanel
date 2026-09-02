@@ -1,6 +1,6 @@
 # AEGIS Prior-Art Field Report
 
-Research dates: 2026-08-28 through 2026-08-29
+Research dates: 2026-08-28 through 2026-09-02
 
 This report records the public-software survey behind the first AEGIS
 calibration follow-up. It is a dependency and provenance decision record, not
@@ -162,3 +162,21 @@ normal workload shifts, seasonal ambient changes, sensor dropouts, real fan
 degradation, and storage incidents. Run the built-in policy and an optional
 River-backed detector through the same interface, then publish per-scenario
 false-positive rate, lead time, confidence stability, and root-cause stability.
+
+## Recovery-ground-truth follow-up
+
+The 2026-09-02 survey inspected in-toto Statement v1, W3C PROV-DM,
+Sigstore/Cosign attestation verification, restic repository-check semantics,
+OpenZFS replacement rules, and GUAC's provenance graph. The selected shortcut
+is an original, dependency-free TruePanel statement and ledger shaped by
+in-toto's subject/digest/predicate separation and W3C's
+entity/activity/agent distinction. No source was copied and no runtime
+dependency was added.
+
+The key invalidated assumption is that a SHA-256-bearing receipt proves who
+made a claim. It does not. AEGIS now labels digests as integrity-only and
+separately enforces provider mode, source reference, incident identity,
+freshness, semantic claims, and contradiction handling. See
+[`AEGIS_RECOVERY_GROUND_TRUTH.md`](AEGIS_RECOVERY_GROUND_TRUTH.md) for the
+comparison, licensing decisions, rejected routes, HoloDeck measurements, and
+next adapter boundary.
