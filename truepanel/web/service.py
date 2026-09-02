@@ -8,8 +8,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from truepanel.activity.runtime import activity_providers_from_environment
+from truepanel.config.loader import load_config
+from truepanel.health import ServiceStatusProvider
 from truepanel.paths import installation_root
 
+from .observatory_snapshot import ObservatorySnapshotService
 from .pathfinder_server import serve
 
 
@@ -23,7 +27,6 @@ class MissionControlServiceSettings:
     port: int = 8787
     config_path: Path = installation_root() / "truepanel.yaml"
     allow_config_writes: bool = False
-
 
     @classmethod
     def from_environment(
@@ -119,10 +122,16 @@ def main():
         MissionControlServiceSettings
         .from_environment()
     )
+    snapshot_service = ObservatorySnapshotService(
+        service_status_provider=ServiceStatusProvider(),
+        config=load_config(settings.config_path),
+        activity_providers=activity_providers_from_environment(),
+    )
 
     serve(
         host=settings.host,
         port=settings.port,
+        snapshot_service=snapshot_service,
         allow_config_writes=(
             settings.allow_config_writes
         ),
