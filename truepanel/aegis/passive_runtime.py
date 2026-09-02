@@ -32,7 +32,11 @@ def _dict(value: Any) -> dict[str, Any]:
 
 
 def _list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, (tuple, set, frozenset)):
+        return list(value)
+    return []
 
 
 def _text(value: Any) -> str:
