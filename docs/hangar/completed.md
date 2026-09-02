@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.4 · refreshed 2026-09-02 · 14 experiment(s)
+Registry version 2026.09.02.5 · refreshed 2026-09-02 · 14 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -110,8 +110,8 @@ The positive fixture accepts both ground-truth statements; successful-task-only,
 
 ## TP-EXP-0019 · Governed passive evidence runtime
 
-The lab runtime reaches READY with three initial calls and zero repeat calls, all adversarial paths fail closed, and the first sanitized BattleStation field observation verifies 67 effective read-only roles, performs exactly three governed live reads, publishes no credential or host material, changes no deployment or configuration, and correctly remains HOLD because no tested-restore receipt is present.
+The governed runtime first failed closed on missing restore proof, then a controlled native TrueNAS SSD-to-HDD backup and HDD-to-SSD restore round trip verified three objects against an independent SHA-256 manifest. The CI-clean live observer verified 67 effective read-only roles, performed exactly three fresh governed reads, accepted the incident-bound digest-intact receipt, and transitioned to READY with zero stale hits, zero control authority, no production deployment change, and all pools healthy.
 
 - Safety: `READ_ONLY_EVIDENCE`
-- Strongest follow-up: Validate the live READY transition with a genuine governed tested-restore receipt while retaining zero control authority, then decide whether the passive runtime is ready for deployment review.
-- Revisit when: a genuine governed tested-restore receipt exists for a real incident; TrueNAS API, RBAC, or transport semantics change; production deployment is proposed
+- Strongest follow-up: Review the field-validated passive runtime for deployment without expanding AEGIS control authority, and formalize the controlled restore-test procedure as a supported TrueNAS API/CLI runbook before broader use.
+- Revisit when: TrueNAS API, RBAC, transport, or replication-task state semantics change; production deployment is proposed; receipt issuance or restore-test trust policy changes
