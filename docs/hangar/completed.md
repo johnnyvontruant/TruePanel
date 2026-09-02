@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.3 · refreshed 2026-09-02 · 14 experiment(s)
+Registry version 2026.09.02.4 · refreshed 2026-09-02 · 14 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -110,8 +110,8 @@ The positive fixture accepts both ground-truth statements; successful-task-only,
 
 ## TP-EXP-0019 · Governed passive evidence runtime
 
-The positive runtime reaches READY with three initial calls and zero repeat calls; full-admin, insecure-store, stale-cache, and scope-mismatch paths produce 4/4 HOLD decisions with zero unsafe false-ready, mutation, or runtime-write outcomes.
+The lab runtime reaches READY with three initial calls and zero repeat calls, all adversarial paths fail closed, and the first sanitized BattleStation field observation verifies 67 effective read-only roles, performs exactly three governed live reads, publishes no credential or host material, changes no deployment or configuration, and correctly remains HOLD because no tested-restore receipt is present.
 
-- Safety: `SIMULATION_ONLY`
-- Strongest follow-up: Implement a credential-safe WebSocket session adapter for an operator-created expiring read-only TrueNAS account, then capture one sanitized passive BattleStation observation without deployment.
-- Revisit when: credential-safe authenticated WebSocket adapter is reviewed; operator creates an expiring least-privilege TrueNAS service account; passive BattleStation observation can run without deployment
+- Safety: `READ_ONLY_EVIDENCE`
+- Strongest follow-up: Validate the live READY transition with a genuine governed tested-restore receipt while retaining zero control authority, then decide whether the passive runtime is ready for deployment review.
+- Revisit when: a genuine governed tested-restore receipt exists for a real incident; TrueNAS API, RBAC, or transport semantics change; production deployment is proposed
