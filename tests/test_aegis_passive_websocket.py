@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 
@@ -6,6 +7,8 @@ from truepanel.aegis.passive_observation import observe_websocket
 from truepanel.aegis.passive_runtime import REQUIRED_ROLES
 from truepanel.aegis.passive_websocket import (
     GovernedAPIKeyFile,
+    GovernedTLSCAFile,
+    TRANSPORT_BOOTSTRAP_METHODS,
     TrueNASWebSocketReadOnlyClient,
 )
 
@@ -16,6 +19,18 @@ API_KEY = "k" * 64
 def write_key(tmp_path, *, mode=0o600):
     path = tmp_path / "aegis-api-key"
     path.write_text(API_KEY)
+    path.chmod(mode)
+    return path
+
+
+def write_ca(tmp_path, *, mode=0o600, private=False):
+    path = tmp_path / "truenas-local-cert.pem"
+    body = (
+        "-----BEGIN PRIVATE KEY-----\nforbidden\n-----END PRIVATE KEY-----\n"
+        if private
+        else "-----BEGIN CERTIFICATE-----\nZmFrZQ==\n-----END CERTIFICATE-----\n"
+    )
+    path.write_text(body)
     path.chmod(mode)
     return path
 
@@ -88,6 +103,24 @@ def test_api_key_file_requires_owner_only_regular_file(tmp_path):
     assert GovernedAPIKeyFile(link).load() is None
 
 
+def test_tls_ca_file_rejects_mutable_symlink_or_private_material(tmp_path):
+    ca = write_ca(tmp_path, mode=0o666)
+    assert GovernedTLSCAFile(ca).status()["governed"] is False
+
+    ca.chmod(0o600)
+    link = tmp_path / "linked-ca"
+    link.symlink_to(ca)
+    assert GovernedTLSCAFile(link).status()["governed"] is False
+
+    private = write_ca(tmp_path / "private", private=True) if False else None
+    assert private is None
+    ca.write_text("-----BEGIN PRIVATE KEY-----\nforbidden\n-----END PRIVATE KEY-----\n")
+    ca.chmod(0o600)
+    status = GovernedTLSCAFile(ca).status()
+    assert status["governed"] is False
+    assert "private key" in status["reason"]
+
+
 def test_websocket_client_authenticates_once_and_keeps_key_out_of_argv_surface(tmp_path):
     key = write_key(tmp_path)
     fake = FakeClient(
@@ -125,6 +158,54 @@ def test_websocket_client_authenticates_once_and_keeps_key_out_of_argv_surface(t
     assert status["credential"]["path_published"] is False
     assert status["username_published"] is False
     assert status["uri_published"] is False
+    assert status["transport_bootstrap"]["methods"] == list(TRANSPORT_BOOTSTRAP_METHODS)
+    assert status["transport_bootstrap"]["core_set_options_scope"] == "connection_only"
+    assert status["transport_bootstrap"]["persistent_configuration_changed"] is False
+
+
+def test_process_local_ca_is_applied_only_during_client_connection(tmp_path, monkeypatch):
+    key = write_key(tmp_path)
+    ca = write_ca(tmp_path)
+    fake = FakeClient({"auth.me": identity(*REQUIRED_ROLES)})
+    observed = []
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+
+    def factory(**_kwargs):
+        observed.append(os.environ.get("SSL_CERT_FILE"))
+        return fake
+
+    client = TrueNASWebSocketReadOnlyClient(
+        uri="wss://localhost/api/current",
+        username="truepanel-aegis",
+        api_key_file=key,
+        tls_ca_file=ca,
+        client_factory=factory,
+    )
+    assert client.call("auth.me")["privilege"]["roles"]
+    assert observed == [str(ca)]
+    assert "SSL_CERT_FILE" not in os.environ
+    status = client.status()["tls_trust"]
+    assert status["governed"] is True
+    assert status["source"] == "process_local_ca_file"
+    assert status["system_trust_store_changed"] is False
+    assert status["path_published"] is False
+
+
+def test_invalid_tls_ca_fails_closed_before_client_connection(tmp_path):
+    key = write_key(tmp_path)
+    ca = write_ca(tmp_path, private=True)
+    fake = FakeClient({"auth.me": identity(*REQUIRED_ROLES)})
+    captured = []
+    client = TrueNASWebSocketReadOnlyClient(
+        uri="wss://localhost/api/current",
+        username="truepanel-aegis",
+        api_key_file=key,
+        tls_ca_file=ca,
+        client_factory=factory_for(fake, captured),
+    )
+    assert client.call("auth.me") is None
+    assert captured == []
+    assert fake.calls == []
 
 
 def test_websocket_client_blocks_non_passive_methods_before_connecting(tmp_path):
@@ -160,6 +241,7 @@ def test_authentication_failure_fails_closed_without_querying_data(tmp_path):
 
 def test_no_deploy_websocket_observation_is_sanitized_and_closes_session(tmp_path):
     key = write_key(tmp_path)
+    ca = write_ca(tmp_path)
     receipt_root = tmp_path / "receipts"
     receipt_root.mkdir(mode=0o700)
     fake = FakeClient(
@@ -175,6 +257,7 @@ def test_no_deploy_websocket_observation_is_sanitized_and_closes_session(tmp_pat
         uri="wss://nas.example/api/current",
         username="truepanel-aegis",
         api_key_file=key,
+        tls_ca_file=ca,
         client_factory=lambda **_kwargs: fake,
     )
 
@@ -184,6 +267,7 @@ def test_no_deploy_websocket_observation_is_sanitized_and_closes_session(tmp_pat
     assert result["cache"]["delegate_calls"] == 3
     assert result["transport"]["authenticated"] is True
     assert result["transport"]["tls_verification"] is True
+    assert result["transport"]["tls_trust"]["governed"] is True
     assert result["control_authority"] is False
     assert result["deployment_changed"] is False
     assert fake.closed is True
@@ -193,4 +277,5 @@ def test_no_deploy_websocket_observation_is_sanitized_and_closes_session(tmp_pat
     assert "truepanel-aegis" not in published
     assert "nas.example" not in published
     assert str(key) not in published
+    assert str(ca) not in published
     assert "service-account-must-not-be-published" not in published
