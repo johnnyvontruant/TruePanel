@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import os
+import selectors
 import stat
+import subprocess
 from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import Any
@@ -14,6 +17,8 @@ from .passive_providers import PASSIVE_METHODS
 MAX_API_KEY_BYTES = 4096
 MAX_TLS_CA_BYTES = 64 * 1024
 TRANSPORT_BOOTSTRAP_METHODS = ("core.set_options", "auth.login_ex")
+HOST_PYTHON = Path("/usr/bin/python3")
+_HOST_HELPER_NAME = "_truenas_api_client_helper.py"
 
 
 def _text(value: Any) -> str:
@@ -196,6 +201,172 @@ def _validate_uri(uri: str) -> str:
     return normalized
 
 
+def _import_truenas_client_class() -> Any | None:
+    try:
+        from truenas_api_client import Client
+    except ModuleNotFoundError as exc:
+        if exc.name != "truenas_api_client":
+            raise
+        return None
+    return Client
+
+
+def _validated_host_python() -> Path | None:
+    try:
+        resolved = HOST_PYTHON.resolve(strict=True)
+        metadata = resolved.stat()
+    except OSError:
+        return None
+    if (
+        resolved.parent != Path("/usr/bin")
+        or not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != 0
+        or metadata.st_mode & 0o022
+        or not os.access(resolved, os.X_OK)
+    ):
+        return None
+    return resolved
+
+
+def _validated_host_helper() -> Path | None:
+    helper = Path(__file__).with_name(_HOST_HELPER_NAME)
+    try:
+        metadata = helper.lstat()
+    except OSError:
+        return None
+    if (
+        stat.S_ISLNK(metadata.st_mode)
+        or not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != os.geteuid()
+        or metadata.st_mode & 0o022
+    ):
+        return None
+    return helper
+
+
+def _host_helper_environment() -> dict[str, str]:
+    environment = {
+        "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
+        "PYTHONNOUSERSITE": "1",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+    }
+    tls_ca = os.environ.get("SSL_CERT_FILE")
+    if tls_ca:
+        environment["SSL_CERT_FILE"] = tls_ca
+    return environment
+
+
+class _HostPythonClientProxy:
+    """Proxy one persistent TrueNAS client owned by the appliance Python."""
+
+    runtime_source = "host_python_helper"
+
+    def __init__(
+        self,
+        *,
+        uri: str,
+        verify_ssl: bool,
+        call_timeout: float,
+    ) -> None:
+        if verify_ssl is not True:
+            raise ValueError("host TrueNAS client bridge requires TLS verification")
+        host_python = _validated_host_python()
+        helper = _validated_host_helper()
+        if host_python is None or helper is None:
+            raise RuntimeError("host TrueNAS API client bridge is unavailable")
+
+        self.call_timeout = float(call_timeout)
+        self._closed = False
+        self._process = subprocess.Popen(
+            [str(host_python), "-I", "-u", str(helper)],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            bufsize=1,
+            env=_host_helper_environment(),
+        )
+        if self._process.stdin is None or self._process.stdout is None:
+            self.close()
+            raise RuntimeError("host TrueNAS API client bridge could not open pipes")
+        response = self._request(
+            {
+                "op": "open",
+                "uri": uri,
+                "verify_ssl": True,
+                "call_timeout": self.call_timeout,
+            }
+        )
+        if response.get("ok") is not True:
+            self.close()
+            raise RuntimeError("host TrueNAS API client bridge could not connect")
+
+    def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if self._closed:
+            raise RuntimeError("host TrueNAS API client bridge is closed")
+        stdin = self._process.stdin
+        stdout = self._process.stdout
+        if stdin is None or stdout is None:
+            raise RuntimeError("host TrueNAS API client bridge pipes are unavailable")
+        encoded = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+        stdin.write(encoded + "\n")
+        stdin.flush()
+
+        selector = selectors.DefaultSelector()
+        try:
+            selector.register(stdout, selectors.EVENT_READ)
+            ready = selector.select(timeout=self.call_timeout + 2.0)
+        finally:
+            selector.close()
+        if not ready:
+            raise TimeoutError("host TrueNAS API client bridge timed out")
+        line = stdout.readline()
+        if not line:
+            raise RuntimeError("host TrueNAS API client bridge closed unexpectedly")
+        response = json.loads(line)
+        if not isinstance(response, dict):
+            raise RuntimeError("host TrueNAS API client bridge returned invalid data")
+        return response
+
+    def call(self, method: str, *arguments: Any) -> Any:
+        if method != "auth.login_ex" and method not in PASSIVE_METHODS:
+            raise ValueError(f"TrueNAS method is not passive allowlisted: {method}")
+        response = self._request(
+            {
+                "op": "call",
+                "method": method,
+                "arguments": list(arguments),
+            }
+        )
+        if response.get("ok") is not True:
+            return None
+        return response.get("result")
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        with suppress(Exception):
+            if self._process.poll() is None:
+                self._request({"op": "close"})
+        self._closed = True
+        with suppress(Exception):
+            if self._process.stdin is not None:
+                self._process.stdin.close()
+        with suppress(Exception):
+            if self._process.stdout is not None:
+                self._process.stdout.close()
+        with suppress(Exception):
+            self._process.wait(timeout=1.0)
+        if self._process.poll() is None:
+            with suppress(Exception):
+                self._process.terminate()
+                self._process.wait(timeout=1.0)
+        if self._process.poll() is None:
+            with suppress(Exception):
+                self._process.kill()
+
+
 class TrueNASWebSocketReadOnlyClient:
     """Persistent authenticated client restricted to the passive method allowlist."""
 
@@ -233,9 +404,10 @@ class TrueNASWebSocketReadOnlyClient:
 
     @staticmethod
     def _default_client_factory(**kwargs: Any) -> Any:
-        from truenas_api_client import Client
-
-        return Client(**kwargs)
+        client_class = _import_truenas_client_class()
+        if client_class is not None:
+            return client_class(**kwargs)
+        return _HostPythonClientProxy(**kwargs)
 
     def _connect(self) -> Any | None:
         if self._client is not None:
