@@ -43,7 +43,8 @@ def test_query_client_allows_only_documented_read_methods():
         client.query("disk.wipe")
 
 
-def test_successful_task_without_restore_receipt_remains_unverified():
+@pytest.mark.parametrize("state", ["SUCCESS", "FINISHED"])
+def test_successful_task_without_restore_receipt_remains_unverified(state):
     client = FakeClient(
         {
             "replication.query": [
@@ -52,7 +53,7 @@ def test_successful_task_without_restore_receipt_remains_unverified():
                     "name": "offsite",
                     "enabled": True,
                     "source_datasets": ["HDDs/media"],
-                    "state": {"state": "SUCCESS"},
+                    "state": {"state": state},
                 }
             ]
         }
@@ -65,7 +66,28 @@ def test_successful_task_without_restore_receipt_remains_unverified():
     assert result["control_authority"] is False
 
 
-def test_matching_digest_intact_restore_receipt_promotes_backup_context():
+@pytest.mark.parametrize("state", ["FAILED", "ABORTED", "RUNNING", "WAITING", "UNKNOWN"])
+def test_non_successful_task_states_remain_unqualified(state):
+    client = FakeClient(
+        {
+            "replication.query": [
+                {
+                    "id": 7,
+                    "name": "offsite",
+                    "enabled": True,
+                    "source_datasets": ["HDDs/media"],
+                    "state": {"state": state},
+                }
+            ]
+        }
+    )
+    result = TrueNASProtectionEvidenceProvider(client).observe(incident_id="inc-1")
+    assert result["successful_tasks"] == 0
+    assert result["restore_verified"] is False
+    assert "backup_context" not in result
+
+
+def test_matching_digest_intact_restore_receipt_promotes_finished_task():
     receipt = issue_restore_verification_receipt(
         incident_id="inc-1",
         method="replication.query",
@@ -83,7 +105,7 @@ def test_matching_digest_intact_restore_receipt_promotes_backup_context():
                     "name": "offsite",
                     "enabled": True,
                     "source_datasets": ["HDDs/media"],
-                    "state": {"state": "SUCCESS"},
+                    "state": {"state": "FINISHED"},
                 }
             ]
         }
