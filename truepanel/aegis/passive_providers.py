@@ -18,6 +18,7 @@ from typing import Any
 READ_ONLY_METHODS = frozenset(
     {"disk.query", "replication.query", "cloud_backup.query"}
 )
+PASSIVE_METHODS = READ_ONLY_METHODS | {"auth.me"}
 RESTORE_RECEIPT_SCHEMA = "truepanel.restore-verification/v1"
 
 
@@ -97,16 +98,21 @@ class TrueNASReadOnlyQueryClient:
     ) -> list[dict[str, Any]]:
         if method not in READ_ONLY_METHODS:
             raise ValueError(f"TrueNAS method is not read-only allowlisted: {method}")
+        payload = self.call(method, filters or [], options or {})
+        return [dict(item) for item in _list(payload) if isinstance(item, dict)]
+
+    def call(self, method: str, *arguments: Any) -> Any:
+        """Call one passive method and return decoded JSON or ``None``."""
+
+        if method not in PASSIVE_METHODS:
+            raise ValueError(f"TrueNAS method is not passive allowlisted: {method}")
         executable = self._executable or shutil.which("midclt")
         if not executable:
-            return []
-        command = [
-            executable,
-            "call",
-            method,
-            json.dumps(filters or [], separators=(",", ":")),
-            json.dumps(options or {}, separators=(",", ":")),
-        ]
+            return None
+        command = [executable, "call", method]
+        command.extend(
+            json.dumps(argument, separators=(",", ":")) for argument in arguments
+        )
         try:
             result = self._runner(
                 command,
@@ -116,14 +122,13 @@ class TrueNASReadOnlyQueryClient:
                 timeout=10.0,
             )
         except (OSError, subprocess.SubprocessError):
-            return []
+            return None
         if result.returncode != 0:
-            return []
+            return None
         try:
-            payload = json.loads(result.stdout)
+            return json.loads(result.stdout)
         except (TypeError, json.JSONDecodeError):
-            return []
-        return [dict(item) for item in _list(payload) if isinstance(item, dict)]
+            return None
 
 
 def _task_state(task: dict[str, Any]) -> str:
@@ -200,6 +205,7 @@ class TrueNASProtectionEvidenceProvider:
             and isinstance(task_id, int)
             and len(matching) == 1
             and _text(receipt.get("scope"))
+            and _text(matching[0].get("scope")) == _text(receipt.get("scope"))
             and _text(receipt.get("restore_test_id"))
             and receipt.get("result") == "PASS"
             and (_integer(receipt.get("objects_verified")) or 0) > 0
@@ -305,6 +311,7 @@ class TrueNASReplacementInventoryProvider:
 
 
 __all__ = [
+    "PASSIVE_METHODS",
     "READ_ONLY_METHODS",
     "TrueNASProtectionEvidenceProvider",
     "TrueNASReadOnlyQueryClient",

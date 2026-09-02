@@ -154,7 +154,12 @@ function render(view,payload){
     const trusted=Number(summary.trusted||0);
     const total=Number(summary.total||0);
     const gaps=Number(summary.gaps||0);
-    const passivePanel=Object.keys(passiveEvidence).length?`<details class="ag-coverage ag-passive-evidence"><summary>Passive TrueNAS Evidence <span>${passiveEvidence.restore_verified?"restore verified":"HOLD"}</span></summary><div class="ag-evidence-metric"><strong>${esc(passiveEvidence.successful_tasks??0)} successful protection task(s)</strong><br>${esc(passiveEvidence.restore_verified?"A separate restore-verification receipt matched the active incident.":passiveEvidence.hold_reason||"No governed restore verification is available.")}<br>Read-only: ${passiveEvidence.read_only===true?"YES":"UNKNOWN"} · Control authority: ${passiveEvidence.control_authority===false?"NO":"UNKNOWN"}</div></details>`:"";
+    const roleGate=passiveEvidence.role_verification||{};
+    const receiptStore=passiveEvidence.receipt_store||{};
+    const passiveCache=passiveEvidence.cache||{};
+    const cacheAge=Number(passiveCache.last_age_seconds);
+    const hasCacheAge=passiveCache.last_age_seconds!==null&&passiveCache.last_age_seconds!==undefined&&Number.isFinite(cacheAge);
+    const passivePanel=Object.keys(passiveEvidence).length?`<details class="ag-coverage ag-passive-evidence"><summary>Passive TrueNAS Evidence <span>${passiveEvidence.restore_verified?"restore verified":"HOLD"}</span></summary><div class="ag-evidence-metric"><strong>${esc(passiveEvidence.successful_tasks??0)} successful protection task(s)</strong><br>${esc(passiveEvidence.restore_verified?"A separate restore-verification receipt matched the active incident.":passiveEvidence.hold_reason||"No governed restore verification is available.")}<br>Role gate: ${esc(roleGate.status||"not checked")} · ${esc(roleGate.reason||"No session-role evidence.")}<br>Receipt store: ${receiptStore.governed===true?"GOVERNED":"HOLD"} · ${esc(receiptStore.reason||"Not configured.")}<br>Cache: ${esc(passiveCache.last_source||"inactive")}${hasCacheAge?` · ${Math.round(cacheAge)}s old`:""} · TTL ${esc(passiveCache.ttl_seconds??"unknown")}s<br>Read-only: ${passiveEvidence.read_only===true?"YES":"UNKNOWN"} · Control authority: ${passiveEvidence.control_authority===false?"NO":"UNKNOWN"}</div></details>`:"";
 
     view.classList.toggle("incident",Boolean(incident));
     view.innerHTML=`

@@ -386,6 +386,20 @@ class _ProtectionEvidence:
             "successful_tasks": 1,
             "restore_verified": False,
             "hold_reason": "backup task success is not a tested restore",
+            "runtime_status": "HOLD",
+            "role_verification": {
+                "status": "VERIFIED",
+                "reason": "required read-only roles are present",
+            },
+            "receipt_store": {
+                "governed": True,
+                "reason": "receipt directory ownership and mode are governed",
+            },
+            "cache": {
+                "last_source": "cache",
+                "last_age_seconds": 2,
+                "ttl_seconds": 60,
+            },
         }
 
 
@@ -437,6 +451,9 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "LAB CALIBRATED · NOT LIVE VALIDATED" in source
         assert "Evidence Promotion Gate" in source
         assert "Passive TrueNAS Evidence" in source
+        assert "Role gate:" in source
+        assert "Receipt store:" in source
+        assert "last_age_seconds" in source
         assert "false_positive_rate_wilson_upper" in source
         assert "raw alerts" in source
         assert 'window.addEventListener("truepanel:status"' in source
@@ -460,6 +477,7 @@ def test_reliability_exposes_passive_evidence_without_promoting_task_success():
     assert provider.incident_ids == [result["active_incident"]["incident_id"]]
     assert result["passive_evidence"]["successful_tasks"] == 1
     assert result["passive_evidence"]["restore_verified"] is False
+    assert result["passive_evidence"]["role_verification"]["status"] == "VERIFIED"
     assert result["passive_evidence"]["control_authority"] is False
 
 

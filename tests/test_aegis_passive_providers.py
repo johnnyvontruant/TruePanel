@@ -136,6 +136,35 @@ def test_invalid_restore_receipts_fail_closed(mutation):
     assert "backup_context" not in result
 
 
+def test_restore_receipt_scope_must_match_the_successful_task():
+    receipt = issue_restore_verification_receipt(
+        incident_id="inc-1",
+        method="replication.query",
+        task_id=7,
+        scope="HDDs/wrong",
+        restore_test_id="restore-42",
+        verified_at=990.0,
+        objects_verified=12,
+    )
+    client = FakeClient(
+        {
+            "replication.query": [
+                {
+                    "id": 7,
+                    "enabled": True,
+                    "source_datasets": ["HDDs/media"],
+                    "state": {"state": "SUCCESS"},
+                }
+            ]
+        }
+    )
+    result = TrueNASProtectionEvidenceProvider(
+        client, receipt_loader=lambda: receipt
+    ).observe(incident_id="inc-1")
+    assert result["restore_verified"] is False
+    assert result["hold_reason"] == "restore verification receipt is invalid"
+
+
 def test_disk_query_must_cross_check_local_candidate_before_attestation():
     candidate = {
         "device": "sdh",

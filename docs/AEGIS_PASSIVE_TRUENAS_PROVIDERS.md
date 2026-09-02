@@ -69,3 +69,8 @@ The strongest follow-up is a bounded, cached provider runtime using an explicit
 read-only TrueNAS role and a reviewed local receipt directory, followed by a
 passive BattleStation observation that is incapable of changing service or
 storage state.
+
+That follow-up is now implemented and rehearsed in
+[`AEGIS_GOVERNED_PASSIVE_RUNTIME.md`](AEGIS_GOVERNED_PASSIVE_RUNTIME.md). Live
+activation remains gated on a credential-safe authenticated session; the local
+root socket is deliberately rejected as over-privileged.

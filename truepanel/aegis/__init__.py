@@ -30,6 +30,12 @@ from .passive_providers import (
     TrueNASReplacementInventoryProvider,
     issue_restore_verification_receipt,
 )
+from .passive_runtime import (
+    BoundedTrueNASQueryCache,
+    GovernedPassiveEvidenceRuntime,
+    GovernedRestoreReceiptStore,
+    TrueNASRoleVerifier,
+)
 from .policy import (
     DEFAULT_CORRELATION_POLICY,
     CorrelationPolicy,
@@ -42,14 +48,18 @@ from .reliability import AegisReliabilityEngine
 
 __all__ = [
     "AegisReliabilityEngine",
+    "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",
     "DeclarativeCorrelationPolicy",
     "EvidencePromotionPolicy",
     "HypothesisRule",
+    "GovernedPassiveEvidenceRuntime",
+    "GovernedRestoreReceiptStore",
     "TrueNASProtectionEvidenceProvider",
     "TrueNASReadOnlyQueryClient",
     "TrueNASReplacementInventoryProvider",
+    "TrueNASRoleVerifier",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "evaluate_pre_service_clearance",

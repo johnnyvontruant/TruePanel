@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.2 · refreshed 2026-09-02 · 13 experiment(s)
+Registry version 2026.09.02.3 · refreshed 2026-09-02 · 14 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -107,3 +107,11 @@ The positive fixture accepts both ground-truth statements; successful-task-only,
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add a bounded cached runtime with explicit read-only TrueNAS role verification and a governed local receipt store, then perform a passive no-deploy BattleStation observation.
 - Revisit when: least-privilege TrueNAS query role is reviewed; bounded provider cadence is defined; governed restore receipt directory exists; passive BattleStation observation is authorized
+
+## TP-EXP-0019 · Governed passive evidence runtime
+
+The positive runtime reaches READY with three initial calls and zero repeat calls; full-admin, insecure-store, stale-cache, and scope-mismatch paths produce 4/4 HOLD decisions with zero unsafe false-ready, mutation, or runtime-write outcomes.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Implement a credential-safe WebSocket session adapter for an operator-created expiring read-only TrueNAS account, then capture one sanitized passive BattleStation observation without deployment.
+- Revisit when: credential-safe authenticated WebSocket adapter is reviewed; operator creates an expiring least-privilege TrueNAS service account; passive BattleStation observation can run without deployment

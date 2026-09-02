@@ -204,3 +204,21 @@ interfaces; no TrueNAS source was copied. See
 [`AEGIS_PASSIVE_TRUENAS_PROVIDERS.md`](AEGIS_PASSIVE_TRUENAS_PROVIDERS.md) for
 the exact trust boundary, three adversarial HoloDeck paths, licensing notes,
 and deferred live-runtime gate.
+
+## Governed runtime follow-up
+
+The 2026-09-02 runtime study inspected TrueNAS 25.10 RBAC, `auth.me`, the
+official API client, and current API-key security guidance. The important
+finding is that a read-only method allowlist does not make a `FULL_ADMIN`
+session least-privileged. Local root and `truenas_admin` implicitly receive
+that unrestricted role, while `disk.query` formally requires
+`READONLY_ADMIN`; replication and cloud-backup queries name their corresponding
+read roles.
+
+AEGIS now verifies the session before task queries, bounds refresh traffic,
+demotes stale evidence to display-only, and accepts receipts only from a
+mode/owner/symlink/size-governed read-only store. Command-line API-key injection
+and automatic privilege provisioning were rejected because they would create
+credential-exposure or configuration risks. No external code or dependency was
+incorporated. See
+[`AEGIS_GOVERNED_PASSIVE_RUNTIME.md`](AEGIS_GOVERNED_PASSIVE_RUNTIME.md).
