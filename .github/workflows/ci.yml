@@ -67,6 +67,12 @@ jobs:
           python -m venv "$RUNNER_TEMP/truepanel-wheel"
           "$RUNNER_TEMP/truepanel-wheel/bin/python" -m pip install dist/truepanel-*.whl
 
+      - name: Smoke installed AEGIS bridge modules
+        run: |
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/truepanel-wheel/bin/python" -I -c \
+            "import truepanel.aegis.passive_websocket; import truepanel.aegis._truenas_api_client_helper"
+
       - name: Smoke installed CLI outside source checkout
         run: |
           cd "$RUNNER_TEMP"
