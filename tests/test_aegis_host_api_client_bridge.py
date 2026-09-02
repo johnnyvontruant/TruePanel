@@ -1,3 +1,6 @@
+import json
+from datetime import date, datetime, time, timezone
+
 import pytest
 
 from truepanel.aegis import _truenas_api_client_helper as helper
@@ -85,6 +88,43 @@ def test_host_helper_duplicates_only_the_passive_call_boundary():
     assert "system.shutdown" not in helper.ALLOWED_CALL_METHODS
     assert "replication.run" not in helper.ALLOWED_CALL_METHODS
     assert "replication.create" not in helper.ALLOWED_CALL_METHODS
+
+
+def test_host_helper_serializes_battlestation_evidence_shapes(capsys):
+    observed_at = datetime(2026, 9, 2, 21, 54, 18, tzinfo=timezone.utc)
+    helper._emit(
+        {
+            "ok": True,
+            "result": [
+                {
+                    "state": "FINISHED",
+                    "job": {"time_finished": observed_at},
+                    "roles": {"READONLY_ADMIN", "REPLICATION_TASK_READ"},
+                }
+            ],
+        }
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is True
+    assert payload["result"][0]["state"] == "FINISHED"
+    assert payload["result"][0]["job"]["time_finished"] == observed_at.isoformat()
+    assert payload["result"][0]["roles"] == [
+        "READONLY_ADMIN",
+        "REPLICATION_TASK_READ",
+    ]
+
+
+def test_host_helper_temporal_normalization_is_explicit():
+    assert helper._json_default(date(2026, 9, 2)) == "2026-09-02"
+    assert helper._json_default(time(21, 54, 18)) == "21:54:18"
+    assert helper._json_default(datetime(2026, 9, 2, 21, 54, 18)) == (
+        "2026-09-02T21:54:18"
+    )
+
+    with pytest.raises(TypeError):
+        helper._json_default(object())
 
 
 def test_host_helper_rejects_unsafe_open_requests():

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import sys
 from contextlib import suppress
+from datetime import date, datetime, time
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -23,18 +24,21 @@ PASSIVE_METHODS = {
 ALLOWED_CALL_METHODS = PASSIVE_METHODS | {"auth.login_ex"}
 
 
-def _emit(payload: dict[str, Any]) -> None:
-    def default(value: Any) -> Any:
-        if isinstance(value, (set, frozenset)):
-            return sorted(value)
-        raise TypeError
+def _json_default(value: Any) -> Any:
+    if isinstance(value, (set, frozenset)):
+        return sorted(value)
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    raise TypeError
 
+
+def _emit(payload: dict[str, Any]) -> None:
     try:
         encoded = json.dumps(
             payload,
             separators=(",", ":"),
             sort_keys=True,
-            default=default,
+            default=_json_default,
         )
     except Exception:
         encoded = '{"ok":false}'
