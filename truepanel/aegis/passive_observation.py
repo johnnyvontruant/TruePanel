@@ -51,12 +51,14 @@ def observe_websocket(
     uri: str,
     username: str,
     api_key_file: Path,
+    tls_ca_file: Path | None = None,
     client_factory: Any | None = None,
 ) -> dict[str, Any]:
     with TrueNASWebSocketReadOnlyClient(
         uri=uri,
         username=username,
         api_key_file=api_key_file,
+        tls_ca_file=tls_ca_file,
         client_factory=client_factory,
     ) as websocket_client:
         client = BoundedTrueNASQueryCache(websocket_client)
@@ -91,6 +93,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         help="owner-only file containing the expiring API key; the key is never accepted in argv",
     )
+    parser.add_argument(
+        "--tls-ca-file",
+        type=Path,
+        help="optional governed PEM trust file used only by this observation process",
+    )
     arguments = parser.parse_args(argv)
 
     websocket_values = (
@@ -104,6 +111,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(
             "--websocket-uri, --username, and --api-key-file must be supplied together"
         )
+    if arguments.tls_ca_file is not None and not all(
+        value is not None for value in websocket_values
+    ):
+        parser.error("--tls-ca-file requires WebSocket mode")
 
     if all(value is not None for value in websocket_values):
         result = observe_websocket(
@@ -112,6 +123,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             uri=arguments.websocket_uri,
             username=arguments.username,
             api_key_file=arguments.api_key_file,
+            tls_ca_file=arguments.tls_ca_file,
         )
     else:
         result = observe(arguments.incident_id, arguments.receipt_root)
