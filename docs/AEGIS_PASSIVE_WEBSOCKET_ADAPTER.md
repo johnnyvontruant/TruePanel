@@ -17,9 +17,11 @@ The adapter:
 - authenticates with `auth.login_ex` using `API_KEY_PLAIN` and `login_options.user_info=false`;
 - holds one persistent authenticated WebSocket session for the observation process;
 - exposes only `auth.me`, `disk.query`, `replication.query`, and `cloud_backup.query` to AEGIS;
-- performs no write, delete, restore, wipe, replace, offline, service, privilege, user, or API-key mutation.
+- performs no write, delete, restore, wipe, replace, offline, service, privilege, user, API-key, or persistent system-configuration mutation.
 
-The adapter does not decide whether the session is safe. Immediately after authentication, the existing governed runtime calls `auth.me`. The runtime continues only when the expanded active roles contain the required read roles and no forbidden administrative, write, delete, or full-control role.
+The TrueNAS JSON-RPC client performs one connection-scoped `core.set_options` call while opening the socket. The adapter then performs `auth.login_ex`. These transport-bootstrap calls are reported separately from governed evidence calls. `core.set_options` changes response behavior for that client connection and does not persist a TrueNAS configuration change.
+
+The adapter does not decide whether the authenticated session is safe. Immediately after authentication, the existing governed runtime calls `auth.me`. The runtime continues only when the expanded active roles contain the required read roles and no forbidden administrative, write, delete, or full-control role.
 
 ## Credential boundary
 
@@ -36,6 +38,21 @@ The observer publishes only the credential governance status. It does not publis
 
 For a root-run no-deploy observation, a suitable temporary key file can be created with owner-only permissions and removed immediately after the observation. TruePanel does not create, rotate, persist, or delete the TrueNAS API key itself.
 
+## TLS trust boundary
+
+TLS verification cannot be disabled through this adapter. When the TrueNAS certificate is already trusted by the host, the normal system trust store is used.
+
+For a local TrueNAS installation using its self-signed certificate, the observer can instead receive `--tls-ca-file`. The trust file must:
+
+- be a real regular file, not a symlink;
+- be owned by the runtime UID;
+- not be group- or world-writable;
+- be non-empty and no larger than 64 KiB;
+- contain PEM certificate material;
+- contain no private-key material.
+
+The adapter exposes that file to the TrueNAS client through `SSL_CERT_FILE` only while the WebSocket client is constructed, then restores the previous process environment. It does not modify the operating-system trust store, TrueNAS certificate configuration, or any service. The trust-file path is not published in sanitized observation output.
+
 ## Operator prerequisite
 
 The operator must create the TrueNAS account and expiring user-linked API key outside TruePanel. The account must satisfy the runtime's current role contract:
@@ -47,18 +64,19 @@ The operator must create the TrueNAS account and expiring user-linked API key ou
 
 ## No-deploy observation
 
-The packaged observer keeps the existing local-socket mode. WebSocket mode is selected only when all three transport arguments are supplied:
+The packaged observer keeps the existing local-socket mode. WebSocket mode is selected only when all three transport arguments are supplied. A governed local CA file is optional:
 
 ```bash
 python -m truepanel.aegis.passive_observation \
   --incident-id INCIDENT_ID \
   --receipt-root /path/to/governed/receipts \
-  --websocket-uri wss://truenas.example/api/current \
+  --websocket-uri wss://localhost/api/current \
   --username truepanel-aegis \
-  --api-key-file /root/.config/truepanel/aegis-api-key
+  --api-key-file /root/.config/truepanel/aegis-api-key \
+  --tls-ca-file /root/.config/truepanel/truenas-local-cert.pem
 ```
 
-The command line contains the username, URI, and key-file path, but never the API key value.
+The command line contains the username, URI, key-file path, and optional public trust-file path, but never the API key value.
 
 The observation remains stdout-only and reports:
 
@@ -66,12 +84,14 @@ The observation remains stdout-only and reports:
 - sanitized role-gate result;
 - governed receipt-store state;
 - cache source, age, and call counters;
-- transport TLS/authentication and credential-governance state;
+- transport TLS/authentication, credential-governance, and trust-governance state;
+- explicit transport-bootstrap method accounting for `core.set_options` and `auth.login_ex`;
+- the governed passive evidence-method allowlist;
 - `read_only=true`;
 - `control_authority=false`;
 - `deployment_changed=false`.
 
-It deliberately omits task bodies, account identity, host identity, credential material, and receipt contents.
+It deliberately omits task bodies, account identity, host identity, credential material, key-file path, trust-file path, and receipt contents.
 
 ## Failure semantics
 
@@ -81,6 +101,8 @@ Any of the following results in HOLD or transport unavailability:
 - wrong WebSocket endpoint;
 - URI-embedded credentials;
 - missing, symlinked, over-permissive, oversized, malformed, or wrong-owner key file;
+- supplied TLS CA file that is missing, symlinked, writable by another principal, oversized, malformed, or contains private-key material;
+- failed TLS verification;
 - failed authentication;
 - unavailable `auth.me`;
 - missing required read roles;
@@ -89,7 +111,7 @@ Any of the following results in HOLD or transport unavailability:
 - stale evidence;
 - invalid or scope-mismatched restore receipt.
 
-A failed authentication attempt is not retried repeatedly within one adapter instance. A new observer process is required for another attempt.
+A failed connection or authentication attempt is not retried repeatedly within one adapter instance. A new observer process is required for another attempt.
 
 ## Live boundary
 
@@ -98,6 +120,7 @@ This branch can prove the transport contract and sanitation properties in CI, bu
 ## References
 
 - TrueNAS 25.10 JSON-RPC 2.0 over WebSocket API
+- TrueNAS 25.10 `core.set_options`
 - TrueNAS 25.10 `auth.login_ex`
 - TrueNAS 25.10 `auth.me`
 - TrueNAS 25.10 role-based access control
