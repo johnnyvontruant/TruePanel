@@ -230,7 +230,7 @@
       "value": "Turns recovery evidence from loose payload fields into a replaceable, auditable trust boundary without granting control authority.",
       "prior_art": ["in-toto Statement v1", "W3C PROV-DM", "Sigstore attestation verification", "restic repository checks", "OpenZFS replacement semantics"],
       "safety_class": "SIMULATION_ONLY",
-      "development": {"branch": "feature/aegis-ground-truth-attestations", "pr": null, "commits": []},
+      "development": {"branch": "feature/aegis-ground-truth-attestations", "pr": 110, "commits": ["74441b6e4566964ce3cf1613c6217123ed84cbb4"]},
       "protocol": ["issue backup and candidate statements", "bind each subject and incident", "validate provider, freshness, semantics, and digest", "reconcile missing and contradictory evidence", "exercise one valid and six unsafe HoloDeck paths"],
       "fixtures": ["aegis-recovery-ground-truth-v1", "tests/test_aegis_attestations.py", "tests/test_aegis_attestation_rehearsal.py"],
       "success_criteria": ["complete valid evidence becomes review-ready", "all six unsafe paths hold", "no digest is presented as provider authentication", "phone safety state remains visible", "control authority remains false"],
