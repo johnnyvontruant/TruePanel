@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import stat
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -182,10 +183,8 @@ class TrueNASWebSocketReadOnlyClient:
 
     @staticmethod
     def _close_client(client: Any) -> None:
-        try:
+        with suppress(Exception):
             client.close()
-        except Exception:
-            pass
 
     def call(self, method: str, *arguments: Any) -> Any:
         if method not in PASSIVE_METHODS:
