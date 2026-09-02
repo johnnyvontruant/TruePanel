@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.02.3",
+  "registry_version": "2026.09.02.4",
   "updated_at": "2026-09-02",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
@@ -267,18 +267,18 @@
       "hypothesis": "A bounded cache, explicit session-role gate, and ownership-governed read-only receipt store can make passive TrueNAS evidence safe to activate without allowing stale or over-privileged observations to clear recovery.",
       "value": "Converts the provider prototype into a measurable activation boundary while preventing status-stream polling amplification and ambient root authority.",
       "prior_art": ["TrueNAS 25.10 RBAC", "TrueNAS auth.me", "TrueNAS API client", "TrueNAS API-key security guidance"],
-      "safety_class": "SIMULATION_ONLY",
-      "development": {"branch": "feature/aegis-passive-runtime-governance", "pr": 112, "commits": ["d2c86e96aa3f828e1944ceffac42df6085ebd00d"]},
-      "protocol": ["verify active roles", "reject write-capable sessions", "govern receipt ownership and mode", "bound query cache", "demote stale data", "replay unsafe paths"],
-      "fixtures": ["aegis-governed-passive-runtime-v1", "tests/test_aegis_passive_runtime.py", "tests/test_aegis_passive_runtime_rehearsal.py"],
-      "success_criteria": ["first observation uses at most three middleware calls", "second observation adds zero calls", "four adversarial paths hold", "stale evidence cannot clear recovery", "runtime writes and mutating calls remain zero"],
-      "abort_criteria": ["FULL_ADMIN accepted", "stale cache remains ready", "mutable or symlinked receipt accepted", "API key appears in argv or output", "provider enabled by default", "live configuration changed"],
-      "evidence": [{"path": "docs/evidence/aegis-governed-passive-runtime-v1.json", "sha256": "69f333fe3e3039c95b9fa152ce72ed16e1a56d6aa732a50c7d13b143496088ff"}],
-      "outcome": {"conclusion": "The positive runtime reaches READY with three initial calls and zero repeat calls; full-admin, insecure-store, stale-cache, and scope-mismatch paths produce 4/4 HOLD decisions with zero unsafe false-ready, mutation, or runtime-write outcomes."},
-      "invalidated_assumptions": ["a read-only method allowlist makes a root session least-privileged", "bounded stale data can remain authoritative", "a digest-valid receipt may name a different dataset scope", "midclt command-line API keys are an acceptable credential boundary"],
-      "reproduction": ["pytest -q tests/test_aegis_passive_runtime.py tests/test_aegis_passive_runtime_rehearsal.py", "python -c \"from truepanel.holodeck.aegis_passive_runtime import run_passive_runtime_rehearsal as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root ."],
-      "revisit_conditions": ["credential-safe authenticated WebSocket adapter is reviewed", "operator creates an expiring least-privilege TrueNAS service account", "passive BattleStation observation can run without deployment"],
-      "strongest_follow_up": "Implement a credential-safe WebSocket session adapter for an operator-created expiring read-only TrueNAS account, then capture one sanitized passive BattleStation observation without deployment.",
+      "safety_class": "READ_ONLY_EVIDENCE",
+      "development": {"branch": "feature/aegis-passive-websocket-adapter", "pr": 114, "commits": ["d2c86e96aa3f828e1944ceffac42df6085ebd00d", "7199318fbe4f2cdff05f067f3137bbfc4d9d9127"]},
+      "protocol": ["verify active roles", "reject write-capable sessions", "govern receipt ownership and mode", "bound query cache", "demote stale data", "replay unsafe paths", "authenticate through TLS-verified credential-safe WebSocket transport", "confirm the live session role set before protection queries", "capture a sanitized no-deploy field observation"],
+      "fixtures": ["aegis-governed-passive-runtime-v1", "tests/test_aegis_passive_runtime.py", "tests/test_aegis_passive_runtime_rehearsal.py", "tests/test_aegis_passive_websocket.py"],
+      "success_criteria": ["first observation uses at most three middleware calls", "second observation adds zero calls", "four adversarial paths hold", "stale evidence cannot clear recovery", "runtime writes and mutating calls remain zero", "field session verifies required read-only roles before protection queries", "sanitized field observation holds when tested-restore proof is absent"],
+      "abort_criteria": ["FULL_ADMIN accepted", "stale cache remains ready", "mutable or symlinked receipt accepted", "API key appears in argv or output", "provider enabled by default", "live configuration changed", "TLS verification bypassed", "credential, identity, host, or governed path published"],
+      "evidence": [{"path": "docs/evidence/aegis-governed-passive-runtime-v1.json", "sha256": "69f333fe3e3039c95b9fa152ce72ed16e1a56d6aa732a50c7d13b143496088ff"}, {"path": "docs/evidence/aegis-passive-battlestation-field-v1.json", "sha256": "8f06449c9076e2af59914c4f1933bcc4c98a844d1b6571426f828fe8983cb58d"}],
+      "outcome": {"conclusion": "The lab runtime reaches READY with three initial calls and zero repeat calls, all adversarial paths fail closed, and the first sanitized BattleStation field observation verifies 67 effective read-only roles, performs exactly three governed live reads, publishes no credential or host material, changes no deployment or configuration, and correctly remains HOLD because no tested-restore receipt is present."},
+      "invalidated_assumptions": ["a read-only method allowlist makes a root session least-privileged", "bounded stale data can remain authoritative", "a digest-valid receipt may name a different dataset scope", "midclt command-line API keys are an acceptable credential boundary", "TrueNAS Python API role collections are always lists"],
+      "reproduction": ["pytest -q tests/test_aegis_passive_runtime.py tests/test_aegis_passive_runtime_rehearsal.py", "pytest -q tests/test_aegis_passive_runtime.py tests/test_aegis_passive_websocket.py", "python -c \"from truepanel.holodeck.aegis_passive_runtime import run_passive_runtime_rehearsal as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["a genuine governed tested-restore receipt exists for a real incident", "TrueNAS API, RBAC, or transport semantics change", "production deployment is proposed"],
+      "strongest_follow_up": "Validate the live READY transition with a genuine governed tested-restore receipt while retaining zero control authority, then decide whether the passive runtime is ready for deployment review.",
       "freshness": {"reviewed_at": "2026-09-02", "review_after": "2026-12-31"}
     }
   ]
