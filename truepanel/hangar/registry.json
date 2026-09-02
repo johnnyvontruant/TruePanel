@@ -268,7 +268,7 @@
       "value": "Converts the provider prototype into a measurable activation boundary while preventing status-stream polling amplification and ambient root authority.",
       "prior_art": ["TrueNAS 25.10 RBAC", "TrueNAS auth.me", "TrueNAS API client", "TrueNAS API-key security guidance"],
       "safety_class": "SIMULATION_ONLY",
-      "development": {"branch": "feature/aegis-passive-runtime-governance", "pr": null, "commits": []},
+      "development": {"branch": "feature/aegis-passive-runtime-governance", "pr": 112, "commits": ["d2c86e96aa3f828e1944ceffac42df6085ebd00d"]},
       "protocol": ["verify active roles", "reject write-capable sessions", "govern receipt ownership and mode", "bound query cache", "demote stale data", "replay unsafe paths"],
       "fixtures": ["aegis-governed-passive-runtime-v1", "tests/test_aegis_passive_runtime.py", "tests/test_aegis_passive_runtime_rehearsal.py"],
       "success_criteria": ["first observation uses at most three middleware calls", "second observation adds zero calls", "four adversarial paths hold", "stale evidence cannot clear recovery", "runtime writes and mutating calls remain zero"],
