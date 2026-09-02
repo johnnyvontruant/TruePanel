@@ -36,6 +36,10 @@ from .passive_runtime import (
     GovernedRestoreReceiptStore,
     TrueNASRoleVerifier,
 )
+from .passive_websocket import (
+    GovernedAPIKeyFile,
+    TrueNASWebSocketReadOnlyClient,
+)
 from .policy import (
     DEFAULT_CORRELATION_POLICY,
     CorrelationPolicy,
@@ -53,6 +57,7 @@ __all__ = [
     "DEFAULT_CORRELATION_POLICY",
     "DeclarativeCorrelationPolicy",
     "EvidencePromotionPolicy",
+    "GovernedAPIKeyFile",
     "HypothesisRule",
     "GovernedPassiveEvidenceRuntime",
     "GovernedRestoreReceiptStore",
@@ -60,6 +65,7 @@ __all__ = [
     "TrueNASReadOnlyQueryClient",
     "TrueNASReplacementInventoryProvider",
     "TrueNASRoleVerifier",
+    "TrueNASWebSocketReadOnlyClient",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "evaluate_pre_service_clearance",
