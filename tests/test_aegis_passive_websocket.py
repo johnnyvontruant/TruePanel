@@ -112,8 +112,6 @@ def test_tls_ca_file_rejects_mutable_symlink_or_private_material(tmp_path):
     link.symlink_to(ca)
     assert GovernedTLSCAFile(link).status()["governed"] is False
 
-    private = write_ca(tmp_path / "private", private=True) if False else None
-    assert private is None
     ca.write_text("-----BEGIN PRIVATE KEY-----\nforbidden\n-----END PRIVATE KEY-----\n")
     ca.chmod(0o600)
     status = GovernedTLSCAFile(ca).status()
