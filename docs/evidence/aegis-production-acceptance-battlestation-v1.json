@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "evidence_id": "aegis-production-acceptance-battlestation-v1",
+  "evidence_class": "production_acceptance",
+  "observed_on": "2026-09-02",
+  "platform": {
+    "product": "TrueNAS SCALE",
+    "version": "25.10.5"
+  },
+  "deployment": {
+    "main_commit": "0f91b7178602d99c12c3272feb569210f81780d9",
+    "integration_pr": 117,
+    "predeploy_proof": "READY",
+    "promotion_verified": true,
+    "promotion_return_code": 0,
+    "post_promotion_lifecycle_verify": "PASS",
+    "operator_config_preserved": true,
+    "rollback_generation_retained": true
+  },
+  "aegis_observation": {
+    "runtime_status": "READY",
+    "hold_reason": null,
+    "restore_verified": true,
+    "successful_tasks": 2,
+    "observed_role_count": 67,
+    "least_privilege_verified": true,
+    "missing_roles": [],
+    "forbidden_roles": [],
+    "authenticated": true,
+    "delegate_calls": 3,
+    "cache_entries": 3,
+    "cache_hits": 0,
+    "stale_hits": 0,
+    "last_source": "live_read",
+    "receipt_store_governed": true,
+    "receipt_present": true,
+    "runtime_writes_allowed": false,
+    "control_authority": false,
+    "deployment_changed": false
+  },
+  "field_discoveries": [
+    {
+      "finding": "The isolated TruePanel virtualenv does not contain the appliance-owned truenas_api_client package.",
+      "resolution": "Use the governed host-Python bridge while preserving the passive allowlist, private credential pipe, TLS verification, and fail-closed behavior.",
+      "resolution_pr": 116
+    },
+    {
+      "finding": "TrueNAS replication.query may contain datetime.datetime values that are not JSON-native.",
+      "failure_mode_before_fix": "replication.query was dropped across the governed helper boundary, leaving AEGIS with zero visible successful tasks and an invalid receipt result.",
+      "resolution": "Serialize only standard datetime/date/time objects as ISO-8601 while continuing to reject arbitrary unknown objects.",
+      "resolution_pr": 117
+    }
+  ],
+  "safety": {
+    "mission_control_healthy": true,
+    "mission_control_read_only": true,
+    "host_agent_active": false,
+    "host_agent_enabled_state": "static",
+    "all_pools_healthy_after_promotion": true,
+    "aegis_control_authority": false,
+    "aegis_runtime_writes_allowed": false,
+    "production_observation_mutated_deployment": false
+  },
+  "ci": {
+    "pr_head_run": 1485,
+    "pr_head_conclusion": "success",
+    "post_merge_run": 1486,
+    "post_merge_conclusion": "success"
+  },
+  "conclusion": "The governed AEGIS passive runtime completed production deployment and receipt-backed acceptance on BattleStation. It remained least-privilege, read-only, fresh-evidence-only, zero-control-authority, and zero-runtime-write while the deployed system and storage pools remained healthy."
+}
