@@ -222,3 +222,23 @@ and automatic privilege provisioning were rejected because they would create
 credential-exposure or configuration risks. No external code or dependency was
 incorporated. See
 [`AEGIS_GOVERNED_PASSIVE_RUNTIME.md`](AEGIS_GOVERNED_PASSIVE_RUNTIME.md).
+
+## Credential-safe session follow-up
+
+The 2026-09-02 transport study inspected the exact `TS-25.10.5` tag of the
+LGPLv3 [TrueNAS API client](https://github.com/truenas/api_client), the current
+25.10 `auth.login_with_api_key` contract, and official API-key guidance. The
+stable 25.10 client still uses the TLS-protected API-key method; SCRAM-SHA-512
+and channel binding are improvements on the upstream development line for
+TrueNAS 26, not capabilities TruePanel can assume on BattleStation today.
+
+AEGIS now uses the installed client behind a replaceable interface, requires a
+certificate-verified `wss://.../api/current` endpoint, reads an expiring key
+only from an owner-only file descriptor, authenticates once per persistent
+session, and reuses the existing least-privilege role gate. No upstream code,
+new dependency, key, account, certificate, or host configuration was added.
+
+Plaintext or insecure WebSockets, key-bearing argv/environment values, ambient
+root-socket authority, automatic security provisioning, and vendoring the
+future SCRAM implementation were rejected. See
+[`AEGIS_CREDENTIAL_SAFE_SESSION.md`](AEGIS_CREDENTIAL_SAFE_SESSION.md).

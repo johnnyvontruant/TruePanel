@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.02.3",
+  "registry_version": "2026.09.02.4",
   "updated_at": "2026-09-02",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
@@ -279,6 +279,25 @@
       "reproduction": ["pytest -q tests/test_aegis_passive_runtime.py tests/test_aegis_passive_runtime_rehearsal.py", "python -c \"from truepanel.holodeck.aegis_passive_runtime import run_passive_runtime_rehearsal as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root ."],
       "revisit_conditions": ["credential-safe authenticated WebSocket adapter is reviewed", "operator creates an expiring least-privilege TrueNAS service account", "passive BattleStation observation can run without deployment"],
       "strongest_follow_up": "Implement a credential-safe WebSocket session adapter for an operator-created expiring read-only TrueNAS account, then capture one sanitized passive BattleStation observation without deployment.",
+      "freshness": {"reviewed_at": "2026-09-02", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0020", "title": "Credential-safe TrueNAS evidence session", "state": "COMPLETED",
+      "hypothesis": "A private-file API key, certificate-verified WebSocket, persistent official client, and existing role gate can activate passive evidence without exposing credentials or accepting transport downgrade.",
+      "value": "Closes the last software-side credential boundary before an operator-reviewed no-deploy BattleStation observation.",
+      "prior_art": ["TrueNAS 25.10 auth.login_with_api_key", "TrueNAS API-key transport guidance", "truenas_api_client TS-25.10.5", "TrueNAS 26 SCRAM development boundary"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-credential-safe-session", "pr": null, "commits": []},
+      "protocol": ["require verified wss endpoint", "read owner-only key by file descriptor", "authenticate one persistent session", "verify least-privilege roles", "allowlist passive calls", "sanitize failures", "replay unsafe paths"],
+      "fixtures": ["aegis-credential-safe-session-v1", "tests/test_aegis_credential_session.py", "tests/test_aegis_credential_session_rehearsal.py"],
+      "success_criteria": ["one verified persistent connection", "six unsafe paths hold", "zero credential occurrences in evidence", "zero mutating calls", "zero runtime credential writes", "control authority remains false"],
+      "abort_criteria": ["plaintext or insecure TLS accepted", "key appears in argv, environment, output, or exception", "FULL_ADMIN accepted", "client silently downgrades", "TrueNAS security configuration is changed", "new runtime dependency is vendored"],
+      "evidence": [{"path": "docs/evidence/aegis-credential-safe-session-v1.json", "sha256": "6d3c0714da018c10b1f56bdfd697a22573c46bf9a2e2ad57015d207505a3aa2b"}],
+      "outcome": {"conclusion": "The positive fixture reaches READY through one verified-TLS persistent session, while authentication rejection, FULL_ADMIN, directory-backed identity, secret-bearing upstream failure, group-readable credentials, and plaintext downgrade produce 6/6 HOLD outcomes with no credential disclosure, mutation, or control authority."},
+      "invalidated_assumptions": ["the installed TrueNAS 25.10.5 client provides the newer TrueNAS 26 SCRAM helper", "a local root socket is least privilege because the called methods are read-only", "an insecure TLS escape hatch is needed for self-signed appliance certificates", "credential file paths and raw credentials have equivalent disclosure risk"],
+      "reproduction": ["pytest -q tests/test_aegis_credential_session.py tests/test_aegis_credential_session_rehearsal.py", "python -c \"from truepanel.holodeck.aegis_credential_session import run_credential_session_rehearsal as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["operator creates an expiring least-privilege TrueNAS account and key", "trusted TLS hostname is confirmed", "TrueNAS upgrades to version 26 with a matching client", "sanitized passive BattleStation observation is reviewed"],
+      "strongest_follow_up": "Run the packaged observer once through an operator-created expiring read-only account, review the sanitized HOLD/READY evidence, and only then decide whether to wire it into Mission Control.",
       "freshness": {"reviewed_at": "2026-09-02", "review_after": "2026-12-31"}
     }
   ]

@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.3 · refreshed 2026-09-02 · 14 experiment(s)
+Registry version 2026.09.02.4 · refreshed 2026-09-02 · 15 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -115,3 +115,11 @@ The positive runtime reaches READY with three initial calls and zero repeat call
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Implement a credential-safe WebSocket session adapter for an operator-created expiring read-only TrueNAS account, then capture one sanitized passive BattleStation observation without deployment.
 - Revisit when: credential-safe authenticated WebSocket adapter is reviewed; operator creates an expiring least-privilege TrueNAS service account; passive BattleStation observation can run without deployment
+
+## TP-EXP-0020 · Credential-safe TrueNAS evidence session
+
+The positive fixture reaches READY through one verified-TLS persistent session, while authentication rejection, FULL_ADMIN, directory-backed identity, secret-bearing upstream failure, group-readable credentials, and plaintext downgrade produce 6/6 HOLD outcomes with no credential disclosure, mutation, or control authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Run the packaged observer once through an operator-created expiring read-only account, review the sanitized HOLD/READY evidence, and only then decide whether to wire it into Mission Control.
+- Revisit when: operator creates an expiring least-privilege TrueNAS account and key; trusted TLS hostname is confirmed; TrueNAS upgrades to version 26 with a matching client; sanitized passive BattleStation observation is reviewed

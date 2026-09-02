@@ -72,5 +72,8 @@ storage state.
 
 That follow-up is now implemented and rehearsed in
 [`AEGIS_GOVERNED_PASSIVE_RUNTIME.md`](AEGIS_GOVERNED_PASSIVE_RUNTIME.md). Live
-activation remains gated on a credential-safe authenticated session; the local
-root socket is deliberately rejected as over-privileged.
+The credential-safe session is now implemented and rehearsed in
+[`AEGIS_CREDENTIAL_SAFE_SESSION.md`](AEGIS_CREDENTIAL_SAFE_SESSION.md). The
+local root socket remains deliberately rejected as over-privileged; field
+activation still requires operator-controlled least-privilege credentials and
+trusted TLS.

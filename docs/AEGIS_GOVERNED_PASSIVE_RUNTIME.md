@@ -110,7 +110,8 @@ runtime dependency, or third-party binary was incorporated.
 - Automatically provisioning a TrueNAS service account or privilege: deferred
   because it is a security/configuration change outside this read-only slice.
 
-The strongest next step is a credential-safe WebSocket client using an
-operator-created expiring TrueNAS service account, followed by one passive
-BattleStation observation and comparison against the deterministic receipt and
-cache contract.
+That client boundary is now implemented and rehearsed in
+[`AEGIS_CREDENTIAL_SAFE_SESSION.md`](AEGIS_CREDENTIAL_SAFE_SESSION.md). The
+remaining gate is an operator-created expiring least-privilege account and one
+no-deploy BattleStation observation through a trusted TLS hostname, followed by
+review of the sanitized result.
