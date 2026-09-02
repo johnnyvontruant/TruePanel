@@ -1,0 +1,45 @@
+{
+  "control_authority": false,
+  "field_validated": false,
+  "hardware_isolated": true,
+  "measurements": {
+    "documented_query_methods": 3,
+    "mutating_methods": 0,
+    "negative_holds": 3,
+    "positive_statements_accepted": 2,
+    "task_success_promoted_without_restore_test": false,
+    "unsafe_false_ready": 0
+  },
+  "negative_scenarios": [
+    {
+      "scenario": "task_success_without_restore_test",
+      "status": "HOLD",
+      "missing_kinds": ["backup.restore-verification"]
+    },
+    {
+      "scenario": "candidate_already_in_pool",
+      "status": "HOLD",
+      "missing_kinds": ["storage.replacement-candidate"]
+    },
+    {
+      "scenario": "disk_identity_mismatch",
+      "status": "HOLD",
+      "missing_kinds": ["storage.replacement-candidate"]
+    }
+  ],
+  "positive_ledger": {
+    "accepted_kinds": [
+      "backup.restore-verification",
+      "storage.replacement-candidate"
+    ],
+    "control_authority": false,
+    "digest_authenticates_provider": false,
+    "evidence_maturity": "passive_provider_evidence",
+    "incident_id": "recovery:fixture",
+    "missing_kinds": [],
+    "read_only": true,
+    "status": "EVIDENCE_READY"
+  },
+  "scenario": "truenas-passive-recovery-providers-v1",
+  "schema_version": 1
+}

@@ -24,6 +24,12 @@ from .evidence_gate import (
     wilson_interval,
 )
 from .flight_director import run_flight_director_proof
+from .passive_providers import (
+    TrueNASProtectionEvidenceProvider,
+    TrueNASReadOnlyQueryClient,
+    TrueNASReplacementInventoryProvider,
+    issue_restore_verification_receipt,
+)
 from .policy import (
     DEFAULT_CORRELATION_POLICY,
     CorrelationPolicy,
@@ -41,10 +47,14 @@ __all__ = [
     "DeclarativeCorrelationPolicy",
     "EvidencePromotionPolicy",
     "HypothesisRule",
+    "TrueNASProtectionEvidenceProvider",
+    "TrueNASReadOnlyQueryClient",
+    "TrueNASReplacementInventoryProvider",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "evaluate_pre_service_clearance",
     "issue_recovery_attestation",
+    "issue_restore_verification_receipt",
     "correlate_incident",
     "coverage_matrix",
     "evaluate_evidence_gate",

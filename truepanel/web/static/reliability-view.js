@@ -141,6 +141,7 @@ function render(view,payload){
     const evidenceGate=calibration?.evidence_gate||{};
     const fieldWorkflow=calibration?.field_workflow||{};
     const flightDirector=reliability?.flight_director||{};
+    const passiveEvidence=reliability?.passive_evidence||{};
     const oracleConfidence=Number(reliability?.oracle?.confidence||0);
     const confidence=Math.round(Number(incident?.confidence??oracleConfidence)*100);
     const state=incident
@@ -153,6 +154,7 @@ function render(view,payload){
     const trusted=Number(summary.trusted||0);
     const total=Number(summary.total||0);
     const gaps=Number(summary.gaps||0);
+    const passivePanel=Object.keys(passiveEvidence).length?`<details class="ag-coverage ag-passive-evidence"><summary>Passive TrueNAS Evidence <span>${passiveEvidence.restore_verified?"restore verified":"HOLD"}</span></summary><div class="ag-evidence-metric"><strong>${esc(passiveEvidence.successful_tasks??0)} successful protection task(s)</strong><br>${esc(passiveEvidence.restore_verified?"A separate restore-verification receipt matched the active incident.":passiveEvidence.hold_reason||"No governed restore verification is available.")}<br>Read-only: ${passiveEvidence.read_only===true?"YES":"UNKNOWN"} · Control authority: ${passiveEvidence.control_authority===false?"NO":"UNKNOWN"}</div></details>`:"";
 
     view.classList.toggle("incident",Boolean(incident));
     view.innerHTML=`
@@ -172,6 +174,7 @@ function render(view,payload){
         <details class="ag-coverage"><summary>Recovery Coverage Matrix <span>${gaps?`${gaps} gap${gaps===1?"":"s"}`:"complete"}</span></summary>${gapRows(matrix)}</details>
         <details class="ag-coverage ag-evidence"><summary>Evidence Promotion Gate <span>${evidenceGate?.eligible_for_field_validation?"field candidate":`${Number(evidenceGate?.gaps?.length||0)} holds`}</span></summary>${evidenceGateRows(evidenceGate)}</details>
         <details class="ag-coverage ag-field-workflow"><summary>Field Evidence Workflow <span>${esc(title(fieldWorkflow?.state||"not started"))}</span></summary>${fieldWorkflowRows(fieldWorkflow)}</details>
+        ${passivePanel}
         <p class="ag-safety">Correlation uses ${esc(policy?.semantics||"evidence grouping")}; it retains raw alerts, grants no control authority, and performs no repair.</p>
     `;
 }

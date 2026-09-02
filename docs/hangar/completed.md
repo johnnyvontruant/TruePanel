@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.1 · refreshed 2026-09-02 · 12 experiment(s)
+Registry version 2026.09.02.2 · refreshed 2026-09-02 · 13 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -99,3 +99,11 @@ The deterministic valid path accepts two provider statements, while mutated, exp
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Implement supported passive local backup and replacement-inventory adapters, then compare their statements with the HoloDeck contract before lifting the live CHECKRIDE evidence HOLD.
 - Revisit when: supported passive TrueNAS backup or block-inventory provider is available; local provider-authentication trust root is defined; real replacement candidate can be observed without actuation
+
+## TP-EXP-0018 · Passive TrueNAS recovery evidence providers
+
+The positive fixture accepts both ground-truth statements; successful-task-only, pooled-candidate, and identity-mismatch paths produce 3/3 HOLD decisions with zero unsafe false-ready outcomes and no mutating method.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add a bounded cached runtime with explicit read-only TrueNAS role verification and a governed local receipt store, then perform a passive no-deploy BattleStation observation.
+- Revisit when: least-privilege TrueNAS query role is reviewed; bounded provider cadence is defined; governed restore receipt directory exists; passive BattleStation observation is authorized

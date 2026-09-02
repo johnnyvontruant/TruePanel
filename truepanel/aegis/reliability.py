@@ -53,6 +53,7 @@ class AegisReliabilityEngine:
         *,
         oracle: OracleEngine | None = None,
         correlation_policy: CorrelationPolicy | None = None,
+        protection_evidence_provider: Any | None = None,
         sample_interval_seconds: float = 5.0,
     ) -> None:
         interval = _number(sample_interval_seconds)
@@ -61,6 +62,7 @@ class AegisReliabilityEngine:
 
         self.oracle = oracle or OracleEngine()
         self.correlation_policy = correlation_policy or DEFAULT_CORRELATION_POLICY
+        self.protection_evidence_provider = protection_evidence_provider
         self.sample_interval_seconds = interval
         self.rehearsals = rehearse_recovery_paths()
         self.matrix = coverage_matrix(self.rehearsals)
@@ -257,7 +259,25 @@ class AegisReliabilityEngine:
             hard_faults=self._hard_faults(cards),
         )
         incident = correlate_incident(cards, outlook, policy=self.correlation_policy)
-        active_flight_director = compose_storage_checkride(payload, incident)
+        working_payload = payload
+        passive_evidence = None
+        if incident and self.protection_evidence_provider is not None:
+            try:
+                passive_evidence = self.protection_evidence_provider.observe(
+                    incident_id=str(incident.get("incident_id") or "")
+                )
+            except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+                passive_evidence = {
+                    "read_only": True,
+                    "control_authority": False,
+                    "restore_verified": False,
+                    "hold_reason": "passive evidence provider unavailable",
+                }
+            backup_context = _dict(_dict(passive_evidence).get("backup_context"))
+            if backup_context:
+                working_payload = deepcopy(payload)
+                working_payload["backup_context"] = backup_context
+        active_flight_director = compose_storage_checkride(working_payload, incident)
         return {
             "schema_version": 1,
             "project": "AEGIS",
@@ -281,6 +301,7 @@ class AegisReliabilityEngine:
                 "gaps": self.matrix["gaps"],
             },
             "topology": self._topology(payload),
+            "passive_evidence": passive_evidence,
             "flight_director": active_flight_director or self.flight_director,
         }
 

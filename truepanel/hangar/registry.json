@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.02.1",
+  "registry_version": "2026.09.02.2",
   "updated_at": "2026-09-02",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
@@ -241,6 +241,25 @@
       "reproduction": ["pytest -q tests/test_aegis_attestations.py tests/test_aegis_attestation_rehearsal.py tests/test_checkride.py", "python -c \"from truepanel.holodeck.aegis_attestations import run_recovery_attestation_rehearsal as run; print(run()['measurements'])\"", "PLAYWRIGHT_ROOT=<playwright-package> PLAYWRIGHT_BROWSERS_PATH=<chromium-cache> node development/aegis_ground_truth_browser_check.mjs", "python -m truepanel.hangar validate --root ."],
       "revisit_conditions": ["supported passive TrueNAS backup or block-inventory provider is available", "local provider-authentication trust root is defined", "real replacement candidate can be observed without actuation"],
       "strongest_follow_up": "Implement supported passive local backup and replacement-inventory adapters, then compare their statements with the HoloDeck contract before lifting the live CHECKRIDE evidence HOLD.",
+      "freshness": {"reviewed_at": "2026-09-02", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0018", "title": "Passive TrueNAS recovery evidence providers", "state": "COMPLETED",
+      "hypothesis": "Documented read-only TrueNAS task and disk queries can strengthen recovery evidence without confusing backup completion with restore verification or granting mutation authority.",
+      "value": "Connects AEGIS ground truth to replaceable platform adapters while preserving conservative CHECKRIDE holds.",
+      "prior_art": ["TrueNAS disk.query", "TrueNAS replication.query", "TrueNAS cloud_backup.query", "TrueNAS read-only roles"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-passive-evidence-providers", "pr": null, "commits": []},
+      "protocol": ["allowlist documented query methods", "observe protection tasks", "require separate restore receipt", "cross-check disk identity and pool state", "replay adversarial paths"],
+      "fixtures": ["truenas-passive-recovery-providers-v1", "tests/test_aegis_passive_providers.py", "tests/test_aegis_passive_provider_rehearsal.py"],
+      "success_criteria": ["two positive statements accepted", "all negative paths hold", "successful task is not promoted without restore proof", "mutating methods remain zero", "control authority remains false"],
+      "abort_criteria": ["disk.query used as sole preserved-data proof", "backup SUCCESS treated as restore proof", "write API method allowed", "provider enabled live without cadence and role review"],
+      "evidence": [{"path": "docs/evidence/aegis-passive-truenas-providers-v1.json", "sha256": "05287fae9f89cdc38580c9e20635ddc87088ba1ed2a10fbae74a710ca1354930"}],
+      "outcome": {"conclusion": "The positive fixture accepts both ground-truth statements; successful-task-only, pooled-candidate, and identity-mismatch paths produce 3/3 HOLD decisions with zero unsafe false-ready outcomes and no mutating method."},
+      "invalidated_assumptions": ["successful replication proves recoverability", "pool absence proves blank media", "a Linux path is sufficient disk identity", "read-only integration requires a cloud dependency"],
+      "reproduction": ["pytest -q tests/test_aegis_passive_providers.py tests/test_aegis_passive_provider_rehearsal.py", "python -c \"from truepanel.holodeck.aegis_passive_providers import run_passive_provider_rehearsal as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["least-privilege TrueNAS query role is reviewed", "bounded provider cadence is defined", "governed restore receipt directory exists", "passive BattleStation observation is authorized"],
+      "strongest_follow_up": "Add a bounded cached runtime with explicit read-only TrueNAS role verification and a governed local receipt store, then perform a passive no-deploy BattleStation observation.",
       "freshness": {"reviewed_at": "2026-09-02", "review_after": "2026-12-31"}
     }
   ]

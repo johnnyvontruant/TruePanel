@@ -180,3 +180,27 @@ freshness, semantic claims, and contradiction handling. See
 [`AEGIS_RECOVERY_GROUND_TRUTH.md`](AEGIS_RECOVERY_GROUND_TRUTH.md) for the
 comparison, licensing decisions, rejected routes, HoloDeck measurements, and
 next adapter boundary.
+
+## Passive TrueNAS provider follow-up
+
+The 2026-09-02 adapter study inspected the documented TrueNAS 25.10
+`disk.query`, `replication.query`, and `cloud_backup.query` contracts plus the
+corresponding middleware implementations and LGPLv3 license. The supported
+read-only APIs are the best platform-fit shortcut: they expose disk identity,
+capacity, pool membership, and protection-task state without importing private
+middleware internals or adding a cloud service, credential, or runtime
+dependency.
+
+Two attractive shortcuts were rejected. A successful replication or cloud
+backup task proves transfer completion, not a tested restore. A disk absent
+from a pool is not necessarily blank or disposable. TruePanel therefore
+requires a separate incident-bound restore receipt and agreement between
+TrueNAS inventory and local read-only signature evidence. Run and restore
+methods remain outside the allowlist because the middleware assigns them write
+authority.
+
+The implementation is original TruePanel code behind replaceable provider
+interfaces; no TrueNAS source was copied. See
+[`AEGIS_PASSIVE_TRUENAS_PROVIDERS.md`](AEGIS_PASSIVE_TRUENAS_PROVIDERS.md) for
+the exact trust boundary, three adversarial HoloDeck paths, licensing notes,
+and deferred live-runtime gate.
