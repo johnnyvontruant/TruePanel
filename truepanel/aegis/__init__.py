@@ -38,6 +38,7 @@ from .passive_runtime import (
 )
 from .passive_websocket import (
     GovernedAPIKeyFile,
+    GovernedTLSCAFile,
     TrueNASWebSocketReadOnlyClient,
 )
 from .policy import (
@@ -58,6 +59,7 @@ __all__ = [
     "DeclarativeCorrelationPolicy",
     "EvidencePromotionPolicy",
     "GovernedAPIKeyFile",
+    "GovernedTLSCAFile",
     "HypothesisRule",
     "GovernedPassiveEvidenceRuntime",
     "GovernedRestoreReceiptStore",
