@@ -125,6 +125,20 @@ def test_role_verifier_requires_read_roles_and_rejects_any_write_authority():
     assert result["status"] == "HOLD"
     assert result["missing_roles"]
 
+    directory = Delegate(
+        {
+            "auth.me": {
+                "local": False,
+                "source": "LDAP",
+                "privilege": {"roles": sorted(REQUIRED_ROLES)},
+            }
+        }
+    )
+    result = TrueNASRoleVerifier(directory).verify()
+    assert result["status"] == "HOLD"
+    assert result["local_account"] is False
+    assert "dedicated local" in result["reason"]
+
 
 def test_receipt_store_requires_secure_owner_mode_and_incident_binding(tmp_path):
     receipt = {"incident_id": "incident-1", "value": "fixture"}

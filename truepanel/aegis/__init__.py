@@ -17,6 +17,11 @@ from .checkride import (
 )
 from .correlation import correlate_incident
 from .coverage import coverage_matrix, validate_recovery_coverage
+from .credential_session import (
+    CredentialSafeTrueNASClient,
+    PrivateApiKeyFile,
+    validate_api_uri,
+)
 from .evidence_gate import (
     EvidencePromotionPolicy,
     evaluate_evidence_gate,
@@ -50,10 +55,12 @@ __all__ = [
     "AegisReliabilityEngine",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
+    "CredentialSafeTrueNASClient",
     "DEFAULT_CORRELATION_POLICY",
     "DeclarativeCorrelationPolicy",
     "EvidencePromotionPolicy",
     "HypothesisRule",
+    "PrivateApiKeyFile",
     "GovernedPassiveEvidenceRuntime",
     "GovernedRestoreReceiptStore",
     "TrueNASProtectionEvidenceProvider",
@@ -75,6 +82,7 @@ __all__ = [
     "validate_recovery_coverage",
     "validate_correlation_policy",
     "validate_field_manifest",
+    "validate_api_uri",
     "validate_recovery_attestation",
     "wilson_interval",
 ]

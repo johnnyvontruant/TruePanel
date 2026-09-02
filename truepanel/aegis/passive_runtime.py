@@ -177,9 +177,12 @@ class TrueNASRoleVerifier:
             or role == "FILESYSTEM_FULL_CONTROL"
         )
         missing = sorted(REQUIRED_ROLES - role_set)
-        verified = bool(identity and not forbidden and not missing)
+        local_account = _dict(identity).get("local") is True
+        verified = bool(identity and local_account and not forbidden and not missing)
         if not identity:
             reason = "auth.me was unavailable"
+        elif not local_account:
+            reason = "session identity is not a dedicated local TrueNAS account"
         elif forbidden:
             reason = "session includes write-capable or unrestricted roles"
         elif missing:
@@ -193,7 +196,7 @@ class TrueNASRoleVerifier:
             "missing_roles": missing,
             "forbidden_roles": forbidden,
             "observed_role_count": len(roles),
-            "local_account": _dict(identity).get("local") is True,
+            "local_account": local_account,
             "reason": reason,
             "control_authority": False,
         }
