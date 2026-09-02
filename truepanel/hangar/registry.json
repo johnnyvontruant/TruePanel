@@ -249,7 +249,7 @@
       "value": "Connects AEGIS ground truth to replaceable platform adapters while preserving conservative CHECKRIDE holds.",
       "prior_art": ["TrueNAS disk.query", "TrueNAS replication.query", "TrueNAS cloud_backup.query", "TrueNAS read-only roles"],
       "safety_class": "SIMULATION_ONLY",
-      "development": {"branch": "feature/aegis-passive-evidence-providers", "pr": null, "commits": []},
+      "development": {"branch": "feature/aegis-passive-evidence-providers", "pr": 111, "commits": ["47112e386569a0eb7bcf6f318b392c644450f155"]},
       "protocol": ["allowlist documented query methods", "observe protection tasks", "require separate restore receipt", "cross-check disk identity and pool state", "replay adversarial paths"],
       "fixtures": ["truenas-passive-recovery-providers-v1", "tests/test_aegis_passive_providers.py", "tests/test_aegis_passive_provider_rehearsal.py"],
       "success_criteria": ["two positive statements accepted", "all negative paths hold", "successful task is not promoted without restore proof", "mutating methods remain zero", "control authority remains false"],
