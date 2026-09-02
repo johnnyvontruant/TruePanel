@@ -23,7 +23,7 @@ The platform now includes:
 - Black Box recording, replay, and incident compilation;
 - ORACLE adaptive baselines and developing-fault analysis;
 - AEGIS incident correlation and a CI-enforced Recovery Coverage Matrix;
-- Project HANGAR's packaged, CI-validated experiment registry (14 experiments: 10 completed, 2 failed, 2 future);
+- Project HANGAR's packaged, CI-validated experiment registry (16 experiments: 11 completed, 2 failed, 2 future, 1 in progress);
 - Project FLIGHT DIRECTOR's Time Machine, causal map, forecast, what-if rehearsal, and recovery-verification signature;
 - GLASS COCKPIT's evidence-led Mission Control command strip and disclosure layout;
 - guarded install, upgrade, rollback, repair, verify, cleanup, and uninstall;

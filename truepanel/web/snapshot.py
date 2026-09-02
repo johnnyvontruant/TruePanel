@@ -355,19 +355,22 @@ class SnapshotService(_base.SnapshotService):
 
                 context = _safe_dict(session.get("context"))
 
-                if profile is not None and profile.drive_service_supported:
-                    if not (
+                if (
+                    profile is not None
+                    and profile.drive_service_supported
+                    and not (
                         context.get("service_procedure_verified") is True
                         and context.get("service_profile") == profile.key
                         and context.get("service_source") == profile.source_title
-                    ):
-                        self.lifeline_store.set_service_procedure_verified(
-                            session_id,
-                            verified=True,
-                            profile=profile.key,
-                            source=profile.source_title,
-                        )
-                        changed = True
+                    )
+                ):
+                    self.lifeline_store.set_service_procedure_verified(
+                        session_id,
+                        verified=True,
+                        profile=profile.key,
+                        source=profile.source_title,
+                    )
+                    changed = True
 
                 try:
                     candidates = self.replacement_candidate_provider.candidates(
@@ -475,6 +478,7 @@ class SnapshotService(_base.SnapshotService):
             "physical_bay",
             "model",
             "serial_last4",
+            "capacity_bytes",
             "zfs_state",
         )
 

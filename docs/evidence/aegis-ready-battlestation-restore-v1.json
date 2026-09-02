@@ -1,0 +1,124 @@
+{
+  "aegis_observation": {
+    "authenticated": true,
+    "cache_hits": 0,
+    "control_authority": false,
+    "delegate_calls": 3,
+    "deployment_changed": false,
+    "forbidden_roles": [],
+    "hold_reason": null,
+    "least_privilege_verified": true,
+    "missing_roles": [],
+    "observed_role_count": 67,
+    "receipt_present": true,
+    "receipt_store_governed": true,
+    "restore_verified": true,
+    "runtime_status": "READY",
+    "stale_hits": 0,
+    "successful_tasks": 2
+  },
+  "conclusion": "A controlled native TrueNAS backup and restore round trip was independently SHA-256 verified and admitted by the governed passive AEGIS runtime as READY while control authority remained false and production deployment remained unchanged.",
+  "evidence_class": "controlled_field_restore",
+  "evidence_id": "aegis-ready-battlestation-restore-v1",
+  "field_discoveries": [
+    {
+      "failure_mode_before_fix": "false HOLD after auth.me",
+      "finding": "TrueNAS Python API role collections may be sets",
+      "resolution_commit": "7199318fbe4f2cdff05f067f3137bbfc4d9d9127",
+      "safety_effect": "fail-closed"
+    },
+    {
+      "accepted_success_states": [
+        "SUCCESS",
+        "FINISHED"
+      ],
+      "failure_mode_before_fix": "successful protection task not counted",
+      "finding": "Completed TrueNAS replication tasks may report FINISHED",
+      "resolution_commit": "041c38b442907e043b27a767f59992d02bffec83"
+    }
+  ],
+  "object_verification": {
+    "backup_verified": true,
+    "manifest_location": "operator-governed external manifest",
+    "objects_verified": 3,
+    "restored_verified": true,
+    "sha256": {
+      "canary.bin": "e91db7585175e26eed3527e57a3cbd55a8832e64f7021ab1c64c067dcc990ab2",
+      "flight-card.txt": "5a831e3cfd6c16effe09c1d5c9613f0dc3e413e29842aa221d872a546f23f2a1",
+      "nested/telemetry.txt": "d67f41d146c674ea21337d7be87390215df5d876123e7562b374d787c01e3e22"
+    }
+  },
+  "observed_on": "2026-09-02",
+  "platform": {
+    "product": "TrueNAS SCALE",
+    "version": "25.10.5"
+  },
+  "protection_task": {
+    "destination_readonly": true,
+    "enabled": true,
+    "source_datasets": [
+      "SSDs/truepanel-aegis-lab/source"
+    ],
+    "state": "FINISHED",
+    "target_dataset": "HDDs/truepanel-aegis-lab/backup",
+    "task_id": 1
+  },
+  "restore": {
+    "job_id": 10068,
+    "job_percent": 100,
+    "job_state": "SUCCESS",
+    "restored_dataset_readonly": true,
+    "source_datasets": [
+      "HDDs/truepanel-aegis-lab/backup"
+    ],
+    "target_dataset": "SSDs/truepanel-aegis-lab/restored",
+    "task_enabled": true,
+    "task_id": 2,
+    "task_state": "FINISHED"
+  },
+  "restore_receipt": {
+    "evidence_sha256": "b211da7cd964c5fd62bc967e8116085976a7be2d000d95dfe7f31ae65de39d8b",
+    "method": "replication.query",
+    "objects_verified": 3,
+    "receipt_file_mode": "0600",
+    "receipt_filename": "fce571ce0d3bd5a7c789bf644790e5f8f3aeecda7083b69f140399a5bb1f7c23.json",
+    "receipt_root_mode": "0700",
+    "schema": "truepanel.restore-verification/v1",
+    "scope": "SSDs/truepanel-aegis-lab/source",
+    "task_id": 1
+  },
+  "runtime": {
+    "branch": "feature/aegis-passive-websocket-adapter",
+    "ci": {
+      "conclusion": "success",
+      "run_id": 33681366347,
+      "run_number": 1443,
+      "workflow": "CI"
+    },
+    "commit": "041c38b442907e043b27a767f59992d02bffec83",
+    "pr": 114
+  },
+  "safety": {
+    "aegis_control_authority": false,
+    "aegis_runtime_writes_allowed": false,
+    "all_pools_healthy_after_test": true,
+    "production_deployment_changed": false,
+    "production_services_changed": false
+  },
+  "sanitation": {
+    "api_key_path_published": false,
+    "api_key_published": false,
+    "service_username_published": false,
+    "tls_ca_path_published": false,
+    "websocket_uri_published": false
+  },
+  "scenario": {
+    "data_protection_execution": "native TrueNAS LOCAL replication tasks",
+    "incident_id": "battlestation-restore-verified-2026-09-02-r4",
+    "lab_isolation": "disposable TruePanel AEGIS datasets; no production dataset used",
+    "protection_scope": "SSDs/truepanel-aegis-lab/source",
+    "restore_test_id": "battlestation-roundtrip-20260902-01",
+    "snapshot": "aegis-field-restore-proof-20260903"
+  },
+  "schema_version": 1
+}

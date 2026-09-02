@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "experiment_id": "TP-EXP-0015",
+  "project": "CHECKRIDE",
+  "case": "storage-smart-recovery-v1",
+  "evidence_maturity": "passive_live_diagnosis_repair_unvalidated",
+  "live_identity": {
+    "bay": 3,
+    "device": "sda",
+    "model": "ST8000NE001-2M71",
+    "serial_last4": "MW6D",
+    "pool": "HDDs",
+    "vdev": "raidz1-0",
+    "zfs_state": "ONLINE"
+  },
+  "smart_evidence": {
+    "self_assessment": "PASSED",
+    "reallocated": 16120,
+    "pending": 1608,
+    "offline_uncorrectable": 1608,
+    "reported_uncorrect": 905
+  },
+  "safety_contract": {
+    "control_authority": false,
+    "physical_service_ready": false,
+    "destructive_actions_ready": false,
+    "live_diagnosis_is_repair_validation": false
+  },
+  "deterministic_rehearsals": {
+    "total": 6,
+    "proceed_to_operator_review": 1,
+    "abort": 2,
+    "hold": 1,
+    "observe": 1,
+    "hold_and_escalate": 1,
+    "hardware_isolated": 6
+  },
+  "verification_signature": {
+    "status": "awaiting_external_repair",
+    "machine_verifiable": true,
+    "criteria_count": 5
+  },
+  "result": "The live incident can be bound to a truthful advisory plan; field repair verification remains open.",
+  "replay": "pytest -q tests/test_checkride.py"
+}

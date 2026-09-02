@@ -1,6 +1,6 @@
 # AEGIS Prior-Art Field Report
 
-Research dates: 2026-08-28 through 2026-08-29
+Research dates: 2026-08-28 through 2026-09-02
 
 This report records the public-software survey behind the first AEGIS
 calibration follow-up. It is a dependency and provenance decision record, not
@@ -162,3 +162,63 @@ normal workload shifts, seasonal ambient changes, sensor dropouts, real fan
 degradation, and storage incidents. Run the built-in policy and an optional
 River-backed detector through the same interface, then publish per-scenario
 false-positive rate, lead time, confidence stability, and root-cause stability.
+
+## Recovery-ground-truth follow-up
+
+The 2026-09-02 survey inspected in-toto Statement v1, W3C PROV-DM,
+Sigstore/Cosign attestation verification, restic repository-check semantics,
+OpenZFS replacement rules, and GUAC's provenance graph. The selected shortcut
+is an original, dependency-free TruePanel statement and ledger shaped by
+in-toto's subject/digest/predicate separation and W3C's
+entity/activity/agent distinction. No source was copied and no runtime
+dependency was added.
+
+The key invalidated assumption is that a SHA-256-bearing receipt proves who
+made a claim. It does not. AEGIS now labels digests as integrity-only and
+separately enforces provider mode, source reference, incident identity,
+freshness, semantic claims, and contradiction handling. See
+[`AEGIS_RECOVERY_GROUND_TRUTH.md`](AEGIS_RECOVERY_GROUND_TRUTH.md) for the
+comparison, licensing decisions, rejected routes, HoloDeck measurements, and
+next adapter boundary.
+
+## Passive TrueNAS provider follow-up
+
+The 2026-09-02 adapter study inspected the documented TrueNAS 25.10
+`disk.query`, `replication.query`, and `cloud_backup.query` contracts plus the
+corresponding middleware implementations and LGPLv3 license. The supported
+read-only APIs are the best platform-fit shortcut: they expose disk identity,
+capacity, pool membership, and protection-task state without importing private
+middleware internals or adding a cloud service, credential, or runtime
+dependency.
+
+Two attractive shortcuts were rejected. A successful replication or cloud
+backup task proves transfer completion, not a tested restore. A disk absent
+from a pool is not necessarily blank or disposable. TruePanel therefore
+requires a separate incident-bound restore receipt and agreement between
+TrueNAS inventory and local read-only signature evidence. Run and restore
+methods remain outside the allowlist because the middleware assigns them write
+authority.
+
+The implementation is original TruePanel code behind replaceable provider
+interfaces; no TrueNAS source was copied. See
+[`AEGIS_PASSIVE_TRUENAS_PROVIDERS.md`](AEGIS_PASSIVE_TRUENAS_PROVIDERS.md) for
+the exact trust boundary, three adversarial HoloDeck paths, licensing notes,
+and deferred live-runtime gate.
+
+## Governed runtime follow-up
+
+The 2026-09-02 runtime study inspected TrueNAS 25.10 RBAC, `auth.me`, the
+official API client, and current API-key security guidance. The important
+finding is that a read-only method allowlist does not make a `FULL_ADMIN`
+session least-privileged. Local root and `truenas_admin` implicitly receive
+that unrestricted role, while `disk.query` formally requires
+`READONLY_ADMIN`; replication and cloud-backup queries name their corresponding
+read roles.
+
+AEGIS now verifies the session before task queries, bounds refresh traffic,
+demotes stale evidence to display-only, and accepts receipts only from a
+mode/owner/symlink/size-governed read-only store. Command-line API-key injection
+and automatic privilege provisioning were rejected because they would create
+credential-exposure or configuration risks. No external code or dependency was
+incorporated. See
+[`AEGIS_GOVERNED_PASSIVE_RUNTIME.md`](AEGIS_GOVERNED_PASSIVE_RUNTIME.md).

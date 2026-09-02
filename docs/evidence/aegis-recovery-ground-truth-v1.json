@@ -1,0 +1,116 @@
+{
+  "cases": [
+    {
+      "accepted": 2,
+      "contradictions": [],
+      "control_authority": false,
+      "ledger_sha256": "4b1d5d508008f3ba39e3e443b15f2a6de55e5585194e2e65d206b110ea529bce",
+      "missing_kinds": [],
+      "name": "fresh-bound-evidence",
+      "rejected": 0,
+      "rejection_reasons": [],
+      "status": "EVIDENCE_READY"
+    },
+    {
+      "accepted": 1,
+      "contradictions": [],
+      "control_authority": false,
+      "ledger_sha256": "47030f825e5498ab739f7f4bb7d387b86c193ae0a6b1d0089fe5c3b344d2544c",
+      "missing_kinds": [
+        "backup.restore-verification"
+      ],
+      "name": "mutated-statement",
+      "rejected": 1,
+      "rejection_reasons": [
+        "attestation digest mismatch",
+        "restore test has not passed"
+      ],
+      "status": "HOLD"
+    },
+    {
+      "accepted": 0,
+      "contradictions": [],
+      "control_authority": false,
+      "ledger_sha256": "91aaa6ba24f957ba1248417e31007af7d457856ce6d1f32021b0a56d343e2179",
+      "missing_kinds": [
+        "backup.restore-verification",
+        "storage.replacement-candidate"
+      ],
+      "name": "expired-evidence",
+      "rejected": 2,
+      "rejection_reasons": [
+        "attestation has expired",
+        "attestation has expired"
+      ],
+      "status": "HOLD"
+    },
+    {
+      "accepted": 1,
+      "contradictions": [],
+      "control_authority": false,
+      "ledger_sha256": "74221f4faace8a6d8e99ab62efdb30f6495336e6ef8f8c9e36ef0d4a55937ca4",
+      "missing_kinds": [
+        "storage.replacement-candidate"
+      ],
+      "name": "reused-drive-identity",
+      "rejected": 1,
+      "rejection_reasons": [
+        "candidate identity is not strongly distinct"
+      ],
+      "status": "HOLD"
+    },
+    {
+      "accepted": 1,
+      "contradictions": [],
+      "control_authority": false,
+      "ledger_sha256": "6a514357e1f511e04cfce517dfbb8a7b1150b703a01657c3ab4811a8a9313609",
+      "missing_kinds": [
+        "backup.restore-verification"
+      ],
+      "name": "ungoverned-provider",
+      "rejected": 1,
+      "rejection_reasons": [
+        "provider mode is not governed"
+      ],
+      "status": "HOLD"
+    },
+    {
+      "accepted": 1,
+      "contradictions": [],
+      "control_authority": false,
+      "ledger_sha256": "3be07f9d12e2942585883884ce46cf6b12c7c5b83280ccfda3155685e41cb8d3",
+      "missing_kinds": [
+        "backup.restore-verification"
+      ],
+      "name": "missing-backup",
+      "rejected": 0,
+      "rejection_reasons": [],
+      "status": "HOLD"
+    },
+    {
+      "accepted": 3,
+      "contradictions": [
+        "multiple accepted backup.restore-verification attestations require explicit selection"
+      ],
+      "control_authority": false,
+      "ledger_sha256": "b3a479b6b8bdefc65d660d8d6d355ac5c924799394ff24eb5925903ff6b07155",
+      "missing_kinds": [],
+      "name": "ambiguous-duplicate",
+      "rejected": 0,
+      "rejection_reasons": [],
+      "status": "HOLD"
+    }
+  ],
+  "control_authority": false,
+  "evidence_maturity": "deterministic_lab_fixture",
+  "field_validated": false,
+  "hardware_isolated": true,
+  "measurements": {
+    "cases": 7,
+    "negative_holds": 6,
+    "positive_attestations_accepted": 2,
+    "positive_ready": 1,
+    "unsafe_false_ready": 0
+  },
+  "scenario": "aegis-recovery-ground-truth-v1"
+}

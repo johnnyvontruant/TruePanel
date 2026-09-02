@@ -24,6 +24,11 @@ function spark(data,label){
 function render(view,payload){
     const health=payload?.health||{};
     const incident=payload?.reliability?.active_incident||null;
+    const flight=payload?.reliability?.flight_director||{};
+    const flightBound=flight?.presentation_scope==="active_incident"
+        && flight?.applies_to_active_incident===true
+        && Boolean(incident?.incident_id)
+        && flight?.incident_id===incident?.incident_id;
     const thermal=payload?.thermal||payload?.cooling||{};
     const storage=payload?.storage||{};
     const drives=Array.isArray(storage.drives)?storage.drives:Array.isArray(storage.temperatures)?storage.temperatures:[];
@@ -36,8 +41,8 @@ function render(view,payload){
     const pool=pools[0]||{};
     const overall=String(first(health.overall,health.state,incident?"ATTENTION":"UNKNOWN")).toUpperCase();
     const cause=incident?.likely_cause||"No active correlated incident";
-    const move=incident?.safest_next_action||"Continue passive monitoring";
-    const verify=incident?.verification_state||"not required";
+    const move=(flightBound&&flight?.safest_action)||incident?.safest_next_action||"Continue passive monitoring";
+    const verify=(flightBound&&flight?.verification_signature?.status)||incident?.verification_state||"not required";
     view.innerHTML=`<div class="gc-now"><div><small>NOW</small><strong class="gc-state">${esc(overall)}</strong></div><div><small>WHY</small><strong>${esc(cause)}</strong></div><div><small>SAFEST MOVE</small><strong>${esc(move)}</strong></div><div><small>PROOF</small><strong>${esc(verify)}</strong></div></div><div class="gc-domains"><section><small>COOLING</small><strong>${fan===null?"RPM unknown":`${fan.toLocaleString()} RPM`}</strong>${spark(fanTrend,"Fan delivery")}</section><section><small>HOTTEST DRIVE</small><strong>${hottestValue===null?"Temperature unknown":`${hottestValue}°C`} · Bay ${esc(first(hottest?.bay,"unknown"))}</strong>${spark(driveTrend,"Hottest drive temperature")}</section><section><small>STORAGE</small><strong>${esc(first(pool?.name,"Pool unknown"))} · ${esc(first(pool?.health,pool?.status,"state unknown"))}</strong><span>Redundancy ${esc(first(pool?.redundancy,"unknown"))}</span></section></div><details><summary>Evidence, history, and advanced diagnostics</summary><p>Safety-critical incident, action, and proof remain outside this drawer. Trend graphics have text alternatives; unknown topology stays unknown.</p></details>`;
 }
 

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "evidence_id": "aegis-passive-battlestation-field-v1",
+  "observed_at": "2026-09-02",
+  "platform": {
+    "product": "TrueNAS SCALE",
+    "version": "25.10.5"
+  },
+  "code": {
+    "branch": "feature/aegis-passive-websocket-adapter",
+    "commit": "7199318fbe4f2cdff05f067f3137bbfc4d9d9127",
+    "pr": 114
+  },
+  "transport": {
+    "authenticated": true,
+    "tls_verification": true,
+    "tls_trust_governed": true,
+    "system_trust_store_changed": false,
+    "bootstrap_methods": [
+      "core.set_options",
+      "auth.login_ex"
+    ],
+    "persistent_configuration_changed": false
+  },
+  "role_verification": {
+    "status": "VERIFIED",
+    "least_privilege_verified": true,
+    "observed_role_count": 67,
+    "missing_roles": [],
+    "forbidden_roles": []
+  },
+  "observation": {
+    "runtime_status": "HOLD",
+    "hold_reason": "backup task success is not a tested restore",
+    "delegate_calls": 3,
+    "cache_hits": 0,
+    "stale_hits": 0,
+    "successful_tasks": 0,
+    "restore_verified": false,
+    "control_authority": false,
+    "deployment_changed": false
+  },
+  "sanitization": {
+    "api_key_absent": true,
+    "identity_path_host_absent": true
+  },
+  "field_conclusion": "The governed passive runtime verified the live least-privilege API-key session, performed only the three expected live evidence calls, and held because no tested-restore receipt was present."
+}

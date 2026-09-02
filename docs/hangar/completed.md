@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.08.30.2 · refreshed 2026-08-30 · 10 experiment(s)
+Registry version 2026.09.02.5 · refreshed 2026-09-02 · 14 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -83,3 +83,35 @@ Candidate B consolidated eleven competing surfaces into four decision domains wi
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Run moderated think-aloud tests with one new and one experienced operator on lab fixtures, then tune only measured friction.
 - Revisit when: human task testing contradicts the structural result; new Mission Control decision domain is added
+
+## TP-EXP-0016 · CHECKRIDE pre-service clearance receipts
+
+The deterministic positive fixture passes all six gates and produces a digest-bound 15-minute receipt, while absent or stale backup/candidate evidence fails closed and both physical-service and storage-write authority remain false.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Bind a governed backup/restore attestation provider and passively discovered replacement candidate to the live incident, then capture the external repair signature.
+- Revisit when: a governed live backup evidence provider exists; a real replacement candidate is passively observed; service-time evidence needs a different expiry policy
+
+## TP-EXP-0017 · AEGIS recovery ground-truth attestations
+
+The deterministic valid path accepts two provider statements, while mutated, expired, identity-reused, ungoverned, missing, and ambiguous evidence produces 6/6 HOLD decisions with zero unsafe false-ready outcomes.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Implement supported passive local backup and replacement-inventory adapters, then compare their statements with the HoloDeck contract before lifting the live CHECKRIDE evidence HOLD.
+- Revisit when: supported passive TrueNAS backup or block-inventory provider is available; local provider-authentication trust root is defined; real replacement candidate can be observed without actuation
+
+## TP-EXP-0018 · Passive TrueNAS recovery evidence providers
+
+The positive fixture accepts both ground-truth statements; successful-task-only, pooled-candidate, and identity-mismatch paths produce 3/3 HOLD decisions with zero unsafe false-ready outcomes and no mutating method.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add a bounded cached runtime with explicit read-only TrueNAS role verification and a governed local receipt store, then perform a passive no-deploy BattleStation observation.
+- Revisit when: least-privilege TrueNAS query role is reviewed; bounded provider cadence is defined; governed restore receipt directory exists; passive BattleStation observation is authorized
+
+## TP-EXP-0019 · Governed passive evidence runtime
+
+The governed runtime first failed closed on missing restore proof, then a controlled native TrueNAS SSD-to-HDD backup and HDD-to-SSD restore round trip verified three objects against an independent SHA-256 manifest. The CI-clean live observer verified 67 effective read-only roles, performed exactly three fresh governed reads, accepted the incident-bound digest-intact receipt, and transitioned to READY with zero stale hits, zero control authority, no production deployment change, and all pools healthy.
+
+- Safety: `READ_ONLY_EVIDENCE`
+- Strongest follow-up: Review the field-validated passive runtime for deployment without expanding AEGIS control authority, and formalize the controlled restore-test procedure as a supported TrueNAS API/CLI runbook before broader use.
+- Revisit when: TrueNAS API, RBAC, transport, or replication-task state semantics change; production deployment is proposed; receipt issuance or restore-test trust policy changes

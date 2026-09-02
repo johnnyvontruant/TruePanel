@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "scenario": "aegis-governed-passive-runtime-v1",
+  "hardware_isolated": true,
+  "field_validated": false,
+  "control_authority": false,
+  "positive": {
+    "runtime_status": "READY",
+    "role_gate": "VERIFIED",
+    "receipt_store": "GOVERNED",
+    "restore_verified": true,
+    "second_observation_source": "cache"
+  },
+  "negative_scenarios": [
+    {"scenario": "full_admin_session", "runtime_status": "HOLD"},
+    {"scenario": "insecure_receipt_store", "runtime_status": "HOLD"},
+    {"scenario": "stale_cached_evidence", "runtime_status": "HOLD"},
+    {"scenario": "restore_scope_mismatch", "runtime_status": "HOLD"}
+  ],
+  "measurements": {
+    "positive_runtime_status": "READY",
+    "delegate_calls_first_observation": 3,
+    "delegate_calls_after_second_observation": 3,
+    "second_observation_query_reduction_percent": 100.0,
+    "negative_holds": 4,
+    "unsafe_false_ready": 0,
+    "mutating_method_calls": 0,
+    "stale_cache_can_clear_recovery": false,
+    "runtime_receipt_writes": 0
+  }
+}

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = (
     ROOT
@@ -154,3 +153,27 @@ def test_preview_layout_selector_remains_authoritative_during_comparison():
     final_layout = script[start:end]
 
     assert 'if(params.get("cockpit-preview")==="1"||params.has("layout")) return;' in final_layout
+
+
+def test_health_annunciators_expose_non_color_state_and_keep_phone_states_visible():
+    script = text()
+
+    assert 'class="gc-annunciator-state">UNKNOWN</span>' in script
+    assert ".gc-annunciator{flex:0 0 auto;display:inline-flex;align-items:center;gap:.4rem;min-height:44px" in script
+    assert 'stateNode.textContent!==state' in script
+    assert ".topbar{flex-wrap:wrap}" in script
+    assert "overflow-x:visible" in script
+    assert "max-width:100%;flex-wrap:wrap" in script
+    assert "priority={CRITICAL:0,DEGRADED:1,ATTENTION:2,UNKNOWN:3,NOMINAL:4}" in script
+    assert ").forEach(name=>row.appendChild(pills[name]))" in script
+
+
+def test_native_annunciator_buttons_do_not_duplicate_keyboard_activation():
+    script = text()
+    start = script.index("function installHealthAnnunciators(){")
+    end = script.index("function install(){", start)
+    annunciators = script[start:end]
+
+    assert 'const pill=el("button","gc-annunciator")' in annunciators
+    assert 'row.addEventListener("click"' in annunciators
+    assert 'row.addEventListener("keydown"' not in annunciators

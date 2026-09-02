@@ -1,0 +1,46 @@
+{
+  "control_authority": false,
+  "experiment_id": "TP-EXP-0016",
+  "hardware_isolated": true,
+  "measurements": {
+    "evidence_expiry_seconds": 900,
+    "gates_evaluated": 6,
+    "operator_review_ready": true,
+    "passing_gates": 6,
+    "physical_service_authority": false,
+    "storage_write_authority": false
+  },
+  "negative_scenarios": [
+    {"expected": "HOLD", "scenario": "missing_backup_restore_proof"},
+    {"expected": "HOLD", "scenario": "expired_backup_and_candidate_evidence"},
+    {"expected": "HOLD", "scenario": "identity_mismatch"},
+    {"expected": "HOLD", "scenario": "zero_remaining_redundancy"},
+    {"expected": "HOLD", "scenario": "ambiguous_or_undersized_candidate"},
+    {"expected": "HOLD", "scenario": "resilver_active"}
+  ],
+  "positive_receipt": {
+    "backup_evidence": {"restore_tested": true, "source": "fixture:offline-restore-report", "verified_at": 940.0},
+    "blocked_by": [],
+    "expires_after_seconds": 900,
+    "gates": [
+      {"code": "incident_identity", "detail": "Incident, bay, device, model, serial suffix, pool, and VDEV must be present in the current passive snapshot.", "evidence_age_seconds": 0.0, "satisfied": true},
+      {"code": "redundancy_margin", "detail": "Current topology must retain at least one additional member of fault tolerance.", "evidence_age_seconds": 0.0, "satisfied": true},
+      {"code": "backup_restore_evidence", "detail": "An independent backup with a tested restore and named source must be attested within 15 minutes.", "evidence_age_seconds": 60.0, "satisfied": true},
+      {"code": "service_procedure", "detail": "The service procedure must match a known chassis profile and retain its source provenance.", "evidence_age_seconds": 30.0, "satisfied": true},
+      {"code": "replacement_fit_and_identity", "detail": "One fresh, distinct, equal-or-larger candidate must be outside every pool and free of preserved-data risk.", "evidence_age_seconds": 30.0, "satisfied": true},
+      {"code": "recovery_quiescent", "detail": "No resilver may be active while a physical-service plan is reviewed.", "evidence_age_seconds": 0.0, "satisfied": true}
+    ],
+    "generated_at": 1000.0,
+    "incident_id": "recovery:b128b6846467dd1e",
+    "operator_review_ready": true,
+    "physical_service_authority": false,
+    "receipt_sha256": "1292de89d3a9bd5e9794c594b6546e24fb2e0da592240c31daddeae8c5127c6d",
+    "replacement_identity": {"bay": 3, "capacity_bytes": 8000000000000, "device": "sdh", "model": "ST8000NE001-2M71", "serial_last4": "NEW1"},
+    "schema_version": 1,
+    "source_identity": {"bay": 3, "device": "sda", "model": "ST8000NE001-2M71", "pool": "HDDs", "serial_last4": "MW6D", "vdev": "raidz1-0"},
+    "status": "READY_FOR_OPERATOR_REVIEW",
+    "storage_write_authority": false
+  },
+  "scenario": "storage-pre-service-clearance-v1",
+  "schema_version": 1
+}
