@@ -20,6 +20,7 @@ READ_ONLY_METHODS = frozenset(
 )
 PASSIVE_METHODS = READ_ONLY_METHODS | {"auth.me"}
 RESTORE_RECEIPT_SCHEMA = "truepanel.restore-verification/v1"
+SUCCESSFUL_TASK_STATES = frozenset({"SUCCESS", "FINISHED"})
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -141,6 +142,10 @@ def _task_state(task: dict[str, Any]) -> str:
     return _text(state).upper()
 
 
+def _task_succeeded(task: dict[str, Any]) -> bool:
+    return task.get("enabled") is True and task.get("state") in SUCCESSFUL_TASK_STATES
+
+
 class TrueNASProtectionEvidenceProvider:
     """Observe backup tasks and admit only separately verified restores."""
 
@@ -176,9 +181,7 @@ class TrueNASProtectionEvidenceProvider:
             "read_only": True,
             "control_authority": False,
             "tasks": tasks,
-            "successful_tasks": sum(
-                1 for item in tasks if item["enabled"] and item["state"] == "SUCCESS"
-            ),
+            "successful_tasks": sum(1 for item in tasks if _task_succeeded(item)),
             "restore_verified": False,
             "hold_reason": "backup task success is not a tested restore",
         }
@@ -195,8 +198,7 @@ class TrueNASProtectionEvidenceProvider:
             for item in tasks
             if item["method"] == method
             and item["task_id"] == task_id
-            and item["enabled"]
-            and item["state"] == "SUCCESS"
+            and _task_succeeded(item)
         ]
         valid = bool(
             receipt.get("schema") == RESTORE_RECEIPT_SCHEMA
