@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import stat
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -12,6 +12,8 @@ from urllib.parse import urlsplit
 from .passive_providers import PASSIVE_METHODS
 
 MAX_API_KEY_BYTES = 4096
+MAX_TLS_CA_BYTES = 64 * 1024
+TRANSPORT_BOOTSTRAP_METHODS = ("core.set_options", "auth.login_ex")
 
 
 def _text(value: Any) -> str:
@@ -91,6 +93,93 @@ class GovernedAPIKeyFile:
         return key
 
 
+class GovernedTLSCAFile:
+    """Admit one local PEM trust file without changing the system trust store."""
+
+    def __init__(
+        self,
+        path: Path | str,
+        *,
+        expected_uid: int | None = None,
+        max_bytes: int = MAX_TLS_CA_BYTES,
+    ) -> None:
+        self.path = Path(path)
+        self.expected_uid = os.geteuid() if expected_uid is None else expected_uid
+        self.max_bytes = max_bytes
+
+    def _governance(self) -> tuple[bool, str]:
+        try:
+            metadata = self.path.lstat()
+        except OSError:
+            return False, "TLS CA file is unavailable"
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+            return False, "TLS CA source must be a real regular file"
+        if metadata.st_uid != self.expected_uid:
+            return False, "TLS CA file owner does not match the runtime"
+        if metadata.st_mode & 0o022:
+            return False, "TLS CA file must not be group- or world-writable"
+        if metadata.st_size <= 0 or metadata.st_size > self.max_bytes:
+            return False, "TLS CA file size is outside the governed bound"
+
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            descriptor = os.open(self.path, flags)
+            with os.fdopen(descriptor, "rb") as handle:
+                confirmed = os.fstat(handle.fileno())
+                if (
+                    not stat.S_ISREG(confirmed.st_mode)
+                    or confirmed.st_uid != self.expected_uid
+                    or confirmed.st_mode & 0o022
+                    or confirmed.st_size != metadata.st_size
+                ):
+                    return False, "TLS CA file changed during validation"
+                raw = handle.read(self.max_bytes + 1)
+        except OSError:
+            return False, "TLS CA file could not be read safely"
+
+        if len(raw) > self.max_bytes:
+            return False, "TLS CA file size is outside the governed bound"
+        if b"PRIVATE KEY" in raw:
+            return False, "TLS CA file must not contain private key material"
+        if b"-----BEGIN CERTIFICATE-----" not in raw or b"-----END CERTIFICATE-----" not in raw:
+            return False, "TLS CA file does not contain a PEM certificate"
+        return True, "TLS CA ownership, mode, size, and PEM content are governed"
+
+    def trust_path(self) -> Path | None:
+        governed, _reason = self._governance()
+        return self.path if governed else None
+
+    def status(self) -> dict[str, Any]:
+        governed, reason = self._governance()
+        return {
+            "governed": governed,
+            "reason": reason,
+            "source": "process_local_ca_file",
+            "max_bytes": self.max_bytes,
+            "symlinks_allowed": False,
+            "group_world_write_allowed": False,
+            "private_material_allowed": False,
+            "system_trust_store_changed": False,
+            "path_published": False,
+        }
+
+
+@contextmanager
+def _process_local_tls_ca(path: Path | None):
+    if path is None:
+        yield
+        return
+    previous = os.environ.get("SSL_CERT_FILE")
+    os.environ["SSL_CERT_FILE"] = str(path)
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("SSL_CERT_FILE", None)
+        else:
+            os.environ["SSL_CERT_FILE"] = previous
+
+
 def _validate_uri(uri: str) -> str:
     normalized = _text(uri)
     parsed = urlsplit(normalized)
@@ -116,6 +205,7 @@ class TrueNASWebSocketReadOnlyClient:
         uri: str,
         username: str,
         api_key_file: Path | str,
+        tls_ca_file: Path | str | None = None,
         client_factory: Any | None = None,
         expected_uid: int | None = None,
         call_timeout: float = 10.0,
@@ -130,6 +220,11 @@ class TrueNASWebSocketReadOnlyClient:
         self.api_key_file = GovernedAPIKeyFile(
             api_key_file,
             expected_uid=expected_uid,
+        )
+        self.tls_ca_file = (
+            GovernedTLSCAFile(tls_ca_file, expected_uid=expected_uid)
+            if tls_ca_file is not None
+            else None
         )
         self._client_factory = client_factory
         self._client: Any | None = None
@@ -151,14 +246,21 @@ class TrueNASWebSocketReadOnlyClient:
         api_key = self.api_key_file.load()
         if api_key is None:
             return None
+        ca_path = None
+        if self.tls_ca_file is not None:
+            ca_path = self.tls_ca_file.trust_path()
+            if ca_path is None:
+                api_key = ""
+                return None
         factory = self._client_factory or self._default_client_factory
         client: Any | None = None
         try:
-            client = factory(
-                uri=self.uri,
-                verify_ssl=True,
-                call_timeout=self.call_timeout,
-            )
+            with _process_local_tls_ca(ca_path):
+                client = factory(
+                    uri=self.uri,
+                    verify_ssl=True,
+                    call_timeout=self.call_timeout,
+                )
             response = client.call(
                 "auth.login_ex",
                 {
@@ -198,14 +300,31 @@ class TrueNASWebSocketReadOnlyClient:
             return None
 
     def status(self) -> dict[str, Any]:
+        tls_trust = (
+            self.tls_ca_file.status()
+            if self.tls_ca_file is not None
+            else {
+                "governed": True,
+                "source": "system_default",
+                "system_trust_store_changed": False,
+                "path_published": False,
+            }
+        )
         return {
             "transport": "truenas_jsonrpc_websocket",
             "endpoint": "/api/current",
             "tls_required": True,
             "tls_verification": True,
+            "tls_trust": tls_trust,
             "persistent_session": True,
             "authenticated": self._authenticated,
             "credential": self.api_key_file.status(),
+            "transport_bootstrap": {
+                "methods": list(TRANSPORT_BOOTSTRAP_METHODS),
+                "core_set_options_scope": "connection_only",
+                "persistent_configuration_changed": False,
+            },
+            "governed_evidence_methods": sorted(PASSIVE_METHODS),
             "username_published": False,
             "uri_published": False,
             "control_authority": False,
@@ -226,6 +345,9 @@ class TrueNASWebSocketReadOnlyClient:
 
 __all__ = [
     "GovernedAPIKeyFile",
+    "GovernedTLSCAFile",
     "MAX_API_KEY_BYTES",
+    "MAX_TLS_CA_BYTES",
+    "TRANSPORT_BOOTSTRAP_METHODS",
     "TrueNASWebSocketReadOnlyClient",
 ]
