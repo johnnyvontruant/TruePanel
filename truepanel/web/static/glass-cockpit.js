@@ -194,3 +194,89 @@ window.TruePanelMissionMode={
     setMode:mode=>applyMode(mode),
 };
 })();
+
+(()=>{
+"use strict";
+
+const SUMMARY_ID="pilotPreflightSummary";
+const PREFLIGHT_STYLE_ID="pilotPreflightStyles";
+
+function installPreflightStyle(){
+    if(document.getElementById(PREFLIGHT_STYLE_ID)) return;
+    const style=document.createElement("style");
+    style.id=PREFLIGHT_STYLE_ID;
+    style.textContent=`
+body[data-mission-mode="pilot"] #preflightPanel{display:none!important}
+body[data-mission-mode="engineer"] #${SUMMARY_ID}{display:none!important}
+#${SUMMARY_ID}{cursor:pointer}
+`;
+    document.head.appendChild(style);
+}
+
+function compactPreflightState(raw){
+    const normalized=String(raw||"UNKNOWN").trim().toUpperCase();
+    if(["READY","PASS"].includes(normalized)) return {label:"PASS",tone:"nominal"};
+    if(["HOLD","FAIL"].includes(normalized)) return {label:"HOLD",tone:"critical"};
+    if(normalized==="REVIEW") return {label:"REVIEW",tone:"attention"};
+    if(normalized==="UNAVAILABLE") return {label:"UNAVAILABLE",tone:"critical"};
+    if(normalized==="CHECKING") return {label:"CHECK",tone:"attention"};
+    return {label:normalized||"UNKNOWN",tone:""};
+}
+
+function installPilotPreflightSummary(){
+    installPreflightStyle();
+    if(document.getElementById(SUMMARY_ID)) return;
+
+    const nativeStatus=document.getElementById("preflightFlightStatus");
+    const annunciators=document.getElementById("gcHealthAnnunciators");
+    if(!nativeStatus||!annunciators){
+        window.setTimeout(installPilotPreflightSummary,50);
+        return;
+    }
+
+    const button=document.createElement("button");
+    button.id=SUMMARY_ID;
+    button.type="button";
+    button.className="gc-annunciator attention";
+    button.innerHTML='<span class="gc-annunciator-dot"></span><span class="gc-annunciator-label">Preflight</span><span class="gc-annunciator-state">CHECK</span>';
+    annunciators.appendChild(button);
+
+    const refresh=()=>{
+        const state=compactPreflightState(nativeStatus.textContent);
+        const desiredClass=`gc-annunciator ${state.tone}`.trim();
+        if(button.className!==desiredClass) button.className=desiredClass;
+        const stateNode=button.querySelector(".gc-annunciator-state");
+        if(stateNode&&stateNode.textContent!==state.label) stateNode.textContent=state.label;
+        button.setAttribute("aria-label",`Preflight: ${state.label.toLowerCase()}. Open Flight Engineer details.`);
+        button.title=`Preflight ${state.label} · Open Flight Engineer details`;
+    };
+
+    button.addEventListener("click",()=>{
+        window.TruePanelMissionMode?.setMode("engineer");
+        window.requestAnimationFrame(()=>{
+            const panel=document.getElementById("preflightPanel");
+            if(!panel) return;
+            panel.classList.add("gc-jump-focus");
+            const behavior=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth";
+            panel.scrollIntoView({behavior,block:"start"});
+            window.setTimeout(()=>panel.classList.remove("gc-jump-focus"),1300);
+        });
+    });
+
+    new MutationObserver(refresh).observe(nativeStatus,{
+        childList:true,
+        subtree:true,
+        characterData:true,
+        attributes:true,
+        attributeFilter:["class"],
+    });
+    refresh();
+}
+
+installPreflightStyle();
+if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",installPilotPreflightSummary,{once:true});
+}else{
+    installPilotPreflightSummary();
+}
+})();
