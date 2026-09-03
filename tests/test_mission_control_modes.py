@@ -40,6 +40,7 @@ def test_pilot_mode_keeps_deep_diagnostics_out_of_the_day_to_day_view():
         '#flightManualPanel',
         '.cockpit-layout-switcher',
         '#glassCockpitSituation>details',
+        '#preflightPanel',
     )
     for selector in hidden_in_pilot:
         assert f'body[data-mission-mode="pilot"] {selector}' in source
@@ -47,6 +48,22 @@ def test_pilot_mode_keeps_deep_diagnostics_out_of_the_day_to_day_view():
     assert 'modeButton(PILOT,"Pilot"' in source
     assert 'modeButton(ENGINEER,"Engineer"' in source
     assert "Flight Engineer Mode" in source
+
+
+def test_pilot_preflight_is_a_compact_mirror_of_existing_status():
+    source = _source()
+
+    assert 'const SUMMARY_ID="pilotPreflightSummary";' in source
+    assert 'getElementById("preflightFlightStatus")' in source
+    assert 'getElementById("gcHealthAnnunciators")' in source
+    assert 'return {label:"PASS",tone:"nominal"}' in source
+    assert 'return {label:"REVIEW",tone:"attention"}' in source
+    assert 'return {label:"HOLD",tone:"critical"}' in source
+    assert 'new MutationObserver(refresh).observe(nativeStatus' in source
+    assert 'window.TruePanelMissionMode?.setMode("engineer")' in source
+    assert 'getElementById("preflightPanel")' in source
+    assert 'Open Flight Engineer details' in source
+    assert 'body[data-mission-mode="engineer"] #${SUMMARY_ID}' in source
 
 
 def test_mission_mode_switch_is_presentation_only():
