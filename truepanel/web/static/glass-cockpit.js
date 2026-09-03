@@ -65,3 +65,218 @@ function install(){
 }
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",install,{once:true}); else install();
 })();
+
+(()=>{
+"use strict";
+
+const MISSION_MODE_KEY="truepanel.mission.mode.v1";
+const PILOT="pilot";
+const ENGINEER="engineer";
+const STYLE_ID="missionModeStyles";
+const SWITCH_ID="missionModeSwitch";
+
+function normalizeMode(value){
+    return value===ENGINEER?ENGINEER:PILOT;
+}
+
+function storedMode(){
+    try{
+        return normalizeMode(window.localStorage.getItem(MISSION_MODE_KEY));
+    }catch(_error){
+        return PILOT;
+    }
+}
+
+function saveMode(mode){
+    try{
+        window.localStorage.setItem(MISSION_MODE_KEY,mode);
+    }catch(_error){
+        // Storage is a convenience only. Mission Control remains usable without it.
+    }
+}
+
+function installModeStyle(){
+    if(document.getElementById(STYLE_ID)) return;
+    const style=document.createElement("style");
+    style.id=STYLE_ID;
+    style.textContent=`
+.mission-mode-switch{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--edge);border-radius:9px;background:color-mix(in srgb,var(--panel-solid) 66%,transparent)}
+.mission-mode-switch button{min-height:36px;padding:.42rem .62rem;border:0;border-radius:7px;background:transparent;color:var(--muted);font-size:.68rem;font-weight:850;letter-spacing:.04em;white-space:nowrap}
+.mission-mode-switch button:hover{border:0;background:color-mix(in srgb,var(--accent) 9%,transparent);color:var(--text)}
+.mission-mode-switch button[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 22%,var(--panel-solid));color:var(--text);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
+body[data-mission-mode="pilot"] .temps-card,
+body[data-mission-mode="pilot"] .fans-card,
+body[data-mission-mode="pilot"] .events-card,
+body[data-mission-mode="pilot"] #aegisReliabilityView,
+body[data-mission-mode="pilot"] #cockpitMaintenance,
+body[data-mission-mode="pilot"] #openFlightManual,
+body[data-mission-mode="pilot"] #flightManualPanel,
+body[data-mission-mode="pilot"] .cockpit-layout-switcher,
+body[data-mission-mode="pilot"] #glassCockpitSituation>details{display:none!important}
+@media(max-width:640px){.mission-mode-switch{order:-1}.mission-mode-switch button{min-height:40px;padding:.48rem .56rem;font-size:.64rem}}
+`;
+    document.head.appendChild(style);
+}
+
+function syncButtons(mode){
+    document.querySelectorAll(`#${SWITCH_ID} button[data-mission-mode]`).forEach(button=>{
+        const active=button.dataset.missionMode===mode;
+        button.setAttribute("aria-pressed",active?"true":"false");
+        button.classList.toggle("active",active);
+    });
+}
+
+function applyMode(value,{persist=true,announce=true}={}){
+    const mode=normalizeMode(value);
+    if(document.body) document.body.dataset.missionMode=mode;
+    if(persist) saveMode(mode);
+    syncButtons(mode);
+
+    if(mode===PILOT){
+        document.getElementById("flightManualPanel")?.classList.remove("show");
+    }
+
+    if(announce){
+        document.dispatchEvent(new CustomEvent("truepanel:mission-mode",{detail:{mode}}));
+    }
+    return mode;
+}
+
+function modeButton(mode,label,title){
+    const button=document.createElement("button");
+    button.type="button";
+    button.dataset.missionMode=mode;
+    button.textContent=label;
+    button.title=title;
+    button.setAttribute("aria-label",title);
+    button.setAttribute("aria-pressed","false");
+    button.addEventListener("click",()=>applyMode(mode));
+    return button;
+}
+
+function installModeSwitch(){
+    if(document.getElementById(SWITCH_ID)) return;
+    const actions=document.querySelector(".actions");
+    if(!actions) return;
+
+    const group=document.createElement("div");
+    group.id=SWITCH_ID;
+    group.className="mission-mode-switch";
+    group.setAttribute("role","group");
+    group.setAttribute("aria-label","Mission Control operating mode");
+    group.append(
+        modeButton(PILOT,"Pilot","Pilot Mode · day-to-day system health and action items"),
+        modeButton(ENGINEER,"Engineer","Flight Engineer Mode · troubleshooting, diagnostics, controls, and Flight Manual")
+    );
+
+    const manual=document.getElementById("openFlightManual");
+    if(manual) actions.insertBefore(group,manual);
+    else actions.prepend(group);
+}
+
+function installMissionModes(){
+    installModeStyle();
+    installModeSwitch();
+    applyMode(storedMode(),{persist:false,announce:false});
+}
+
+installModeStyle();
+if(document.body) document.body.dataset.missionMode=storedMode();
+
+if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",installMissionModes,{once:true});
+}else{
+    installMissionModes();
+}
+
+window.TruePanelMissionMode={
+    getMode:()=>normalizeMode(document.body?.dataset.missionMode||storedMode()),
+    setMode:mode=>applyMode(mode),
+};
+})();
+
+(()=>{
+"use strict";
+
+const SUMMARY_ID="pilotPreflightSummary";
+const PREFLIGHT_STYLE_ID="pilotPreflightStyles";
+
+function installPreflightStyle(){
+    if(document.getElementById(PREFLIGHT_STYLE_ID)) return;
+    const style=document.createElement("style");
+    style.id=PREFLIGHT_STYLE_ID;
+    style.textContent=`
+body[data-mission-mode="pilot"] #preflightPanel{display:none!important}
+body[data-mission-mode="engineer"] #${SUMMARY_ID}{display:none!important}
+#${SUMMARY_ID}{cursor:pointer}
+`;
+    document.head.appendChild(style);
+}
+
+function compactPreflightState(raw){
+    const normalized=String(raw||"UNKNOWN").trim().toUpperCase();
+    if(["READY","PASS"].includes(normalized)) return {label:"PASS",tone:"nominal"};
+    if(["HOLD","FAIL"].includes(normalized)) return {label:"HOLD",tone:"critical"};
+    if(normalized==="REVIEW") return {label:"REVIEW",tone:"attention"};
+    if(normalized==="UNAVAILABLE") return {label:"UNAVAILABLE",tone:"critical"};
+    if(normalized==="CHECKING") return {label:"CHECK",tone:"attention"};
+    return {label:normalized||"UNKNOWN",tone:""};
+}
+
+function installPilotPreflightSummary(){
+    installPreflightStyle();
+    if(document.getElementById(SUMMARY_ID)) return;
+
+    const nativeStatus=document.getElementById("preflightFlightStatus");
+    const annunciators=document.getElementById("gcHealthAnnunciators");
+    if(!nativeStatus||!annunciators){
+        window.setTimeout(installPilotPreflightSummary,50);
+        return;
+    }
+
+    const button=document.createElement("button");
+    button.id=SUMMARY_ID;
+    button.type="button";
+    button.className="gc-annunciator attention";
+    button.innerHTML='<span class="gc-annunciator-dot"></span><span class="gc-annunciator-label">Preflight</span><span class="gc-annunciator-state">CHECK</span>';
+    annunciators.appendChild(button);
+
+    const refresh=()=>{
+        const state=compactPreflightState(nativeStatus.textContent);
+        const desiredClass=`gc-annunciator ${state.tone}`.trim();
+        if(button.className!==desiredClass) button.className=desiredClass;
+        const stateNode=button.querySelector(".gc-annunciator-state");
+        if(stateNode&&stateNode.textContent!==state.label) stateNode.textContent=state.label;
+        button.setAttribute("aria-label",`Preflight: ${state.label.toLowerCase()}. Open Flight Engineer details.`);
+        button.title=`Preflight ${state.label} · Open Flight Engineer details`;
+    };
+
+    button.addEventListener("click",()=>{
+        window.TruePanelMissionMode?.setMode("engineer");
+        window.requestAnimationFrame(()=>{
+            const panel=document.getElementById("preflightPanel");
+            if(!panel) return;
+            panel.classList.add("gc-jump-focus");
+            const behavior=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth";
+            panel.scrollIntoView({behavior,block:"start"});
+            window.setTimeout(()=>panel.classList.remove("gc-jump-focus"),1300);
+        });
+    });
+
+    new MutationObserver(refresh).observe(nativeStatus,{
+        childList:true,
+        subtree:true,
+        characterData:true,
+        attributes:true,
+        attributeFilter:["class"],
+    });
+    refresh();
+}
+
+installPreflightStyle();
+if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",installPilotPreflightSummary,{once:true});
+}else{
+    installPilotPreflightSummary();
+}
+})();
