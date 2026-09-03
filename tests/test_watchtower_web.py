@@ -46,7 +46,7 @@ def test_watchtower_hold_guidance_covers_governed_failure_classes():
     source = (STATIC / "watchtower.js").read_text()
 
     expected = (
-        "auth.me",
+        "auth\\.me",
         "write-capable",
         "missing required read-only roles",
         "receipt directory is unavailable",
