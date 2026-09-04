@@ -616,6 +616,10 @@ class SnapshotService:
                 state.get("machine")
                 or platform.machine()
             ),
+            # Accepted AEGIS evidence is release-scoped.  Only forward an
+            # explicit collector fact; never infer a TrueNAS release from the
+            # Linux kernel string.
+            "truenas_version": state.get("truenas_version"),
             "cpu_percent": _safe_number(
                 state.get(
                     "cpu_percent"
