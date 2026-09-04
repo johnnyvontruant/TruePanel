@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "project": "WATCHTOWER",
+  "evidence_class": "deterministic_ui_scenario_contract",
+  "production_mutation": false,
+  "control_authority": false,
+  "scenarios": [
+    {"id":"ready","expected":"READY","facts":["least_privilege","successful_task","governed_receipt","restore_verified","fresh_evidence","zero_control_authority"]},
+    {"id":"missing_receipt","expected":"HOLD","reason":"backup task success is not a tested restore"},
+    {"id":"stale_evidence","expected":"HOLD","reason":"stale cached evidence is display-only and cannot clear recovery"},
+    {"id":"failed_replication","expected":"HOLD","reason":"no successful protection task is visible"},
+    {"id":"excessive_privileges","expected":"HOLD","reason":"session includes write-capable or unrestricted roles"},
+    {"id":"malformed_truenas_response","expected":"HOLD","reason":"fresh evidence unavailable"},
+    {"id":"api_connectivity_lost","expected":"HOLD","reason":"auth.me was unavailable"},
+    {"id":"corrupt_receipt","expected":"HOLD","reason":"restore verification receipt is invalid"},
+    {"id":"recovery_to_ready","expected":"READY","transition":"fresh live evidence plus matching governed restore receipt"}
+  ],
+  "confidence_decision": {
+    "recommendation": "ABANDON numeric recovery confidence",
+    "replacement": "show six independently verifiable gates and READY/HOLD",
+    "reason": "Safety gates are conjunctive. A five-of-six score must not imply that an unverified restore is 83 percent safe."
+  }
+}
