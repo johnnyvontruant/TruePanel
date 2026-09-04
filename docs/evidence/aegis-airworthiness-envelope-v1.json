@@ -1,0 +1,23 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "ba29efc3da386c6ad0af77fd2eb3d446434e10940c07e07ba1e4517b1755d34d",
+  "evidence_subjects_checked_by_ci": 3,
+  "experiment_id": "TP-EXP-0020",
+  "hardware_isolated": true,
+  "production_mutation": false,
+  "scenario": "aegis-airworthiness-envelope-v1",
+  "scenarios": [
+    {"control_authority": false, "production_mutation": false, "reason": "InsideValidatedEnvelope", "scenario": "accepted-envelope", "status": "CURRENT"},
+    {"control_authority": false, "production_mutation": false, "reason": "PlatformVersionUnobserved", "scenario": "platform-unobserved", "status": "REVIEW"},
+    {"control_authority": false, "production_mutation": false, "reason": "PlatformDrift", "scenario": "platform-drift", "status": "HOLD"},
+    {"control_authority": false, "production_mutation": false, "reason": "PolicyDrift", "scenario": "policy-drift", "status": "HOLD"},
+    {"control_authority": false, "production_mutation": false, "reason": "CoverageDrift", "scenario": "coverage-drift", "status": "HOLD"},
+    {"control_authority": false, "production_mutation": false, "reason": "DigestDrift", "scenario": "subject-digest-drift", "status": "HOLD"},
+    {"control_authority": false, "production_mutation": false, "reason": "EnvelopeExpired", "scenario": "expired-envelope", "status": "HOLD"},
+    {"control_authority": false, "production_mutation": false, "reason": "ClockPredatesEnvelope", "scenario": "clock-rollback", "status": "HOLD"}
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "status_counts": {"CURRENT": 1, "HOLD": 6, "REVIEW": 1},
+  "subjects_checked": 5
+}
