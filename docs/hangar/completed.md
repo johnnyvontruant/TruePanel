@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.5 · refreshed 2026-09-02 · 14 experiment(s)
+Registry version 2026.09.02.5 · refreshed 2026-09-02 · 15 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -115,3 +115,11 @@ The governed runtime first failed closed on missing restore proof, then a contro
 - Safety: `READ_ONLY_EVIDENCE`
 - Strongest follow-up: Review the field-validated passive runtime for deployment without expanding AEGIS control authority, and formalize the controlled restore-test procedure as a supported TrueNAS API/CLI runbook before broader use.
 - Revisit when: TrueNAS API, RBAC, transport, or replication-task state semantics change; production deployment is proposed; receipt issuance or restore-test trust policy changes
+
+## TP-EXP-0020 · AEGIS airworthiness and trust-decay envelope
+
+The accepted contract produces CURRENT only with an explicit matching TrueNAS version; an unobserved version produces REVIEW, while platform, policy, coverage, subject-digest, expiry, and clock drift produce 6/6 HOLD decisions with zero control authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Expose an explicit TrueNAS release fact through the passive collector boundary and rehearse a platform upgrade that remains HOLD until a new reviewed envelope is issued.
+- Revisit when: TrueNAS or TruePanel release changes; correlation policy or recovery coverage changes; the acceptance envelope reaches its review deadline; a governed signing-key lifecycle is introduced

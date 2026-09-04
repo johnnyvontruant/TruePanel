@@ -222,3 +222,24 @@ and automatic privilege provisioning were rejected because they would create
 credential-exposure or configuration risks. No external code or dependency was
 incorporated. See
 [`AEGIS_GOVERNED_PASSIVE_RUNTIME.md`](AEGIS_GOVERNED_PASSIVE_RUNTIME.md).
+
+## Airworthiness and trust-decay follow-up
+
+The 2026-09-03 study inspected Kubernetes condition fields and their actual
+`apimachinery` representation, The Update Framework's version/hash/expiry
+checks and current Python-TUF release notes, in-toto Statement and test-result
+subjects, and SLSA provenance. The common transferable idea is that a success
+is meaningful only when its subject, observation generation, and validity
+window remain identifiable.
+
+TruePanel adopted those semantics in an original, dependency-free acceptance
+envelope. Five installed runtime subjects and three canonical evidence
+artifacts are SHA-256 bound; policy and recovery coverage are checked
+separately; missing platform evidence is REVIEW; known drift, expiry, or clock
+rollback is HOLD. Raw alerts and recovery guidance remain visible.
+
+Full TUF metadata, in-toto signing, and hosted verification were deferred.
+They solve stronger distribution and authentication problems but would require
+a governed signing-key lifecycle that TruePanel does not yet have. Treating a
+plain digest as a signature was explicitly rejected. See
+[`AEGIS_AIRWORTHINESS_ENVELOPE.md`](AEGIS_AIRWORTHINESS_ENVELOPE.md).

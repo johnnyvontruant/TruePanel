@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "envelope_id": "aegis-airworthiness-battlestation-v1",
+  "issued_at": "2026-09-02T22:06:47Z",
+  "expires_at": "2026-12-01T22:06:47Z",
+  "platform_product": "TrueNAS SCALE",
+  "platform_version": "25.10.5",
+  "truepanel_version": "1.3.0",
+  "correlation_policy_id": "aegis-declarative-correlation-v1",
+  "coverage_sha256": "8b206f8bfa897eb454f53506301d50384db64ac8d1d2515eb02817f931d2ca98",
+  "subjects": [
+    {
+      "name": "aegis/policy.py",
+      "sha256": "612942a484f72062783614a4e0e62231e41fc701e6991f62869e29d76f87aeff"
+    },
+    {
+      "name": "aegis/coverage.py",
+      "sha256": "1f11db2c81c747d108c318c3612fee478dfb537e9bb36e5ff8befd885511930d"
+    },
+    {
+      "name": "aegis/passive_runtime.py",
+      "sha256": "7730ecbe3867837f3ead2a9ec506b4c211c725aecf4e2d3fb8b404b1ffae8698"
+    },
+    {
+      "name": "aegis/passive_websocket.py",
+      "sha256": "9e41ce37e80bd5132f461122ecb7d0c58bae38f5f1accb0672df85f0240f01eb"
+    },
+    {
+      "name": "guidance/recovery.py",
+      "sha256": "de0f3703414778274801c7353c721249202cbdbe6b2b66f28ba01f972d93d775"
+    }
+  ],
+  "evidence_subjects": [
+    {
+      "name": "docs/evidence/aegis-production-acceptance-battlestation-v1.json",
+      "sha256": "08493f2ca64d79cbb0b93166c387d9f22283983c5d3d76e9dd0acb900ca41b2a"
+    },
+    {
+      "name": "docs/evidence/aegis-ready-battlestation-restore-v1.json",
+      "sha256": "85b880cf998c23082f0fc67996c056cca658ed3f27e3664a7bb7da82fdae39e2"
+    },
+    {
+      "name": "docs/evidence/aegis-black-box-corpus-v1.json",
+      "sha256": "a63c331d4c84bd05f4986adeac510a8a7e78e641c5bd622b484fec485638a84f"
+    }
+  ]
+}
