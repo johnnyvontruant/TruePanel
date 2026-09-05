@@ -18,6 +18,8 @@ from typing import Any
 
 from truepanel import __version__
 
+from .platform_witness import validate_platform_witness
+
 ASSURANCE_SCHEMA_VERSION = 1
 DEFAULT_ENVELOPE_PATH = Path(__file__).with_name("assurance_envelope.json")
 
@@ -279,15 +281,50 @@ def evaluate_airworthiness(
     platform = platform if isinstance(platform, Mapping) else {}
     observed_platform = str(platform.get("truenas_version") or "").strip()
     expected_platform = str(accepted.get("platform_version") or "").strip()
-    if not observed_platform:
+    witness = platform.get("platform_witness")
+    witness_errors = validate_platform_witness(witness)
+    witness_required = accepted.get("platform_witness_required") is True
+    if witness is None and not witness_required:
+        if not observed_platform:
+            platform_status = "Unknown"
+            platform_reason = "PlatformVersionUnobserved"
+            platform_message = (
+                f"Accepted platform is TrueNAS SCALE {expected_platform}; "
+                "this snapshot does not expose a version fact."
+            )
+        else:
+            matches = observed_platform == expected_platform
+            platform_status = "True" if matches else "False"
+            platform_reason = "PlatformMatched" if matches else "PlatformDrift"
+            platform_message = (
+                f"Observed TrueNAS {observed_platform}; accepted {expected_platform}."
+            )
+    elif witness is not None and witness_errors:
+        platform_status = "False"
+        platform_reason = "PlatformWitnessInvalid"
+        platform_message = "The platform observation failed integrity validation."
+    elif isinstance(witness, Mapping) and witness.get("status") == "HOLD":
+        platform_status = "False"
+        platform_reason = str(witness.get("reason") or "PlatformWitnessHold")
+        platform_message = "The platform witness rejected the observed release."
+    elif isinstance(witness, Mapping) and witness.get("status") != "VERIFIED":
         platform_status = "Unknown"
-        platform_reason = "PlatformVersionUnobserved"
+        platform_reason = str(witness.get("reason") or "PlatformWitnessUnavailable")
+        platform_message = "The platform observation is unavailable or stale."
+    elif witness is None:
+        platform_status = "Unknown"
+        platform_reason = "PlatformWitnessUnbound"
         platform_message = (
             f"Accepted platform is TrueNAS SCALE {expected_platform}; "
-            "this snapshot does not expose a version fact."
+            "this snapshot has no governed platform witness."
         )
     else:
-        matches = observed_platform == expected_platform
+        witnessed_platform = str(witness.get("truenas_version") or "")
+        matches = (
+            bool(observed_platform)
+            and witnessed_platform == observed_platform
+            and observed_platform == expected_platform
+        )
         platform_status = "True" if matches else "False"
         platform_reason = "PlatformMatched" if matches else "PlatformDrift"
         platform_message = (
@@ -321,6 +358,16 @@ def evaluate_airworthiness(
         reason = "InsideValidatedEnvelope"
         message = "Observed contracts match the current acceptance envelope."
 
+    witness_summary = {}
+    if isinstance(witness, Mapping):
+        witness_summary = {
+            "status": witness.get("status"),
+            "reason": witness.get("reason"),
+            "source": witness.get("source"),
+            "age_seconds": witness.get("age_seconds"),
+            "evidence_sha256": witness.get("evidence_sha256"),
+        }
+
     return {
         "schema_version": ASSURANCE_SCHEMA_VERSION,
         "envelope_id": accepted.get("envelope_id"),
@@ -333,6 +380,7 @@ def evaluate_airworthiness(
         .isoformat()
         .replace("+00:00", "Z"),
         "platform_scope": f"TrueNAS SCALE {expected_platform}",
+        "platform_witness": witness_summary,
         "conditions": conditions,
         "subjects": subjects,
         "evidence_subjects": list(accepted.get("evidence_subjects", [])),

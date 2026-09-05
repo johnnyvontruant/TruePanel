@@ -12,16 +12,37 @@ from truepanel.aegis.assurance import (
     validate_repository_evidence,
 )
 from truepanel.aegis.coverage import coverage_matrix
+from truepanel.aegis.passive_runtime import BoundedTrueNASQueryCache
+from truepanel.aegis.platform_witness import (
+    bind_platform_witness,
+    issue_platform_witness,
+)
 from truepanel.aegis.policy import DEFAULT_CORRELATION_POLICY
 from truepanel.aegis.rehearsal import rehearse_recovery_paths
 from truepanel.holodeck.aegis_assurance import run_airworthiness_rehearsal
 
-NOW = datetime(2026, 9, 3, 12, 0, tzinfo=UTC).timestamp()
+NOW = datetime(2026, 9, 5, 12, 0, tzinfo=UTC).timestamp()
+
+
+class _VersionClient:
+    def __init__(self, value="TrueNAS-SCALE-25.10.5"):
+        self.value = value
+
+    def call(self, _method, *_arguments):
+        return self.value
+
+
+def _witnessed_payload(value="TrueNAS-SCALE-25.10.5"):
+    witness = issue_platform_witness(
+        BoundedTrueNASQueryCache(_VersionClient(value)),
+        clock=lambda: NOW,
+    )
+    return bind_platform_witness({"system": {}}, witness)
 
 
 def _evaluate(**overrides):
     arguments = {
-        "payload": {"system": {"truenas_version": "25.10.5"}},
+        "payload": _witnessed_payload(),
         "coverage_matrix": coverage_matrix(rehearse_recovery_paths()),
         "correlation_policy": DEFAULT_CORRELATION_POLICY.describe(),
         "now": NOW,
@@ -36,7 +57,7 @@ def test_accepted_contract_is_current_and_has_no_authority():
     assert result["status"] == "CURRENT"
     assert result["reason"] == "InsideValidatedEnvelope"
     assert result["platform_scope"] == "TrueNAS SCALE 25.10.5"
-    assert len(result["subjects"]) == 5
+    assert len(result["subjects"]) == 9
     assert all(item["status"] == "MATCH" for item in result["subjects"])
     assert result["raw_alerts_retained"] is True
     assert result["recovery_guidance_visible"] is True
@@ -48,7 +69,7 @@ def test_missing_platform_fact_is_review_not_false_validation():
     result = _evaluate(payload={"system": {}})
 
     assert result["status"] == "REVIEW"
-    assert result["reason"] == "PlatformVersionUnobserved"
+    assert result["reason"] == "PlatformWitnessUnbound"
     platform = next(
         item
         for item in result["conditions"]
@@ -64,7 +85,8 @@ def test_every_known_drift_class_fails_closed(tmp_path):
     assert _evaluate(coverage_matrix=incomplete)["status"] == "HOLD"
     assert _evaluate(correlation_policy={"policy_id": "changed"})["status"] == "HOLD"
     assert (
-        _evaluate(payload={"system": {"truenas_version": "26.0.0"}})["status"] == "HOLD"
+        _evaluate(payload=_witnessed_payload("TrueNAS-SCALE-26.0.0"))["status"]
+        == "HOLD"
     )
 
     package_root = tmp_path / "truepanel"

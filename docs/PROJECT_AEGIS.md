@@ -166,8 +166,14 @@ it binds the accepted policy, coverage contract, runtime subjects, evidence
 artifacts, TruePanel release, TrueNAS release scope, and review window. See
 [`AEGIS_AIRWORTHINESS_ENVELOPE.md`](AEGIS_AIRWORTHINESS_ENVELOPE.md).
 
-The strongest next step is to expose an explicit TrueNAS release fact through
-the passive collector boundary and rehearse an appliance upgrade. Any release,
-policy, coverage, or bound-subject change must remain REVIEW/HOLD until a new
-envelope is reviewed; the opt-in Black Box field-evidence campaign remains the
+Project PLATFORM WITNESS now supplies that explicit release fact through one
+privacy-minimal `system.version` observation. AIRWORTHINESS accepts only a
+fresh, normalized, digest-intact witness; stale or unavailable evidence is
+REVIEW, while malformed, tampered, or version-drifted evidence is HOLD. See
+[`AEGIS_PLATFORM_WITNESS.md`](AEGIS_PLATFORM_WITNESS.md).
+
+The strongest next step is one operator-governed passive field observation,
+followed by a deterministic appliance-upgrade rehearsal. The old envelope must
+remain HOLD after the version changes until a separately reviewed replacement
+envelope is issued; the opt-in Black Box field-evidence campaign remains the
 path for estimating real false-positive behavior.

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.02.5",
-  "updated_at": "2026-09-02",
+  "registry_version": "2026.09.05.1",
+  "updated_at": "2026-09-05",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -299,6 +299,25 @@
       "revisit_conditions": ["TrueNAS or TruePanel release changes", "correlation policy or recovery coverage changes", "the acceptance envelope reaches its review deadline", "a governed signing-key lifecycle is introduced"],
       "strongest_follow_up": "Expose an explicit TrueNAS release fact through the passive collector boundary and rehearse a platform upgrade that remains HOLD until a new reviewed envelope is issued.",
       "freshness": {"reviewed_at": "2026-09-03", "review_after": "2026-12-01"}
+    },
+    {
+      "id": "TP-EXP-0021", "title": "AEGIS passive platform witness", "state": "COMPLETED",
+      "hypothesis": "One privacy-minimal, cached, read-only TrueNAS release observation can bind AIRWORTHINESS to the running appliance while stale, malformed, missing, drifted, and tampered evidence fail closed.",
+      "value": "Closes the gap between a declared platform scope and passively observed platform evidence without collecting host identity or granting control authority.",
+      "prior_art": ["TrueNAS system.version", "IETF RATS evidence appraisal", "SLSA verification summaries", "in-toto subjects"],
+      "safety_class": "READ_ONLY_EVIDENCE",
+      "development": {"branch": "feature/aegis-platform-witness", "pr": null, "commits": []},
+      "protocol": ["allowlist only system.version", "normalize the scalar release", "bind source, age, timestamp, and SHA-256", "strip unapproved fields", "demote stale or absent evidence", "replay upgrade and tamper paths", "surface AIRWORTHINESS state without hiding alerts"],
+      "fixtures": ["aegis-platform-witness-v1", "tests/test_aegis_platform_witness.py", "truepanel/holodeck/aegis_platform_witness.py"],
+      "success_criteria": ["matching live and cached evidence is CURRENT", "stale and unavailable evidence is REVIEW", "malformed, drifted, and tampered evidence is HOLD", "one fresh call serves subsequent cache reads", "zero sensitive fields survive", "control authority remains false"],
+      "abort_criteria": ["system.info or host identifiers retained", "kernel text treated as authoritative version", "stale cache remains CURRENT", "digest presented as provider authentication", "witness mutates configuration or expands control authority"],
+      "evidence": [{"path": "docs/evidence/aegis-platform-witness-v1.json", "sha256": "bbd9ac24529da93dd4d0a9ca857bcd904bea2905703de65bafcccb8622488fad"}],
+      "outcome": {"conclusion": "Two matching live/cache paths are CURRENT, two stale/unavailable paths are REVIEW, and malformed/drifted/tampered evidence produces 3/3 HOLD decisions. The first observation makes one passive call, the cached observation adds none, and no sensitive field, runtime write, production mutation, or control authority is present."},
+      "invalidated_assumptions": ["the kernel banner is authoritative TrueNAS release evidence", "system.info is necessary to learn the release", "a valid digest may excuse unapproved fields", "cached evidence can remain authoritative without an age boundary"],
+      "reproduction": ["pytest -q tests/test_aegis_platform_witness.py tests/test_aegis_assurance.py tests/test_aegis_passive_websocket.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_platform_witness import run_platform_witness_rehearsal as run; print(run())\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["TrueNAS API release semantics change", "the appliance upgrades from 25.10.5", "platform identity stronger than release version is required", "a governed signing-key lifecycle exists"],
+      "strongest_follow_up": "Run one operator-governed passive observation, then rehearse a TrueNAS upgrade where the old envelope holds until a separately reviewed replacement envelope is issued.",
+      "freshness": {"reviewed_at": "2026-09-05", "review_after": "2026-12-04"}
     }
   ]
 }

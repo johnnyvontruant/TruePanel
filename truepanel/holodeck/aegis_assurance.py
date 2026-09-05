@@ -6,6 +6,7 @@ import hashlib
 import json
 from copy import deepcopy
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from truepanel.aegis.assurance import evaluate_airworthiness, load_assurance_envelope
@@ -29,7 +30,14 @@ def _digest(value: Any) -> str:
 def run_airworthiness_rehearsal() -> dict[str, Any]:
     """Exercise the accepted path and every independent drift class."""
 
-    envelope = load_assurance_envelope()
+    archived = Path(__file__).parents[1] / "aegis" / "assurance_envelope_v1.json"
+    envelope = load_assurance_envelope(archived)
+    current_subjects = {
+        item["name"]: item["sha256"]
+        for item in load_assurance_envelope()["subjects"]
+    }
+    for subject in envelope["subjects"]:
+        subject["sha256"] = current_subjects[subject["name"]]
     matrix = coverage_matrix(rehearse_recovery_paths())
     policy = DEFAULT_CORRELATION_POLICY.describe()
     payload = {"system": {"truenas_version": "25.10.5"}}

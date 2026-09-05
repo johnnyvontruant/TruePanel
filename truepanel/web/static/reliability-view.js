@@ -51,9 +51,11 @@ function airworthinessView(assurance){
         const state=item?.status==="True"?"PASS":(item?.status==="False"?"HOLD":"REVIEW");
         return `<article class="ag-assurance-condition ${state.toLowerCase()}"><span>${esc(state)}</span><strong>${esc(title(item?.type||"condition"))}</strong><small>${esc(item?.message||"")}</small></article>`;
     }).join("");
+    const witness=assurance.platform_witness||{};
+    const witnessAge=Number.isFinite(Number(witness.age_seconds))?`${Math.round(Number(witness.age_seconds))}s old`:"age unavailable";
     return `<section class="ag-assurance ${tone}" aria-label="AEGIS airworthiness envelope">
         <div><span class="ag-kicker">Project AIRWORTHINESS</span><strong>${esc(title(status))}</strong><p>${esc(assurance.message||"Acceptance-envelope status unavailable.")}</p></div>
-        <div class="ag-assurance-scope"><small>VALIDATED SCOPE</small><strong>${esc(assurance.platform_scope||"Unknown platform")}</strong><span>Review by ${esc(assurance.expires_at||"unknown")}</span></div>
+        <div class="ag-assurance-scope"><small>VALIDATED SCOPE</small><strong>${esc(assurance.platform_scope||"Unknown platform")}</strong><span>Witness ${esc(witness.status||"UNBOUND")} · ${esc(witness.source||"no source")} · ${esc(witnessAge)}</span><span>Review by ${esc(assurance.expires_at||"unknown")}</span></div>
         <details><summary>Validation envelope · ${esc(String(assurance.envelope_id||"").replaceAll("-"," "))}</summary><div class="ag-assurance-grid">${conditions}</div><small>Raw alerts and recovery guidance remain visible in every state. Control authority false.</small></details>
     </section>`;
 }

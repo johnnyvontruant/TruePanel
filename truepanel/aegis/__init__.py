@@ -47,6 +47,12 @@ from .passive_websocket import (
     GovernedTLSCAFile,
     TrueNASWebSocketReadOnlyClient,
 )
+from .platform_witness import (
+    bind_platform_witness,
+    issue_platform_witness,
+    normalize_truenas_version,
+    validate_platform_witness,
+)
 from .policy import (
     DEFAULT_CORRELATION_POLICY,
     CorrelationPolicy,
@@ -74,6 +80,7 @@ __all__ = [
     "TrueNASReplacementInventoryProvider",
     "TrueNASRoleVerifier",
     "TrueNASWebSocketReadOnlyClient",
+    "bind_platform_witness",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "coverage_contract_sha256",
@@ -81,7 +88,9 @@ __all__ = [
     "evaluate_pre_service_clearance",
     "issue_recovery_attestation",
     "issue_restore_verification_receipt",
+    "issue_platform_witness",
     "load_assurance_envelope",
+    "normalize_truenas_version",
     "correlate_incident",
     "coverage_matrix",
     "evaluate_evidence_gate",
@@ -94,5 +103,6 @@ __all__ = [
     "validate_field_manifest",
     "validate_recovery_attestation",
     "validate_repository_evidence",
+    "validate_platform_witness",
     "wilson_interval",
 ]
