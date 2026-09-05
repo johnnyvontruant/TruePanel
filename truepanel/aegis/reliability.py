@@ -15,6 +15,7 @@ from .checkride import compose_storage_checkride
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
 from .flight_director import run_flight_director_proof
+from .platform_witness import bind_platform_witness
 from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 from .rehearsal import rehearse_recovery_paths
 
@@ -275,9 +276,18 @@ class AegisReliabilityEngine:
                     "hold_reason": "passive evidence provider unavailable",
                 }
             backup_context = _dict(_dict(passive_evidence).get("backup_context"))
-            if backup_context:
+            platform_witness = _dict(
+                _dict(passive_evidence).get("platform_witness")
+            )
+            if backup_context or platform_witness:
                 working_payload = deepcopy(payload)
+            if backup_context:
                 working_payload["backup_context"] = backup_context
+            if platform_witness:
+                working_payload = bind_platform_witness(
+                    working_payload,
+                    platform_witness,
+                )
         active_flight_director = compose_storage_checkride(working_payload, incident)
         policy_description = self.correlation_policy.describe()
         airworthiness = evaluate_airworthiness(

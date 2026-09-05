@@ -14,6 +14,8 @@ from truepanel.aegis import (
     validate_correlation_policy,
     validate_recovery_coverage,
 )
+from truepanel.aegis.passive_runtime import BoundedTrueNASQueryCache
+from truepanel.aegis.platform_witness import issue_platform_witness
 from truepanel.guidance import guidance_for_snapshot
 from truepanel.guidance.catalog import guidance_codes
 from truepanel.guidance.recovery import recovery_contract
@@ -380,6 +382,10 @@ class _ProtectionEvidence:
 
     def observe(self, *, incident_id):
         self.incident_ids.append(incident_id)
+        class VersionClient:
+            def call(self, _method, *_arguments):
+                return "TrueNAS-SCALE-25.10.5"
+
         return {
             "read_only": True,
             "control_authority": False,
@@ -400,6 +406,10 @@ class _ProtectionEvidence:
                 "last_age_seconds": 2,
                 "ttl_seconds": 60,
             },
+            "platform_witness": issue_platform_witness(
+                BoundedTrueNASQueryCache(VersionClient()),
+                clock=lambda: 1788451200.0,
+            ),
         }
 
 
@@ -434,7 +444,7 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert reliability["project"] == "AEGIS"
         assert reliability["active_incident"]["likely_cause"] == "network.link_down"
         assert reliability["airworthiness"]["status"] == "REVIEW"
-        assert reliability["airworthiness"]["reason"] == "PlatformVersionUnobserved"
+        assert reliability["airworthiness"]["reason"] == "PlatformWitnessUnbound"
         assert reliability["airworthiness"]["control_authority"] is False
 
         status, _, dashboard = _request(server, "/")
@@ -456,6 +466,7 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "Passive TrueNAS Evidence" in source
         assert "Project AIRWORTHINESS" in source
         assert "Validation envelope" in source
+        assert "Witness ${esc(witness.status" in source
         assert "Raw alerts and recovery guidance remain visible" in source
         assert ".ag-assurance-grid" in source
         assert "Role gate:" in source
@@ -486,6 +497,7 @@ def test_reliability_exposes_passive_evidence_without_promoting_task_success():
     assert result["passive_evidence"]["restore_verified"] is False
     assert result["passive_evidence"]["role_verification"]["status"] == "VERIFIED"
     assert result["passive_evidence"]["control_authority"] is False
+    assert result["airworthiness"]["status"] == "CURRENT"
 
 
 def test_topology_reports_hottest_drive_bay_when_localized():

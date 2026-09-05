@@ -1,12 +1,10 @@
 {
   "schema_version": 1,
-  "envelope_id": "aegis-airworthiness-battlestation-v2",
-  "predecessor_envelope_sha256": "70134bb87f81f527385726c22f6999d2777b21bf3a839c93818f025b485d3841",
-  "issued_at": "2026-09-05T04:52:25Z",
-  "expires_at": "2026-12-04T04:52:25Z",
+  "envelope_id": "aegis-airworthiness-battlestation-v1",
+  "issued_at": "2026-09-02T22:06:47Z",
+  "expires_at": "2026-12-01T22:06:47Z",
   "platform_product": "TrueNAS SCALE",
   "platform_version": "25.10.5",
-  "platform_witness_required": true,
   "truepanel_version": "1.3.0",
   "correlation_policy_id": "aegis-declarative-correlation-v1",
   "coverage_sha256": "8b206f8bfa897eb454f53506301d50384db64ac8d1d2515eb02817f931d2ca98",
@@ -20,28 +18,12 @@
       "sha256": "1f11db2c81c747d108c318c3612fee478dfb537e9bb36e5ff8befd885511930d"
     },
     {
-      "name": "aegis/assurance.py",
-      "sha256": "d8dfd2dc2b58778c460785474a358651b323cf17fe0ea7b55fdebc44fd7957e4"
-    },
-    {
-      "name": "aegis/platform_witness.py",
-      "sha256": "3906627e722cf348f44198c4fdd22c50eeb7bc96f9734e7ad765a94ed6217c6b"
-    },
-    {
-      "name": "aegis/passive_providers.py",
-      "sha256": "6d7dca50053f564f16fbe56d3485c76c7af3921a987e34ffaa9e8cb35b8d1d78"
-    },
-    {
       "name": "aegis/passive_runtime.py",
-      "sha256": "f9711cdbcc6e71ef8cf19bb19077558deaf277ce5f3cb657ea485cadf023fc62"
+      "sha256": "7730ecbe3867837f3ead2a9ec506b4c211c725aecf4e2d3fb8b404b1ffae8698"
     },
     {
       "name": "aegis/passive_websocket.py",
       "sha256": "9e41ce37e80bd5132f461122ecb7d0c58bae38f5f1accb0672df85f0240f01eb"
-    },
-    {
-      "name": "aegis/_truenas_api_client_helper.py",
-      "sha256": "6ba69befea1ac10948bf07c8e2f1238c9a61f2346683072a1c3961acbca0c4af"
     },
     {
       "name": "guidance/recovery.py",
@@ -60,10 +42,7 @@
     {
       "name": "docs/evidence/aegis-black-box-corpus-v1.json",
       "sha256": "a63c331d4c84bd05f4986adeac510a8a7e78e641c5bd622b484fec485638a84f"
-    },
-    {
-      "name": "docs/evidence/aegis-airworthiness-envelope-v1.json",
-      "sha256": "836a95b01b9f67a11b8ae4a5200bad24bf7544630f7046c66d061b9baf8b7472"
     }
   ]
 }
+

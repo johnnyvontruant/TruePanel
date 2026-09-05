@@ -18,7 +18,7 @@ from typing import Any
 READ_ONLY_METHODS = frozenset(
     {"disk.query", "replication.query", "cloud_backup.query"}
 )
-PASSIVE_METHODS = READ_ONLY_METHODS | {"auth.me"}
+PASSIVE_METHODS = READ_ONLY_METHODS | {"auth.me", "system.version"}
 RESTORE_RECEIPT_SCHEMA = "truepanel.restore-verification/v1"
 SUCCESSFUL_TASK_STATES = frozenset({"SUCCESS", "FINISHED"})
 
