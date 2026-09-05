@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.5 · refreshed 2026-09-02 · 15 experiment(s)
+Registry version 2026.09.05.1 · refreshed 2026-09-05 · 16 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -123,3 +123,11 @@ The accepted contract produces CURRENT only with an explicit matching TrueNAS ve
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Expose an explicit TrueNAS release fact through the passive collector boundary and rehearse a platform upgrade that remains HOLD until a new reviewed envelope is issued.
 - Revisit when: TrueNAS or TruePanel release changes; correlation policy or recovery coverage changes; the acceptance envelope reaches its review deadline; a governed signing-key lifecycle is introduced
+
+## TP-EXP-0021 · AEGIS passive platform witness
+
+Two matching live/cache paths are CURRENT, two stale/unavailable paths are REVIEW, and malformed/drifted/tampered evidence produces 3/3 HOLD decisions. The first observation makes one passive call, the cached observation adds none, and no sensitive field, runtime write, production mutation, or control authority is present.
+
+- Safety: `READ_ONLY_EVIDENCE`
+- Strongest follow-up: Run one operator-governed passive observation, then rehearse a TrueNAS upgrade where the old envelope holds until a separately reviewed replacement envelope is issued.
+- Revisit when: TrueNAS API release semantics change; the appliance upgrades from 25.10.5; platform identity stronger than release version is required; a governed signing-key lifecycle exists

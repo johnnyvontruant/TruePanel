@@ -243,3 +243,30 @@ They solve stronger distribution and authentication problems but would require
 a governed signing-key lifecycle that TruePanel does not yet have. Treating a
 plain digest as a signature was explicitly rejected. See
 [`AEGIS_AIRWORTHINESS_ENVELOPE.md`](AEGIS_AIRWORTHINESS_ENVELOPE.md).
+
+## Platform-witness follow-up
+
+The 2026-09-05 study inspected the actual TrueNAS 25.10.5 API contract. The
+documented `system.version` method returns only the full software version and
+requires no additional role. By contrast, `system.info` returns hostname,
+system serial, CPU, memory, license, and other facts under `READONLY_ADMIN`.
+TruePanel therefore adopted only `system.version` behind its existing
+credential-safe, TLS-verified, read-only session interface.
+
+IETF RATS supplied the separation between collected evidence and an appraisal
+decision. SLSA's Verification Summary Attestation and the in-toto Statement
+model reinforced binding a result to explicit subjects and policy rather than
+asserting permanent trust. TruePanel adapted those semantics in original,
+dependency-free code; it copied no source, schema, credential, or hosted
+service.
+
+The resulting PLATFORM WITNESS retains only normalized release, source, age,
+observation time, safety flags, and a SHA-256 integrity digest. It rejects
+unknown fields instead of letting a correct digest legitimize them. Live and
+fresh cache evidence can satisfy AIRWORTHINESS; stale or unavailable evidence
+is REVIEW; malformed, untrusted, tampered, or version-drifted evidence is HOLD.
+
+Rejected routes were `system.info` overcollection, parsing the Linux banner,
+accepting arbitrary version strings, treating a plain digest as authentication,
+and collecting hardware identity that the decision does not require. See
+[`AEGIS_PLATFORM_WITNESS.md`](AEGIS_PLATFORM_WITNESS.md).
