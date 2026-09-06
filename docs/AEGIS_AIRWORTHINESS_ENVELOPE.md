@@ -110,7 +110,8 @@ MIT-licensed TruePanel code behind a replaceable local interface.
 
 ## Strongest follow-up
 
-Expose the TrueNAS release through the already-supported passive API/collector
-boundary, then rehearse an upgrade from 25.10.5 in HoloDeck. A release change
-must produce REVIEW/HOLD until the recovery matrix, policy, passive providers,
-and key scenarios are revalidated and a new immutable envelope is issued.
+PLATFORM WITNESS now exposes the TrueNAS release through the passive boundary,
+and Project REQUALIFICATION rehearses the upgrade lifecycle. A release change
+keeps the old envelope on HOLD; a lineage-bound successor can become only
+`READY_FOR_OPERATOR_REVIEW`, never self-accepted or installed. See
+[`AEGIS_REQUALIFICATION.md`](AEGIS_REQUALIFICATION.md).

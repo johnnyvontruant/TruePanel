@@ -18,6 +18,7 @@ from .flight_director import run_flight_director_proof
 from .platform_witness import bind_platform_witness
 from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 from .rehearsal import rehearse_recovery_paths
+from .requalification import renewal_guidance
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -56,6 +57,7 @@ class AegisReliabilityEngine:
         oracle: OracleEngine | None = None,
         correlation_policy: CorrelationPolicy | None = None,
         protection_evidence_provider: Any | None = None,
+        platform_witness_provider: Any | None = None,
         sample_interval_seconds: float = 5.0,
     ) -> None:
         interval = _number(sample_interval_seconds)
@@ -65,6 +67,7 @@ class AegisReliabilityEngine:
         self.oracle = oracle or OracleEngine()
         self.correlation_policy = correlation_policy or DEFAULT_CORRELATION_POLICY
         self.protection_evidence_provider = protection_evidence_provider
+        self.platform_witness_provider = platform_witness_provider
         self.sample_interval_seconds = interval
         self.rehearsals = rehearse_recovery_paths()
         self.matrix = coverage_matrix(self.rehearsals)
@@ -263,6 +266,17 @@ class AegisReliabilityEngine:
         incident = correlate_incident(cards, outlook, policy=self.correlation_policy)
         working_payload = payload
         passive_evidence = None
+        platform_witness: dict[str, Any] = {}
+        if self.platform_witness_provider is not None:
+            try:
+                platform_witness = _dict(self.platform_witness_provider.observe())
+            except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+                platform_witness = {}
+            if platform_witness:
+                working_payload = bind_platform_witness(
+                    working_payload,
+                    platform_witness,
+                )
         if incident and self.protection_evidence_provider is not None:
             try:
                 passive_evidence = self.protection_evidence_provider.observe(
@@ -276,17 +290,17 @@ class AegisReliabilityEngine:
                     "hold_reason": "passive evidence provider unavailable",
                 }
             backup_context = _dict(_dict(passive_evidence).get("backup_context"))
-            platform_witness = _dict(
+            recovery_platform_witness = _dict(
                 _dict(passive_evidence).get("platform_witness")
             )
-            if backup_context or platform_witness:
+            if backup_context and working_payload is payload:
                 working_payload = deepcopy(payload)
             if backup_context:
                 working_payload["backup_context"] = backup_context
-            if platform_witness:
+            if recovery_platform_witness and not platform_witness:
                 working_payload = bind_platform_witness(
                     working_payload,
-                    platform_witness,
+                    recovery_platform_witness,
                 )
         active_flight_director = compose_storage_checkride(working_payload, incident)
         policy_description = self.correlation_policy.describe()
@@ -295,6 +309,7 @@ class AegisReliabilityEngine:
             coverage_matrix=self.matrix,
             correlation_policy=policy_description,
         )
+        airworthiness["renewal"] = renewal_guidance(airworthiness)
         return {
             "schema_version": 1,
             "project": "AEGIS",

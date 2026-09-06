@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.05.1 · refreshed 2026-09-05 · 16 experiment(s)
+Registry version 2026.09.06.1 · refreshed 2026-09-06 · 17 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -131,3 +131,11 @@ Two matching live/cache paths are CURRENT, two stale/unavailable paths are REVIE
 - Safety: `READ_ONLY_EVIDENCE`
 - Strongest follow-up: Run one operator-governed passive observation, then rehearse a TrueNAS upgrade where the old envelope holds until a separately reviewed replacement envelope is issued.
 - Revisit when: TrueNAS API release semantics change; the appliance upgrades from 25.10.5; platform identity stronger than release version is required; a governed signing-key lifecycle exists
+
+## TP-EXP-0022 · AEGIS airworthiness requalification
+
+The old envelope remains HOLD after simulated platform drift. Two coherent successors become READY_FOR_OPERATOR_REVIEW, two uncertain cases remain REVIEW, and six unsafe proposals HOLD with zero false-ready outcomes, installations, automatic acceptances, runtime writes, or control authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add an operator-signed acceptance receipt with a governed key lifecycle, then validate the same renewal protocol during an isolated pre-upgrade checkride.
+- Revisit when: a real TrueNAS upgrade is planned; the accepted envelope approaches expiry; prerelease ordering must be supported; a governed signing-key and reviewer identity lifecycle exists

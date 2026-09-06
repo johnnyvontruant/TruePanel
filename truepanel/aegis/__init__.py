@@ -62,6 +62,13 @@ from .policy import (
 )
 from .rehearsal import rehearse_recovery_paths
 from .reliability import AegisReliabilityEngine
+from .requalification import (
+    classify_platform_transition,
+    envelope_sha256,
+    evaluate_successor_envelope,
+    renewal_contract_sha256,
+    renewal_guidance,
+)
 
 __all__ = [
     "AegisReliabilityEngine",
@@ -83,9 +90,12 @@ __all__ = [
     "bind_platform_witness",
     "compose_storage_checkride",
     "collect_recovery_attestations",
+    "classify_platform_transition",
     "coverage_contract_sha256",
     "evaluate_airworthiness",
     "evaluate_pre_service_clearance",
+    "evaluate_successor_envelope",
+    "envelope_sha256",
     "issue_recovery_attestation",
     "issue_restore_verification_receipt",
     "issue_platform_witness",
@@ -95,6 +105,8 @@ __all__ = [
     "coverage_matrix",
     "evaluate_evidence_gate",
     "rehearse_recovery_paths",
+    "renewal_contract_sha256",
+    "renewal_guidance",
     "run_flight_director_proof",
     "run_storage_recovery_rehearsals",
     "reconcile_recovery_attestations",

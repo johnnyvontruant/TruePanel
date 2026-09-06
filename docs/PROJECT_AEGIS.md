@@ -172,8 +172,14 @@ fresh, normalized, digest-intact witness; stale or unavailable evidence is
 REVIEW, while malformed, tampered, or version-drifted evidence is HOLD. See
 [`AEGIS_PLATFORM_WITNESS.md`](AEGIS_PLATFORM_WITNESS.md).
 
-The strongest next step is one operator-governed passive field observation,
-followed by a deterministic appliance-upgrade rehearsal. The old envelope must
-remain HOLD after the version changes until a separately reviewed replacement
-envelope is issued; the opt-in Black Box field-evidence campaign remains the
-path for estimating real false-positive behavior.
+Project REQUALIFICATION now proves that upgrade lifecycle deterministically:
+the old envelope remains HOLD, while a complete successor becomes only
+`READY_FOR_OPERATOR_REVIEW`. Predecessor mismatch, downgrade, excessive
+validity, automatic acceptance, renewal-code drift, and runtime-subject drift
+all hold. Mission Control gives a visible next action for CURRENT, REVIEW, and
+HOLD states. See [`AEGIS_REQUALIFICATION.md`](AEGIS_REQUALIFICATION.md).
+
+The strongest next step is a governed reviewer-identity and signing-key
+lifecycle so an external operator—not AEGIS—can issue an acceptance receipt.
+The opt-in Black Box field-evidence campaign remains the path for estimating
+real false-positive behavior.
