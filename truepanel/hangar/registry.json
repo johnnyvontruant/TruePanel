@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.05.1",
-  "updated_at": "2026-09-05",
+  "registry_version": "2026.09.06.1",
+  "updated_at": "2026-09-06",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -318,6 +318,25 @@
       "revisit_conditions": ["TrueNAS API release semantics change", "the appliance upgrades from 25.10.5", "platform identity stronger than release version is required", "a governed signing-key lifecycle exists"],
       "strongest_follow_up": "Run one operator-governed passive observation, then rehearse a TrueNAS upgrade where the old envelope holds until a separately reviewed replacement envelope is issued.",
       "freshness": {"reviewed_at": "2026-09-05", "review_after": "2026-12-04"}
+    },
+    {
+      "id": "TP-EXP-0022", "title": "AEGIS airworthiness requalification", "state": "COMPLETED",
+      "hypothesis": "A successor envelope can be lineage-bound, downgrade-resistant, time-bounded, fully reappraised, and made ready for independent review without allowing AEGIS to accept or install its own evidence.",
+      "value": "Turns AIRWORTHINESS HOLD into an actionable and machine-verifiable trust-renewal path while preserving human authority and historical evidence.",
+      "prior_art": ["TUF rollback and freeze protection", "SLSA verification summaries", "IETF RATS appraisal separation", "NIST configuration change control"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-envelope-renewal", "pr": null, "commits": []},
+      "protocol": ["preserve the accepted envelope", "bind the successor to its canonical predecessor digest", "classify platform movement", "bound chronology to 92 days", "re-evaluate runtime subjects, policy, coverage, and witness", "forbid automatic acceptance and installation", "surface the safest next review action"],
+      "fixtures": ["aegis-airworthiness-requalification-v1", "tests/test_aegis_requalification.py", "truepanel/holodeck/aegis_requalification.py"],
+      "success_criteria": ["old envelope holds after a simulated upgrade", "coherent upgrade and same-platform renewal become review-ready", "missing or unordered evidence remains review", "six unsafe proposals hold", "no candidate is installed or automatically accepted", "control authority remains false"],
+      "abort_criteria": ["successor replaces historical evidence", "downgrade becomes review-ready", "unbounded validity is accepted", "candidate accepts itself", "missing witness becomes pass", "live platform or services are changed"],
+      "evidence": [{"path": "docs/evidence/aegis-airworthiness-requalification-v1.json", "sha256": "1e559dda0b16bdeaf03ce171ae466fbda058a6f47c925c564c00f6c9efbc6460"}],
+      "outcome": {"conclusion": "The old envelope remains HOLD after simulated platform drift. Two coherent successors become READY_FOR_OPERATOR_REVIEW, two uncertain cases remain REVIEW, and six unsafe proposals HOLD with zero false-ready outcomes, installations, automatic acceptances, runtime writes, or control authority."},
+      "invalidated_assumptions": ["passing revalidation should automatically replace accepted evidence", "semantic version ordering is safe for every prerelease label", "a new envelope need not identify its predecessor", "a healthy system cannot provide platform assurance without an active incident"],
+      "reproduction": ["pytest -q tests/test_aegis_requalification.py tests/test_aegis_assurance.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_requalification import run_requalification_rehearsal as run; print(run())\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["a real TrueNAS upgrade is planned", "the accepted envelope approaches expiry", "prerelease ordering must be supported", "a governed signing-key and reviewer identity lifecycle exists"],
+      "strongest_follow_up": "Add an operator-signed acceptance receipt with a governed key lifecycle, then validate the same renewal protocol during an isolated pre-upgrade checkride.",
+      "freshness": {"reviewed_at": "2026-09-06", "review_after": "2026-12-05"}
     }
   ]
 }

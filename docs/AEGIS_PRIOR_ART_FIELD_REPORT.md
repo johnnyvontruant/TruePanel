@@ -270,3 +270,26 @@ Rejected routes were `system.info` overcollection, parsing the Linux banner,
 accepting arbitrary version strings, treating a plain digest as authentication,
 and collecting hardware identity that the decision does not require. See
 [`AEGIS_PLATFORM_WITNESS.md`](AEGIS_PLATFORM_WITNESS.md).
+
+## Airworthiness-requalification follow-up
+
+The 2026-09-06 study compared TUF's current rollback, freeze, mix-and-match,
+expiry, and trusted-lineage protections; SLSA's separation of verification
+summaries from consumer policy; IETF RATS evidence appraisal; and NIST
+security-focused configuration change control. The transferable pattern is
+that successful checks are evidence for a decision, not authority to enact the
+decision.
+
+TruePanel adapted that pattern in an original, dependency-free successor gate.
+It requires the exact canonical predecessor digest, unique successor identity,
+bounded chronology, non-downgrade platform movement, current subject/policy/
+coverage/witness appraisal, and an explicit operator-review boundary. The gate
+can emit `READY_FOR_OPERATOR_REVIEW`, `REVIEW`, or `HOLD`; it cannot write,
+install, or accept an envelope.
+
+Full TUF metadata/signatures, Sigstore transparency, and automatic semantic
+version libraries were deferred. The first two require a governed key and
+identity lifecycle; the latter would add dependency weight while still failing
+to settle vendor-specific prerelease ordering. Unsupported prerelease movement
+therefore remains REVIEW rather than guessed. See
+[`AEGIS_REQUALIFICATION.md`](AEGIS_REQUALIFICATION.md).
