@@ -35,7 +35,7 @@ class _Client:
         return f"TrueNAS-SCALE-{self.version}"
 
 
-def _payload(version: str) -> dict[str, Any]:
+def platform_payload(version: str) -> dict[str, Any]:
     witness = issue_platform_witness(
         BoundedTrueNASQueryCache(_Client(version)),
         clock=lambda: NOW,
@@ -43,7 +43,7 @@ def _payload(version: str) -> dict[str, Any]:
     return bind_platform_witness({"system": {}}, witness)
 
 
-def _candidate(
+def build_candidate_fixture(
     accepted: dict[str, Any],
     root: Path,
     *,
@@ -86,7 +86,7 @@ def run_requalification_rehearsal(
     policy = DEFAULT_CORRELATION_POLICY.describe()
 
     drifted = evaluate_airworthiness(
-        payload=_payload("25.10.6"),
+        payload=platform_payload("25.10.6"),
         coverage_matrix=matrix,
         correlation_policy=policy,
         now=NOW,
@@ -95,11 +95,13 @@ def run_requalification_rehearsal(
     )
     scenarios: list[dict[str, Any]] = []
 
-    def record(name: str, candidate: dict[str, Any], version: str, expected: str) -> None:
+    def record(
+        name: str, candidate: dict[str, Any], version: str, expected: str
+    ) -> None:
         result = evaluate_successor_envelope(
             accepted=accepted,
             candidate=candidate,
-            payload=_payload(version),
+            payload=platform_payload(version),
             coverage_matrix=matrix,
             correlation_policy=policy,
             now=NOW,
@@ -119,17 +121,17 @@ def run_requalification_rehearsal(
             }
         )
 
-    upgrade = _candidate(accepted, root)
+    upgrade = build_candidate_fixture(accepted, root)
     record("coherent-upgrade", upgrade, "25.10.6", "READY_FOR_OPERATOR_REVIEW")
     record(
         "same-platform-renewal",
-        _candidate(accepted, root, version="25.10.5"),
+        build_candidate_fixture(accepted, root, version="25.10.5"),
         "25.10.5",
         "READY_FOR_OPERATOR_REVIEW",
     )
     record(
         "prerelease-order-unknown",
-        _candidate(accepted, root, version="25.10-RC.1"),
+        build_candidate_fixture(accepted, root, version="25.10-RC.1"),
         "25.10-RC.1",
         "REVIEW",
     )
@@ -163,7 +165,7 @@ def run_requalification_rehearsal(
     record("wrong-predecessor", wrong_parent, "25.10.6", "HOLD")
     record(
         "platform-downgrade",
-        _candidate(accepted, root, version="25.10.4"),
+        build_candidate_fixture(accepted, root, version="25.10.4"),
         "25.10.4",
         "HOLD",
     )
@@ -211,4 +213,8 @@ def run_requalification_rehearsal(
     return report
 
 
-__all__ = ["run_requalification_rehearsal"]
+__all__ = [
+    "build_candidate_fixture",
+    "platform_payload",
+    "run_requalification_rehearsal",
+]

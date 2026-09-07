@@ -55,7 +55,7 @@ function airworthinessView(assurance){
     const renewal=assurance.renewal||{};
     const witnessAge=Number.isFinite(Number(witness.age_seconds))?`${Math.round(Number(witness.age_seconds))}s old`:"age unavailable";
     return `<section class="ag-assurance ${tone}" aria-label="AEGIS airworthiness envelope">
-        <div><span class="ag-kicker">Project AIRWORTHINESS</span><strong>${esc(title(status))}</strong><p>${esc(assurance.message||"Acceptance-envelope status unavailable.")}</p><small><b>NEXT · ${esc(title(renewal.state||"revalidation required"))}</b> ${esc(renewal.next_action||"Preserve evidence and request review.")}</small></div>
+        <div><span class="ag-kicker">Project AIRWORTHINESS</span><strong>${esc(title(status))}</strong><p>${esc(assurance.message||"Acceptance-envelope status unavailable.")}</p><small><b>NEXT · ${esc(title(renewal.state||"revalidation required"))}</b> ${esc(renewal.next_action||"Preserve evidence and request review.")}</small><small><b>APPROVAL · EXTERNAL RECEIPT REQUIRED</b> AEGIS cannot sign, accept, or install its own successor.</small></div>
         <div class="ag-assurance-scope"><small>VALIDATED SCOPE</small><strong>${esc(assurance.platform_scope||"Unknown platform")}</strong><span>Witness ${esc(witness.status||"UNBOUND")} · ${esc(witness.source||"no source")} · ${esc(witnessAge)}</span><span>Review by ${esc(assurance.expires_at||"unknown")}</span></div>
         <details><summary>Validation envelope · ${esc(String(assurance.envelope_id||"").replaceAll("-"," "))}</summary><div class="ag-assurance-grid">${conditions}</div><small>Raw alerts and recovery guidance remain visible in every state. Control authority false.</small></details>
     </section>`;

@@ -10,6 +10,12 @@ from .assurance import (
     load_assurance_envelope,
     validate_repository_evidence,
 )
+from .acceptance import (
+    ACCEPTANCE_SCHEMA,
+    TRUST_POLICY_SCHEMA,
+    acceptance_statement,
+    evaluate_acceptance_receipt,
+)
 from .attestations import (
     collect_recovery_attestations,
     issue_recovery_attestation,
@@ -71,6 +77,7 @@ from .requalification import (
 )
 
 __all__ = [
+    "ACCEPTANCE_SCHEMA",
     "AegisReliabilityEngine",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
@@ -87,12 +94,15 @@ __all__ = [
     "TrueNASReplacementInventoryProvider",
     "TrueNASRoleVerifier",
     "TrueNASWebSocketReadOnlyClient",
+    "TRUST_POLICY_SCHEMA",
+    "acceptance_statement",
     "bind_platform_witness",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "classify_platform_transition",
     "coverage_contract_sha256",
     "evaluate_airworthiness",
+    "evaluate_acceptance_receipt",
     "evaluate_pre_service_clearance",
     "evaluate_successor_envelope",
     "envelope_sha256",
