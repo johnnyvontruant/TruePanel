@@ -179,7 +179,10 @@ validity, automatic acceptance, renewal-code drift, and runtime-subject drift
 all hold. Mission Control gives a visible next action for CURRENT, REVIEW, and
 HOLD states. See [`AEGIS_REQUALIFICATION.md`](AEGIS_REQUALIFICATION.md).
 
-The strongest next step is a governed reviewer-identity and signing-key
-lifecycle so an external operator—not AEGIS—can issue an acceptance receipt.
+Project INDEPENDENT REVIEW now supplies a verifier-only acceptance receipt
+contract with two-reviewer quorum, key validity and revocation, exact subject
+binding, and a deterministic pre-upgrade checkride. AEGIS contains no signer
+or production private key and cannot install an accepted successor. See
+[`AEGIS_INDEPENDENT_REVIEW.md`](AEGIS_INDEPENDENT_REVIEW.md).
 The opt-in Black Box field-evidence campaign remains the path for estimating
 real false-positive behavior.

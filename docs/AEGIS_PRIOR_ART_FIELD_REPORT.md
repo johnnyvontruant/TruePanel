@@ -293,3 +293,19 @@ identity lifecycle; the latter would add dependency weight while still failing
 to settle vendor-specific prerelease ordering. Unsupported prerelease movement
 therefore remains REVIEW rather than guessed. See
 [`AEGIS_REQUALIFICATION.md`](AEGIS_REQUALIFICATION.md).
+
+## Independent-review follow-up
+
+The 2026-09-07 study inspected TUF threshold and revocation rules, Sigstore
+identity-bound verification and offline bundles, SLSA verification-summary
+separation, and IETF RATS appraisal boundaries. TruePanel adapted the small,
+replaceable policy seam: two distinct valid reviewer identities must sign the
+exact candidate, predecessor, and appraisal statement. Signing remains wholly
+outside AEGIS.
+
+Sigstore/Cosign is the strongest future production-verifier candidate because
+its bundle can carry identity, signature, timestamp, and transparency proof.
+It was deferred until operator identity, offline availability, privacy, and
+trust-root lifecycle are governed. Full TUF is also deferred as disproportionate
+for this narrow receipt. No external code, dependency, service, or key was
+incorporated. See [`AEGIS_INDEPENDENT_REVIEW.md`](AEGIS_INDEPENDENT_REVIEW.md).

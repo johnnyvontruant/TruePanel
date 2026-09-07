@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.06.1 · refreshed 2026-09-06 · 17 experiment(s)
+Registry version 2026.09.07.1 · refreshed 2026-09-07 · 18 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -139,3 +139,11 @@ The old envelope remains HOLD after simulated platform drift. Two coherent succe
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add an operator-signed acceptance receipt with a governed key lifecycle, then validate the same renewal protocol during an isolated pre-upgrade checkride.
 - Revisit when: a real TrueNAS upgrade is planned; the accepted envelope approaches expiry; prerelease ordering must be supported; a governed signing-key and reviewer identity lifecycle exists
+
+## TP-EXP-0023 · AEGIS independent-review receipt
+
+The isolated upgrade leaves the old envelope HOLD. One two-reviewer path is eligible for manual promotion and seven adversarial paths HOLD, with zero false eligibility, private-key persistence, installs, automatic acceptance, runtime writes, production mutation, or control authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Choose an operator-owned signing workflow, add a replaceable public verifier adapter, and prove manual staging promotion without granting AEGIS deployment authority.
+- Revisit when: operator identity policy is approved; an offline or keyless signing workflow is selected; a real TrueNAS upgrade is planned; a production verifier adapter is proposed
