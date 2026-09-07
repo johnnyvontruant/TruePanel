@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.06.1",
-  "updated_at": "2026-09-06",
+  "registry_version": "2026.09.07.1",
+  "updated_at": "2026-09-07",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -337,6 +337,25 @@
       "revisit_conditions": ["a real TrueNAS upgrade is planned", "the accepted envelope approaches expiry", "prerelease ordering must be supported", "a governed signing-key and reviewer identity lifecycle exists"],
       "strongest_follow_up": "Add an operator-signed acceptance receipt with a governed key lifecycle, then validate the same renewal protocol during an isolated pre-upgrade checkride.",
       "freshness": {"reviewed_at": "2026-09-06", "review_after": "2026-12-05"}
+    },
+    {
+      "id": "TP-EXP-0023", "title": "AEGIS independent-review receipt", "state": "COMPLETED",
+      "hypothesis": "A threshold receipt can bind independent reviewer decisions to an exact successor appraisal while revoked, duplicated, forged, expired, incomplete, or tampered evidence fails closed and AEGIS retains no signing or installation authority.",
+      "value": "Closes the trust-renewal loop without letting the system approve its own evidence or retain production private keys.",
+      "prior_art": ["TUF threshold signatures and key revocation", "Sigstore identity-bound bundles", "SLSA verification summaries", "IETF RATS appraisal separation"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-reviewer-receipt", "pr": null, "commits": []},
+      "protocol": ["bind candidate, appraisal, and predecessor digests", "require two distinct valid reviewer keys", "enforce key validity and revocation", "bound receipt life to 24 hours", "inject verification without a signer", "rehearse platform upgrade and adversarial receipt paths"],
+      "fixtures": ["aegis-independent-review-checkride-v1", "tests/test_aegis_acceptance.py", "truepanel/holodeck/aegis_acceptance.py"],
+      "success_criteria": ["old envelope holds after upgrade", "two valid independent reviewers produce eligibility", "seven unsafe paths hold", "zero false eligibility", "no private key is persisted", "no installation, automatic acceptance, mutation, or control authority"],
+      "abort_criteria": ["one reviewer satisfies quorum", "duplicate identity satisfies quorum", "revoked key remains valid", "digest tamper passes", "TruePanel stores a production private key", "receipt triggers installation or deployment"],
+      "evidence": [{"path": "docs/evidence/aegis-independent-review-checkride-v1.json", "sha256": "74c13a97380714e07b858ad2e653fac18f344fe1a351a24249bea33b68e866bf"}],
+      "outcome": {"conclusion": "The isolated upgrade leaves the old envelope HOLD. One two-reviewer path is eligible for manual promotion and seven adversarial paths HOLD, with zero false eligibility, private-key persistence, installs, automatic acceptance, runtime writes, production mutation, or control authority."},
+      "invalidated_assumptions": ["a digest authenticates its author", "one operator is sufficient separation of duty", "two signatures necessarily mean two reviewers", "AEGIS must contain a signer to verify approval", "approval evidence should trigger deployment"],
+      "reproduction": ["pytest -q tests/test_aegis_acceptance.py tests/test_aegis_requalification.py", "python -c \"from truepanel.holodeck.aegis_acceptance import run_acceptance_checkride as run; print(run())\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["operator identity policy is approved", "an offline or keyless signing workflow is selected", "a real TrueNAS upgrade is planned", "a production verifier adapter is proposed"],
+      "strongest_follow_up": "Choose an operator-owned signing workflow, add a replaceable public verifier adapter, and prove manual staging promotion without granting AEGIS deployment authority.",
+      "freshness": {"reviewed_at": "2026-09-07", "review_after": "2026-12-06"}
     }
   ]
 }

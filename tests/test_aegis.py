@@ -466,6 +466,7 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "Passive TrueNAS Evidence" in source
         assert "Project AIRWORTHINESS" in source
         assert "NEXT ·" in source
+        assert "APPROVAL · EXTERNAL RECEIPT REQUIRED" in source
         assert "Validation envelope" in source
         assert "Witness ${esc(witness.status" in source
         assert "Raw alerts and recovery guidance remain visible" in source
