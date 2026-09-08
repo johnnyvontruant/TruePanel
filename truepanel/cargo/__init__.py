@@ -14,3 +14,19 @@ __all__ = [
     "ServarrClient",
     "ServarrConfig",
 ]
+
+from .backup_producer import (
+    BackupMapping as BackupMapping,
+)
+from .backup_producer import (
+    BackupProducerError as BackupProducerError,
+)
+from .backup_producer import (
+    build_backup_manifest as build_backup_manifest,
+)
+from .backup_producer import (
+    map_backup_path as map_backup_path,
+)
+from .backup_producer import (
+    write_manifest_atomic as write_manifest_atomic,
+)
