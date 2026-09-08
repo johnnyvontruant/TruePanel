@@ -541,6 +541,29 @@ button.danger .profile-target{color:var(--bad)}
   color:var(--muted)
 }
 
+
+.cargo-backup-state{
+  display:inline-block;
+  margin-top:.35rem;
+  padding:.14rem .4rem;
+  border:1px solid var(--edge);
+  border-radius:999px;
+  font-size:.64rem;
+  font-weight:800;
+  letter-spacing:.05em
+}
+.cargo-backup-state.verified{
+  color:var(--good)
+}
+.cargo-backup-state.awaiting{
+  color:var(--muted)
+}
+.cargo-backup-state.stale,
+.cargo-backup-state.mismatch,
+.cargo-backup-state.invalid{
+  color:var(--warn)
+}
+
 .cargo-placeholder{
   padding:.35rem 0 .9rem;
   color:var(--muted);
@@ -814,10 +837,10 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
       <span>Backup Manifest</span>
       <small id="cargoBackupSummary">NOT TRACKED</small>
     </summary>
-    <div id="cargoBackup" class="cargo-placeholder">
-      Backup tracking is not configured.
-      Cargo Bay will not infer backup completion without
-      explicit backup evidence.
+    <div id="cargoBackup" class="cargo-list">
+      <div class="detail">
+        Backup tracking is not configured.
+      </div>
     </div>
   </details>
 </div>
@@ -2885,6 +2908,168 @@ function renderCargoItems(targetId,items,emptyText){
 }
 
 
+
+function renderCargoBackup(backup){
+    const payload=(
+        backup&&typeof backup==="object"
+    )?backup:{};
+
+    const tracking=payload.tracking===true;
+    const state=String(
+        payload.state||"NOT_TRACKED"
+    ).toUpperCase();
+
+    const verified=Number(payload.verified)||0;
+    const awaiting=Number(payload.awaiting)||0;
+    const stale=Number(payload.stale)||0;
+    const mismatch=Number(payload.mismatch)||0;
+    const invalid=Number(payload.invalid)||0;
+    const total=Number(payload.total)||0;
+
+    let summary="NOT TRACKED";
+
+    if(tracking){
+        if(state==="INVALID"){
+            summary="INVALID";
+        }else if(total>0){
+            summary=`${verified} / ${total} VERIFIED`;
+        }else{
+            summary="CLEAR";
+        }
+    }
+
+    if(q("cargoBackupSummary")){
+        q("cargoBackupSummary").textContent=
+            summary;
+    }
+
+    const root=q("cargoBackup");
+
+    if(!root){
+        return;
+    }
+
+    root.replaceChildren();
+
+    if(!tracking){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                "Backup tracking is not configured. "
+                +"Cargo Bay will not infer backup completion "
+                +"without explicit backup evidence."
+            )
+        );
+        return;
+    }
+
+    if(state==="INVALID"){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                val(
+                    payload.invalid_reason,
+                    "Backup manifest is invalid."
+                )
+            )
+        );
+        return;
+    }
+
+    const metaParts=[];
+
+    if(awaiting){
+        metaParts.push(`${awaiting} awaiting`);
+    }
+
+    if(stale){
+        metaParts.push(`${stale} stale`);
+    }
+
+    if(mismatch){
+        metaParts.push(`${mismatch} mismatch`);
+    }
+
+    if(invalid){
+        metaParts.push(`${invalid} invalid`);
+    }
+
+    if(metaParts.length){
+        root.append(
+            cargoElement(
+                "div",
+                "cargo-meta",
+                metaParts.join(" • ")
+            )
+        );
+    }
+
+    const items=Array.isArray(payload.items)
+        ?payload.items
+        :[];
+
+    if(!items.length){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                "No recent cargo requires backup evidence."
+            )
+        );
+        return;
+    }
+
+    items.forEach(item=>{
+        const card=cargoElement(
+            "div",
+            "cargo-item"
+        );
+
+        const head=cargoElement(
+            "div",
+            "cargo-item-head"
+        );
+
+        head.append(
+            cargoElement(
+                "strong",
+                "cargo-title",
+                val(item&&item.title,"Unknown cargo")
+            )
+        );
+
+        card.append(head);
+
+        const itemState=String(
+            item&&item.state||"INVALID"
+        ).toUpperCase();
+
+        card.append(
+            cargoElement(
+                "span",
+                `cargo-backup-state ${
+                    itemState.toLowerCase()
+                }`,
+                itemState
+            )
+        );
+
+        if(item&&item.current_path){
+            card.append(
+                cargoElement(
+                    "code",
+                    "cargo-path",
+                    item.current_path
+                )
+            );
+        }
+
+        root.append(card);
+    });
+}
+
 function renderCargoDownloads(downloads){
     const payload=(
         downloads&&typeof downloads==="object"
@@ -3154,7 +3339,9 @@ function renderCargoBay(cargo){
             "No recent arrivals • "
             +(
                 backupTracking
-                ?`Backup ${backupState}`
+                ?`${Number(backup.verified)||0} of ${
+                    Number(backup.total)||0
+                } recent arrivals backup verified`
                 :"Backup tracking not configured"
             );
     }else if(state==="REVIEW"){
@@ -3170,7 +3357,9 @@ function renderCargoBay(cargo){
             } • ${cargoBytes(totalBytes)} • `
             +(
                 backupTracking
-                ?`Backup ${backupState}`
+                ?`${Number(backup.verified)||0} of ${
+                    Number(backup.total)||0
+                } recent arrivals backup verified`
                 :"Backup tracking not configured"
             );
     }
@@ -3201,14 +3390,9 @@ function renderCargoBay(cargo){
         payload.downloads
     );
 
-    if(q("cargoBackup")){
-        q("cargoBackup").textContent=
-            backupTracking
-            ?`Backup state: ${backupState}`
-            :"Backup tracking is not configured. "
-             +"Cargo Bay will not infer backup completion "
-             +"without explicit backup evidence.";
-    }
+    renderCargoBackup(
+        payload.backup
+    );
 }
 
 async function refresh(){

@@ -103,3 +103,30 @@ def test_cargo_bay_download_activity_supports_progress_and_review():
     assert '"REVIEW"' in html
     assert "`${active} ACTIVE`" in html
     assert "`${pending} PENDING`" in html
+
+
+def test_cargo_bay_renders_backup_manifest_states():
+    html = source()
+
+    assert "function renderCargoBackup(backup)" in html
+    assert "renderCargoBackup(" in html
+    assert "cargo-backup-state" in html
+
+    assert "item&&item.state" in html
+    assert "itemState.toLowerCase()" in html
+
+    for css_state in (
+        "verified",
+        "awaiting",
+        "stale",
+        "mismatch",
+        "invalid",
+    ):
+        assert f".cargo-backup-state.{css_state}" in html
+
+
+def test_cargo_bay_backup_summary_is_evidence_based():
+    html = source()
+
+    assert "recent arrivals backup verified" in html
+    assert "will not infer backup completion" in html
