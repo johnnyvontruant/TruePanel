@@ -184,5 +184,10 @@ contract with two-reviewer quorum, key validity and revocation, exact subject
 binding, and a deterministic pre-upgrade checkride. AEGIS contains no signer
 or production private key and cannot install an accepted successor. See
 [`AEGIS_INDEPENDENT_REVIEW.md`](AEGIS_INDEPENDENT_REVIEW.md).
+
+Project MANUAL PROMOTION GATE now binds that review to the exact staged tree,
+manifest, destination, rollback path, version, preflight state, and one-time
+nonce. It can report manual readiness but cannot consume the receipt or execute
+promotion. See [`AEGIS_MANUAL_PROMOTION_GATE.md`](AEGIS_MANUAL_PROMOTION_GATE.md).
 The opt-in Black Box field-evidence campaign remains the path for estimating
 real false-positive behavior.
