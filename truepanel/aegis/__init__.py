@@ -4,17 +4,17 @@ AEGIS is an additive, read-only layer over TruePanel's existing detectors,
 ORACLE outlooks, Pathfinder recovery contracts, and HoloDeck rehearsals.
 """
 
-from .assurance import (
-    coverage_contract_sha256,
-    evaluate_airworthiness,
-    load_assurance_envelope,
-    validate_repository_evidence,
-)
 from .acceptance import (
     ACCEPTANCE_SCHEMA,
     TRUST_POLICY_SCHEMA,
     acceptance_statement,
     evaluate_acceptance_receipt,
+)
+from .assurance import (
+    coverage_contract_sha256,
+    evaluate_airworthiness,
+    load_assurance_envelope,
+    validate_repository_evidence,
 )
 from .attestations import (
     collect_recovery_attestations,
@@ -66,6 +66,7 @@ from .policy import (
     HypothesisRule,
     validate_correlation_policy,
 )
+from .promotion_gate import build_promotion_request, evaluate_manual_promotion
 from .rehearsal import rehearse_recovery_paths
 from .reliability import AegisReliabilityEngine
 from .requalification import (
@@ -97,6 +98,7 @@ __all__ = [
     "TRUST_POLICY_SCHEMA",
     "acceptance_statement",
     "bind_platform_witness",
+    "build_promotion_request",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "classify_platform_transition",
@@ -104,6 +106,7 @@ __all__ = [
     "evaluate_airworthiness",
     "evaluate_acceptance_receipt",
     "evaluate_pre_service_clearance",
+    "evaluate_manual_promotion",
     "evaluate_successor_envelope",
     "envelope_sha256",
     "issue_recovery_attestation",
