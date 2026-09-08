@@ -326,6 +326,216 @@ button.danger .profile-target{color:var(--bad)}
 @media(max-width:900px){.health-subsystems{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:640px){.health-command-head{display:block}.health-unknown{margin-top:1rem;text-align:left}.health-subsystems{grid-template-columns:repeat(2,minmax(0,1fr))}.health-advisory{grid-template-columns:1fr}.health-advisory button{width:100%}}
 
+
+.cargo-bay{
+  border-color:color-mix(
+    in srgb,
+    var(--accent) 24%,
+    var(--edge)
+  );
+  background:linear-gradient(
+    135deg,
+    color-mix(
+      in srgb,
+      var(--accent) 4%,
+      var(--panel)
+    ),
+    var(--panel)
+  )
+}
+.cargo-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+  flex-wrap:wrap
+}
+.cargo-head h2{margin-bottom:.35rem}
+.cargo-summary{
+  color:var(--muted);
+  font-size:.86rem
+}
+.cargo-state{
+  padding:.28rem .55rem;
+  border:1px solid var(--edge);
+  border-radius:999px;
+  font-size:.68rem;
+  font-weight:800;
+  letter-spacing:.08em
+}
+.cargo-state.good{
+  color:var(--good);
+  border-color:color-mix(
+    in srgb,
+    var(--good) 45%,
+    var(--edge)
+  )
+}
+.cargo-state.warn{
+  color:var(--warn);
+  border-color:color-mix(
+    in srgb,
+    var(--warn) 45%,
+    var(--edge)
+  )
+}
+.cargo-state.bad{
+  color:var(--bad);
+  border-color:color-mix(
+    in srgb,
+    var(--bad) 45%,
+    var(--edge)
+  )
+}
+.cargo-drawers{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.7rem;
+  margin-top:1rem
+}
+.cargo-drawer{
+  min-width:0;
+  padding:0 .9rem;
+  border:1px solid var(--edge);
+  border-radius:var(--radius-sm);
+  background:color-mix(
+    in srgb,
+    var(--panel-solid) 38%,
+    transparent
+  )
+}
+.cargo-drawer>summary{
+  padding:.9rem 0;
+  cursor:pointer;
+  color:var(--text);
+  list-style:none
+}
+.cargo-drawer>summary::-webkit-details-marker{
+  display:none
+}
+.cargo-drawer>summary::before{
+  content:"›";
+  display:inline-block;
+  margin-right:.5rem;
+  color:var(--muted);
+  transition:transform .15s ease
+}
+.cargo-drawer[open]>summary::before{
+  transform:rotate(90deg)
+}
+.cargo-drawer>summary span{
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase
+}
+.cargo-drawer>summary small{
+  float:right;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:500
+}
+.cargo-drawer[open]>summary{
+  margin-bottom:.25rem;
+  border-bottom:1px solid var(--edge)
+}
+.cargo-list{
+  padding:.15rem 0 .85rem
+}
+.cargo-item{
+  padding:.7rem 0;
+  border-bottom:1px solid
+    color-mix(
+      in srgb,
+      var(--edge) 70%,
+      transparent
+    )
+}
+.cargo-item:last-child{
+  border-bottom:0
+}
+.cargo-item-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:.75rem
+}
+.cargo-title{
+  min-width:0;
+  overflow-wrap:anywhere
+}
+.cargo-size{
+  flex:0 0 auto;
+  color:var(--muted);
+  font-size:.76rem
+}
+.cargo-detail{
+  margin-top:.2rem;
+  color:var(--text);
+  font-size:.82rem
+}
+.cargo-meta{
+  margin-top:.3rem;
+  color:var(--muted);
+  font-size:.72rem
+}
+.cargo-flags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem;
+  margin-top:.4rem
+}
+.cargo-flag{
+  padding:.14rem .35rem;
+  border:1px solid var(--edge);
+  border-radius:999px;
+  color:var(--muted);
+  font-size:.64rem;
+  font-weight:700;
+  letter-spacing:.04em
+}
+.cargo-flag.moved{
+  color:var(--warn)
+}
+.cargo-flag.review{
+  color:var(--bad)
+}
+.cargo-path{
+  display:block;
+  margin-top:.45rem;
+  color:var(--muted);
+  font-size:.66rem;
+  overflow-wrap:anywhere
+}
+.cargo-placeholder{
+  padding:.35rem 0 .9rem;
+  color:var(--muted);
+  font-size:.78rem;
+  line-height:1.5
+}
+@media(max-width:640px){
+  .cargo-head{display:block}
+  .cargo-state{
+    display:inline-block;
+    margin-top:.65rem
+  }
+  .cargo-drawers{
+    grid-template-columns:1fr
+  }
+  .cargo-drawer>summary small{
+    display:block;
+    float:none;
+    margin:.3rem 0 0 1rem
+  }
+  .cargo-item-head{
+    display:block
+  }
+  .cargo-size{
+    display:block;
+    margin-top:.25rem
+  }
+}
+
 footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.8rem}
 @media(max-width:640px){main{padding:0 1rem 2.5rem}.section{padding-top:1.5rem}.topbar{padding:.75rem 1rem}.pillnav{padding:.6rem 1rem}}
 </style>
@@ -516,6 +726,70 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 <div id="policyDiff" class="diff"></div>
 </article>
 <article class="card wide" id="cardMissionControlStatus"><h2>Mission Control Status</h2><div class="row"><span class="label">Host</span><span id="hostname" class="value">--</span></div><div class="row"><span class="label">Configuration mode</span><span id="configMode" class="value">Checking</span></div><div class="row"><span class="label">Fan commands</span><span class="value">Guarded socket only</span></div><div class="row"><span class="label">Direct hardware access</span><span class="value good">Disabled</span></div><div class="row"><span class="label">Last refresh</span><span id="updated" class="value">--</span></div></article>
+
+<article
+  class="card wide cargo-bay"
+  id="cardCargoBay"
+  aria-labelledby="cargoBayTitle"
+>
+<div class="cargo-head">
+  <div>
+    <h2 id="cargoBayTitle">Cargo Bay</h2>
+    <div id="cargoSummary" class="cargo-summary">
+      Cargo telemetry unavailable
+    </div>
+  </div>
+  <div id="cargoState" class="cargo-state bad">
+    UNAVAILABLE
+  </div>
+</div>
+
+<div class="cargo-drawers">
+  <details class="cargo-drawer" id="cargoTvDrawer">
+    <summary>
+      <span>TV Cargo</span>
+      <small id="cargoTvCount">0 items</small>
+    </summary>
+    <div id="cargoTv" class="cargo-list">
+      <div class="detail">No recent TV cargo</div>
+    </div>
+  </details>
+
+  <details class="cargo-drawer" id="cargoMovieDrawer">
+    <summary>
+      <span>Movie Cargo</span>
+      <small id="cargoMovieCount">0 items</small>
+    </summary>
+    <div id="cargoMovies" class="cargo-list">
+      <div class="detail">No recent movie cargo</div>
+    </div>
+  </details>
+
+  <details class="cargo-drawer" id="cargoDownloadDrawer">
+    <summary>
+      <span>Download Activity</span>
+      <small id="cargoDownloadSummary">NOT WIRED</small>
+    </summary>
+    <div class="cargo-placeholder">
+      Download activity reporting is not wired yet.
+      This drawer is reserved for qBittorrent and Servarr
+      transfer activity.
+    </div>
+  </details>
+
+  <details class="cargo-drawer" id="cargoBackupDrawer">
+    <summary>
+      <span>Backup Manifest</span>
+      <small id="cargoBackupSummary">NOT TRACKED</small>
+    </summary>
+    <div id="cargoBackup" class="cargo-placeholder">
+      Backup tracking is not configured.
+      Cargo Bay will not infer backup completion without
+      explicit backup evidence.
+    </div>
+  </details>
+</div>
+</article>
 </section></main>
 <footer>TruePanel v1.1 Mission Control</footer>
 <script>
@@ -2401,6 +2675,327 @@ async function pressVirtualLcdButton(
     }
 }
 
+
+function cargoElement(tag,className,text){
+    const element=document.createElement(tag);
+
+    if(className){
+        element.className=className;
+    }
+
+    if(text!==undefined&&text!==null){
+        element.textContent=String(text);
+    }
+
+    return element;
+}
+
+function cargoBytes(value){
+    let number=Number(value);
+
+    if(!Number.isFinite(number)||number<0){
+        return "--";
+    }
+
+    const units=["B","KB","MB","GB","TB"];
+
+    for(const unit of units){
+        if(number<1024||unit==="TB"){
+            const digits=(
+                number>=10||unit==="B"
+            )?0:1;
+
+            return `${number.toFixed(digits)} ${unit}`;
+        }
+
+        number/=1024;
+    }
+
+    return "--";
+}
+
+function cargoAge(timestamp){
+    const seconds=Number(timestamp);
+
+    if(!Number.isFinite(seconds)||seconds<=0){
+        return "Arrival time unknown";
+    }
+
+    const age=Math.max(
+        0,
+        Math.floor(Date.now()/1000-seconds)
+    );
+
+    if(age<60){
+        return "Arrived moments ago";
+    }
+
+    if(age<3600){
+        return `Arrived ${Math.floor(age/60)}m ago`;
+    }
+
+    if(age<86400){
+        return `Arrived ${Math.floor(age/3600)}h ago`;
+    }
+
+    return `Arrived ${Math.floor(age/86400)}d ago`;
+}
+
+function renderCargoItems(targetId,items,emptyText){
+    const root=q(targetId);
+
+    if(!root){
+        return;
+    }
+
+    root.replaceChildren();
+
+    if(!Array.isArray(items)||!items.length){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                emptyText
+            )
+        );
+        return;
+    }
+
+    items.forEach(item=>{
+        const card=cargoElement(
+            "div",
+            "cargo-item"
+        );
+
+        const head=cargoElement(
+            "div",
+            "cargo-item-head"
+        );
+
+        head.append(
+            cargoElement(
+                "strong",
+                "cargo-title",
+                val(item&&item.title,"Unknown cargo")
+            ),
+            cargoElement(
+                "span",
+                "cargo-size",
+                cargoBytes(item&&item.size_bytes)
+            )
+        );
+
+        card.append(head);
+
+        card.append(
+            cargoElement(
+                "div",
+                "cargo-detail",
+                val(item&&item.detail,"No detail")
+            )
+        );
+
+        const source=String(
+            item&&item.source||"unknown"
+        ).toUpperCase();
+
+        card.append(
+            cargoElement(
+                "div",
+                "cargo-meta",
+                `${cargoAge(
+                    item&&item.imported_at
+                )} • ${source}`
+            )
+        );
+
+        const flags=cargoElement(
+            "div",
+            "cargo-flags"
+        );
+
+        if(item&&item.moved_since_import){
+            flags.append(
+                cargoElement(
+                    "span",
+                    "cargo-flag moved",
+                    "MOVED / RENAMED"
+                )
+            );
+        }
+
+        if(item&&item.exists===false){
+            flags.append(
+                cargoElement(
+                    "span",
+                    "cargo-flag review",
+                    "REVIEW"
+                )
+            );
+        }
+
+        if(flags.childNodes.length){
+            card.append(flags);
+        }
+
+        if(item&&item.current_path){
+            card.append(
+                cargoElement(
+                    "code",
+                    "cargo-path",
+                    item.current_path
+                )
+            );
+        }
+
+        root.append(card);
+    });
+}
+
+function renderCargoBay(cargo){
+    const payload=(
+        cargo&&typeof cargo==="object"
+    )?cargo:{};
+
+    const allowedStates=new Set([
+        "NOMINAL",
+        "CLEAR",
+        "REVIEW",
+        "UNAVAILABLE"
+    ]);
+
+    let state=String(
+        payload.state||"UNAVAILABLE"
+    ).toUpperCase();
+
+    if(!allowedStates.has(state)){
+        state="UNAVAILABLE";
+    }
+
+    const stateElement=q("cargoState");
+
+    if(stateElement){
+        stateElement.textContent=state;
+
+        const tone=(
+            state==="NOMINAL"
+            ||state==="CLEAR"
+        )
+            ?"good"
+            :state==="REVIEW"
+                ?"warn"
+                :"bad";
+
+        stateElement.className=
+            `cargo-state ${tone}`;
+    }
+
+    const summary=(
+        payload.summary
+        &&typeof payload.summary==="object"
+    )?payload.summary:{};
+
+    const total=Number(summary.total)||0;
+    const tv=Number(summary.tv)||0;
+    const movies=Number(summary.movies)||0;
+    const unresolved=Number(
+        summary.unresolved
+    )||0;
+    const totalBytes=Number(
+        summary.total_bytes
+    )||0;
+
+    if(q("cargoTvCount")){
+        q("cargoTvCount").textContent=
+            `${tv} ${tv===1?"item":"items"}`;
+    }
+
+    if(q("cargoMovieCount")){
+        q("cargoMovieCount").textContent=
+            `${movies} ${movies===1?"item":"items"}`;
+    }
+
+    const backup=(
+        payload.backup
+        &&typeof payload.backup==="object"
+    )?payload.backup:{};
+
+    const backupTracking=
+        backup.tracking===true;
+
+    const backupState=backupTracking
+        ?String(
+            backup.state||"UNKNOWN"
+        ).toUpperCase()
+        :"NOT TRACKED";
+
+    if(q("cargoBackupSummary")){
+        q("cargoBackupSummary").textContent=
+            backupState;
+    }
+
+    let summaryText;
+
+    if(state==="UNAVAILABLE"){
+        summaryText="Cargo telemetry unavailable";
+    }else if(state==="CLEAR"){
+        summaryText=
+            "No recent arrivals • "
+            +(
+                backupTracking
+                ?`Backup ${backupState}`
+                :"Backup tracking not configured"
+            );
+    }else if(state==="REVIEW"){
+        summaryText=
+            `${total} recent ${
+                total===1?"arrival":"arrivals"
+            } • ${unresolved} need review • `
+            +cargoBytes(totalBytes);
+    }else{
+        summaryText=
+            `${total} recent ${
+                total===1?"arrival":"arrivals"
+            } • ${cargoBytes(totalBytes)} • `
+            +(
+                backupTracking
+                ?`Backup ${backupState}`
+                :"Backup tracking not configured"
+            );
+    }
+
+    if(q("cargoSummary")){
+        q("cargoSummary").textContent=
+            summaryText;
+    }
+
+    const groups=(
+        payload.groups
+        &&typeof payload.groups==="object"
+    )?payload.groups:{};
+
+    renderCargoItems(
+        "cargoTv",
+        groups.tv,
+        "No recent TV cargo"
+    );
+
+    renderCargoItems(
+        "cargoMovies",
+        groups.movies,
+        "No recent movie cargo"
+    );
+
+    if(q("cargoBackup")){
+        q("cargoBackup").textContent=
+            backupTracking
+            ?`Backup state: ${backupState}`
+            :"Backup tracking is not configured. "
+             +"Cargo Bay will not infer backup completion "
+             +"without explicit backup evidence.";
+    }
+}
+
 async function refresh(){
     try{
         const response=await fetch(
@@ -2423,6 +3018,7 @@ async function refresh(){
         );
 
         render(data);
+        renderCargoBay(data.cargo_bay);
         renderThermalArmControls(data);
 
         await loadCommissioningHistory();
