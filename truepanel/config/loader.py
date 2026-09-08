@@ -16,6 +16,27 @@ except Exception:
 
 DEFAULT_CONFIG = {
     "mission_control": {
+        "cargo_bay": {
+            "enabled": False,
+            "window_seconds": 86400,
+            "backup": {
+                "manifest_path": "",
+            },
+            "cache_seconds": 60,
+            "history_limit": 250,
+            "sonarr": {
+                "url": "",
+                "config_path": "",
+                "media_prefix": "/media/tv",
+                "host_prefix": "",
+            },
+            "radarr": {
+                "url": "",
+                "config_path": "",
+                "media_prefix": "/media/movies",
+                "host_prefix": "",
+            },
+        },
         "storage_health": {
             "enabled": True,
             "interval": 300,

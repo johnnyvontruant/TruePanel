@@ -34,6 +34,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from truepanel.cargo import provider_from_config
 from truepanel.guidance.storage_evidence import (
     StorageRecoveryEvidenceProvider,
     normalize_device,
@@ -210,6 +211,7 @@ class SnapshotService(_base.SnapshotService):
         drive_fingerprint_path=None,
         lifeline_store=None,
         lifeline_path=None,
+        cargo_provider=None,
         **kwargs,
     ) -> None:
         if kwargs.get("fan_status_provider") is None:
@@ -248,6 +250,77 @@ class SnapshotService(_base.SnapshotService):
             )
         )
         self.lifeline_service_profile = service_profile_for_config(self.config)
+        self.cargo_provider = (
+            cargo_provider
+            if cargo_provider is not None
+            else provider_from_config(self.config)
+        )
+
+    @staticmethod
+    def _cargo_unavailable_payload() -> dict[str, Any]:
+        return {
+            "schema_version": 1,
+            "read_only": True,
+            "state": "UNAVAILABLE",
+            "window_seconds": 0,
+            "summary": {
+                "total": 0,
+                "tv": 0,
+                "movies": 0,
+                "resolved": 0,
+                "unresolved": 0,
+                "moved_since_import": 0,
+                "total_bytes": 0,
+            },
+            "downloads": {
+                "state": "UNAVAILABLE",
+                "read_only": True,
+                "total": 0,
+                "active": 0,
+                "pending": 0,
+                "review": 0,
+                "remaining_bytes": 0,
+                "items": [],
+            },
+            "backup": {
+                "tracking": False,
+                "state": "NOT_TRACKED",
+            },
+            "groups": {
+                "tv": [],
+                "movies": [],
+            },
+        }
+
+    def _cargo_bay_payload(self) -> dict[str, Any]:
+        provider = self.cargo_provider
+
+        if provider is None:
+            return self._cargo_unavailable_payload()
+
+        try:
+            payload = provider.snapshot()
+        except (
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+            AttributeError,
+        ):
+            return self._cargo_unavailable_payload()
+
+        if not isinstance(payload, dict):
+            return self._cargo_unavailable_payload()
+
+        return payload
+
+    def _with_cargo_bay(
+        self,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        result = dict(payload)
+        result["cargo_bay"] = self._cargo_bay_payload()
+        return result
 
     def _record_healthy_fingerprints(self) -> None:
         try:
@@ -398,7 +471,7 @@ class SnapshotService(_base.SnapshotService):
             if profile is not None:
                 lifeline["service_profile"] = profile.to_payload()
             result["lifeline"] = lifeline
-            return result
+            return self._with_cargo_bay(result)
         except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
             result = dict(payload)
             result["lifeline"] = {
@@ -407,7 +480,7 @@ class SnapshotService(_base.SnapshotService):
                 "available": False,
                 "sessions": [],
             }
-            return result
+            return self._with_cargo_bay(result)
 
     def _storage_payload(
         self,

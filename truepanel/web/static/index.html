@@ -326,6 +326,273 @@ button.danger .profile-target{color:var(--bad)}
 @media(max-width:900px){.health-subsystems{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:640px){.health-command-head{display:block}.health-unknown{margin-top:1rem;text-align:left}.health-subsystems{grid-template-columns:repeat(2,minmax(0,1fr))}.health-advisory{grid-template-columns:1fr}.health-advisory button{width:100%}}
 
+
+.cargo-bay{
+  border-color:color-mix(
+    in srgb,
+    var(--accent) 24%,
+    var(--edge)
+  );
+  background:linear-gradient(
+    135deg,
+    color-mix(
+      in srgb,
+      var(--accent) 4%,
+      var(--panel)
+    ),
+    var(--panel)
+  )
+}
+.cargo-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+  flex-wrap:wrap
+}
+.cargo-head h2{margin-bottom:.35rem}
+.cargo-summary{
+  color:var(--muted);
+  font-size:.86rem
+}
+.cargo-state{
+  padding:.28rem .55rem;
+  border:1px solid var(--edge);
+  border-radius:999px;
+  font-size:.68rem;
+  font-weight:800;
+  letter-spacing:.08em
+}
+.cargo-state.good{
+  color:var(--good);
+  border-color:color-mix(
+    in srgb,
+    var(--good) 45%,
+    var(--edge)
+  )
+}
+.cargo-state.warn{
+  color:var(--warn);
+  border-color:color-mix(
+    in srgb,
+    var(--warn) 45%,
+    var(--edge)
+  )
+}
+.cargo-state.bad{
+  color:var(--bad);
+  border-color:color-mix(
+    in srgb,
+    var(--bad) 45%,
+    var(--edge)
+  )
+}
+.cargo-drawers{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.7rem;
+  margin-top:1rem
+}
+.cargo-drawer{
+  min-width:0;
+  padding:0 .9rem;
+  border:1px solid var(--edge);
+  border-radius:var(--radius-sm);
+  background:color-mix(
+    in srgb,
+    var(--panel-solid) 38%,
+    transparent
+  )
+}
+.cargo-drawer>summary{
+  padding:.9rem 0;
+  cursor:pointer;
+  color:var(--text);
+  list-style:none
+}
+.cargo-drawer>summary::-webkit-details-marker{
+  display:none
+}
+.cargo-drawer>summary::before{
+  content:"›";
+  display:inline-block;
+  margin-right:.5rem;
+  color:var(--muted);
+  transition:transform .15s ease
+}
+.cargo-drawer[open]>summary::before{
+  transform:rotate(90deg)
+}
+.cargo-drawer>summary span{
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase
+}
+.cargo-drawer>summary small{
+  float:right;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:500
+}
+.cargo-drawer[open]>summary{
+  margin-bottom:.25rem;
+  border-bottom:1px solid var(--edge)
+}
+.cargo-list{
+  padding:.15rem 0 .85rem
+}
+.cargo-item{
+  padding:.7rem 0;
+  border-bottom:1px solid
+    color-mix(
+      in srgb,
+      var(--edge) 70%,
+      transparent
+    )
+}
+.cargo-item:last-child{
+  border-bottom:0
+}
+.cargo-item-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:.75rem
+}
+.cargo-title{
+  min-width:0;
+  overflow-wrap:anywhere
+}
+.cargo-size{
+  flex:0 0 auto;
+  color:var(--muted);
+  font-size:.76rem
+}
+.cargo-detail{
+  margin-top:.2rem;
+  color:var(--text);
+  font-size:.82rem
+}
+.cargo-meta{
+  margin-top:.3rem;
+  color:var(--muted);
+  font-size:.72rem
+}
+.cargo-flags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem;
+  margin-top:.4rem
+}
+.cargo-flag{
+  padding:.14rem .35rem;
+  border:1px solid var(--edge);
+  border-radius:999px;
+  color:var(--muted);
+  font-size:.64rem;
+  font-weight:700;
+  letter-spacing:.04em
+}
+.cargo-flag.moved{
+  color:var(--warn)
+}
+.cargo-flag.review{
+  color:var(--bad)
+}
+.cargo-path{
+  display:block;
+  margin-top:.45rem;
+  color:var(--muted);
+  font-size:.66rem;
+  overflow-wrap:anywhere
+}
+
+.cargo-progress{
+  position:relative;
+  height:.38rem;
+  margin-top:.5rem;
+  overflow:hidden;
+  border-radius:999px;
+  background:color-mix(
+    in srgb,
+    var(--edge) 75%,
+    transparent
+  )
+}
+.cargo-progress>span{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:var(--accent)
+}
+.cargo-download-status{
+  margin-top:.35rem;
+  color:var(--muted);
+  font-size:.72rem
+}
+.cargo-download-status.review{
+  color:var(--warn)
+}
+.cargo-download-status.active{
+  color:var(--good)
+}
+.cargo-download-status.pending{
+  color:var(--muted)
+}
+
+
+.cargo-backup-state{
+  display:inline-block;
+  margin-top:.35rem;
+  padding:.14rem .4rem;
+  border:1px solid var(--edge);
+  border-radius:999px;
+  font-size:.64rem;
+  font-weight:800;
+  letter-spacing:.05em
+}
+.cargo-backup-state.verified{
+  color:var(--good)
+}
+.cargo-backup-state.awaiting{
+  color:var(--muted)
+}
+.cargo-backup-state.stale,
+.cargo-backup-state.mismatch,
+.cargo-backup-state.invalid{
+  color:var(--warn)
+}
+
+.cargo-placeholder{
+  padding:.35rem 0 .9rem;
+  color:var(--muted);
+  font-size:.78rem;
+  line-height:1.5
+}
+@media(max-width:640px){
+  .cargo-head{display:block}
+  .cargo-state{
+    display:inline-block;
+    margin-top:.65rem
+  }
+  .cargo-drawers{
+    grid-template-columns:1fr
+  }
+  .cargo-drawer>summary small{
+    display:block;
+    float:none;
+    margin:.3rem 0 0 1rem
+  }
+  .cargo-item-head{
+    display:block
+  }
+  .cargo-size{
+    display:block;
+    margin-top:.25rem
+  }
+}
+
 footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.8rem}
 @media(max-width:640px){main{padding:0 1rem 2.5rem}.section{padding-top:1.5rem}.topbar{padding:.75rem 1rem}.pillnav{padding:.6rem 1rem}}
 </style>
@@ -516,6 +783,68 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 <div id="policyDiff" class="diff"></div>
 </article>
 <article class="card wide" id="cardMissionControlStatus"><h2>Mission Control Status</h2><div class="row"><span class="label">Host</span><span id="hostname" class="value">--</span></div><div class="row"><span class="label">Configuration mode</span><span id="configMode" class="value">Checking</span></div><div class="row"><span class="label">Fan commands</span><span class="value">Guarded socket only</span></div><div class="row"><span class="label">Direct hardware access</span><span class="value good">Disabled</span></div><div class="row"><span class="label">Last refresh</span><span id="updated" class="value">--</span></div></article>
+
+<article
+  class="card wide cargo-bay"
+  id="cardCargoBay"
+  aria-labelledby="cargoBayTitle"
+>
+<div class="cargo-head">
+  <div>
+    <h2 id="cargoBayTitle">Cargo Bay</h2>
+    <div id="cargoSummary" class="cargo-summary">
+      Cargo telemetry unavailable
+    </div>
+  </div>
+  <div id="cargoState" class="cargo-state bad">
+    UNAVAILABLE
+  </div>
+</div>
+
+<div class="cargo-drawers">
+  <details class="cargo-drawer" id="cargoTvDrawer">
+    <summary>
+      <span>TV Cargo</span>
+      <small id="cargoTvCount">0 items</small>
+    </summary>
+    <div id="cargoTv" class="cargo-list">
+      <div class="detail">No recent TV cargo</div>
+    </div>
+  </details>
+
+  <details class="cargo-drawer" id="cargoMovieDrawer">
+    <summary>
+      <span>Movie Cargo</span>
+      <small id="cargoMovieCount">0 items</small>
+    </summary>
+    <div id="cargoMovies" class="cargo-list">
+      <div class="detail">No recent movie cargo</div>
+    </div>
+  </details>
+
+  <details class="cargo-drawer" id="cargoDownloadDrawer">
+    <summary>
+      <span>Download Activity</span>
+      <small id="cargoDownloadSummary">UNAVAILABLE</small>
+    </summary>
+    <div id="cargoDownloads" class="cargo-list">
+      <div class="detail">Download telemetry unavailable</div>
+    </div>
+  </details>
+
+  <details class="cargo-drawer" id="cargoBackupDrawer">
+    <summary>
+      <span>Backup Manifest</span>
+      <small id="cargoBackupSummary">NOT TRACKED</small>
+    </summary>
+    <div id="cargoBackup" class="cargo-list">
+      <div class="detail">
+        Backup tracking is not configured.
+      </div>
+    </div>
+  </details>
+</div>
+</article>
 </section></main>
 <footer>TruePanel v1.1 Mission Control</footer>
 <script>
@@ -2401,6 +2730,671 @@ async function pressVirtualLcdButton(
     }
 }
 
+
+function cargoElement(tag,className,text){
+    const element=document.createElement(tag);
+
+    if(className){
+        element.className=className;
+    }
+
+    if(text!==undefined&&text!==null){
+        element.textContent=String(text);
+    }
+
+    return element;
+}
+
+function cargoBytes(value){
+    let number=Number(value);
+
+    if(!Number.isFinite(number)||number<0){
+        return "--";
+    }
+
+    const units=["B","KB","MB","GB","TB"];
+
+    for(const unit of units){
+        if(number<1024||unit==="TB"){
+            const digits=(
+                number>=10||unit==="B"
+            )?0:1;
+
+            return `${number.toFixed(digits)} ${unit}`;
+        }
+
+        number/=1024;
+    }
+
+    return "--";
+}
+
+function cargoAge(timestamp){
+    const seconds=Number(timestamp);
+
+    if(!Number.isFinite(seconds)||seconds<=0){
+        return "Arrival time unknown";
+    }
+
+    const age=Math.max(
+        0,
+        Math.floor(Date.now()/1000-seconds)
+    );
+
+    if(age<60){
+        return "Arrived moments ago";
+    }
+
+    if(age<3600){
+        return `Arrived ${Math.floor(age/60)}m ago`;
+    }
+
+    if(age<86400){
+        return `Arrived ${Math.floor(age/3600)}h ago`;
+    }
+
+    return `Arrived ${Math.floor(age/86400)}d ago`;
+}
+
+function renderCargoItems(targetId,items,emptyText){
+    const root=q(targetId);
+
+    if(!root){
+        return;
+    }
+
+    root.replaceChildren();
+
+    if(!Array.isArray(items)||!items.length){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                emptyText
+            )
+        );
+        return;
+    }
+
+    items.forEach(item=>{
+        const card=cargoElement(
+            "div",
+            "cargo-item"
+        );
+
+        const head=cargoElement(
+            "div",
+            "cargo-item-head"
+        );
+
+        head.append(
+            cargoElement(
+                "strong",
+                "cargo-title",
+                val(item&&item.title,"Unknown cargo")
+            ),
+            cargoElement(
+                "span",
+                "cargo-size",
+                cargoBytes(item&&item.size_bytes)
+            )
+        );
+
+        card.append(head);
+
+        card.append(
+            cargoElement(
+                "div",
+                "cargo-detail",
+                val(item&&item.detail,"No detail")
+            )
+        );
+
+        const source=String(
+            item&&item.source||"unknown"
+        ).toUpperCase();
+
+        card.append(
+            cargoElement(
+                "div",
+                "cargo-meta",
+                `${cargoAge(
+                    item&&item.imported_at
+                )} • ${source}`
+            )
+        );
+
+        const flags=cargoElement(
+            "div",
+            "cargo-flags"
+        );
+
+        if(item&&item.moved_since_import){
+            flags.append(
+                cargoElement(
+                    "span",
+                    "cargo-flag moved",
+                    "MOVED / RENAMED"
+                )
+            );
+        }
+
+        if(item&&item.exists===false){
+            flags.append(
+                cargoElement(
+                    "span",
+                    "cargo-flag review",
+                    "REVIEW"
+                )
+            );
+        }
+
+        if(flags.childNodes.length){
+            card.append(flags);
+        }
+
+        if(item&&item.current_path){
+            card.append(
+                cargoElement(
+                    "code",
+                    "cargo-path",
+                    item.current_path
+                )
+            );
+        }
+
+        root.append(card);
+    });
+}
+
+
+
+function renderCargoBackup(backup){
+    const payload=(
+        backup&&typeof backup==="object"
+    )?backup:{};
+
+    const tracking=payload.tracking===true;
+    const state=String(
+        payload.state||"NOT_TRACKED"
+    ).toUpperCase();
+
+    const verified=Number(payload.verified)||0;
+    const awaiting=Number(payload.awaiting)||0;
+    const stale=Number(payload.stale)||0;
+    const mismatch=Number(payload.mismatch)||0;
+    const invalid=Number(payload.invalid)||0;
+    const total=Number(payload.total)||0;
+
+    let summary="NOT TRACKED";
+
+    if(tracking){
+        if(state==="INVALID"){
+            summary="INVALID";
+        }else if(total>0){
+            summary=`${verified} / ${total} VERIFIED`;
+        }else{
+            summary="CLEAR";
+        }
+    }
+
+    if(q("cargoBackupSummary")){
+        q("cargoBackupSummary").textContent=
+            summary;
+    }
+
+    const root=q("cargoBackup");
+
+    if(!root){
+        return;
+    }
+
+    root.replaceChildren();
+
+    if(!tracking){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                "Backup tracking is not configured. "
+                +"Cargo Bay will not infer backup completion "
+                +"without explicit backup evidence."
+            )
+        );
+        return;
+    }
+
+    if(state==="INVALID"){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                val(
+                    payload.invalid_reason,
+                    "Backup manifest is invalid."
+                )
+            )
+        );
+        return;
+    }
+
+    const metaParts=[];
+
+    if(awaiting){
+        metaParts.push(`${awaiting} awaiting`);
+    }
+
+    if(stale){
+        metaParts.push(`${stale} stale`);
+    }
+
+    if(mismatch){
+        metaParts.push(`${mismatch} mismatch`);
+    }
+
+    if(invalid){
+        metaParts.push(`${invalid} invalid`);
+    }
+
+    if(metaParts.length){
+        root.append(
+            cargoElement(
+                "div",
+                "cargo-meta",
+                metaParts.join(" • ")
+            )
+        );
+    }
+
+    const items=Array.isArray(payload.items)
+        ?payload.items
+        :[];
+
+    if(!items.length){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                "No recent cargo requires backup evidence."
+            )
+        );
+        return;
+    }
+
+    items.forEach(item=>{
+        const card=cargoElement(
+            "div",
+            "cargo-item"
+        );
+
+        const head=cargoElement(
+            "div",
+            "cargo-item-head"
+        );
+
+        head.append(
+            cargoElement(
+                "strong",
+                "cargo-title",
+                val(item&&item.title,"Unknown cargo")
+            )
+        );
+
+        card.append(head);
+
+        const itemState=String(
+            item&&item.state||"INVALID"
+        ).toUpperCase();
+
+        card.append(
+            cargoElement(
+                "span",
+                `cargo-backup-state ${
+                    itemState.toLowerCase()
+                }`,
+                itemState
+            )
+        );
+
+        if(item&&item.current_path){
+            card.append(
+                cargoElement(
+                    "code",
+                    "cargo-path",
+                    item.current_path
+                )
+            );
+        }
+
+        root.append(card);
+    });
+}
+
+function renderCargoDownloads(downloads){
+    const payload=(
+        downloads&&typeof downloads==="object"
+    )?downloads:{};
+
+    const state=String(
+        payload.state||"UNAVAILABLE"
+    ).toUpperCase();
+
+    const active=Number(payload.active)||0;
+    const pending=Number(payload.pending)||0;
+    const review=Number(payload.review)||0;
+
+    let summary="UNAVAILABLE";
+
+    if(state==="REVIEW"){
+        summary=`${review} REVIEW`;
+    }else if(active>0){
+        summary=`${active} ACTIVE`;
+    }else if(pending>0){
+        summary=`${pending} PENDING`;
+    }else if(state==="CLEAR"){
+        summary="CLEAR";
+    }else if(state==="NOMINAL"){
+        summary="NOMINAL";
+    }
+
+    if(q("cargoDownloadSummary")){
+        q("cargoDownloadSummary").textContent=
+            summary;
+    }
+
+    const root=q("cargoDownloads");
+
+    if(!root){
+        return;
+    }
+
+    root.replaceChildren();
+
+    const items=Array.isArray(payload.items)
+        ?payload.items
+        :[];
+
+    if(!items.length){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                state==="UNAVAILABLE"
+                    ?"Download telemetry unavailable"
+                    :"No active Sonarr or Radarr downloads"
+            )
+        );
+        return;
+    }
+
+    items.forEach(item=>{
+        const card=cargoElement(
+            "div",
+            "cargo-item"
+        );
+
+        const head=cargoElement(
+            "div",
+            "cargo-item-head"
+        );
+
+        head.append(
+            cargoElement(
+                "strong",
+                "cargo-title",
+                val(item&&item.title,"Unknown download")
+            ),
+            cargoElement(
+                "span",
+                "cargo-size",
+                cargoBytes(item&&item.size_bytes)
+            )
+        );
+
+        card.append(head);
+
+        const classification=String(
+            item&&item.classification||"REVIEW"
+        ).toUpperCase();
+
+        const source=String(
+            item&&item.source||"unknown"
+        ).toUpperCase();
+
+        const status=String(
+            item&&item.status||"unknown"
+        ).toUpperCase();
+
+        const trackedState=String(
+            item&&item.tracked_state||"unknown"
+        ).replace(/([a-z])([A-Z])/g,"$1 $2")
+         .toUpperCase();
+
+        card.append(
+            cargoElement(
+                "div",
+                `cargo-download-status ${
+                    classification.toLowerCase()
+                }`,
+                `${source} • ${status} • ${trackedState} • ${classification}`
+            )
+        );
+
+        const progress=Number(
+            item&&item.progress_percent
+        );
+
+        if(Number.isFinite(progress)){
+            const bar=cargoElement(
+                "div",
+                "cargo-progress"
+            );
+
+            const fill=cargoElement(
+                "span",
+                ""
+            );
+
+            fill.style.width=
+                `${Math.max(
+                    0,
+                    Math.min(100,progress)
+                )}%`;
+
+            bar.append(fill);
+            card.append(bar);
+
+            card.append(
+                cargoElement(
+                    "div",
+                    "cargo-meta",
+                    `${progress.toFixed(1)}% complete`
+                )
+            );
+        }
+
+        const remaining=Number(
+            item&&item.remaining_bytes
+        )||0;
+
+        if(remaining>0){
+            card.append(
+                cargoElement(
+                    "div",
+                    "cargo-meta",
+                    `${cargoBytes(remaining)} remaining`
+                )
+            );
+        }
+
+        const timeLeft=String(
+            item&&item.time_left||""
+        );
+
+        if(
+            timeLeft
+            &&timeLeft!=="00:00:00"
+        ){
+            card.append(
+                cargoElement(
+                    "div",
+                    "cargo-meta",
+                    `ETA ${timeLeft}`
+                )
+            );
+        }
+
+        root.append(card);
+    });
+}
+
+function renderCargoBay(cargo){
+    const payload=(
+        cargo&&typeof cargo==="object"
+    )?cargo:{};
+
+    const allowedStates=new Set([
+        "NOMINAL",
+        "CLEAR",
+        "REVIEW",
+        "UNAVAILABLE"
+    ]);
+
+    let state=String(
+        payload.state||"UNAVAILABLE"
+    ).toUpperCase();
+
+    if(!allowedStates.has(state)){
+        state="UNAVAILABLE";
+    }
+
+    const stateElement=q("cargoState");
+
+    if(stateElement){
+        stateElement.textContent=state;
+
+        const tone=(
+            state==="NOMINAL"
+            ||state==="CLEAR"
+        )
+            ?"good"
+            :state==="REVIEW"
+                ?"warn"
+                :"bad";
+
+        stateElement.className=
+            `cargo-state ${tone}`;
+    }
+
+    const summary=(
+        payload.summary
+        &&typeof payload.summary==="object"
+    )?payload.summary:{};
+
+    const total=Number(summary.total)||0;
+    const tv=Number(summary.tv)||0;
+    const movies=Number(summary.movies)||0;
+    const unresolved=Number(
+        summary.unresolved
+    )||0;
+    const totalBytes=Number(
+        summary.total_bytes
+    )||0;
+
+    if(q("cargoTvCount")){
+        q("cargoTvCount").textContent=
+            `${tv} ${tv===1?"item":"items"}`;
+    }
+
+    if(q("cargoMovieCount")){
+        q("cargoMovieCount").textContent=
+            `${movies} ${movies===1?"item":"items"}`;
+    }
+
+    const backup=(
+        payload.backup
+        &&typeof payload.backup==="object"
+    )?payload.backup:{};
+
+    const backupTracking=
+        backup.tracking===true;
+
+    const backupState=backupTracking
+        ?String(
+            backup.state||"UNKNOWN"
+        ).toUpperCase()
+        :"NOT TRACKED";
+
+    if(q("cargoBackupSummary")){
+        q("cargoBackupSummary").textContent=
+            backupState;
+    }
+
+    let summaryText;
+
+    if(state==="UNAVAILABLE"){
+        summaryText="Cargo telemetry unavailable";
+    }else if(state==="CLEAR"){
+        summaryText=
+            "No recent arrivals • "
+            +(
+                backupTracking
+                ?`${Number(backup.verified)||0} of ${
+                    Number(backup.total)||0
+                } recent arrivals backup verified`
+                :"Backup tracking not configured"
+            );
+    }else if(state==="REVIEW"){
+        summaryText=
+            `${total} recent ${
+                total===1?"arrival":"arrivals"
+            } • ${unresolved} need review • `
+            +cargoBytes(totalBytes);
+    }else{
+        summaryText=
+            `${total} recent ${
+                total===1?"arrival":"arrivals"
+            } • ${cargoBytes(totalBytes)} • `
+            +(
+                backupTracking
+                ?`${Number(backup.verified)||0} of ${
+                    Number(backup.total)||0
+                } recent arrivals backup verified`
+                :"Backup tracking not configured"
+            );
+    }
+
+    if(q("cargoSummary")){
+        q("cargoSummary").textContent=
+            summaryText;
+    }
+
+    const groups=(
+        payload.groups
+        &&typeof payload.groups==="object"
+    )?payload.groups:{};
+
+    renderCargoItems(
+        "cargoTv",
+        groups.tv,
+        "No recent TV cargo"
+    );
+
+    renderCargoItems(
+        "cargoMovies",
+        groups.movies,
+        "No recent movie cargo"
+    );
+
+    renderCargoDownloads(
+        payload.downloads
+    );
+
+    renderCargoBackup(
+        payload.backup
+    );
+}
+
 async function refresh(){
     try{
         const response=await fetch(
@@ -2423,6 +3417,7 @@ async function refresh(){
         );
 
         render(data);
+        renderCargoBay(data.cargo_bay);
         renderThermalArmControls(data);
 
         await loadCommissioningHistory();
