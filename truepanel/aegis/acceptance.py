@@ -53,6 +53,7 @@ def acceptance_statement(receipt: Mapping[str, Any]) -> dict[str, Any]:
         "issued_at": receipt.get("issued_at"),
         "expires_at": receipt.get("expires_at"),
         "environment": receipt.get("environment"),
+        "promotion_request_sha256": receipt.get("promotion_request_sha256"),
     }
 
 

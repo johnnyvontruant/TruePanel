@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.07.1",
-  "updated_at": "2026-09-07",
+  "registry_version": "2026.09.08.1",
+  "updated_at": "2026-09-08",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -356,6 +356,25 @@
       "revisit_conditions": ["operator identity policy is approved", "an offline or keyless signing workflow is selected", "a real TrueNAS upgrade is planned", "a production verifier adapter is proposed"],
       "strongest_follow_up": "Choose an operator-owned signing workflow, add a replaceable public verifier adapter, and prove manual staging promotion without granting AEGIS deployment authority.",
       "freshness": {"reviewed_at": "2026-09-07", "review_after": "2026-12-06"}
+    },
+    {
+      "id": "TP-EXP-0024", "title": "AEGIS manual promotion gate", "state": "COMPLETED",
+      "hypothesis": "Independent review can be bound to an exact validated stage, rollback path, preflight state, and one-time nonce while promotion execution and receipt consumption remain manual external actions.",
+      "value": "Prevents an approved envelope from authorizing a different or unsafe staged tree and closes the last read-only decision boundary before deployment.",
+      "prior_art": ["TUF target and metadata binding", "Uptane rollback and mix-and-match resistance", "GitHub deployment protection environments"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-manual-promotion-gate", "pr": null, "commits": []},
+      "protocol": ["content-address the stage manifest and tree", "bind the signed review receipt to the promotion request", "reject consumed receipts", "verify safe stage, deployment, and rollback paths", "require clear preflight and rollback readiness", "return manual readiness without execution"],
+      "fixtures": ["aegis-manual-promotion-gate-v1", "tests/test_aegis_promotion_gate.py", "truepanel/holodeck/aegis_promotion_gate.py"],
+      "success_criteria": ["one reviewed pristine stage is manual-ready", "eight unsafe paths hold", "zero false-ready outcomes", "no receipt is consumed", "no promotion, service change, write, mutation, or control authority occurs"],
+      "abort_criteria": ["receipt does not bind stage request", "stage content can change after review", "replayed receipt remains ready", "active incident or unverified rollback passes", "gate executes promotion or records consumption"],
+      "evidence": [{"path": "docs/evidence/aegis-manual-promotion-gate-v1.json", "sha256": "8421849828fe05abbf780a0dda95ee05d5c7b26ff72b953eec83d4abbe69e71a"}],
+      "outcome": {"conclusion": "One exact, independently reviewed, pristine stage is READY_FOR_MANUAL_PROMOTION; missing review, replay, tree tamper, dirty stage, active incident, unverified rollback, unsafe backup, and version mismatch all HOLD with zero execution authority."},
+      "invalidated_assumptions": ["approving the successor envelope also approves any staged tree", "a receipt need not be replay protected", "rollback location is merely an operator preference", "readiness should consume evidence or start promotion"],
+      "reproduction": ["pytest -q tests/test_aegis_promotion_gate.py tests/test_aegis_acceptance.py", "python -c \"from truepanel.holodeck.aegis_promotion_gate import run_manual_promotion_checkride as run; print(run())\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["real staging integration is proposed", "operator-owned verifier adapter exists", "deployment or rollback semantics change", "a production upgrade is planned"],
+      "strongest_follow_up": "Generate the content-addressed request from a real dry-run stage and add an operator-owned public verifier adapter before any manual deployment trial.",
+      "freshness": {"reviewed_at": "2026-09-08", "review_after": "2026-12-07"}
     }
   ]
 }

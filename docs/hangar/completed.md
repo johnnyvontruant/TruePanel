@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.07.1 · refreshed 2026-09-07 · 18 experiment(s)
+Registry version 2026.09.08.1 · refreshed 2026-09-08 · 19 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -147,3 +147,11 @@ The isolated upgrade leaves the old envelope HOLD. One two-reviewer path is elig
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Choose an operator-owned signing workflow, add a replaceable public verifier adapter, and prove manual staging promotion without granting AEGIS deployment authority.
 - Revisit when: operator identity policy is approved; an offline or keyless signing workflow is selected; a real TrueNAS upgrade is planned; a production verifier adapter is proposed
+
+## TP-EXP-0024 · AEGIS manual promotion gate
+
+One exact, independently reviewed, pristine stage is READY_FOR_MANUAL_PROMOTION; missing review, replay, tree tamper, dirty stage, active incident, unverified rollback, unsafe backup, and version mismatch all HOLD with zero execution authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Generate the content-addressed request from a real dry-run stage and add an operator-owned public verifier adapter before any manual deployment trial.
+- Revisit when: real staging integration is proposed; operator-owned verifier adapter exists; deployment or rollback semantics change; a production upgrade is planned

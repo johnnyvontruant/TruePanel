@@ -309,3 +309,13 @@ It was deferred until operator identity, offline availability, privacy, and
 trust-root lifecycle are governed. Full TUF is also deferred as disproportionate
 for this narrow receipt. No external code, dependency, service, or key was
 incorporated. See [`AEGIS_INDEPENDENT_REVIEW.md`](AEGIS_INDEPENDENT_REVIEW.md).
+
+## Manual-promotion follow-up
+
+The 2026-09-08 experiment adapted TUF/Uptane target, metadata, rollback, and
+mix-and-match protections plus GitHub deployment-environment separation. The
+important shortcut is semantic rather than a dependency: approve an exact
+content-addressed request, keep readiness separate from execution, and require
+rollback and preflight evidence. Hosted deployment automation was rejected
+because BattleStation promotion remains deliberately local and manual. See
+[`AEGIS_MANUAL_PROMOTION_GATE.md`](AEGIS_MANUAL_PROMOTION_GATE.md).

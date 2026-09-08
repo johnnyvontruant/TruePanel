@@ -1,0 +1,85 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "352f99adb90dcc270d1e69af2bf9c28e34108d35585e6ced366f9f31cebaddf4",
+  "experiment_id": "TP-EXP-0024",
+  "measurements": {
+    "false_ready_paths": 0,
+    "promotion_executions": 0,
+    "receipt_consumptions": 0,
+    "runtime_writes": 0,
+    "service_changes": 0
+  },
+  "production_mutation": false,
+  "scenario": "aegis-manual-promotion-gate-v1",
+  "scenarios": [
+    {
+      "promotion_performed": false,
+      "reason": "ManualPromotionChecksPassed",
+      "scenario": "reviewed-pristine-stage",
+      "services_modified": false,
+      "status": "READY_FOR_MANUAL_PROMOTION"
+    },
+    {
+      "promotion_performed": false,
+      "reason": "IndependentReviewMissing",
+      "scenario": "independent-review-missing",
+      "services_modified": false,
+      "status": "HOLD"
+    },
+    {
+      "promotion_performed": false,
+      "reason": "ReceiptAlreadyConsumed",
+      "scenario": "receipt-replay",
+      "services_modified": false,
+      "status": "HOLD"
+    },
+    {
+      "promotion_performed": false,
+      "reason": "StageTreeDigestMismatch",
+      "scenario": "stage-tree-tamper",
+      "services_modified": false,
+      "status": "HOLD"
+    },
+    {
+      "promotion_performed": false,
+      "reason": "ManifestDigestMismatch",
+      "scenario": "stage-not-pristine",
+      "services_modified": false,
+      "status": "HOLD"
+    },
+    {
+      "promotion_performed": false,
+      "reason": "PreflightHold",
+      "scenario": "active-incident",
+      "services_modified": false,
+      "status": "HOLD"
+    },
+    {
+      "promotion_performed": false,
+      "reason": "PreflightHold",
+      "scenario": "rollback-unverified",
+      "services_modified": false,
+      "status": "HOLD"
+    },
+    {
+      "promotion_performed": false,
+      "reason": "PromotionRequestDigestMismatch",
+      "scenario": "unsafe-backup-path",
+      "services_modified": false,
+      "status": "HOLD"
+    },
+    {
+      "promotion_performed": false,
+      "reason": "ManifestDigestMismatch",
+      "scenario": "version-mismatch",
+      "services_modified": false,
+      "status": "HOLD"
+    }
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "status_counts": {
+    "HOLD": 8,
+    "READY_FOR_MANUAL_PROMOTION": 1
+  }
+}
