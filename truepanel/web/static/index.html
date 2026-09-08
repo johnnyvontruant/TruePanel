@@ -507,6 +507,40 @@ button.danger .profile-target{color:var(--bad)}
   font-size:.66rem;
   overflow-wrap:anywhere
 }
+
+.cargo-progress{
+  position:relative;
+  height:.38rem;
+  margin-top:.5rem;
+  overflow:hidden;
+  border-radius:999px;
+  background:color-mix(
+    in srgb,
+    var(--edge) 75%,
+    transparent
+  )
+}
+.cargo-progress>span{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:var(--accent)
+}
+.cargo-download-status{
+  margin-top:.35rem;
+  color:var(--muted);
+  font-size:.72rem
+}
+.cargo-download-status.review{
+  color:var(--warn)
+}
+.cargo-download-status.active{
+  color:var(--good)
+}
+.cargo-download-status.pending{
+  color:var(--muted)
+}
+
 .cargo-placeholder{
   padding:.35rem 0 .9rem;
   color:var(--muted);
@@ -768,12 +802,10 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
   <details class="cargo-drawer" id="cargoDownloadDrawer">
     <summary>
       <span>Download Activity</span>
-      <small id="cargoDownloadSummary">NOT WIRED</small>
+      <small id="cargoDownloadSummary">UNAVAILABLE</small>
     </summary>
-    <div class="cargo-placeholder">
-      Download activity reporting is not wired yet.
-      This drawer is reserved for qBittorrent and Servarr
-      transfer activity.
+    <div id="cargoDownloads" class="cargo-list">
+      <div class="detail">Download telemetry unavailable</div>
     </div>
   </details>
 
@@ -2852,6 +2884,185 @@ function renderCargoItems(targetId,items,emptyText){
     });
 }
 
+
+function renderCargoDownloads(downloads){
+    const payload=(
+        downloads&&typeof downloads==="object"
+    )?downloads:{};
+
+    const state=String(
+        payload.state||"UNAVAILABLE"
+    ).toUpperCase();
+
+    const active=Number(payload.active)||0;
+    const pending=Number(payload.pending)||0;
+    const review=Number(payload.review)||0;
+
+    let summary="UNAVAILABLE";
+
+    if(state==="REVIEW"){
+        summary=`${review} REVIEW`;
+    }else if(active>0){
+        summary=`${active} ACTIVE`;
+    }else if(pending>0){
+        summary=`${pending} PENDING`;
+    }else if(state==="CLEAR"){
+        summary="CLEAR";
+    }else if(state==="NOMINAL"){
+        summary="NOMINAL";
+    }
+
+    if(q("cargoDownloadSummary")){
+        q("cargoDownloadSummary").textContent=
+            summary;
+    }
+
+    const root=q("cargoDownloads");
+
+    if(!root){
+        return;
+    }
+
+    root.replaceChildren();
+
+    const items=Array.isArray(payload.items)
+        ?payload.items
+        :[];
+
+    if(!items.length){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                state==="UNAVAILABLE"
+                    ?"Download telemetry unavailable"
+                    :"No active Sonarr or Radarr downloads"
+            )
+        );
+        return;
+    }
+
+    items.forEach(item=>{
+        const card=cargoElement(
+            "div",
+            "cargo-item"
+        );
+
+        const head=cargoElement(
+            "div",
+            "cargo-item-head"
+        );
+
+        head.append(
+            cargoElement(
+                "strong",
+                "cargo-title",
+                val(item&&item.title,"Unknown download")
+            ),
+            cargoElement(
+                "span",
+                "cargo-size",
+                cargoBytes(item&&item.size_bytes)
+            )
+        );
+
+        card.append(head);
+
+        const classification=String(
+            item&&item.classification||"REVIEW"
+        ).toUpperCase();
+
+        const source=String(
+            item&&item.source||"unknown"
+        ).toUpperCase();
+
+        const status=String(
+            item&&item.status||"unknown"
+        ).toUpperCase();
+
+        const trackedState=String(
+            item&&item.tracked_state||"unknown"
+        ).replace(/([a-z])([A-Z])/g,"$1 $2")
+         .toUpperCase();
+
+        card.append(
+            cargoElement(
+                "div",
+                `cargo-download-status ${
+                    classification.toLowerCase()
+                }`,
+                `${source} • ${status} • ${trackedState} • ${classification}`
+            )
+        );
+
+        const progress=Number(
+            item&&item.progress_percent
+        );
+
+        if(Number.isFinite(progress)){
+            const bar=cargoElement(
+                "div",
+                "cargo-progress"
+            );
+
+            const fill=cargoElement(
+                "span",
+                ""
+            );
+
+            fill.style.width=
+                `${Math.max(
+                    0,
+                    Math.min(100,progress)
+                )}%`;
+
+            bar.append(fill);
+            card.append(bar);
+
+            card.append(
+                cargoElement(
+                    "div",
+                    "cargo-meta",
+                    `${progress.toFixed(1)}% complete`
+                )
+            );
+        }
+
+        const remaining=Number(
+            item&&item.remaining_bytes
+        )||0;
+
+        if(remaining>0){
+            card.append(
+                cargoElement(
+                    "div",
+                    "cargo-meta",
+                    `${cargoBytes(remaining)} remaining`
+                )
+            );
+        }
+
+        const timeLeft=String(
+            item&&item.time_left||""
+        );
+
+        if(
+            timeLeft
+            &&timeLeft!=="00:00:00"
+        ){
+            card.append(
+                cargoElement(
+                    "div",
+                    "cargo-meta",
+                    `ETA ${timeLeft}`
+                )
+            );
+        }
+
+        root.append(card);
+    });
+}
+
 function renderCargoBay(cargo){
     const payload=(
         cargo&&typeof cargo==="object"
@@ -2984,6 +3195,10 @@ function renderCargoBay(cargo){
         "cargoMovies",
         groups.movies,
         "No recent movie cargo"
+    );
+
+    renderCargoDownloads(
+        payload.downloads
     );
 
     if(q("cargoBackup")){

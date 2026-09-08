@@ -272,6 +272,16 @@ class SnapshotService(_base.SnapshotService):
                 "moved_since_import": 0,
                 "total_bytes": 0,
             },
+            "downloads": {
+                "state": "UNAVAILABLE",
+                "read_only": True,
+                "total": 0,
+                "active": 0,
+                "pending": 0,
+                "review": 0,
+                "remaining_bytes": 0,
+                "items": [],
+            },
             "backup": {
                 "tracking": False,
                 "state": "NOT_TRACKED",

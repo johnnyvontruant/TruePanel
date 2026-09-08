@@ -470,6 +470,258 @@ class CargoResolver:
 
         return cargo
 
+    @staticmethod
+    def _queue_classification(
+        record: dict[str, Any],
+    ) -> str:
+        status = str(
+            record.get("status") or ""
+        ).strip().lower()
+        tracked_status = str(
+            record.get("trackedDownloadStatus") or ""
+        ).strip().lower()
+        tracked_state = str(
+            record.get("trackedDownloadState") or ""
+        ).strip().lower()
+
+        size = CargoResolver._safe_int(
+            record.get("size")
+        ) or 0
+        remaining = CargoResolver._safe_int(
+            record.get("sizeleft")
+        ) or 0
+
+        if (
+            tracked_status == "warning"
+            or status in {"failed", "error"}
+        ):
+            return "REVIEW"
+
+        if (
+            status == "completed"
+            and tracked_state == "importpending"
+        ):
+            return "PENDING"
+
+        if (
+            remaining > 0
+            or status in {
+                "downloading",
+                "queued",
+                "paused",
+            }
+        ):
+            return "ACTIVE"
+
+        if status == "completed":
+            return "PENDING"
+
+        if size > 0 and remaining == 0:
+            return "PENDING"
+
+        return "REVIEW"
+
+    @staticmethod
+    def _queue_progress(
+        record: dict[str, Any],
+    ) -> float | None:
+        size = CargoResolver._safe_int(
+            record.get("size")
+        )
+        remaining = CargoResolver._safe_int(
+            record.get("sizeleft")
+        )
+
+        if (
+            size is None
+            or size <= 0
+            or remaining is None
+        ):
+            return None
+
+        completed = max(
+            0,
+            min(size, size - remaining),
+        )
+
+        return round(
+            completed / size * 100.0,
+            1,
+        )
+
+    def _queue_records(
+        self,
+        client: ServarrClient,
+        *,
+        source: str,
+        kind: str,
+        unknown_parameter: str,
+    ) -> list[dict[str, Any]]:
+        payload = client.get(
+            "/api/v3/queue",
+            {
+                "page": 1,
+                "pageSize": 100,
+                unknown_parameter: "true",
+            },
+        )
+
+        if not isinstance(payload, dict):
+            return []
+
+        records = payload.get("records")
+
+        if not isinstance(records, list):
+            return []
+
+        result = []
+
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+
+            size = self._safe_int(
+                record.get("size")
+            )
+            remaining = self._safe_int(
+                record.get("sizeleft")
+            )
+
+            result.append(
+                {
+                    "source": source,
+                    "kind": kind,
+                    "queue_id": record.get("id"),
+                    "media_id": (
+                        record.get("episodeId")
+                        if source == "sonarr"
+                        else record.get("movieId")
+                    ),
+                    "parent_id": (
+                        record.get("seriesId")
+                        if source == "sonarr"
+                        else None
+                    ),
+                    "title": str(
+                        record.get("title")
+                        or "Unknown download"
+                    ),
+                    "status": str(
+                        record.get("status")
+                        or "unknown"
+                    ),
+                    "tracked_status": str(
+                        record.get(
+                            "trackedDownloadStatus"
+                        )
+                        or "unknown"
+                    ),
+                    "tracked_state": str(
+                        record.get(
+                            "trackedDownloadState"
+                        )
+                        or "unknown"
+                    ),
+                    "classification": (
+                        self._queue_classification(
+                            record
+                        )
+                    ),
+                    "size_bytes": size,
+                    "remaining_bytes": remaining,
+                    "progress_percent": (
+                        self._queue_progress(record)
+                    ),
+                    "time_left": (
+                        record.get("timeleft")
+                    ),
+                    "estimated_completion": (
+                        record.get(
+                            "estimatedCompletionTime"
+                        )
+                    ),
+                    "protocol": (
+                        record.get("protocol")
+                    ),
+                }
+            )
+
+        return result
+
+    def _download_activity(self) -> dict[str, Any]:
+        try:
+            sonarr = self._queue_records(
+                self.sonarr_client,
+                source="sonarr",
+                kind="tv",
+                unknown_parameter=(
+                    "includeUnknownSeriesItems"
+                ),
+            )
+
+            radarr = self._queue_records(
+                self.radarr_client,
+                source="radarr",
+                kind="movie",
+                unknown_parameter=(
+                    "includeUnknownMovieItems"
+                ),
+            )
+        except (
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+            HTTPError,
+        ):
+            return {
+                "state": "UNAVAILABLE",
+                "read_only": True,
+                "total": 0,
+                "active": 0,
+                "pending": 0,
+                "review": 0,
+                "remaining_bytes": 0,
+                "items": [],
+            }
+
+        items = sonarr + radarr
+
+        active = sum(
+            item["classification"] == "ACTIVE"
+            for item in items
+        )
+        pending = sum(
+            item["classification"] == "PENDING"
+            for item in items
+        )
+        review = sum(
+            item["classification"] == "REVIEW"
+            for item in items
+        )
+        remaining = sum(
+            int(item.get("remaining_bytes") or 0)
+            for item in items
+        )
+
+        if review:
+            state = "REVIEW"
+        elif active or pending:
+            state = "NOMINAL"
+        else:
+            state = "CLEAR"
+
+        return {
+            "state": state,
+            "read_only": True,
+            "total": len(items),
+            "active": active,
+            "pending": pending,
+            "review": review,
+            "remaining_bytes": remaining,
+            "items": items,
+        }
+
     def snapshot(self) -> dict[str, Any]:
         """Return the current bounded Cargo Bay discovery payload."""
 
@@ -504,6 +756,8 @@ class CargoResolver:
         else:
             state = "CLEAR"
 
+        downloads = self._download_activity()
+
         return {
             "schema_version": 1,
             "read_only": True,
@@ -518,6 +772,7 @@ class CargoResolver:
                 "moved_since_import": moved,
                 "total_bytes": total_bytes,
             },
+            "downloads": downloads,
             "backup": {
                 "tracking": False,
                 "state": "NOT_TRACKED",

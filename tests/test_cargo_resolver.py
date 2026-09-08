@@ -15,6 +15,16 @@ class FakeClient:
 
         if endpoint == "/api/v3/history":
             key = "history"
+        elif endpoint == "/api/v3/queue":
+            key = "/api/v3/queue"
+
+            if key not in self.responses:
+                return {
+                    "page": 1,
+                    "pageSize": 100,
+                    "records": [],
+                    "totalRecords": 0,
+                }
 
         value = self.responses[key]
 
@@ -374,3 +384,219 @@ def test_source_failure_escapes_resolver_boundary(tmp_path):
         raise AssertionError(
             "source failure must reach the snapshot isolation boundary"
         )
+
+
+def test_download_activity_classifies_active_transfer(tmp_path):
+    sonarr = FakeClient(
+        config("sonarr", "/media/tv", tmp_path / "Shows"),
+        {
+            "/api/v3/series": [],
+            "history": {"records": []},
+            "/api/v3/queue": {
+                "records": [
+                    {
+                        "id": 10,
+                        "seriesId": 1,
+                        "episodeId": 2,
+                        "title": "Vigil.S03E04.mkv",
+                        "status": "downloading",
+                        "trackedDownloadStatus": "ok",
+                        "trackedDownloadState": "downloading",
+                        "size": 1000,
+                        "sizeleft": 250,
+                        "timeleft": "00:02:00",
+                        "protocol": "torrent",
+                    }
+                ]
+            },
+        },
+    )
+
+    radarr = FakeClient(
+        config("radarr", "/media/movies", tmp_path / "Movies"),
+        {
+            "/api/v3/movie": [],
+            "history": {"records": []},
+            "/api/v3/queue": {
+                "records": []
+            },
+        },
+    )
+
+    payload = CargoResolver(
+        sonarr_client=sonarr,
+        radarr_client=radarr,
+        clock=lambda: NOW,
+    ).snapshot()
+
+    downloads = payload["downloads"]
+
+    assert downloads["state"] == "NOMINAL"
+    assert downloads["active"] == 1
+    assert downloads["pending"] == 0
+    assert downloads["review"] == 0
+    assert downloads["remaining_bytes"] == 250
+
+    item = downloads["items"][0]
+
+    assert item["classification"] == "ACTIVE"
+    assert item["progress_percent"] == 75.0
+    assert item["source"] == "sonarr"
+
+
+def test_download_activity_classifies_import_pending(tmp_path):
+    sonarr = FakeClient(
+        config("sonarr", "/media/tv", tmp_path / "Shows"),
+        {
+            "/api/v3/series": [],
+            "history": {"records": []},
+            "/api/v3/queue": {
+                "records": [
+                    {
+                        "id": 11,
+                        "seriesId": 226,
+                        "episodeId": 13408,
+                        "title": "Scrubs.S01E05.mkv",
+                        "status": "completed",
+                        "trackedDownloadStatus": "ok",
+                        "trackedDownloadState": "importPending",
+                        "size": 100,
+                        "sizeleft": 0,
+                    }
+                ]
+            },
+        },
+    )
+
+    radarr = FakeClient(
+        config("radarr", "/media/movies", tmp_path / "Movies"),
+        {
+            "/api/v3/movie": [],
+            "history": {"records": []},
+            "/api/v3/queue": {"records": []},
+        },
+    )
+
+    payload = CargoResolver(
+        sonarr_client=sonarr,
+        radarr_client=radarr,
+        clock=lambda: NOW,
+    ).snapshot()
+
+    downloads = payload["downloads"]
+
+    assert downloads["state"] == "NOMINAL"
+    assert downloads["active"] == 0
+    assert downloads["pending"] == 1
+    assert (
+        downloads["items"][0]["classification"]
+        == "PENDING"
+    )
+
+
+def test_download_warning_is_review_not_active(tmp_path):
+    sonarr = FakeClient(
+        config("sonarr", "/media/tv", tmp_path / "Shows"),
+        {
+            "/api/v3/series": [],
+            "history": {"records": []},
+            "/api/v3/queue": {
+                "records": [
+                    {
+                        "id": 12,
+                        "title": "Old test",
+                        "status": "completed",
+                        "trackedDownloadStatus": "warning",
+                        "trackedDownloadState": "importPending",
+                        "size": 100,
+                        "sizeleft": 0,
+                    }
+                ]
+            },
+        },
+    )
+
+    radarr = FakeClient(
+        config("radarr", "/media/movies", tmp_path / "Movies"),
+        {
+            "/api/v3/movie": [],
+            "history": {"records": []},
+            "/api/v3/queue": {"records": []},
+        },
+    )
+
+    downloads = CargoResolver(
+        sonarr_client=sonarr,
+        radarr_client=radarr,
+        clock=lambda: NOW,
+    ).snapshot()["downloads"]
+
+    assert downloads["state"] == "REVIEW"
+    assert downloads["active"] == 0
+    assert downloads["pending"] == 0
+    assert downloads["review"] == 1
+    assert (
+        downloads["items"][0]["classification"]
+        == "REVIEW"
+    )
+
+
+def test_empty_download_queues_are_clear(tmp_path):
+    sonarr = FakeClient(
+        config("sonarr", "/media/tv", tmp_path / "Shows"),
+        {
+            "/api/v3/series": [],
+            "history": {"records": []},
+            "/api/v3/queue": {"records": []},
+        },
+    )
+
+    radarr = FakeClient(
+        config("radarr", "/media/movies", tmp_path / "Movies"),
+        {
+            "/api/v3/movie": [],
+            "history": {"records": []},
+            "/api/v3/queue": {"records": []},
+        },
+    )
+
+    downloads = CargoResolver(
+        sonarr_client=sonarr,
+        radarr_client=radarr,
+        clock=lambda: NOW,
+    ).snapshot()["downloads"]
+
+    assert downloads["state"] == "CLEAR"
+    assert downloads["total"] == 0
+    assert downloads["items"] == []
+
+
+def test_queue_failure_isolated_from_cargo_snapshot(tmp_path):
+    sonarr = FakeClient(
+        config("sonarr", "/media/tv", tmp_path / "Shows"),
+        {
+            "/api/v3/series": [],
+            "history": {"records": []},
+            "/api/v3/queue": OSError(
+                "queue unavailable"
+            ),
+        },
+    )
+
+    radarr = FakeClient(
+        config("radarr", "/media/movies", tmp_path / "Movies"),
+        {
+            "/api/v3/movie": [],
+            "history": {"records": []},
+            "/api/v3/queue": {"records": []},
+        },
+    )
+
+    payload = CargoResolver(
+        sonarr_client=sonarr,
+        radarr_client=radarr,
+        clock=lambda: NOW,
+    ).snapshot()
+
+    assert payload["state"] == "CLEAR"
+    assert payload["downloads"]["state"] == "UNAVAILABLE"

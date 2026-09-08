@@ -64,10 +64,14 @@ def test_cargo_bay_supports_all_backend_states():
         assert f'"{state}"' in html
 
 
-def test_cargo_bay_has_honest_future_placeholders():
+def test_cargo_bay_wires_download_activity_and_keeps_backup_honest():
     html = source()
 
-    assert "Download activity reporting is not wired yet." in html
+    assert 'id="cargoDownloads"' in html
+    assert "function renderCargoDownloads(downloads)" in html
+    assert "renderCargoDownloads(" in html
+    assert "No active Sonarr or Radarr downloads" in html
+
     assert "Backup tracking is not configured." in html
     assert "will not infer backup completion" in html
 
@@ -86,3 +90,16 @@ def test_cargo_bay_preserves_mobile_single_column_layout():
     assert "@media(max-width:640px)" in html
     assert ".cargo-drawers{" in html
     assert "grid-template-columns:1fr" in html
+
+
+
+def test_cargo_bay_download_activity_supports_progress_and_review():
+    html = source()
+
+    assert ".cargo-progress{" in html
+    assert "progress_percent" in html
+    assert "remaining_bytes" in html
+    assert "tracked_state" in html
+    assert '"REVIEW"' in html
+    assert "`${active} ACTIVE`" in html
+    assert "`${pending} PENDING`" in html
