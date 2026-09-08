@@ -341,3 +341,36 @@ def test_empty_cargo_is_clear(tmp_path):
 
     assert payload["state"] == "CLEAR"
     assert payload["summary"]["total"] == 0
+
+
+def test_source_failure_escapes_resolver_boundary(tmp_path):
+    sonarr = FakeClient(
+        config("sonarr", "/media/tv", tmp_path / "Shows"),
+        {
+            "/api/v3/series": OSError("Sonarr unavailable"),
+            "history": {"records": []},
+        },
+    )
+
+    radarr = FakeClient(
+        config("radarr", "/media/movies", tmp_path / "Movies"),
+        {
+            "/api/v3/movie": [],
+            "history": {"records": []},
+        },
+    )
+
+    resolver = CargoResolver(
+        sonarr_client=sonarr,
+        radarr_client=radarr,
+        clock=lambda: NOW,
+    )
+
+    try:
+        resolver.snapshot()
+    except OSError:
+        pass
+    else:
+        raise AssertionError(
+            "source failure must reach the snapshot isolation boundary"
+        )

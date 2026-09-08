@@ -34,6 +34,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from truepanel.cargo import provider_from_config
 from truepanel.guidance.storage_evidence import (
     StorageRecoveryEvidenceProvider,
     normalize_device,
@@ -249,7 +250,11 @@ class SnapshotService(_base.SnapshotService):
             )
         )
         self.lifeline_service_profile = service_profile_for_config(self.config)
-        self.cargo_provider = cargo_provider
+        self.cargo_provider = (
+            cargo_provider
+            if cargo_provider is not None
+            else provider_from_config(self.config)
+        )
 
     @staticmethod
     def _cargo_unavailable_payload() -> dict[str, Any]:

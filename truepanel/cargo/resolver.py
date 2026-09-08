@@ -473,27 +473,8 @@ class CargoResolver:
     def snapshot(self) -> dict[str, Any]:
         """Return the current bounded Cargo Bay discovery payload."""
 
-        try:
-            tv = self._resolve_sonarr()
-        except (
-            OSError,
-            RuntimeError,
-            TypeError,
-            ValueError,
-            HTTPError,
-        ):
-            tv = []
-
-        try:
-            movies = self._resolve_radarr()
-        except (
-            OSError,
-            RuntimeError,
-            TypeError,
-            ValueError,
-            HTTPError,
-        ):
-            movies = []
+        tv = self._resolve_sonarr()
+        movies = self._resolve_radarr()
 
         items = tv + movies
         items.sort(
