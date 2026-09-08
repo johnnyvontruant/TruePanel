@@ -168,3 +168,157 @@ def test_enabled_configuration_builds_portable_provider():
         resolver.radarr_client.config.base_url
         == "http://radarr:7878"
     )
+
+
+def test_provider_without_manifest_stays_not_tracked(tmp_path):
+    resolver = Resolver(
+        {
+            "schema_version": 1,
+            "read_only": True,
+            "state": "NOMINAL",
+            "groups": {
+                "tv": [
+                    {
+                        "title": "Example",
+                        "current_path": "/mnt/HDDs/Shows/Example.mkv",
+                        "size_bytes": 100,
+                        "imported_at": 1000.0,
+                    }
+                ],
+                "movies": [],
+            },
+        }
+    )
+
+    provider = CachedCargoProvider(
+        resolver,
+        backup_manifest_path=None,
+    )
+
+    payload = provider.snapshot()
+
+    assert payload["backup"]["state"] == "NOT_TRACKED"
+    assert payload["backup"]["tracking"] is False
+
+
+def test_provider_marks_valid_matching_manifest_verified(tmp_path):
+    manifest_path = tmp_path / "manifest.json"
+
+    manifest_path.write_text(
+        """
+{
+  "schema_version": 1,
+  "kind": "truepanel.cargo_backup_manifest",
+  "created_at": "1970-01-01T00:21:00Z",
+  "source": "test-backup",
+  "items": [
+    {
+      "path": "/mnt/HDDs/Shows/Example.mkv",
+      "size_bytes": 100,
+      "backed_up_at": "1970-01-01T00:20:00Z"
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    resolver = Resolver(
+        {
+            "schema_version": 1,
+            "read_only": True,
+            "state": "NOMINAL",
+            "groups": {
+                "tv": [
+                    {
+                        "title": "Example",
+                        "current_path": "/mnt/HDDs/Shows/Example.mkv",
+                        "size_bytes": 100,
+                        "imported_at": 1000.0,
+                    }
+                ],
+                "movies": [],
+            },
+        }
+    )
+
+    provider = CachedCargoProvider(
+        resolver,
+        backup_manifest_path=manifest_path,
+    )
+
+    payload = provider.snapshot()
+
+    assert payload["backup"]["state"] == "VERIFIED"
+    assert payload["backup"]["verified"] == 1
+
+
+def test_provider_invalid_manifest_fails_closed(tmp_path):
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        "{broken",
+        encoding="utf-8",
+    )
+
+    resolver = Resolver(
+        {
+            "schema_version": 1,
+            "read_only": True,
+            "state": "NOMINAL",
+            "groups": {
+                "tv": [
+                    {
+                        "title": "Example",
+                        "current_path": "/mnt/HDDs/Shows/Example.mkv",
+                        "size_bytes": 100,
+                        "imported_at": 1000.0,
+                    }
+                ],
+                "movies": [],
+            },
+        }
+    )
+
+    provider = CachedCargoProvider(
+        resolver,
+        backup_manifest_path=manifest_path,
+    )
+
+    payload = provider.snapshot()
+
+    assert payload["backup"]["state"] == "INVALID"
+    assert payload["backup"]["tracking"] is True
+    assert payload["backup"]["invalid"] == 1
+
+
+def test_provider_config_accepts_manifest_path():
+    provider = provider_from_config(
+        {
+            "mission_control": {
+                "cargo_bay": {
+                    "enabled": True,
+                    "backup": {
+                        "manifest_path": (
+                            "/backup/cargo.json"
+                        )
+                    },
+                    "sonarr": {
+                        "url": "http://sonarr:8989",
+                        "config_path": "/config/sonarr.xml",
+                        "host_prefix": "/tank/shows",
+                    },
+                    "radarr": {
+                        "url": "http://radarr:7878",
+                        "config_path": "/config/radarr.xml",
+                        "host_prefix": "/tank/movies",
+                    },
+                }
+            }
+        }
+    )
+
+    assert provider is not None
+    assert (
+        str(provider.backup_manifest_path)
+        == "/backup/cargo.json"
+    )

@@ -9,6 +9,7 @@ state requires an explicit Cargo backup manifest.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -77,6 +78,15 @@ def validate_backup_manifest(
             "Cargo backup manifest created_at is invalid"
         )
 
+    try:
+        datetime.fromisoformat(
+            created_at.replace("Z", "+00:00")
+        )
+    except ValueError as error:
+        raise ValueError(
+            "Cargo backup manifest created_at is invalid"
+        ) from error
+
     source = payload.get("source")
     if (
         not isinstance(source, str)
@@ -133,6 +143,16 @@ def validate_backup_manifest(
                 "Cargo backup manifest item "
                 f"{index} backed_up_at is invalid"
             )
+
+        try:
+            datetime.fromisoformat(
+                backed_up_at.replace("Z", "+00:00")
+            )
+        except ValueError as error:
+            raise ValueError(
+                "Cargo backup manifest item "
+                f"{index} backed_up_at is invalid"
+            ) from error
 
         normalized = {
             "path": path,

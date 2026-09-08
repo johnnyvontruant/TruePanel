@@ -220,3 +220,37 @@ def test_invalid_sha256_is_rejected(
         match="sha256 is invalid",
     ):
         validate_backup_manifest(path)
+
+
+def test_invalid_created_at_timestamp_is_rejected(tmp_path):
+    payload = manifest()
+    payload["created_at"] = "not-a-time"
+
+    path = write_manifest(
+        tmp_path,
+        payload,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="created_at is invalid",
+    ):
+        validate_backup_manifest(path)
+
+
+def test_invalid_backed_up_at_timestamp_is_rejected(tmp_path):
+    payload = manifest()
+    payload["items"][0][
+        "backed_up_at"
+    ] = "not-a-time"
+
+    path = write_manifest(
+        tmp_path,
+        payload,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="backed_up_at is invalid",
+    ):
+        validate_backup_manifest(path)

@@ -19,6 +19,9 @@ DEFAULT_CONFIG = {
         "cargo_bay": {
             "enabled": False,
             "window_seconds": 86400,
+            "backup": {
+                "manifest_path": "",
+            },
             "cache_seconds": 60,
             "history_limit": 250,
             "sonarr": {

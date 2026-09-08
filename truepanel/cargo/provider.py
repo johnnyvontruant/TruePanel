@@ -8,6 +8,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from .backup_manifest import validate_backup_manifest
+from .backup_state import correlate_backup_manifest
 from .resolver import (
     CargoResolver,
     ServarrClient,
@@ -24,10 +26,12 @@ class CachedCargoProvider:
         *,
         cache_seconds: float = 60.0,
         clock: Callable[[], float] = time.monotonic,
+        backup_manifest_path: Path | None = None,
     ) -> None:
         self.resolver = resolver
         self.cache_seconds = max(0.0, float(cache_seconds))
         self.clock = clock
+        self.backup_manifest_path = backup_manifest_path
         self._cached_at: float | None = None
         self._cached_payload: dict[str, Any] | None = None
 
@@ -45,6 +49,52 @@ class CachedCargoProvider:
 
         if not isinstance(payload, dict):
             raise TypeError("Cargo resolver returned a non-dict payload")
+
+        groups = payload.get("groups")
+        if not isinstance(groups, dict):
+            groups = {}
+
+        cargo_items = []
+
+        for key in ("tv", "movies"):
+            values = groups.get(key)
+
+            if isinstance(values, list):
+                cargo_items.extend(
+                    item
+                    for item in values
+                    if isinstance(item, dict)
+                )
+
+        manifest_path = self.backup_manifest_path
+
+        if manifest_path is None:
+            backup = correlate_backup_manifest(
+                cargo_items=cargo_items,
+                manifest=None,
+                tracking=False,
+            )
+        else:
+            try:
+                manifest = validate_backup_manifest(
+                    manifest_path
+                )
+            except ValueError as error:
+                backup = correlate_backup_manifest(
+                    cargo_items=cargo_items,
+                    manifest=None,
+                    tracking=True,
+                    invalid_reason=str(error),
+                )
+            else:
+                backup = correlate_backup_manifest(
+                    cargo_items=cargo_items,
+                    manifest=manifest,
+                    tracking=True,
+                )
+
+        payload = dict(payload)
+        payload["backup"] = backup
 
         self._cached_at = now
         self._cached_payload = deepcopy(payload)
@@ -76,6 +126,7 @@ def provider_from_config(
 
     sonarr = _dict(cargo.get("sonarr"))
     radarr = _dict(cargo.get("radarr"))
+    backup = _dict(cargo.get("backup"))
 
     required = (
         _text(sonarr.get("url")),
@@ -123,10 +174,19 @@ def provider_from_config(
         ),
     )
 
+    manifest_path_text = _text(
+        backup.get("manifest_path")
+    )
+
     return CachedCargoProvider(
         resolver,
         cache_seconds=float(
             cargo.get("cache_seconds") or 60
         ),
         clock=cache_clock,
+        backup_manifest_path=(
+            Path(manifest_path_text)
+            if manifest_path_text
+            else None
+        ),
     )
