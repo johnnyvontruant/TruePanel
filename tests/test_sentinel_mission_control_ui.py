@@ -19,7 +19,7 @@ def test_sentinel_card_uses_live_explanation_contract():
         "protected_items",
         "unknowns",
         "language_guard",
-        "Evidence and provenance",
+        "Evidence, provenance, and recovery references",
     ):
         assert token in source
 
@@ -41,6 +41,20 @@ def test_sentinel_ui_preserves_provenance_and_mobile_layout():
     assert "@media(max-width:480px)" in source
     assert "min-height:44px" in source
     assert "overflow-wrap:anywhere" in source
+
+
+def test_sentinel_card_exposes_pathfinder_as_reference_only():
+    source = _source()
+
+    for token in (
+        "Pathfinder recovery references",
+        "Reference only · no repair authority",
+        "physical_service_ready",
+        "destructive_actions_ready",
+        "Blocked by:",
+        "recovery?.references",
+    ):
+        assert token in source
 
 
 def test_sentinel_card_does_not_offer_recovery_actuation():
