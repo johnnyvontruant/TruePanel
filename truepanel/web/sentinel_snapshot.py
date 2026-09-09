@@ -14,6 +14,7 @@ from typing import Any
 from truepanel.health import ServiceStatusProvider
 from truepanel.sentinel import (
     CachedTopologyProvider,
+    attach_consequence_summaries,
     attach_recovery_references,
     build_flight_director_explanation,
     build_sentinel_snapshot,
@@ -175,6 +176,7 @@ class SentinelSnapshotService(_SnapshotService):
                 result["sentinel"],
                 result.get("operator_guidance"),
             )
+            attach_consequence_summaries(result["sentinel"])
         except (TypeError, ValueError, ArithmeticError, AttributeError):
             result["sentinel"] = {
                 "schema_version": 1,
