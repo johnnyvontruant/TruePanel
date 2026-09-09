@@ -8,11 +8,13 @@ matures.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from truepanel.health import ServiceStatusProvider
 from truepanel.sentinel import (
     CachedTopologyProvider,
+    build_flight_director_explanation,
     build_sentinel_snapshot,
 )
 
@@ -93,6 +95,69 @@ class SentinelSnapshotService(_SnapshotService):
         )
         if message not in unknowns:
             unknowns.append(message)
+            unknowns.sort()
+
+    @staticmethod
+    def _live_incident_package(
+        sentinel: dict[str, Any],
+        report: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Convert one proved live impact report into explanation input."""
+
+        reachable = [
+            deepcopy(item)
+            for item in report.get("reachable", [])
+            if isinstance(item, dict)
+        ]
+        assessment = sentinel.get("assessment")
+        assessment = assessment if isinstance(assessment, dict) else {}
+        unknowns = sorted(
+            {
+                str(item).strip()
+                for item in assessment.get("unknowns", [])
+                if str(item).strip()
+            }
+        )
+        return {
+            "source_device": str(report.get("source_device") or "").strip(),
+            "proved_blast_radius": reachable,
+            "backup_evidence": [
+                deepcopy(item)
+                for item in reachable
+                if str(item.get("kind") or "").strip() == "backup_evidence"
+            ],
+            "unknowns": unknowns,
+            "language_guard": (
+                "Objects absent from the proved blast radius are not automatically "
+                "classified as unaffected."
+            ),
+        }
+
+    @classmethod
+    def _attach_live_explanations(cls, sentinel: dict[str, Any]) -> None:
+        """Attach deterministic Flight Director language to active reports only.
+
+        An empty explanation list means no active impact report was available.
+        It is intentionally not an all-clear or healthy-system assertion.
+        """
+
+        reports = [
+            report
+            for report in sentinel.get("impact_reports", [])
+            if isinstance(report, dict)
+        ]
+        reports.sort(
+            key=lambda report: (
+                str(report.get("source_device") or ""),
+                str(report.get("source_node_id") or ""),
+            )
+        )
+        sentinel["explanations"] = [
+            build_flight_director_explanation(
+                cls._live_incident_package(sentinel, report)
+            )
+            for report in reports
+        ]
 
     def status(self) -> dict[str, Any]:
         payload = super().status()
@@ -104,6 +169,7 @@ class SentinelSnapshotService(_SnapshotService):
             result["sentinel"] = build_sentinel_snapshot(result)
             if result["sentinel_topology"].get("available") is False:
                 self._mark_topology_unknown(result["sentinel"])
+            self._attach_live_explanations(result["sentinel"])
         except (TypeError, ValueError, ArithmeticError, AttributeError):
             result["sentinel"] = {
                 "schema_version": 1,
@@ -119,6 +185,7 @@ class SentinelSnapshotService(_SnapshotService):
                     ],
                 },
                 "impact_reports": [],
+                "explanations": [],
                 "available": False,
             }
 
