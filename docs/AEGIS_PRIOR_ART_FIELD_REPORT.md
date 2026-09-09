@@ -319,3 +319,15 @@ content-addressed request, keep readiness separate from execution, and require
 rollback and preflight evidence. Hosted deployment automation was rejected
 because BattleStation promotion remains deliberately local and manual. See
 [`AEGIS_MANUAL_PROMOTION_GATE.md`](AEGIS_MANUAL_PROMOTION_GATE.md).
+
+## Actual-stage-witness follow-up
+
+The 2026-09-09 experiment inspected TUF target-hash and consistent-snapshot
+semantics plus Python's official `lstat`, descriptor `fstat`, and `O_NOFOLLOW`
+contracts. TruePanel adapted the smallest useful idea: review must bind bytes
+observed from the actual stage, and link substitution or concurrent filesystem
+change must fail closed. A full TUF repository, Sigstore service, and generic
+SBOM generator were rejected as disproportionate to this local evidence step.
+No external code, schema, dependency, service, credential, or artifact was
+incorporated. See
+[`AEGIS_ACTUAL_STAGE_WITNESS.md`](AEGIS_ACTUAL_STAGE_WITNESS.md).

@@ -189,5 +189,12 @@ Project MANUAL PROMOTION GATE now binds that review to the exact staged tree,
 manifest, destination, rollback path, version, preflight state, and one-time
 nonce. It can report manual readiness but cannot consume the receipt or execute
 promotion. See [`AEGIS_MANUAL_PROMOTION_GATE.md`](AEGIS_MANUAL_PROMOTION_GATE.md).
+
+Project ACTUAL STAGE WITNESS now derives that tree digest from the real staged
+filesystem rather than trusting a caller-supplied value. It rejects symlinks,
+special files, bounded-resource violations, manifest/root mismatch, version
+drift, and content changes during or after review. It emits only a request ready
+for external review and performs no promotion or stage write. See
+[`AEGIS_ACTUAL_STAGE_WITNESS.md`](AEGIS_ACTUAL_STAGE_WITNESS.md).
 The opt-in Black Box field-evidence campaign remains the path for estimating
 real false-positive behavior.
