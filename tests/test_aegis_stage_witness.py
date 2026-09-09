@@ -117,6 +117,16 @@ def test_manifest_symlink_fails_closed(tmp_path):
     assert result["reason"] == "UnsafeStageManifest"
 
 
+def test_platform_without_no_follow_support_fails_closed(tmp_path, monkeypatch):
+    stage = _stage(tmp_path)
+    monkeypatch.delattr(stage_witness_module.os, "O_NOFOLLOW")
+
+    result = witness_validated_stage(stage)
+
+    assert result["status"] == "HOLD"
+    assert result["reason"] == "StageNoFollowUnavailable"
+
+
 def test_version_mismatch_never_creates_review_request(tmp_path):
     stage = _stage(tmp_path, version="1.3.0")
 

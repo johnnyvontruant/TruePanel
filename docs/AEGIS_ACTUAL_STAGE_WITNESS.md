@@ -8,7 +8,7 @@ Project MANUAL PROMOTION GATE originally accepted a caller-supplied stage digest
 - The manifest must remain validated, unpromoted, service-clean, bounded in size, and bound to the exact stage root.
 - Every promoted regular file is opened without following symlinks, hashed, and checked with descriptor metadata before and after reading.
 - Directory metadata is checked before and after traversal so concurrent additions, removals, or replacements fail closed.
-- Symlinks, special files, oversized files, oversized trees, excessive entry counts, version mismatch, or post-review content drift produce `HOLD`.
+- Symlinks, special files, unavailable no-follow support, oversized files, oversized trees, excessive entry counts, version mismatch, or post-review content drift produce `HOLD`.
 - The tree digest covers exactly the deployable payload. Preserved configuration, runtime environments, generated caches, the manifest, receipts, and the managed CLI wrapper remain outside that digest in agreement with guarded-promotion exclusions.
 - Success means only `READY_FOR_EXTERNAL_REVIEW`. It creates no signature, receipt, file, promotion, service change, or control authority.
 

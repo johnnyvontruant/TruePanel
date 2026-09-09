@@ -60,7 +60,10 @@ def _read_regular(
 ) -> tuple[str, int, bytes | None, tuple[int, int, int, int, int]]:
     if before.st_size > MAX_FILE_BYTES:
         raise ValueError("StageFileTooLarge")
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise ValueError("StageNoFollowUnavailable")
+    flags = os.O_RDONLY | no_follow
     descriptor = os.open(path, flags)
     try:
         opened = os.fstat(descriptor)
