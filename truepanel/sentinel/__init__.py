@@ -1,5 +1,9 @@
 """Project SENTINEL: deterministic operational intelligence for TruePanel."""
 
+from .consequences import (
+    attach_consequence_summaries,
+    summarize_consequences,
+)
 from .explanation import (
     LANGUAGE_GUARD,
     SCHEMA_VERSION as EXPLANATION_SCHEMA_VERSION,
@@ -46,9 +50,11 @@ __all__ = [
     "SentinelAssessment",
     "SentinelClaim",
     "TopologyResolver",
+    "attach_consequence_summaries",
     "attach_recovery_references",
     "build_flight_director_explanation",
     "build_sentinel_snapshot",
     "recovery_references_for_source",
     "run_sentinel_rehearsal",
+    "summarize_consequences",
 ]
