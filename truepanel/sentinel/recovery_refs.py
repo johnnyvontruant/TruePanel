@@ -33,6 +33,11 @@ def recovery_references_for_source(
     similarity is never enough to create a link. The decorated Pathfinder
     recovery contract must carry an exact device identity matching the SENTINEL
     source device. Conflicting runtime/recovery device identities fail closed.
+
+    References deliberately omit mutable Pathfinder workflow state. The final
+    HTTP composition layer may advance bookkeeping after the snapshot is built;
+    SENTINEL only promises the stable procedure identity and current evidence
+    gates that were already present in the guidance card.
     """
 
     source = _text(source_device)
@@ -68,7 +73,6 @@ def recovery_references_for_source(
             "title": _text(card.get("title")) or code,
             "severity": _text(recovery.get("severity") or card.get("severity"))
             or "warning",
-            "workflow_state": _text(recovery.get("state")) or "reviewing",
             "explanation": _text(recovery.get("explanation") or card.get("summary")),
             "verification": deepcopy(_dict(recovery.get("verification"))),
             "action_gate": deepcopy(_dict(recovery.get("action_gate"))),
