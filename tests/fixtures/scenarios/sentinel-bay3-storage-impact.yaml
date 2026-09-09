@@ -1,0 +1,102 @@
+name: sentinel-bay3-storage-impact
+snapshot:
+  system:
+    hostname: BattleStation
+  storage:
+    pools:
+      - name: HDDs
+        health: ONLINE
+      - name: SSDs
+        health: ONLINE
+    devices:
+      - device: /dev/sdc
+        pool: HDDs
+        vdev: raidz1-0
+        physical_bay: 3
+        zfs_state: ONLINE
+        model: ST8000NE001-2M7101
+      - device: /dev/nvme0n1
+        pool: SSDs
+        vdev: mirror-0
+        zfs_state: ONLINE
+        model: Samsung 970 EVO Plus
+    smart:
+      - device: /dev/sdc
+        health: FAILED
+        pending: 2
+  sentinel_topology:
+    schema_version: 1
+    read_only: true
+    source: truenas.middleware
+    available: true
+    datasets:
+      - id: HDDs/Movies
+        name: Movies
+        pool: HDDs
+        type: FILESYSTEM
+        mountpoint: /mnt/HDDs/Movies
+        locked: false
+      - id: SSDs/Applications
+        name: Applications
+        pool: SSDs
+        type: FILESYSTEM
+        mountpoint: /mnt/SSDs/Applications
+        locked: false
+    applications:
+      - id: radarr
+        name: Radarr
+        state: RUNNING
+        paths:
+          - /mnt/HDDs/Movies
+      - id: plex
+        name: Plex
+        state: RUNNING
+        paths:
+          - /mnt/SSDs/Applications/plex
+    relationships:
+      - dataset_id: HDDs/Movies
+        application_id: radarr
+        path: /mnt/HDDs/Movies
+        source: truenas.middleware.app-config
+      - dataset_id: SSDs/Applications
+        application_id: plex
+        path: /mnt/SSDs/Applications/plex
+        source: truenas.middleware.app-config
+  cargo_bay:
+    summary:
+      unresolved: 0
+    groups:
+      tv: []
+      movies:
+        - source: radarr
+          history_id: 77
+          title: Example Movie
+          current_path: /mnt/HDDs/Movies/Example Movie (2026)/movie.mkv
+          exists: true
+          resolution: movie-current-file-id
+          imported_at: 1788960000.0
+    backup:
+      tracking: true
+      state: VERIFIED
+      items:
+        - title: Example Movie
+          current_path: /mnt/HDDs/Movies/Example Movie (2026)/movie.mkv
+          state: VERIFIED
+          size_bytes: 123456789
+          backed_up_at: 1788963600.0
+expect:
+  source_device: /dev/sdc
+  reachable:
+    - vdev:HDDs:raidz1-0
+    - pool:HDDs
+    - dataset:HDDs/Movies
+    - application:radarr
+    - cargo:radarr:77
+    - backup:/mnt/HDDs/Movies/Example Movie (2026)/movie.mkv
+  not_in_proved_blast_radius:
+    - pool:SSDs
+    - dataset:SSDs/Applications
+    - application:plex
+  node_states:
+    backup:/mnt/HDDs/Movies/Example Movie (2026)/movie.mkv: VERIFIED
+  unknown_contains: []
