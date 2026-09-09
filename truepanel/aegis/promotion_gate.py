@@ -12,6 +12,62 @@ PROMOTION_REQUEST_SCHEMA = "truepanel.aegis-promotion-request/v1"
 PROMOTION_GATE_SCHEMA = "truepanel.aegis-manual-promotion-gate/v1"
 
 
+def build_witnessed_promotion_request(
+    *,
+    request_id: str,
+    candidate: Mapping[str, Any],
+    stage_root: str,
+    backup_root: str,
+    nonce: str,
+) -> dict[str, Any]:
+    """Derive a review request from the actual stage without changing it."""
+
+    from .stage_witness import witness_validated_stage
+
+    witness = witness_validated_stage(stage_root)
+    manifest = witness.get("manifest")
+    if witness.get("status") != "WITNESSED" or not isinstance(manifest, Mapping):
+        return {
+            "status": "HOLD",
+            "reason": witness.get("reason") or "StageWitnessUnavailable",
+            "request": None,
+            "witness": witness,
+            "review_signatures": 0,
+            "promotion_performed": False,
+            "filesystem_writes": 0,
+            "control_authority": False,
+        }
+    if manifest.get("source_version") != candidate.get("truepanel_version"):
+        return {
+            "status": "HOLD",
+            "reason": "VersionMismatch",
+            "request": None,
+            "witness": witness,
+            "review_signatures": 0,
+            "promotion_performed": False,
+            "filesystem_writes": 0,
+            "control_authority": False,
+        }
+    request = build_promotion_request(
+        request_id=request_id,
+        candidate=candidate,
+        stage_manifest=manifest,
+        stage_tree_sha256=str(witness["stage_tree_sha256"]),
+        backup_root=backup_root,
+        nonce=nonce,
+    )
+    return {
+        "status": "READY_FOR_EXTERNAL_REVIEW",
+        "reason": "StageWitnessBound",
+        "request": request,
+        "witness": witness,
+        "review_signatures": 0,
+        "promotion_performed": False,
+        "filesystem_writes": 0,
+        "control_authority": False,
+    }
+
+
 def build_promotion_request(
     *,
     request_id: str,
@@ -183,5 +239,6 @@ __all__ = [
     "PROMOTION_GATE_SCHEMA",
     "PROMOTION_REQUEST_SCHEMA",
     "build_promotion_request",
+    "build_witnessed_promotion_request",
     "evaluate_manual_promotion",
 ]

@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.08.1 · refreshed 2026-09-08 · 19 experiment(s)
+Registry version 2026.09.09.1 · refreshed 2026-09-09 · 20 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -155,3 +155,11 @@ One exact, independently reviewed, pristine stage is READY_FOR_MANUAL_PROMOTION;
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Generate the content-addressed request from a real dry-run stage and add an operator-owned public verifier adapter before any manual deployment trial.
 - Revisit when: real staging integration is proposed; operator-owned verifier adapter exists; deployment or rollback semantics change; a production upgrade is planned
+
+## TP-EXP-0025 · AEGIS actual-stage witness
+
+One real disposable validated stage reaches READY_FOR_EXTERNAL_REVIEW. Payload symlink, previously promoted stage, manifest/root mismatch, version mismatch, and post-review payload tamper all HOLD with no signature or execution authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add an operator-owned public-signature verifier for the witnessed request, then rehearse the full chain in a sandbox that stops before confirmation and any service change.
+- Revisit when: guarded promotion exclusions change; a platform lacks O_NOFOLLOW; stage size exceeds current bounds; an operator-owned signature verifier is selected; a sandboxed end-to-end promotion rehearsal is planned

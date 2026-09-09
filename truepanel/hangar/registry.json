@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.08.1",
-  "updated_at": "2026-09-08",
+  "registry_version": "2026.09.09.1",
+  "updated_at": "2026-09-09",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -375,6 +375,25 @@
       "revisit_conditions": ["real staging integration is proposed", "operator-owned verifier adapter exists", "deployment or rollback semantics change", "a production upgrade is planned"],
       "strongest_follow_up": "Generate the content-addressed request from a real dry-run stage and add an operator-owned public verifier adapter before any manual deployment trial.",
       "freshness": {"reviewed_at": "2026-09-08", "review_after": "2026-12-07"}
+    },
+    {
+      "id": "TP-EXP-0025", "title": "AEGIS actual-stage witness", "state": "COMPLETED",
+      "hypothesis": "A promotion request can be derived from the exact deployable bytes in an actual validated stage while symlink substitution, concurrent change, unsafe entries, manifest drift, and version mismatch fail closed without modifying the stage.",
+      "value": "Removes the caller-supplied stage-digest trust gap and ensures independent reviewers approve the same bytes a later manual promotion would copy.",
+      "prior_art": ["TUF target hashes and consistent snapshots", "Python lstat and descriptor fstat", "Python O_NOFOLLOW link protection"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-stage-witness", "pr": null, "commits": []},
+      "protocol": ["open the actual absolute stage read-only", "validate the bounded manifest and exact root", "traverse without following links", "hash deployable regular files with before/after descriptor identity checks", "exclude preserved runtime and configuration state", "bind the observed digest into a request for external review"],
+      "fixtures": ["aegis-actual-stage-witness-v1", "tests/test_aegis_stage_witness.py", "truepanel/holodeck/aegis_stage_witness.py"],
+      "success_criteria": ["one actual validated stage is ready for external review", "five unsafe or changed stages hold", "payload changes alter the digest", "preserved configuration does not alter the deployable digest", "zero false readiness, signatures, promotion execution, service changes, production writes, mutation, or control authority"],
+      "abort_criteria": ["caller-supplied digest remains authoritative", "symlinked payload is followed", "manifest-only hashing is treated as payload proof", "post-review tamper remains ready", "witness writes into the stage or triggers promotion"],
+      "evidence": [{"path": "docs/evidence/aegis-actual-stage-witness-v1.json", "sha256": "b40f2a760ddb251a6df27f4de17d0d008590def68d5c6cba7bc20ae650a8e48c"}],
+      "outcome": {"conclusion": "One real disposable validated stage reaches READY_FOR_EXTERNAL_REVIEW. Payload symlink, previously promoted stage, manifest/root mismatch, version mismatch, and post-review payload tamper all HOLD with no signature or execution authority."},
+      "invalidated_assumptions": ["a digest supplied alongside a request proves which bytes were reviewed", "manifest integrity alone inventories the deployable tree", "preserved configuration belongs in the promoted payload digest", "filesystem paths remain stable while they are hashed"],
+      "reproduction": ["pytest -q tests/test_aegis_stage_witness.py tests/test_aegis_promotion_gate.py", "python -c \"from truepanel.holodeck.aegis_stage_witness import run_stage_witness_checkride as run; print(run())\"", "python -m truepanel.hangar validate --root .", "python development/tools/smoke_installed_wheel.py"],
+      "revisit_conditions": ["guarded promotion exclusions change", "a platform lacks O_NOFOLLOW", "stage size exceeds current bounds", "an operator-owned signature verifier is selected", "a sandboxed end-to-end promotion rehearsal is planned"],
+      "strongest_follow_up": "Add an operator-owned public-signature verifier for the witnessed request, then rehearse the full chain in a sandbox that stops before confirmation and any service change.",
+      "freshness": {"reviewed_at": "2026-09-09", "review_after": "2026-12-08"}
     }
   ]
 }

@@ -66,7 +66,11 @@ from .policy import (
     HypothesisRule,
     validate_correlation_policy,
 )
-from .promotion_gate import build_promotion_request, evaluate_manual_promotion
+from .promotion_gate import (
+    build_promotion_request,
+    build_witnessed_promotion_request,
+    evaluate_manual_promotion,
+)
 from .rehearsal import rehearse_recovery_paths
 from .reliability import AegisReliabilityEngine
 from .requalification import (
@@ -76,6 +80,7 @@ from .requalification import (
     renewal_contract_sha256,
     renewal_guidance,
 )
+from .stage_witness import witness_validated_stage
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -99,6 +104,7 @@ __all__ = [
     "acceptance_statement",
     "bind_platform_witness",
     "build_promotion_request",
+    "build_witnessed_promotion_request",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "classify_platform_transition",
@@ -129,5 +135,6 @@ __all__ = [
     "validate_recovery_attestation",
     "validate_repository_evidence",
     "validate_platform_witness",
+    "witness_validated_stage",
     "wilson_interval",
 ]
