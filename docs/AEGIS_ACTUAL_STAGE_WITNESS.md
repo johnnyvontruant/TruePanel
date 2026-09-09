@@ -10,6 +10,7 @@ Project MANUAL PROMOTION GATE originally accepted a caller-supplied stage digest
 - Directory metadata is checked before and after traversal so concurrent additions, removals, or replacements fail closed.
 - Symlinks, special files, unavailable no-follow support, oversized files, oversized trees, excessive entry counts, version mismatch, or post-review content drift produce `HOLD`.
 - The tree digest covers exactly the deployable payload. Preserved configuration, runtime environments, generated caches, the manifest, receipts, and the managed CLI wrapper remain outside that digest in agreement with guarded-promotion exclusions.
+- The recognized exclusion tuple is an explicit CI/runtime contract. Any guarded-promotion scope change forces `HOLD` until the witness mapping is reviewed.
 - Success means only `READY_FOR_EXTERNAL_REVIEW`. It creates no signature, receipt, file, promotion, service change, or control authority.
 
 ## HoloDeck proof

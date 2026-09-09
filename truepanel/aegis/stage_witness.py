@@ -9,7 +9,11 @@ import stat
 from pathlib import Path
 from typing import Any
 
-from truepanel.upgrade.promotion import MANIFEST_NAME
+from truepanel.upgrade.promotion import (
+    MANIFEST_NAME,
+    PROMOTION_DEPLOY_EXCLUDES,
+    PROMOTION_EXCLUDES,
+)
 
 from .acceptance import semantic_sha256
 
@@ -18,6 +22,24 @@ MAX_MANIFEST_BYTES = 128 * 1024
 MAX_ENTRIES = 20_000
 MAX_FILE_BYTES = 128 * 1024 * 1024
 MAX_TREE_BYTES = 1024 * 1024 * 1024
+SUPPORTED_PROMOTION_EXCLUDES = (
+    ".git",
+    ".venv/",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    "__pycache__/",
+    "*.pyc",
+    "*.bak",
+    "*.before-*",
+    "truepanel.backup-*",
+    "development/logs/",
+    "development/backups/",
+    "development/firmware/",
+    "truepanel.yaml",
+    MANIFEST_NAME,
+    "truepanel-backup-receipt.json",
+    "bin/",
+)
 
 
 def _excluded(relative: str, *, directory: bool) -> bool:
@@ -158,6 +180,10 @@ def witness_validated_stage(stage_root: str | Path) -> dict[str, Any]:
         "control_authority": False,
     }
     try:
+        if (*PROMOTION_EXCLUDES, *PROMOTION_DEPLOY_EXCLUDES) != (
+            SUPPORTED_PROMOTION_EXCLUDES
+        ):
+            raise ValueError("StageExclusionContractDrift")
         if not supplied.is_absolute() or supplied.is_symlink():
             raise ValueError("UnsafeStageRoot")
         root = supplied.resolve(strict=True)
