@@ -11,6 +11,7 @@ from pathlib import Path
 from truepanel.paths import installation_root
 
 from .pathfinder_server import serve
+from .sentinel_snapshot import SentinelSnapshotService
 
 
 class ServiceConfigurationError(ValueError):
@@ -23,7 +24,6 @@ class MissionControlServiceSettings:
     port: int = 8787
     config_path: Path = installation_root() / "truepanel.yaml"
     allow_config_writes: bool = False
-
 
     @classmethod
     def from_environment(
@@ -127,6 +127,7 @@ def main():
             settings.allow_config_writes
         ),
         config_path=settings.config_path,
+        snapshot_service=SentinelSnapshotService(),
     )
 
 
