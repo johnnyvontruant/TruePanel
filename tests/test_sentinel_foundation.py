@@ -11,6 +11,16 @@ from truepanel.sentinel import (
 )
 
 
+def empty_topology():
+    return {
+        "schema_version": 1,
+        "read_only": True,
+        "datasets": [],
+        "applications": [],
+        "relationships": [],
+    }
+
+
 def test_graph_blast_radius_is_deterministic_and_cycle_safe():
     graph = KnowledgeGraph()
     evidence = EvidenceRef(
@@ -97,6 +107,7 @@ def test_runtime_links_storage_to_cargo_and_preserves_provenance():
             ],
             "smart": [],
         },
+        "sentinel_topology": empty_topology(),
         "cargo_bay": {
             "summary": {"unresolved": 0},
             "backup": {"tracking": False, "state": "NOT_TRACKED"},
@@ -186,16 +197,22 @@ def test_runtime_reports_actionable_smart_without_inventing_cause():
             ],
         }
     ]
+    assert sentinel["impact_reports"] == []
+    assert any(
+        "downstream impact cannot be proven" in unknown
+        for unknown in assessment["unknowns"]
+    )
 
 
 def test_runtime_marks_missing_backup_observation_unknown_not_unprotected():
     sentinel = build_sentinel_snapshot(
         {
+            "sentinel_topology": empty_topology(),
             "cargo_bay": {
                 "summary": {"unresolved": 0},
                 "groups": {"tv": [], "movies": []},
                 "backup": {"tracking": False, "state": "NOT_TRACKED"},
-            }
+            },
         }
     )
 
@@ -203,3 +220,137 @@ def test_runtime_marks_missing_backup_observation_unknown_not_unprotected():
     assert assessment["claims"] == []
     assert len(assessment["unknowns"]) == 1
     assert "protected or unprotected" in assessment["unknowns"][0]
+
+
+def test_storage_intelligence_builds_full_consequence_chain():
+    path = "/mnt/HDDs/Movies/Example/movie.mkv"
+    sentinel = build_sentinel_snapshot(
+        {
+            "system": {"hostname": "BattleStation"},
+            "storage": {
+                "pools": [{"name": "HDDs", "health": "DEGRADED"}],
+                "devices": [
+                    {
+                        "device": "/dev/sdc",
+                        "pool": "HDDs",
+                        "vdev": "raidz1-0",
+                        "physical_bay": 3,
+                        "zfs_state": "DEGRADED",
+                        "remaining_redundancy": 0,
+                        "vdev_topology": "raidz1",
+                    }
+                ],
+                "smart": [
+                    {
+                        "device": "/dev/sdc",
+                        "health": "FAILED",
+                        "pending": 1,
+                    }
+                ],
+            },
+            "sentinel_topology": {
+                "schema_version": 1,
+                "read_only": True,
+                "datasets": [
+                    {
+                        "id": "HDDs/Movies",
+                        "name": "Movies",
+                        "pool": "HDDs",
+                        "type": "FILESYSTEM",
+                        "mountpoint": "/mnt/HDDs/Movies",
+                        "locked": False,
+                    }
+                ],
+                "applications": [
+                    {
+                        "id": "radarr",
+                        "name": "Radarr",
+                        "state": "RUNNING",
+                        "paths": ["/mnt/HDDs/Movies"],
+                    }
+                ],
+                "relationships": [
+                    {
+                        "dataset_id": "HDDs/Movies",
+                        "application_id": "radarr",
+                        "path": "/mnt/HDDs/Movies",
+                        "source": "truenas.app.query.literal_path",
+                    }
+                ],
+            },
+            "cargo_bay": {
+                "summary": {"unresolved": 0},
+                "groups": {
+                    "tv": [],
+                    "movies": [
+                        {
+                            "source": "radarr",
+                            "history_id": 77,
+                            "title": "Example Movie",
+                            "current_path": path,
+                            "exists": True,
+                            "resolution": "movie-current-file-id",
+                            "imported_at": 123.0,
+                        }
+                    ],
+                },
+                "backup": {
+                    "tracking": True,
+                    "state": "VERIFIED",
+                    "items": [
+                        {
+                            "title": "Example Movie",
+                            "current_path": path,
+                            "state": "VERIFIED",
+                            "size_bytes": 1000,
+                            "backed_up_at": "2026-09-09T01:02:03Z",
+                        }
+                    ],
+                },
+            },
+        }
+    )
+
+    edges = {
+        (edge["source"], edge["target"], edge["relation"])
+        for edge in sentinel["graph"]["edges"]
+    }
+    assert (
+        "pool:HDDs",
+        "dataset:HDDs/Movies",
+        "serves",
+    ) in edges
+    assert (
+        "dataset:HDDs/Movies",
+        "application:radarr",
+        "serves",
+    ) in edges
+    assert (
+        "application:radarr",
+        "cargo:radarr:77",
+        "produces",
+    ) in edges
+    assert (
+        "cargo:radarr:77",
+        f"backup:{path}",
+        "evidenced_by",
+    ) in edges
+
+    report = sentinel["impact_reports"][0]
+    assert report["source_node"] == "disk:/dev/sdc"
+    impacted = {item["node_id"] for item in report["reachable"]}
+    assert {
+        "vdev:HDDs:raidz1-0",
+        "pool:HDDs",
+        "dataset:HDDs/Movies",
+        "application:radarr",
+        "cargo:radarr:77",
+        f"backup:{path}",
+    } <= impacted
+
+    backup_node = next(
+        node
+        for node in sentinel["graph"]["nodes"]
+        if node["id"] == f"backup:{path}"
+    )
+    assert backup_node["state"] == "VERIFIED"
