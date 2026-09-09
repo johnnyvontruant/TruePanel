@@ -122,7 +122,7 @@ a runtime dependency of the media.
 
 ### Impact reports
 
-Actionable SMART observations now seed deterministic `impact_reports`. For each
+Actionable SMART observations seed deterministic `impact_reports`. For each
 SMART-affected disk that current topology can identify, SENTINEL traverses the
 proved downstream graph and returns:
 
@@ -137,20 +137,65 @@ complete. If SMART evidence exists but the current storage topology cannot
 identify the disk, SENTINEL emits an explicit unknown and produces no invented
 blast radius.
 
-### Mission Control integration
+## HoloDeck rehearsal
 
-`SentinelSnapshotService` composes above the existing Mission Control snapshot
-service. It attaches bounded `sentinel_topology` evidence and a deterministic
-`sentinel` assessment without changing the established storage, Lifeline,
-Cargo Bay, Pathfinder, or Flight Director contracts beneath it.
+A deterministic HoloDeck SENTINEL scenario now rehearses a Bay 3 storage fault
+through the full proved chain and verifies that unrelated objects stay outside
+the proved blast radius. The rehearsal also verifies independent backup
+evidence and permanently guards the distinction between:
 
-The production Mission Control launcher now supplies this composed snapshot
-service to the existing server stack. Failure of the topology provider is
-fail-closed: Mission Control remains available, topology is marked unavailable,
-and SENTINEL reports what it cannot prove instead of fabricating dependencies.
+- not present in the proved blast radius; and
+- proved unaffected.
 
-The operator-facing Mission Control card is intentionally deferred until this
-evidence contract has survived CI, HoloDeck scenarios, and live observation.
+The first statement may be supported by graph traversal. The second requires
+separate evidence and is never inferred from absence alone.
+
+## Flight Director explanation contract
+
+`build_flight_director_explanation()` translates one structured SENTINEL
+incident package into bounded operator language. The contract includes:
+
+- source device;
+- headline and summary;
+- confirmed known-impact objects;
+- exact graph-path provenance;
+- verified independent-backup observations;
+- explicit unknowns;
+- a permanent language guard;
+- an explicit recovery contract with no authority.
+
+Malformed paths are discarded rather than repaired. Missing source identity or
+absence of all valid paths degrades the explanation to `HOLD`.
+
+## Mission Control integration
+
+`SentinelSnapshotService` is the production Mission Control snapshot service. It
+attaches bounded `sentinel_topology` evidence and a deterministic `sentinel`
+assessment without changing the established storage, Lifeline, Cargo Bay,
+Pathfinder, or reliability contracts beneath it.
+
+The production Mission Control launcher supplies this service to the existing
+server stack. Failure of the topology provider is fail-closed: Mission Control
+remains available, topology is marked unavailable, and SENTINEL reports what it
+cannot prove instead of fabricating dependencies.
+
+For every live `impact_report`, the snapshot service now builds the established
+Flight Director explanation input and attaches the deterministic result at:
+
+`sentinel.explanations[]`
+
+An empty explanation list means only that there is no active SENTINEL impact
+report to explain. It is not an all-clear assertion.
+
+The Glass Cockpit presentation consumes the existing shared status stream and
+adds a compact full-width **SENTINEL / Flight Director** card. The normal view
+shows state, headline, summary, proved-impact count, verified-backup count, and
+unknown count. A native disclosure exposes exact graph-path provenance and the
+complete current unknown set. The presentation remains responsive on phone
+screens and provides no recovery-actuation controls.
+
+See [SENTINEL in Mission Control](SENTINEL_MISSION_CONTROL.md) for the live
+operator contract.
 
 ## Current payload
 
@@ -170,13 +215,15 @@ The returned SENTINEL payload is explicitly read-only:
     "claims": [],
     "unknowns": []
   },
-  "impact_reports": []
+  "impact_reports": [],
+  "explanations": []
 }
 ```
 
 `build_sentinel_snapshot()` itself performs no I/O. Middleware reads are kept in
 the separate topology provider and their normalized output becomes evidence
-supplied to the deterministic adapter.
+supplied to the deterministic adapter. Flight Director explanations are built
+only after those deterministic impact reports exist.
 
 ## Safety invariants
 
@@ -191,32 +238,37 @@ SENTINEL work must preserve all of these invariants:
 4. **Control authority stays separate.** SENTINEL may recommend a recovery path
    later, but it does not acquire the authority to execute it.
 5. **Language is downstream of evidence.** A future conversational or local-AI
-   presentation layer may explain SENTINEL output, but it must not be the source
+   presentation layer may rephrase SENTINEL output, but it must not be the source
    of truth.
 6. **Traversal is bounded and cycle-safe.** A malformed or cyclic relationship
    cannot cause unbounded blast-radius calculation.
 7. **Failure preserves the cockpit.** Loss of topology evidence must degrade
    SENTINEL to explicit unknowns rather than prevent Mission Control status from
    being served.
+8. **Standby is not all clear.** Absence of an active explanation is not evidence
+   of health or absence of impact.
+9. **Presentation has no actuation authority.** Mission Control may expose proof
+   and future recovery references, but SENTINEL presentation cannot execute a
+   repair.
 
 ## Planned slices
 
 The next useful increments remain evidence-first:
 
-1. **HoloDeck SENTINEL scenario**: inject a deterministic disk fault and verify
-   the complete storage/application/cargo consequence chain while preserving
-   unrelated services as unaffected or unknown.
-2. **Flight Director contract**: expose confirmed facts, rejected hypotheses,
-   unknowns, blast radius, and recovery references as a structured explanation.
-3. **Service consequence expansion**: add additional service and dataset
+1. **Live observation gate**: validate the production BattleStation snapshot
+   shape and SENTINEL standby/incident presentation without introducing a
+   synthetic health claim.
+2. **Service consequence expansion**: add additional service and dataset
    relationship evidence only where TrueNAS or another deterministic provider
    can prove it.
-4. **Mission Control presentation**: provide a compact operator explanation with
-   drill-down provenance, keeping mobile usability intact.
-5. **Optional language layer**: only after the deterministic contract is stable,
-   allow a local or external presentation layer to turn SENTINEL facts into
-   conversational explanations without granting it authority or truth-making
-   power.
+3. **Recovery references**: connect existing Pathfinder/Lifeline procedures to
+   explanation output as evidence-backed references while keeping execution
+   authority separate.
+4. **Cross-domain explanations**: extend the same deterministic explanation
+   model beyond storage only after each domain has a proved relationship model.
+5. **Optional language layer**: allow a local or external presentation layer to
+   rephrase deterministic SENTINEL facts conversationally without granting it
+   authority or truth-making power.
 
 The long-term product goal is not another monitoring dashboard. It is a NAS
 flight computer whose explanations can be traced back to evidence.
