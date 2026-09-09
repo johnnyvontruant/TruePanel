@@ -12,6 +12,7 @@ from .models import (
     SentinelAssessment,
     SentinelClaim,
 )
+from .rehearsal import run_sentinel_rehearsal
 from .runtime import build_sentinel_snapshot
 from .topology import (
     CachedTopologyProvider,
@@ -35,4 +36,5 @@ __all__ = [
     "SentinelClaim",
     "TopologyResolver",
     "build_sentinel_snapshot",
+    "run_sentinel_rehearsal",
 ]
