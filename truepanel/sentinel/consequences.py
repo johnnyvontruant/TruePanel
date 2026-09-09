@@ -20,6 +20,13 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _depth(value: Any) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def summarize_consequences(explanation: dict[str, Any] | None) -> dict[str, Any]:
     """Group existing proved impact without upgrading it into an outage claim."""
 
@@ -33,7 +40,7 @@ def summarize_consequences(explanation: dict[str, Any] | None) -> dict[str, Any]
     ]
     impacts.sort(
         key=lambda item: (
-            int(item.get("depth") or 0),
+            _depth(item.get("depth")),
             _text(item.get("node_id")),
         )
     )
