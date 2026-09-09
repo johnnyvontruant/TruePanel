@@ -20,6 +20,7 @@ from typing import Any
 from truepanel.paths import installation_root
 
 STAGE_PREFIX = ".truepanel-stage-"
+STAGE_COPY_TIMEOUT_SECONDS = 300.0
 
 RSYNC_EXCLUDES = (
     ".git",
@@ -387,10 +388,29 @@ def prepare_stage(
         exist_ok=False,
     )
 
-    response = runner(
-        rsync_command(plan),
-        timeout=120.0,
-    )
+    try:
+        response = runner(
+            rsync_command(plan),
+            timeout=STAGE_COPY_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        shutil.rmtree(
+            stage_root,
+            ignore_errors=True,
+        )
+        timeout = getattr(
+            error,
+            "timeout",
+            STAGE_COPY_TIMEOUT_SECONDS,
+        )
+        return (
+            False,
+            (
+                "Stage copy timed out after "
+                f"{float(timeout):g} seconds; "
+                "partial stage removed"
+            ),
+        )
 
     if response.returncode != 0:
         shutil.rmtree(
