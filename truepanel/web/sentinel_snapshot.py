@@ -14,6 +14,7 @@ from typing import Any
 from truepanel.health import ServiceStatusProvider
 from truepanel.sentinel import (
     CachedTopologyProvider,
+    attach_recovery_references,
     build_flight_director_explanation,
     build_sentinel_snapshot,
 )
@@ -113,9 +114,9 @@ class SentinelSnapshotService(_SnapshotService):
         assessment = assessment if isinstance(assessment, dict) else {}
         unknowns = sorted(
             {
-                str(item).strip()
+                str(item or "").strip()
                 for item in assessment.get("unknowns", [])
-                if str(item).strip()
+                if str(item or "").strip()
             }
         )
         return {
@@ -170,6 +171,10 @@ class SentinelSnapshotService(_SnapshotService):
             if result["sentinel_topology"].get("available") is False:
                 self._mark_topology_unknown(result["sentinel"])
             self._attach_live_explanations(result["sentinel"])
+            attach_recovery_references(
+                result["sentinel"],
+                result.get("operator_guidance"),
+            )
         except (TypeError, ValueError, ArithmeticError, AttributeError):
             result["sentinel"] = {
                 "schema_version": 1,
