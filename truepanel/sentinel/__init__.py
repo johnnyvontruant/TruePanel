@@ -17,6 +17,10 @@ from .models import (
     SentinelAssessment,
     SentinelClaim,
 )
+from .recovery_refs import (
+    attach_recovery_references,
+    recovery_references_for_source,
+)
 from .rehearsal import run_sentinel_rehearsal
 from .runtime import build_sentinel_snapshot
 from .topology import (
@@ -42,7 +46,9 @@ __all__ = [
     "SentinelAssessment",
     "SentinelClaim",
     "TopologyResolver",
+    "attach_recovery_references",
     "build_flight_director_explanation",
     "build_sentinel_snapshot",
+    "recovery_references_for_source",
     "run_sentinel_rehearsal",
 ]
