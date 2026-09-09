@@ -110,6 +110,21 @@ def test_unproved_objects_cannot_enter_consequence_summary():
     assert summary["applications"] == []
 
 
+def test_malformed_depth_does_not_take_sentinel_offline():
+    summary = summarize_consequences(
+        {
+            "source_device": "/dev/sdc",
+            "known_impact": [
+                _impact("application:radarr", "application", "Radarr", "unknown"),
+                _impact("pool:HDDs", "pool", "HDDs", 2),
+            ],
+        }
+    )
+
+    assert summary["counts"]["proved_objects"] == 2
+    assert summary["applications"][0]["node_id"] == "application:radarr"
+
+
 def test_attach_adds_summary_without_changing_recovery_contract():
     sentinel = {
         "explanations": [
