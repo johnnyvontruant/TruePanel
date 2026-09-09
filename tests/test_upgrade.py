@@ -4,6 +4,7 @@ from pathlib import Path
 
 from truepanel.upgrade.checks import (
     RSYNC_EXCLUDES,
+    STAGE_COPY_TIMEOUT_SECONDS,
     build_plan,
     prepare_stage,
     rsync_command,
@@ -179,11 +180,13 @@ def test_stage_copies_deployed_configuration(
         deploy_root=deployed,
         stage_root=stage,
     )
+    timeouts = []
 
     def runner(
         command,
         **kwargs,
     ):
+        timeouts.append(kwargs.get("timeout"))
         if command[0] == "rsync":
             for item in source.iterdir():
                 if item.name in (
@@ -225,6 +228,8 @@ def test_stage_copies_deployed_configuration(
 
     assert ok is True
     assert detail == str(stage)
+    assert timeouts[0] == STAGE_COPY_TIMEOUT_SECONDS
+    assert STAGE_COPY_TIMEOUT_SECONDS == 300.0
     assert (
         stage
         / "truepanel.yaml"
@@ -248,3 +253,47 @@ def test_stage_copies_deployed_configuration(
         manifest["services_modified"]
         is False
     )
+
+
+def test_stage_copy_timeout_removes_partial_stage(
+    tmp_path,
+):
+    source = tmp_path / "source"
+    deployed = tmp_path / "deployed"
+    stage = tmp_path / "stage"
+
+    create_tree(
+        source,
+        version="1.2.0",
+    )
+    create_tree(
+        deployed,
+        version="1.1.0",
+    )
+
+    plan = build_plan(
+        source_root=source,
+        deploy_root=deployed,
+        stage_root=stage,
+    )
+
+    def runner(command, **kwargs):
+        assert command[0] == "rsync"
+        assert kwargs["timeout"] == STAGE_COPY_TIMEOUT_SECONDS
+        (stage / "partial.txt").write_text("partial\n")
+        raise subprocess.TimeoutExpired(
+            command,
+            kwargs["timeout"],
+        )
+
+    ok, detail = prepare_stage(
+        plan,
+        runner=runner,
+    )
+
+    assert ok is False
+    assert detail == (
+        "Stage copy timed out after 300 seconds; "
+        "partial stage removed"
+    )
+    assert not stage.exists()
