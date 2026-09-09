@@ -75,6 +75,25 @@ class SentinelSnapshotService(_SnapshotService):
         result["read_only"] = True
         return result
 
+    @staticmethod
+    def _mark_topology_unknown(
+        sentinel: dict[str, Any],
+    ) -> None:
+        assessment = sentinel.get("assessment")
+        if not isinstance(assessment, dict):
+            return
+
+        unknowns = assessment.get("unknowns")
+        if not isinstance(unknowns, list):
+            return
+
+        message = (
+            "TrueNAS dataset/application topology evidence is unavailable; "
+            "SENTINEL cannot prove dataset-to-application dependencies."
+        )
+        if message not in unknowns:
+            unknowns.append(message)
+
     def status(self) -> dict[str, Any]:
         payload = super().status()
         payload = payload if isinstance(payload, dict) else {}
@@ -83,6 +102,8 @@ class SentinelSnapshotService(_SnapshotService):
 
         try:
             result["sentinel"] = build_sentinel_snapshot(result)
+            if result["sentinel_topology"].get("available") is False:
+                self._mark_topology_unknown(result["sentinel"])
         except (TypeError, ValueError, ArithmeticError, AttributeError):
             result["sentinel"] = {
                 "schema_version": 1,
