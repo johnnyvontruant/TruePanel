@@ -38,6 +38,7 @@ class Relation(StrEnum):
     SERVES = "serves"
     PRODUCES = "produces"
     PROTECTS = "protects"
+    EVIDENCED_BY = "evidenced_by"
     AFFECTS = "affects"
     RECOVERS = "recovers"
 
