@@ -8,6 +8,7 @@ matures.
 
 from __future__ import annotations
 
+import subprocess
 from copy import deepcopy
 from typing import Any
 
@@ -68,6 +69,7 @@ class SentinelSnapshotService(_SnapshotService):
             TypeError,
             ValueError,
             AttributeError,
+            subprocess.SubprocessError,
         ):
             return self._topology_unavailable()
 

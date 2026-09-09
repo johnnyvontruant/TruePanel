@@ -50,6 +50,23 @@ def test_midclt_client_uses_supported_read_only_call_shape():
     assert captured["kwargs"]["timeout"] == 3.0
 
 
+def test_topology_resolver_uses_supported_plain_app_query_shape():
+    client = FakeClient(
+        {
+            "pool.dataset.query": [],
+            "app.query": [],
+        }
+    )
+
+    TopologyResolver(client).snapshot()
+
+    assert ("app.query", ([],)) in client.calls
+    assert not any(
+        method == "app.query" and len(arguments) > 1
+        for method, arguments in client.calls
+    )
+
+
 def test_topology_resolver_maps_literal_app_path_to_nearest_dataset():
     client = FakeClient(
         {

@@ -151,14 +151,12 @@ class TopologyResolver:
         return sorted(result, key=lambda item: item["id"])
 
     def _applications(self) -> list[dict[str, Any]]:
+        # TrueNAS 25.10 returns active workload and literal host-mount
+        # evidence from the supported plain app.query response. Passing the
+        # older retrieve_config option is rejected on BattleStation 25.10.5.
         payload = self.client.call(
             "app.query",
             [],
-            {
-                "extra": {
-                    "retrieve_config": True,
-                }
-            },
         )
 
         result = []

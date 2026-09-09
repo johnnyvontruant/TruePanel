@@ -1,3 +1,5 @@
+import subprocess
+
 from truepanel.web import sentinel_snapshot
 
 
@@ -93,6 +95,32 @@ def test_sentinel_snapshot_fails_closed_when_topology_provider_errors(monkeypatc
     assert provider.calls == 1
     assert payload["sentinel_topology"]["available"] is False
     assert payload["sentinel_topology"]["read_only"] is True
+    assert payload["sentinel"]["control_authority"] is False
+    assert any(
+        "dataset-to-application dependencies" in unknown
+        for unknown in payload["sentinel"]["assessment"]["unknowns"]
+    )
+
+
+def test_sentinel_snapshot_fails_closed_on_midclt_process_error(monkeypatch):
+    provider = TopologyProvider(
+        error=subprocess.CalledProcessError(
+            1,
+            ["midclt", "call", "app.query", "[]"],
+        )
+    )
+    service = service_with(provider)
+
+    monkeypatch.setattr(
+        sentinel_snapshot._SnapshotService,
+        "status",
+        lambda self: base_payload(),
+    )
+
+    payload = service.status()
+
+    assert provider.calls == 1
+    assert payload["sentinel_topology"]["available"] is False
     assert payload["sentinel"]["control_authority"] is False
     assert any(
         "dataset-to-application dependencies" in unknown
