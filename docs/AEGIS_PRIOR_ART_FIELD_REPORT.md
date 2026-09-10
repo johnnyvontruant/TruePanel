@@ -331,3 +331,26 @@ SBOM generator were rejected as disproportionate to this local evidence step.
 No external code, schema, dependency, service, credential, or artifact was
 incorporated. See
 [`AEGIS_ACTUAL_STAGE_WITNESS.md`](AEGIS_ACTUAL_STAGE_WITNESS.md).
+
+## Offline-signature follow-up
+
+The 2026-09-10 experiment inspected OpenBSD's current `ssh-keygen -Y sign` and
+`-Y verify` contract, including allowed-signers identity selection, mandatory
+application namespaces, and optional revocation files, plus the OpenSSH SSHSIG
+protocol. TUF's threshold and revocation semantics remain the surrounding
+policy model.
+
+TruePanel adopted the system OpenSSH verifier behind its existing injected
+signature interface. It snapshots a protected public allowed-signers file and
+the detached signature into anonymous memory descriptors, passes the canonical
+receipt statement on standard input, fixes a TruePanel-specific namespace, and
+fails closed on every tool, permission, identity, namespace, or signature
+error. It contains no signer or production private key.
+
+Home-grown Ed25519, a new cryptographic Python dependency, shell pipelines,
+disk-backed signature temporaries, shared HMAC secrets, and hosted Sigstore
+verification were rejected. The first two add cryptographic implementation or
+dependency risk; the next three weaken isolation; Sigstore still needs an
+operator identity, privacy, availability, and trust-root decision. No external
+source, schema, key, service, or runtime package was incorporated. See
+[`AEGIS_OFFLINE_SIGNATURE_VERIFIER.md`](AEGIS_OFFLINE_SIGNATURE_VERIFIER.md).

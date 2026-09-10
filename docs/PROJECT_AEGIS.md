@@ -196,5 +196,12 @@ special files, bounded-resource violations, manifest/root mismatch, version
 drift, and content changes during or after review. It emits only a request ready
 for external review and performs no promotion or stage write. See
 [`AEGIS_ACTUAL_STAGE_WITNESS.md`](AEGIS_ACTUAL_STAGE_WITNESS.md).
+
+Project OFFLINE SIGNATURE now verifies two operator-owned OpenSSH SSHSIG
+signatures over that exact witnessed request. Public trust material is read
+through a protected, no-follow snapshot; private keys and signing remain outside
+TruePanel. The end-to-end HoloDeck checkride stops at manual readiness without
+supplying the promotion confirmation phrase. See
+[`AEGIS_OFFLINE_SIGNATURE_VERIFIER.md`](AEGIS_OFFLINE_SIGNATURE_VERIFIER.md).
 The opt-in Black Box field-evidence campaign remains the path for estimating
 real false-positive behavior.

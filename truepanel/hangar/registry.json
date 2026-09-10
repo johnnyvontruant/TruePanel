@@ -394,6 +394,25 @@
       "revisit_conditions": ["guarded promotion exclusions change", "a platform lacks O_NOFOLLOW", "stage size exceeds current bounds", "an operator-owned signature verifier is selected", "a sandboxed end-to-end promotion rehearsal is planned"],
       "strongest_follow_up": "Add an operator-owned public-signature verifier for the witnessed request, then rehearse the full chain in a sandbox that stops before confirmation and any service change.",
       "freshness": {"reviewed_at": "2026-09-09", "review_after": "2026-12-08"}
+    },
+    {
+      "id": "TP-EXP-0026", "title": "AEGIS offline public-signature verifier", "state": "COMPLETED",
+      "hypothesis": "Two operator-owned OpenSSH signatures can authenticate the exact witnessed promotion request while private keys remain outside TruePanel and all identity, namespace, permission, binding, and preflight failures hold before promotion.",
+      "value": "Replaces lab-only shared-secret verification with a standard public-key seam and proves the complete read-only chain without giving AEGIS signing or deployment authority.",
+      "prior_art": ["OpenSSH SSHSIG detached signatures", "OpenSSH allowed-signers and namespaces", "TUF threshold trust and revocation"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-offline-signature-verifier", "pr": null, "commits": []},
+      "protocol": ["witness an actual disposable validated stage", "bind its deployable bytes into a promotion request", "sign the canonical receipt statement with two disposable external keys", "verify through a protected public allowed-signers snapshot and fixed namespace", "apply quorum, lifecycle, request, stage, and preflight gates", "stop before confirmation or promotion"],
+      "fixtures": ["aegis-offline-signature-checkride-v1", "tests/test_aegis_ssh_verifier.py", "truepanel/holodeck/aegis_offline_signature.py"],
+      "success_criteria": ["one exact two-reviewer chain reaches manual readiness", "nine unsafe or altered paths hold", "zero false readiness", "no production signer or retained private key", "no confirmation, receipt consumption, promotion, service change, runtime write, mutation, or control authority"],
+      "abort_criteria": ["shared secret remains the production verification mechanism", "one reviewer satisfies quorum", "wrong namespace or unsafe trust file verifies", "request or staged bytes can change after signing", "TruePanel stores a production private key", "checkride supplies confirmation or invokes promotion"],
+      "evidence": [{"path": "docs/evidence/aegis-offline-signature-checkride-v1.json", "sha256": "b8fc9d455c08811b14120e3d232f296118ebc499f57ead8ae5ad0b4a1cd1406c"}],
+      "outcome": {"conclusion": "One actual-stage, two-reviewer OpenSSH chain reaches READY_FOR_MANUAL_PROMOTION. Nine identity, signature, namespace, trust-file, binding, stage, and preflight failures HOLD; no private key persists and no confirmation, receipt consumption, promotion, service change, runtime write, mutation, or control authority occurs."},
+      "invalidated_assumptions": ["public-key verification requires a new Python crypto dependency", "review signatures need disk-backed temporary files", "a valid signature may be reused across application domains", "proving readiness requires exercising promotion"],
+      "reproduction": ["pytest -q tests/test_aegis_ssh_verifier.py tests/test_aegis_stage_witness.py tests/test_aegis_promotion_gate.py tests/test_aegis_acceptance.py", "python -c \"from truepanel.holodeck.aegis_offline_signature import run_offline_signature_checkride as run; print(run())\"", "python -m truepanel.hangar validate --root .", "python development/tools/smoke_installed_wheel.py"],
+      "revisit_conditions": ["operator reviewer identities are selected", "protected public trust material is provisioned", "OpenSSH compatibility changes", "a real upgrade stage is prepared", "Sigstore or hardware-backed identity policy is approved"],
+      "strongest_follow_up": "Define the operator signing ceremony and separately provision the protected public trust file, then run one read-only preflight against a real stage while preserving the manual confirmation boundary.",
+      "freshness": {"reviewed_at": "2026-09-10", "review_after": "2026-12-09"}
     }
   ]
 }
