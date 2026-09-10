@@ -4,6 +4,18 @@ AEGIS is an additive, read-only layer over TruePanel's existing detectors,
 ORACLE outlooks, Pathfinder recovery contracts, and HoloDeck rehearsals.
 """
 
+from .acceptance import (
+    ACCEPTANCE_SCHEMA,
+    TRUST_POLICY_SCHEMA,
+    acceptance_statement,
+    evaluate_acceptance_receipt,
+)
+from .assurance import (
+    coverage_contract_sha256,
+    evaluate_airworthiness,
+    load_assurance_envelope,
+    validate_repository_evidence,
+)
 from .attestations import (
     collect_recovery_attestations,
     issue_recovery_attestation,
@@ -41,6 +53,12 @@ from .passive_websocket import (
     GovernedTLSCAFile,
     TrueNASWebSocketReadOnlyClient,
 )
+from .platform_witness import (
+    bind_platform_witness,
+    issue_platform_witness,
+    normalize_truenas_version,
+    validate_platform_witness,
+)
 from .policy import (
     DEFAULT_CORRELATION_POLICY,
     CorrelationPolicy,
@@ -48,10 +66,25 @@ from .policy import (
     HypothesisRule,
     validate_correlation_policy,
 )
+from .promotion_gate import (
+    build_promotion_request,
+    build_witnessed_promotion_request,
+    evaluate_manual_promotion,
+)
 from .rehearsal import rehearse_recovery_paths
 from .reliability import AegisReliabilityEngine
+from .requalification import (
+    classify_platform_transition,
+    envelope_sha256,
+    evaluate_successor_envelope,
+    renewal_contract_sha256,
+    renewal_guidance,
+)
+from .stage_witness import witness_validated_stage
+from .ssh_verifier import DEFAULT_NAMESPACE, OpenSshSignatureVerifier
 
 __all__ = [
+    "ACCEPTANCE_SCHEMA",
     "AegisReliabilityEngine",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
@@ -68,15 +101,32 @@ __all__ = [
     "TrueNASReplacementInventoryProvider",
     "TrueNASRoleVerifier",
     "TrueNASWebSocketReadOnlyClient",
+    "TRUST_POLICY_SCHEMA",
+    "acceptance_statement",
+    "bind_platform_witness",
+    "build_promotion_request",
+    "build_witnessed_promotion_request",
     "compose_storage_checkride",
     "collect_recovery_attestations",
+    "classify_platform_transition",
+    "coverage_contract_sha256",
+    "evaluate_airworthiness",
+    "evaluate_acceptance_receipt",
     "evaluate_pre_service_clearance",
+    "evaluate_manual_promotion",
+    "evaluate_successor_envelope",
+    "envelope_sha256",
     "issue_recovery_attestation",
     "issue_restore_verification_receipt",
+    "issue_platform_witness",
+    "load_assurance_envelope",
+    "normalize_truenas_version",
     "correlate_incident",
     "coverage_matrix",
     "evaluate_evidence_gate",
     "rehearse_recovery_paths",
+    "renewal_contract_sha256",
+    "renewal_guidance",
     "run_flight_director_proof",
     "run_storage_recovery_rehearsals",
     "reconcile_recovery_attestations",
@@ -84,5 +134,10 @@ __all__ = [
     "validate_correlation_policy",
     "validate_field_manifest",
     "validate_recovery_attestation",
+    "validate_repository_evidence",
+    "validate_platform_witness",
+    "witness_validated_stage",
+    "DEFAULT_NAMESPACE",
+    "OpenSshSignatureVerifier",
     "wilson_interval",
 ]

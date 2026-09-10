@@ -222,3 +222,135 @@ and automatic privilege provisioning were rejected because they would create
 credential-exposure or configuration risks. No external code or dependency was
 incorporated. See
 [`AEGIS_GOVERNED_PASSIVE_RUNTIME.md`](AEGIS_GOVERNED_PASSIVE_RUNTIME.md).
+
+## Airworthiness and trust-decay follow-up
+
+The 2026-09-03 study inspected Kubernetes condition fields and their actual
+`apimachinery` representation, The Update Framework's version/hash/expiry
+checks and current Python-TUF release notes, in-toto Statement and test-result
+subjects, and SLSA provenance. The common transferable idea is that a success
+is meaningful only when its subject, observation generation, and validity
+window remain identifiable.
+
+TruePanel adopted those semantics in an original, dependency-free acceptance
+envelope. Five installed runtime subjects and three canonical evidence
+artifacts are SHA-256 bound; policy and recovery coverage are checked
+separately; missing platform evidence is REVIEW; known drift, expiry, or clock
+rollback is HOLD. Raw alerts and recovery guidance remain visible.
+
+Full TUF metadata, in-toto signing, and hosted verification were deferred.
+They solve stronger distribution and authentication problems but would require
+a governed signing-key lifecycle that TruePanel does not yet have. Treating a
+plain digest as a signature was explicitly rejected. See
+[`AEGIS_AIRWORTHINESS_ENVELOPE.md`](AEGIS_AIRWORTHINESS_ENVELOPE.md).
+
+## Platform-witness follow-up
+
+The 2026-09-05 study inspected the actual TrueNAS 25.10.5 API contract. The
+documented `system.version` method returns only the full software version and
+requires no additional role. By contrast, `system.info` returns hostname,
+system serial, CPU, memory, license, and other facts under `READONLY_ADMIN`.
+TruePanel therefore adopted only `system.version` behind its existing
+credential-safe, TLS-verified, read-only session interface.
+
+IETF RATS supplied the separation between collected evidence and an appraisal
+decision. SLSA's Verification Summary Attestation and the in-toto Statement
+model reinforced binding a result to explicit subjects and policy rather than
+asserting permanent trust. TruePanel adapted those semantics in original,
+dependency-free code; it copied no source, schema, credential, or hosted
+service.
+
+The resulting PLATFORM WITNESS retains only normalized release, source, age,
+observation time, safety flags, and a SHA-256 integrity digest. It rejects
+unknown fields instead of letting a correct digest legitimize them. Live and
+fresh cache evidence can satisfy AIRWORTHINESS; stale or unavailable evidence
+is REVIEW; malformed, untrusted, tampered, or version-drifted evidence is HOLD.
+
+Rejected routes were `system.info` overcollection, parsing the Linux banner,
+accepting arbitrary version strings, treating a plain digest as authentication,
+and collecting hardware identity that the decision does not require. See
+[`AEGIS_PLATFORM_WITNESS.md`](AEGIS_PLATFORM_WITNESS.md).
+
+## Airworthiness-requalification follow-up
+
+The 2026-09-06 study compared TUF's current rollback, freeze, mix-and-match,
+expiry, and trusted-lineage protections; SLSA's separation of verification
+summaries from consumer policy; IETF RATS evidence appraisal; and NIST
+security-focused configuration change control. The transferable pattern is
+that successful checks are evidence for a decision, not authority to enact the
+decision.
+
+TruePanel adapted that pattern in an original, dependency-free successor gate.
+It requires the exact canonical predecessor digest, unique successor identity,
+bounded chronology, non-downgrade platform movement, current subject/policy/
+coverage/witness appraisal, and an explicit operator-review boundary. The gate
+can emit `READY_FOR_OPERATOR_REVIEW`, `REVIEW`, or `HOLD`; it cannot write,
+install, or accept an envelope.
+
+Full TUF metadata/signatures, Sigstore transparency, and automatic semantic
+version libraries were deferred. The first two require a governed key and
+identity lifecycle; the latter would add dependency weight while still failing
+to settle vendor-specific prerelease ordering. Unsupported prerelease movement
+therefore remains REVIEW rather than guessed. See
+[`AEGIS_REQUALIFICATION.md`](AEGIS_REQUALIFICATION.md).
+
+## Independent-review follow-up
+
+The 2026-09-07 study inspected TUF threshold and revocation rules, Sigstore
+identity-bound verification and offline bundles, SLSA verification-summary
+separation, and IETF RATS appraisal boundaries. TruePanel adapted the small,
+replaceable policy seam: two distinct valid reviewer identities must sign the
+exact candidate, predecessor, and appraisal statement. Signing remains wholly
+outside AEGIS.
+
+Sigstore/Cosign is the strongest future production-verifier candidate because
+its bundle can carry identity, signature, timestamp, and transparency proof.
+It was deferred until operator identity, offline availability, privacy, and
+trust-root lifecycle are governed. Full TUF is also deferred as disproportionate
+for this narrow receipt. No external code, dependency, service, or key was
+incorporated. See [`AEGIS_INDEPENDENT_REVIEW.md`](AEGIS_INDEPENDENT_REVIEW.md).
+
+## Manual-promotion follow-up
+
+The 2026-09-08 experiment adapted TUF/Uptane target, metadata, rollback, and
+mix-and-match protections plus GitHub deployment-environment separation. The
+important shortcut is semantic rather than a dependency: approve an exact
+content-addressed request, keep readiness separate from execution, and require
+rollback and preflight evidence. Hosted deployment automation was rejected
+because BattleStation promotion remains deliberately local and manual. See
+[`AEGIS_MANUAL_PROMOTION_GATE.md`](AEGIS_MANUAL_PROMOTION_GATE.md).
+
+## Actual-stage-witness follow-up
+
+The 2026-09-09 experiment inspected TUF target-hash and consistent-snapshot
+semantics plus Python's official `lstat`, descriptor `fstat`, and `O_NOFOLLOW`
+contracts. TruePanel adapted the smallest useful idea: review must bind bytes
+observed from the actual stage, and link substitution or concurrent filesystem
+change must fail closed. A full TUF repository, Sigstore service, and generic
+SBOM generator were rejected as disproportionate to this local evidence step.
+No external code, schema, dependency, service, credential, or artifact was
+incorporated. See
+[`AEGIS_ACTUAL_STAGE_WITNESS.md`](AEGIS_ACTUAL_STAGE_WITNESS.md).
+
+## Offline-signature follow-up
+
+The 2026-09-10 experiment inspected OpenBSD's current `ssh-keygen -Y sign` and
+`-Y verify` contract, including allowed-signers identity selection, mandatory
+application namespaces, and optional revocation files, plus the OpenSSH SSHSIG
+protocol. TUF's threshold and revocation semantics remain the surrounding
+policy model.
+
+TruePanel adopted the system OpenSSH verifier behind its existing injected
+signature interface. It snapshots a protected public allowed-signers file and
+the detached signature into anonymous memory descriptors, passes the canonical
+receipt statement on standard input, fixes a TruePanel-specific namespace, and
+fails closed on every tool, permission, identity, namespace, or signature
+error. It contains no signer or production private key.
+
+Home-grown Ed25519, a new cryptographic Python dependency, shell pipelines,
+disk-backed signature temporaries, shared HMAC secrets, and hosted Sigstore
+verification were rejected. The first two add cryptographic implementation or
+dependency risk; the next three weaken isolation; Sigstore still needs an
+operator identity, privacy, availability, and trust-root decision. No external
+source, schema, key, service, or runtime package was incorporated. See
+[`AEGIS_OFFLINE_SIGNATURE_VERIFIER.md`](AEGIS_OFFLINE_SIGNATURE_VERIFIER.md).

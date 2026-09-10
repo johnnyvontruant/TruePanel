@@ -145,7 +145,8 @@ that evidence.
 - The current six-recording, 193-frame corpus includes adversarial shifts and
   faults, but its perfect synthetic score is not a production false-positive
   estimate.
-- AEGIS has not been deployed or evaluated against live BattleStation data.
+- The passive evidence runtime was accepted on BattleStation, but correlation
+  accuracy and repair verification still lack a governed real-incident corpus.
 
 The current correlation policy is calibrated against the versioned
 [`aegis-black-box-corpus-v1`](AEGIS_BLACK_BOX_CORPUS.md). Mission Control labels
@@ -158,7 +159,49 @@ dataset provenance, reviewed labels, workload/system diversity, and 95% Wilson
 confidence bounds. Synthetic point estimates cannot clear that gate, and an
 automatically eligible corpus still requires explicit release review.
 
-The strongest next step is an opt-in Black Box field-evidence campaign: replay
-sanitized normal workloads and reviewed incidents through this same interface,
-measure false positives and confidence stability, and keep live deployment as
-a separate explicit gate.
+The governed passive evidence runtime has since completed a separately
+documented BattleStation acceptance on TrueNAS SCALE 25.10.5. Project
+AIRWORTHINESS now prevents that dated success from being presented as permanent:
+it binds the accepted policy, coverage contract, runtime subjects, evidence
+artifacts, TruePanel release, TrueNAS release scope, and review window. See
+[`AEGIS_AIRWORTHINESS_ENVELOPE.md`](AEGIS_AIRWORTHINESS_ENVELOPE.md).
+
+Project PLATFORM WITNESS now supplies that explicit release fact through one
+privacy-minimal `system.version` observation. AIRWORTHINESS accepts only a
+fresh, normalized, digest-intact witness; stale or unavailable evidence is
+REVIEW, while malformed, tampered, or version-drifted evidence is HOLD. See
+[`AEGIS_PLATFORM_WITNESS.md`](AEGIS_PLATFORM_WITNESS.md).
+
+Project REQUALIFICATION now proves that upgrade lifecycle deterministically:
+the old envelope remains HOLD, while a complete successor becomes only
+`READY_FOR_OPERATOR_REVIEW`. Predecessor mismatch, downgrade, excessive
+validity, automatic acceptance, renewal-code drift, and runtime-subject drift
+all hold. Mission Control gives a visible next action for CURRENT, REVIEW, and
+HOLD states. See [`AEGIS_REQUALIFICATION.md`](AEGIS_REQUALIFICATION.md).
+
+Project INDEPENDENT REVIEW now supplies a verifier-only acceptance receipt
+contract with two-reviewer quorum, key validity and revocation, exact subject
+binding, and a deterministic pre-upgrade checkride. AEGIS contains no signer
+or production private key and cannot install an accepted successor. See
+[`AEGIS_INDEPENDENT_REVIEW.md`](AEGIS_INDEPENDENT_REVIEW.md).
+
+Project MANUAL PROMOTION GATE now binds that review to the exact staged tree,
+manifest, destination, rollback path, version, preflight state, and one-time
+nonce. It can report manual readiness but cannot consume the receipt or execute
+promotion. See [`AEGIS_MANUAL_PROMOTION_GATE.md`](AEGIS_MANUAL_PROMOTION_GATE.md).
+
+Project ACTUAL STAGE WITNESS now derives that tree digest from the real staged
+filesystem rather than trusting a caller-supplied value. It rejects symlinks,
+special files, bounded-resource violations, manifest/root mismatch, version
+drift, and content changes during or after review. It emits only a request ready
+for external review and performs no promotion or stage write. See
+[`AEGIS_ACTUAL_STAGE_WITNESS.md`](AEGIS_ACTUAL_STAGE_WITNESS.md).
+
+Project OFFLINE SIGNATURE now verifies two operator-owned OpenSSH SSHSIG
+signatures over that exact witnessed request. Public trust material is read
+through a protected, no-follow snapshot; private keys and signing remain outside
+TruePanel. The end-to-end HoloDeck checkride stops at manual readiness without
+supplying the promotion confirmation phrase. See
+[`AEGIS_OFFLINE_SIGNATURE_VERIFIER.md`](AEGIS_OFFLINE_SIGNATURE_VERIFIER.md).
+The opt-in Black Box field-evidence campaign remains the path for estimating
+real false-positive behavior.

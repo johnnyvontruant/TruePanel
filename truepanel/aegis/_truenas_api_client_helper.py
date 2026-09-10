@@ -20,6 +20,7 @@ PASSIVE_METHODS = {
     "cloud_backup.query",
     "disk.query",
     "replication.query",
+    "system.version",
 }
 ALLOWED_CALL_METHODS = PASSIVE_METHODS | {"auth.login_ex"}
 

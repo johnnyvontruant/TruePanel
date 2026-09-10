@@ -14,6 +14,8 @@ from truepanel.aegis import (
     validate_correlation_policy,
     validate_recovery_coverage,
 )
+from truepanel.aegis.passive_runtime import BoundedTrueNASQueryCache
+from truepanel.aegis.platform_witness import issue_platform_witness
 from truepanel.guidance import guidance_for_snapshot
 from truepanel.guidance.catalog import guidance_codes
 from truepanel.guidance.recovery import recovery_contract
@@ -380,6 +382,10 @@ class _ProtectionEvidence:
 
     def observe(self, *, incident_id):
         self.incident_ids.append(incident_id)
+        class VersionClient:
+            def call(self, _method, *_arguments):
+                return "TrueNAS-SCALE-25.10.5"
+
         return {
             "read_only": True,
             "control_authority": False,
@@ -400,6 +406,10 @@ class _ProtectionEvidence:
                 "last_age_seconds": 2,
                 "ttl_seconds": 60,
             },
+            "platform_witness": issue_platform_witness(
+                BoundedTrueNASQueryCache(VersionClient()),
+                clock=lambda: 1788451200.0,
+            ),
         }
 
 
@@ -433,6 +443,9 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         reliability = payload["reliability"]
         assert reliability["project"] == "AEGIS"
         assert reliability["active_incident"]["likely_cause"] == "network.link_down"
+        assert reliability["airworthiness"]["status"] == "REVIEW"
+        assert reliability["airworthiness"]["reason"] == "PlatformWitnessUnbound"
+        assert reliability["airworthiness"]["control_authority"] is False
 
         status, _, dashboard = _request(server, "/")
         assert status == 200
@@ -451,6 +464,14 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "LAB CALIBRATED · NOT LIVE VALIDATED" in source
         assert "Evidence Promotion Gate" in source
         assert "Passive TrueNAS Evidence" in source
+        assert "Project AIRWORTHINESS" in source
+        assert "NEXT ·" in source
+        assert "APPROVAL · EXTERNAL RECEIPT REQUIRED" in source
+        assert "Promotion remains manual with rollback verification" in source
+        assert "Validation envelope" in source
+        assert "Witness ${esc(witness.status" in source
+        assert "Raw alerts and recovery guidance remain visible" in source
+        assert ".ag-assurance-grid" in source
         assert "Role gate:" in source
         assert "Receipt store:" in source
         assert "last_age_seconds" in source
@@ -479,6 +500,34 @@ def test_reliability_exposes_passive_evidence_without_promoting_task_success():
     assert result["passive_evidence"]["restore_verified"] is False
     assert result["passive_evidence"]["role_verification"]["status"] == "VERIFIED"
     assert result["passive_evidence"]["control_authority"] is False
+    assert result["airworthiness"]["status"] == "CURRENT"
+    assert result["airworthiness"]["renewal"]["state"] == "MONITOR"
+    assert result["airworthiness"]["renewal"]["automatic_acceptance"] is False
+
+
+def test_platform_witness_provider_is_independent_of_active_incidents():
+    class Provider:
+        calls = 0
+
+        def observe(self):
+            class VersionClient:
+                def call(self, _method, *_arguments):
+                    return "TrueNAS-SCALE-25.10.5"
+
+            self.calls += 1
+            cache = BoundedTrueNASQueryCache(VersionClient())
+            return issue_platform_witness(cache, clock=lambda: 1788609600.0)
+
+    provider = Provider()
+    engine = AegisReliabilityEngine(platform_witness_provider=provider)
+    payload = {"timestamp": 1, "fans": {}, "storage": {}, "operator_guidance": []}
+
+    result = engine.observe(payload)
+
+    assert result["active_incident"] is None
+    assert provider.calls == 1
+    assert result["airworthiness"]["status"] == "CURRENT"
+    assert result["airworthiness"]["renewal"]["state"] == "MONITOR"
 
 
 def test_topology_reports_hottest_drive_bay_when_localized():

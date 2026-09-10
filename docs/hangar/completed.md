@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.5 · refreshed 2026-09-02 · 14 experiment(s)
+Registry version 2026.09.09.1 · refreshed 2026-09-09 · 21 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -115,3 +115,59 @@ The governed runtime first failed closed on missing restore proof, then a contro
 - Safety: `READ_ONLY_EVIDENCE`
 - Strongest follow-up: Review the field-validated passive runtime for deployment without expanding AEGIS control authority, and formalize the controlled restore-test procedure as a supported TrueNAS API/CLI runbook before broader use.
 - Revisit when: TrueNAS API, RBAC, transport, or replication-task state semantics change; production deployment is proposed; receipt issuance or restore-test trust policy changes
+
+## TP-EXP-0020 · AEGIS airworthiness and trust-decay envelope
+
+The accepted contract produces CURRENT only with an explicit matching TrueNAS version; an unobserved version produces REVIEW, while platform, policy, coverage, subject-digest, expiry, and clock drift produce 6/6 HOLD decisions with zero control authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Expose an explicit TrueNAS release fact through the passive collector boundary and rehearse a platform upgrade that remains HOLD until a new reviewed envelope is issued.
+- Revisit when: TrueNAS or TruePanel release changes; correlation policy or recovery coverage changes; the acceptance envelope reaches its review deadline; a governed signing-key lifecycle is introduced
+
+## TP-EXP-0021 · AEGIS passive platform witness
+
+Two matching live/cache paths are CURRENT, two stale/unavailable paths are REVIEW, and malformed/drifted/tampered evidence produces 3/3 HOLD decisions. The first observation makes one passive call, the cached observation adds none, and no sensitive field, runtime write, production mutation, or control authority is present.
+
+- Safety: `READ_ONLY_EVIDENCE`
+- Strongest follow-up: Run one operator-governed passive observation, then rehearse a TrueNAS upgrade where the old envelope holds until a separately reviewed replacement envelope is issued.
+- Revisit when: TrueNAS API release semantics change; the appliance upgrades from 25.10.5; platform identity stronger than release version is required; a governed signing-key lifecycle exists
+
+## TP-EXP-0022 · AEGIS airworthiness requalification
+
+The old envelope remains HOLD after simulated platform drift. Two coherent successors become READY_FOR_OPERATOR_REVIEW, two uncertain cases remain REVIEW, and six unsafe proposals HOLD with zero false-ready outcomes, installations, automatic acceptances, runtime writes, or control authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add an operator-signed acceptance receipt with a governed key lifecycle, then validate the same renewal protocol during an isolated pre-upgrade checkride.
+- Revisit when: a real TrueNAS upgrade is planned; the accepted envelope approaches expiry; prerelease ordering must be supported; a governed signing-key and reviewer identity lifecycle exists
+
+## TP-EXP-0023 · AEGIS independent-review receipt
+
+The isolated upgrade leaves the old envelope HOLD. One two-reviewer path is eligible for manual promotion and seven adversarial paths HOLD, with zero false eligibility, private-key persistence, installs, automatic acceptance, runtime writes, production mutation, or control authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Choose an operator-owned signing workflow, add a replaceable public verifier adapter, and prove manual staging promotion without granting AEGIS deployment authority.
+- Revisit when: operator identity policy is approved; an offline or keyless signing workflow is selected; a real TrueNAS upgrade is planned; a production verifier adapter is proposed
+
+## TP-EXP-0024 · AEGIS manual promotion gate
+
+One exact, independently reviewed, pristine stage is READY_FOR_MANUAL_PROMOTION; missing review, replay, tree tamper, dirty stage, active incident, unverified rollback, unsafe backup, and version mismatch all HOLD with zero execution authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Generate the content-addressed request from a real dry-run stage and add an operator-owned public verifier adapter before any manual deployment trial.
+- Revisit when: real staging integration is proposed; operator-owned verifier adapter exists; deployment or rollback semantics change; a production upgrade is planned
+
+## TP-EXP-0025 · AEGIS actual-stage witness
+
+One real disposable validated stage reaches READY_FOR_EXTERNAL_REVIEW. Payload symlink, previously promoted stage, manifest/root mismatch, version mismatch, and post-review payload tamper all HOLD with no signature or execution authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add an operator-owned public-signature verifier for the witnessed request, then rehearse the full chain in a sandbox that stops before confirmation and any service change.
+- Revisit when: guarded promotion exclusions change; a platform lacks O_NOFOLLOW; stage size exceeds current bounds; an operator-owned signature verifier is selected; a sandboxed end-to-end promotion rehearsal is planned
+
+## TP-EXP-0026 · AEGIS offline public-signature verifier
+
+One actual-stage, two-reviewer OpenSSH chain reaches READY_FOR_MANUAL_PROMOTION. Nine identity, signature, namespace, trust-file, binding, stage, and preflight failures HOLD; no private key persists and no confirmation, receipt consumption, promotion, service change, runtime write, mutation, or control authority occurs.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Define the operator signing ceremony and separately provision the protected public trust file, then run one read-only preflight against a real stage while preserving the manual confirmation boundary.
+- Revisit when: operator reviewer identities are selected; protected public trust material is provisioned; OpenSSH compatibility changes; a real upgrade stage is prepared; Sigstore or hardware-backed identity policy is approved

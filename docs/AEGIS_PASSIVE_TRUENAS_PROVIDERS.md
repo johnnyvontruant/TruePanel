@@ -8,9 +8,11 @@ authority.
 ## Contract
 
 `TrueNASReadOnlyQueryClient` permits exactly `disk.query`,
-`replication.query`, and `cloud_backup.query`. Every other method, including
-`disk.wipe`, is rejected before a subprocess can start. Queries use the local
-middleware CLI, a ten-second timeout, JSON-only results, and no passwords.
+`replication.query`, and `cloud_backup.query`. The shared authenticated-session
+boundary additionally permits the scalar `system.version` method used by
+PLATFORM WITNESS. Every other method, including `system.info` and `disk.wipe`,
+is rejected before transport. Queries use a bounded timeout, JSON-only results,
+and no passwords.
 
 `TrueNASReplacementInventoryProvider` requires agreement between the existing
 Linux/enclosure/signature provider and `disk.query` identity, capacity, and

@@ -1,0 +1,90 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "12beee3d5c04121fe26f3f622691828c9837325746d2b755e926b8dd98679e24",
+  "experiment_id": "TP-EXP-0021",
+  "hardware_isolated": true,
+  "measurements": {
+    "false_current_paths": 0,
+    "fresh_calls_after_cached_observation": 1,
+    "fresh_calls_first_observation": 1,
+    "privacy_fields_retained": 0
+  },
+  "passive_method": "system.version",
+  "production_mutation": false,
+  "runtime_writes": 0,
+  "scenario": "aegis-platform-witness-v1",
+  "scenarios": [
+    {
+      "airworthiness_status": "CURRENT",
+      "control_authority": false,
+      "delegate_calls": 1,
+      "reason": "InsideValidatedEnvelope",
+      "runtime_writes": 0,
+      "scenario": "matching-live-version",
+      "witness_status": "VERIFIED"
+    },
+    {
+      "airworthiness_status": "CURRENT",
+      "control_authority": false,
+      "delegate_calls": 1,
+      "reason": "InsideValidatedEnvelope",
+      "runtime_writes": 0,
+      "scenario": "matching-cached-version",
+      "witness_status": "VERIFIED"
+    },
+    {
+      "airworthiness_status": "REVIEW",
+      "control_authority": false,
+      "delegate_calls": 2,
+      "reason": "PlatformVersionStale",
+      "runtime_writes": 0,
+      "scenario": "stale-display-only-version",
+      "witness_status": "REVIEW"
+    },
+    {
+      "airworthiness_status": "REVIEW",
+      "control_authority": false,
+      "delegate_calls": 1,
+      "reason": "PlatformVersionUnavailable",
+      "runtime_writes": 0,
+      "scenario": "version-unavailable",
+      "witness_status": "REVIEW"
+    },
+    {
+      "airworthiness_status": "HOLD",
+      "control_authority": false,
+      "delegate_calls": 1,
+      "reason": "PlatformVersionMalformed",
+      "runtime_writes": 0,
+      "scenario": "non-scalar-version",
+      "witness_status": "HOLD"
+    },
+    {
+      "airworthiness_status": "HOLD",
+      "control_authority": false,
+      "delegate_calls": 1,
+      "reason": "PlatformDrift",
+      "runtime_writes": 0,
+      "scenario": "version-drift",
+      "witness_status": "VERIFIED"
+    },
+    {
+      "airworthiness_status": "HOLD",
+      "control_authority": false,
+      "delegate_calls": 0,
+      "reason": "PlatformWitnessInvalid",
+      "runtime_writes": 0,
+      "scenario": "tampered-witness",
+      "witness_status": "VERIFIED"
+    }
+  ],
+  "schema_version": 1,
+  "sensitive_fields_retained": false,
+  "simulation": true,
+  "status_counts": {
+    "CURRENT": 2,
+    "HOLD": 3,
+    "REVIEW": 2
+  }
+}
+
