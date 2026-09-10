@@ -81,6 +81,7 @@ from .requalification import (
     renewal_guidance,
 )
 from .stage_witness import witness_validated_stage
+from .ssh_verifier import DEFAULT_NAMESPACE, OpenSshSignatureVerifier
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -136,5 +137,7 @@ __all__ = [
     "validate_repository_evidence",
     "validate_platform_witness",
     "witness_validated_stage",
+    "DEFAULT_NAMESPACE",
+    "OpenSshSignatureVerifier",
     "wilson_interval",
 ]
