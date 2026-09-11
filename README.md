@@ -10,7 +10,7 @@
 
 <h3 align="center">Hardware-aware mission control and guided recovery for TrueNAS SCALE</h3>
 
-TruePanel restores and extends the physical front-panel experience of supported QNAP hardware running TrueNAS SCALE. It combines a rotating 16x2 LCD Flight Deck, a responsive browser-based Mission Control cockpit, physical-to-logical storage awareness, health intelligence, guided recovery, guarded hardware control, historical evidence, and a deterministic Digital Twin.
+TruePanel restores and extends the physical front-panel experience of supported QNAP hardware running TrueNAS SCALE. It combines a rotating 16x2 LCD Flight Deck, a responsive browser-based Mission Control cockpit, physical-to-logical storage awareness, health intelligence, guided recovery, guarded hardware control, historical evidence, a deterministic Digital Twin, and Cargo Bay visibility into recent Servarr media arrivals and independent backup evidence.
 
 The goal is larger than displaying telemetry: when TruePanel identifies a fault, it should help the operator understand the evidence, take the safest useful next step, and verify that the system recovered.
 
@@ -32,6 +32,7 @@ TruePanel began by adapting earlier QNAP LCD utilities, but the current project 
 - Responsive cockpit layout designed to remain usable on phones
 - Virtual Front Panel that follows the same dispatcher as the physical buttons
 - Preflight readiness for Host, Storage, Cooling, Front Panel, and Safety Interlocks
+- Cargo Bay for recent Sonarr/Radarr imports, live download state, current-file resolution, and evidence-backed independent backup status
 - Privacy-safe compatibility support bundles
 - Historical telemetry, event evidence, and guarded configuration surfaces
 
@@ -143,6 +144,8 @@ Mission Control is the browser companion service at port `8787`. It is localhost
 
 The Virtual Front Panel never takes direct serial ownership. Its controls use the local LCD command socket and the same ordered dispatcher as physical button reports.
 
+Cargo Bay extends the cockpit with a bounded, read-only view of recent Sonarr/Radarr imports and live queue state. It resolves imported media to its current Servarr file rather than assuming historical file IDs remain authoritative. Optional backup status is accepted only from a validated independent manifest; TruePanel does not perform the backup itself. See the [Cargo Bay Guide](docs/CARGO_BAY.md).
+
 See the [Mission Control Guide](docs/MISSION_CONTROL.md) for the cockpit, Preflight, Health Intelligence, Pathfinder recovery, Lifeline, AEGIS, mobile behavior, and access boundaries.
 
 <p align="center">
@@ -194,6 +197,7 @@ See the [CLI Reference](docs/CLI.md), [Upgrade and Rollback Guide](docs/UPGRADIN
 
 - [Documentation map](docs/README.md)
 - [Mission Control and reliability](docs/MISSION_CONTROL.md)
+- [Cargo Bay](docs/CARGO_BAY.md)
 - [Installation](docs/INSTALLATION.md)
 - [Upgrade and rollback](docs/UPGRADING.md)
 - [Architecture](docs/ARCHITECTURE.md)
@@ -221,7 +225,7 @@ TruePanel's reliability systems are designed to explain and verify recovery. The
 
 ## Release status
 
-TruePanel 1.3.0 is the release candidate line for the current reliability and guided-recovery stack. It includes Pathfinder, Lifeline, ORACLE, AEGIS, HANGAR, Flight Director, GLASS COCKPIT, supported TrueNAS `i2c-dev` boot persistence, and physical-bay localization for drive-temperature reliability evidence. The major post-1.2 capabilities have been deployed and live-validated on the reference BattleStation while preserving their documented safety boundaries.
+TruePanel 1.3.0 is the release candidate line for the current reliability and guided-recovery stack. It includes Pathfinder, Lifeline, ORACLE, AEGIS, HANGAR, Flight Director, GLASS COCKPIT, Cargo Bay, supported TrueNAS `i2c-dev` boot persistence, and physical-bay localization for drive-temperature reliability evidence. Cargo Bay adds read-only Servarr arrival/queue visibility plus independently produced backup evidence while preserving TruePanel's no-media-mutation boundary. The major post-1.2 capabilities have been deployed and live-validated on the reference BattleStation while preserving their documented safety boundaries.
 
 Every promoted change is expected to pass focused regression coverage, the complete GitHub Actions suite, installed-wheel smoke testing, and the applicable HoloDeck or physical-hardware validation gate.
 
