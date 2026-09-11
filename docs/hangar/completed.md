@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.09.1 · refreshed 2026-09-09 · 21 experiment(s)
+Registry version 2026.09.09.1 · refreshed 2026-09-09 · 22 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -171,3 +171,11 @@ One actual-stage, two-reviewer OpenSSH chain reaches READY_FOR_MANUAL_PROMOTION.
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Define the operator signing ceremony and separately provision the protected public trust file, then run one read-only preflight against a real stage while preserving the manual confirmation boundary.
 - Revisit when: operator reviewer identities are selected; protected public trust material is provisioned; OpenSSH compatibility changes; a real upgrade stage is prepared; Sigstore or hardware-backed identity policy is approved
+
+## TP-EXP-0027 · AEGIS two-person signing ceremony
+
+One exact two-person ceremony reaches READY_FOR_MANUAL_PROMOTION. Eight roster, statement, subject, policy, and quorum failures HOLD; no private key enters the packet and no confirmation or promotion occurs.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision two operator-owned public keys and the protected exact roster outside TruePanel, then run a read-only checkride against a real validated stage while preserving the manual confirmation boundary.
+- Revisit when: real reviewer identities and public keys are selected; hardware-backed Ed25519-SK is approved; OpenSSH allowed-signers grammar changes; a real validated stage is available; Sigstore identity policy is approved
