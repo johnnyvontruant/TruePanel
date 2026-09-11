@@ -9,6 +9,7 @@ from .acceptance import (
     TRUST_POLICY_SCHEMA,
     acceptance_statement,
     evaluate_acceptance_receipt,
+    semantic_sha256,
 )
 from .assurance import (
     coverage_contract_sha256,
@@ -80,8 +81,18 @@ from .requalification import (
     renewal_contract_sha256,
     renewal_guidance,
 )
+from .review_ceremony import (
+    REVIEW_BUNDLE_SCHEMA,
+    assemble_acceptance_receipt,
+    build_review_bundle,
+    validate_review_bundle,
+)
+from .ssh_verifier import (
+    DEFAULT_NAMESPACE,
+    OpenSshSignatureVerifier,
+    validate_allowed_signers_roster,
+)
 from .stage_witness import witness_validated_stage
-from .ssh_verifier import DEFAULT_NAMESPACE, OpenSshSignatureVerifier
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -129,6 +140,7 @@ __all__ = [
     "renewal_guidance",
     "run_flight_director_proof",
     "run_storage_recovery_rehearsals",
+    "semantic_sha256",
     "reconcile_recovery_attestations",
     "validate_recovery_coverage",
     "validate_correlation_policy",
@@ -139,5 +151,10 @@ __all__ = [
     "witness_validated_stage",
     "DEFAULT_NAMESPACE",
     "OpenSshSignatureVerifier",
+    "REVIEW_BUNDLE_SCHEMA",
+    "assemble_acceptance_receipt",
+    "build_review_bundle",
+    "validate_allowed_signers_roster",
+    "validate_review_bundle",
     "wilson_interval",
 ]

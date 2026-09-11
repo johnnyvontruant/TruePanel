@@ -6,7 +6,11 @@ outside TruePanel, and verification never grants promotion authority.
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
 import os
+import re
 import stat
 import subprocess
 from pathlib import Path
@@ -15,6 +19,66 @@ from typing import Final
 DEFAULT_NAMESPACE: Final = "truepanel-aegis-review-v1@truepanel"
 MAX_ALLOWED_SIGNERS_BYTES: Final = 64 * 1024
 MAX_SIGNATURE_BYTES: Final = 32 * 1024
+_KEY_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@-]{0,127}\Z")
+
+
+def validate_allowed_signers_roster(
+    payload: bytes, *, expected_key_ids: tuple[str, ...] | None = None
+) -> dict[str, str]:
+    """Validate the deliberately narrow TruePanel allowed-signers profile.
+
+    OpenSSH supports wildcard principals, certificate authorities, validity
+    options, and comma-separated aliases.  The AEGIS ceremony permits none of
+    those: one exact identity and one Ed25519 public key per line.
+    """
+
+    try:
+        text = payload.decode("ascii")
+    except UnicodeDecodeError as error:
+        raise ValueError("TrustRosterEncodingInvalid") from error
+    roster: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split()
+        if len(fields) < 3:
+            raise ValueError("TrustRosterEntryInvalid")
+        principal, key_type, encoded_key = fields[:3]
+        if not _KEY_ID.fullmatch(principal) or key_type != "ssh-ed25519":
+            raise ValueError("TrustRosterProfileInvalid")
+        if principal in roster:
+            raise ValueError("TrustRosterDuplicateIdentity")
+        try:
+            key_blob = base64.b64decode(encoded_key, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError("TrustRosterKeyInvalid") from error
+        algorithm_size = (
+            int.from_bytes(key_blob[:4], "big") if len(key_blob) >= 4 else 0
+        )
+        algorithm_end = 4 + algorithm_size
+        key_size = (
+            int.from_bytes(key_blob[algorithm_end : algorithm_end + 4], "big")
+            if len(key_blob) >= algorithm_end + 4
+            else 0
+        )
+        if (
+            key_blob[4:algorithm_end] != b"ssh-ed25519"
+            or key_size != 32
+            or len(key_blob) != algorithm_end + 4 + key_size
+        ):
+            raise ValueError("TrustRosterKeyInvalid")
+        fingerprint = (
+            base64.b64encode(hashlib.sha256(key_blob).digest()).decode().rstrip("=")
+        )
+        roster[principal] = f"SHA256:{fingerprint}"
+    if not roster:
+        raise ValueError("TrustRosterEmpty")
+    if expected_key_ids is not None:
+        expected = set(expected_key_ids)
+        if len(expected) != len(expected_key_ids) or set(roster) != expected:
+            raise ValueError("TrustRosterPolicyMismatch")
+    return roster
 
 
 class OpenSshSignatureVerifier:
@@ -27,11 +91,13 @@ class OpenSshSignatureVerifier:
         namespace: str = DEFAULT_NAMESPACE,
         executable: str = "/usr/bin/ssh-keygen",
         timeout: float = 5.0,
+        expected_key_ids: tuple[str, ...] | None = None,
     ) -> None:
         self.allowed_signers_path = Path(allowed_signers_path)
         self.namespace = namespace
         self.executable = executable
         self.timeout = float(timeout)
+        self.expected_key_ids = expected_key_ids
 
     @staticmethod
     def _snapshot(path: Path, *, maximum: int) -> bytes:
@@ -57,6 +123,7 @@ class OpenSshSignatureVerifier:
                 remaining -= len(chunk)
             payload = b"".join(chunks)
             after = os.fstat(descriptor)
+
             def identity(value: os.stat_result) -> tuple[int, ...]:
                 return (
                     value.st_dev,
@@ -67,6 +134,7 @@ class OpenSshSignatureVerifier:
                     value.st_mtime_ns,
                     value.st_ctime_ns,
                 )
+
             if identity(before) != identity(after):
                 raise ValueError("ProtectedFileChanged")
             if not payload or len(payload) > maximum:
@@ -118,6 +186,11 @@ class OpenSshSignatureVerifier:
             allowed = self._snapshot(
                 self.allowed_signers_path, maximum=MAX_ALLOWED_SIGNERS_BYTES
             )
+            roster = validate_allowed_signers_roster(
+                allowed, expected_key_ids=self.expected_key_ids
+            )
+            if key_id not in roster:
+                return False
             allowed_fd = self._memfd("truepanel-allowed-signers", allowed)
             signature_fd = self._memfd("truepanel-review-signature", encoded_signature)
             descriptors.extend((allowed_fd, signature_fd))
@@ -150,4 +223,8 @@ class OpenSshSignatureVerifier:
                 os.close(descriptor)
 
 
-__all__ = ["DEFAULT_NAMESPACE", "OpenSshSignatureVerifier"]
+__all__ = [
+    "DEFAULT_NAMESPACE",
+    "OpenSshSignatureVerifier",
+    "validate_allowed_signers_roster",
+]

@@ -413,6 +413,25 @@
       "revisit_conditions": ["operator reviewer identities are selected", "protected public trust material is provisioned", "OpenSSH compatibility changes", "a real upgrade stage is prepared", "Sigstore or hardware-backed identity policy is approved"],
       "strongest_follow_up": "Define the operator signing ceremony and separately provision the protected public trust file, then run one read-only preflight against a real stage while preserving the manual confirmation boundary.",
       "freshness": {"reviewed_at": "2026-09-10", "review_after": "2026-12-09"}
+    },
+    {
+      "id": "TP-EXP-0027", "title": "AEGIS two-person signing ceremony", "state": "COMPLETED",
+      "hypothesis": "A portable content-addressed review packet and exact public trust roster can keep two operator signing lanes independent while every presentation, identity, policy, and quorum mismatch holds before promotion.",
+      "value": "Turns the abstract two-reviewer rule into a reproducible ceremony and removes wildcard, alias, option, and roster-drift ambiguity from OpenSSH trust configuration.",
+      "prior_art": ["OpenSSH SSHSIG and allowed-signers", "TUF threshold roles", "NIST SP 800-53 separation of duties"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-two-person-ceremony", "pr": null, "commits": []},
+      "protocol": ["witness an actual disposable validated stage", "build one content-addressed packet containing the exact statement, subjects, and trust policy", "validate a strict two-key Ed25519 public roster", "sign the statement in two isolated disposable lanes", "assemble and verify detached receipts", "stop before confirmation or promotion"],
+      "fixtures": ["aegis-two-person-ceremony-v1", "tests/test_aegis_review_ceremony.py", "truepanel/holodeck/aegis_two_person_ceremony.py"],
+      "success_criteria": ["one exact two-person path reaches manual readiness", "eight altered or ambiguous paths hold", "zero false readiness", "no private key in the packet or production signer", "no confirmation, receipt consumption, promotion, service change, runtime write, mutation, or control authority"],
+      "abort_criteria": ["wildcard, alias, option, duplicate, missing, or extra roster identity verifies", "displayed subjects or policy can differ from signed material", "one signing lane reaches quorum", "TruePanel gains signing or promotion authority"],
+      "evidence": [{"path": "docs/evidence/aegis-two-person-ceremony-v1.json", "sha256": "cfdff7b446377c948f03447cf920f130b9d946d8408634f6669161bbd015e9c5"}],
+      "outcome": {"conclusion": "One exact two-person ceremony reaches READY_FOR_MANUAL_PROMOTION. Eight roster, statement, subject, policy, and quorum failures HOLD; no private key enters the packet and no confirmation or promotion occurs."},
+      "invalidated_assumptions": ["an OpenSSH allowed-signers file is automatically an auditable two-person roster", "human-readable review material need not be cryptographically tied to the signed statement", "a signing ceremony requires giving TruePanel a signer"],
+      "reproduction": ["pytest -q tests/test_aegis_review_ceremony.py tests/test_aegis_ssh_verifier.py", "python -c \"from truepanel.holodeck.aegis_two_person_ceremony import run_two_person_ceremony_checkride as run; print(run())\"", "python -m truepanel.hangar validate --root .", "python development/tools/smoke_installed_wheel.py"],
+      "revisit_conditions": ["real reviewer identities and public keys are selected", "hardware-backed Ed25519-SK is approved", "OpenSSH allowed-signers grammar changes", "a real validated stage is available", "Sigstore identity policy is approved"],
+      "strongest_follow_up": "Provision two operator-owned public keys and the protected exact roster outside TruePanel, then run a read-only checkride against a real validated stage while preserving the manual confirmation boundary.",
+      "freshness": {"reviewed_at": "2026-09-11", "review_after": "2026-12-10"}
     }
   ]
 }
