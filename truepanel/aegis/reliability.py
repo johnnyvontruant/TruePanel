@@ -10,6 +10,7 @@ from typing import Any
 
 from truepanel.oracle import OracleEngine
 
+from .assurance import evaluate_airworthiness
 from .checkride import compose_storage_checkride
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
@@ -278,6 +279,12 @@ class AegisReliabilityEngine:
                 working_payload = deepcopy(payload)
                 working_payload["backup_context"] = backup_context
         active_flight_director = compose_storage_checkride(working_payload, incident)
+        policy_description = self.correlation_policy.describe()
+        airworthiness = evaluate_airworthiness(
+            payload=working_payload,
+            coverage_matrix=self.matrix,
+            correlation_policy=policy_description,
+        )
         return {
             "schema_version": 1,
             "project": "AEGIS",
@@ -294,7 +301,7 @@ class AegisReliabilityEngine:
                 "request_count": self._sequence,
             },
             "coverage_matrix": self.matrix,
-            "correlation_policy": self.correlation_policy.describe(),
+            "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],
                 "trusted": self.matrix["trusted"],
@@ -302,6 +309,7 @@ class AegisReliabilityEngine:
             },
             "topology": self._topology(payload),
             "passive_evidence": passive_evidence,
+            "airworthiness": airworthiness,
             "flight_director": active_flight_director or self.flight_director,
         }
 

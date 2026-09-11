@@ -433,6 +433,9 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         reliability = payload["reliability"]
         assert reliability["project"] == "AEGIS"
         assert reliability["active_incident"]["likely_cause"] == "network.link_down"
+        assert reliability["airworthiness"]["status"] == "REVIEW"
+        assert reliability["airworthiness"]["reason"] == "PlatformVersionUnobserved"
+        assert reliability["airworthiness"]["control_authority"] is False
 
         status, _, dashboard = _request(server, "/")
         assert status == 200
@@ -451,6 +454,10 @@ def test_mission_control_publishes_reliability_payload_and_mobile_asset(tmp_path
         assert "LAB CALIBRATED · NOT LIVE VALIDATED" in source
         assert "Evidence Promotion Gate" in source
         assert "Passive TrueNAS Evidence" in source
+        assert "Project AIRWORTHINESS" in source
+        assert "Validation envelope" in source
+        assert "Raw alerts and recovery guidance remain visible" in source
+        assert ".ag-assurance-grid" in source
         assert "Role gate:" in source
         assert "Receipt store:" in source
         assert "last_age_seconds" in source

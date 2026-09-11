@@ -145,7 +145,8 @@ that evidence.
 - The current six-recording, 193-frame corpus includes adversarial shifts and
   faults, but its perfect synthetic score is not a production false-positive
   estimate.
-- AEGIS has not been deployed or evaluated against live BattleStation data.
+- The passive evidence runtime was accepted on BattleStation, but correlation
+  accuracy and repair verification still lack a governed real-incident corpus.
 
 The current correlation policy is calibrated against the versioned
 [`aegis-black-box-corpus-v1`](AEGIS_BLACK_BOX_CORPUS.md). Mission Control labels
@@ -158,7 +159,15 @@ dataset provenance, reviewed labels, workload/system diversity, and 95% Wilson
 confidence bounds. Synthetic point estimates cannot clear that gate, and an
 automatically eligible corpus still requires explicit release review.
 
-The strongest next step is an opt-in Black Box field-evidence campaign: replay
-sanitized normal workloads and reviewed incidents through this same interface,
-measure false positives and confidence stability, and keep live deployment as
-a separate explicit gate.
+The governed passive evidence runtime has since completed a separately
+documented BattleStation acceptance on TrueNAS SCALE 25.10.5. Project
+AIRWORTHINESS now prevents that dated success from being presented as permanent:
+it binds the accepted policy, coverage contract, runtime subjects, evidence
+artifacts, TruePanel release, TrueNAS release scope, and review window. See
+[`AEGIS_AIRWORTHINESS_ENVELOPE.md`](AEGIS_AIRWORTHINESS_ENVELOPE.md).
+
+The strongest next step is to expose an explicit TrueNAS release fact through
+the passive collector boundary and rehearse an appliance upgrade. Any release,
+policy, coverage, or bound-subject change must remain REVIEW/HOLD until a new
+envelope is reviewed; the opt-in Black Box field-evidence campaign remains the
+path for estimating real false-positive behavior.

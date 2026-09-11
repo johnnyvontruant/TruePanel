@@ -280,6 +280,25 @@
       "revisit_conditions": ["TrueNAS API, RBAC, transport, or replication-task state semantics change", "production deployment is proposed", "receipt issuance or restore-test trust policy changes"],
       "strongest_follow_up": "Review the field-validated passive runtime for deployment without expanding AEGIS control authority, and formalize the controlled restore-test procedure as a supported TrueNAS API/CLI runbook before broader use.",
       "freshness": {"reviewed_at": "2026-09-02", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0020", "title": "AEGIS airworthiness and trust-decay envelope", "state": "COMPLETED",
+      "hypothesis": "A versioned, expiring envelope bound to runtime subjects, recovery coverage, policy, platform scope, and acceptance evidence can prevent historical success from being presented as current after drift.",
+      "value": "Makes AEGIS self-question its own validation claims after software, policy, platform, evidence, or time changes.",
+      "prior_art": ["Kubernetes status conditions", "The Update Framework expiry and hashes", "in-toto subject digests", "SLSA provenance"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-airworthiness-envelope", "pr": null, "commits": []},
+      "protocol": ["bind accepted runtime and evidence subjects", "evaluate policy and recovery coverage", "require explicit platform evidence", "expire acceptance evidence", "replay independent drift classes", "surface CURRENT, REVIEW, or HOLD without hiding alerts"],
+      "fixtures": ["aegis-airworthiness-envelope-v1", "tests/test_aegis_assurance.py", "truepanel/holodeck/aegis_assurance.py"],
+      "success_criteria": ["accepted contract is CURRENT", "missing platform fact is REVIEW", "all six known drift paths HOLD", "repository evidence digests are CI checked", "installed wheel retains the envelope", "raw alerts and recovery guidance remain visible", "control authority remains false"],
+      "abort_criteria": ["historical acceptance treated as permanent", "unknown platform reported as matching", "envelope updates itself", "digest presented as a signature", "assurance HOLD suppresses an alert or grants control authority"],
+      "evidence": [{"path": "docs/evidence/aegis-airworthiness-envelope-v1.json", "sha256": "836a95b01b9f67a11b8ae4a5200bad24bf7544630f7046c66d061b9baf8b7472"}],
+      "outcome": {"conclusion": "The accepted contract produces CURRENT only with an explicit matching TrueNAS version; an unobserved version produces REVIEW, while platform, policy, coverage, subject-digest, expiry, and clock drift produce 6/6 HOLD decisions with zero control authority."},
+      "invalidated_assumptions": ["production acceptance remains current indefinitely", "a Linux kernel string authoritatively identifies the TrueNAS release", "a digest authenticates who issued evidence", "assurance failure should hide recovery guidance"],
+      "reproduction": ["pytest -q tests/test_aegis_assurance.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_assurance import run_airworthiness_rehearsal as run; print(run())\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["TrueNAS or TruePanel release changes", "correlation policy or recovery coverage changes", "the acceptance envelope reaches its review deadline", "a governed signing-key lifecycle is introduced"],
+      "strongest_follow_up": "Expose an explicit TrueNAS release fact through the passive collector boundary and rehearse a platform upgrade that remains HOLD until a new reviewed envelope is issued.",
+      "freshness": {"reviewed_at": "2026-09-03", "review_after": "2026-12-01"}
     }
   ]
 }
