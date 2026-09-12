@@ -432,6 +432,25 @@
       "revisit_conditions": ["real reviewer identities and public keys are selected", "hardware-backed Ed25519-SK is approved", "OpenSSH allowed-signers grammar changes", "a real validated stage is available", "Sigstore identity policy is approved"],
       "strongest_follow_up": "Provision two operator-owned public keys and the protected exact roster outside TruePanel, then run a read-only checkride against a real validated stage while preserving the manual confirmation boundary.",
       "freshness": {"reviewed_at": "2026-09-11", "review_after": "2026-12-10"}
+    },
+    {
+      "id": "TP-EXP-0028", "title": "AEGIS final handoff seal", "state": "COMPLETED",
+      "hypothesis": "A five-minute content-bound seal can revalidate reviewed staged bytes at the final operator handoff while expiry, clock rollback, replay, binding drift, and post-seal tamper hold without invoking promotion.",
+      "value": "Closes the remaining time-of-check/time-of-use gap between manual readiness and operator confirmation without extending AEGIS authority.",
+      "prior_art": ["TUF expiry, freeze, rollback, and target binding", "Uptane last-mile metadata verification", "SLSA subject digest binding", "GitHub protected deployment environments"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-final-handoff-seal", "pr": null, "commits": []},
+      "protocol": ["start from an independently reviewed manual-ready request", "re-witness the actual stage before issuing a five-minute seal", "bind request, receipt, gate, paths, manifest bytes, deployable tree, and confirmation contract", "re-witness at final handoff", "reject expiry, rollback, replay, drift, unknown fields, and byte tamper", "stop before confirmation or promotion"],
+      "fixtures": ["aegis-final-handoff-seal-v1", "tests/test_aegis_final_handoff.py", "truepanel/holodeck/aegis_final_handoff.py"],
+      "success_criteria": ["one exact reviewed current stage reaches operator-confirmation readiness", "nine unsafe or altered paths hold", "zero false readiness", "no confirmation phrase is supplied", "no seal consumption, promotion, service change, runtime write, mutation, or control authority"],
+      "abort_criteria": ["an expired or replayed seal remains ready", "clock rollback passes", "request, receipt, gate, path, manifest, tree, or confirmation contract drift passes", "unknown fields are ignored", "the evaluator supplies confirmation or invokes promotion"],
+      "evidence": [{"path": "docs/evidence/aegis-final-handoff-seal-v1.json", "sha256": "bc7da50ad5686f7442d841f4f28c81372feccd28190350aa9c01816c835518a3"}],
+      "outcome": {"conclusion": "One exact reviewed stage reaches READY_FOR_OPERATOR_CONFIRMATION. Nine expiry, clock, replay, binding, gate, contract, schema, and stage-tamper paths HOLD; no confirmation, seal consumption, promotion, service change, runtime write, mutation, or control authority occurs."},
+      "invalidated_assumptions": ["manual readiness stays fresh until an operator acts", "an earlier receipt proves later staged bytes", "the final gate must call the upgrader to be meaningful", "unknown presentation fields are harmless"],
+      "reproduction": ["pytest -q tests/test_aegis_final_handoff.py tests/test_aegis_promotion_gate.py tests/test_aegis_stage_witness.py", "python -c \"from truepanel.holodeck.aegis_final_handoff import run_final_handoff_checkride as run; print(run())\"", "python -m truepanel.hangar validate --root .", "python development/tools/smoke_installed_wheel.py"],
+      "revisit_conditions": ["the guarded promotion confirmation contract changes", "real reviewer identities and trust material are provisioned", "a real validated stage is available", "operator approval is granted to integrate the seal into the production-capable entry point"],
+      "strongest_follow_up": "Run the read-only seal check against a real validated stage with separately provisioned operator trust, then review an explicit integration that makes the guarded upgrader require a fresh seal while retaining its manual confirmation.",
+      "freshness": {"reviewed_at": "2026-09-12", "review_after": "2026-12-11"}
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.09.1 · refreshed 2026-09-09 · 22 experiment(s)
+Registry version 2026.09.09.1 · refreshed 2026-09-09 · 23 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -179,3 +179,11 @@ One exact two-person ceremony reaches READY_FOR_MANUAL_PROMOTION. Eight roster, 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision two operator-owned public keys and the protected exact roster outside TruePanel, then run a read-only checkride against a real validated stage while preserving the manual confirmation boundary.
 - Revisit when: real reviewer identities and public keys are selected; hardware-backed Ed25519-SK is approved; OpenSSH allowed-signers grammar changes; a real validated stage is available; Sigstore identity policy is approved
+
+## TP-EXP-0028 · AEGIS final handoff seal
+
+One exact reviewed stage reaches READY_FOR_OPERATOR_CONFIRMATION. Nine expiry, clock, replay, binding, gate, contract, schema, and stage-tamper paths HOLD; no confirmation, seal consumption, promotion, service change, runtime write, mutation, or control authority occurs.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Run the read-only seal check against a real validated stage with separately provisioned operator trust, then review an explicit integration that makes the guarded upgrader require a fresh seal while retaining its manual confirmation.
+- Revisit when: the guarded promotion confirmation contract changes; real reviewer identities and trust material are provisioned; a real validated stage is available; operator approval is granted to integrate the seal into the production-capable entry point
