@@ -36,6 +36,11 @@ from .evidence_gate import (
     validate_field_manifest,
     wilson_interval,
 )
+from .final_handoff import (
+    confirmation_contract_sha256,
+    evaluate_final_handoff,
+    issue_final_handoff_seal,
+)
 from .flight_director import run_flight_director_proof
 from .passive_providers import (
     TrueNASProtectionEvidenceProvider,
@@ -125,9 +130,11 @@ __all__ = [
     "evaluate_acceptance_receipt",
     "evaluate_pre_service_clearance",
     "evaluate_manual_promotion",
+    "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",
     "issue_recovery_attestation",
+    "issue_final_handoff_seal",
     "issue_restore_verification_receipt",
     "issue_platform_witness",
     "load_assurance_envelope",
@@ -141,6 +148,7 @@ __all__ = [
     "run_flight_director_proof",
     "run_storage_recovery_rehearsals",
     "semantic_sha256",
+    "confirmation_contract_sha256",
     "reconcile_recovery_attestations",
     "validate_recovery_coverage",
     "validate_correlation_policy",
