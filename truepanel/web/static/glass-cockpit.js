@@ -181,7 +181,7 @@ body[data-mission-mode="pilot"] #openFlightManual,
 body[data-mission-mode="pilot"] #flightManualPanel,
 body[data-mission-mode="pilot"] .cockpit-layout-switcher,
 body[data-mission-mode="pilot"] #glassCockpitSituation>details{display:none!important}
-@media(max-width:640px){.mission-mode-switch{order:-1}.mission-mode-switch button{min-height:40px;padding:.48rem .56rem;font-size:.64rem}}
+@media(max-width:640px){.mission-mode-switch{gap:1px;padding:1px}.mission-mode-switch button{min-height:36px;padding:.42rem .46rem;font-size:.58rem}}
 `;
     document.head.appendChild(style);
 }
@@ -224,8 +224,8 @@ function modeButton(mode,label,title){
 
 function installModeSwitch(){
     if(document.getElementById(SWITCH_ID)) return;
-    const actions=document.querySelector(".actions");
-    if(!actions) return;
+    const topbar=document.querySelector(".topbar");
+    if(!topbar) return;
 
     const group=document.createElement("div");
     group.id=SWITCH_ID;
@@ -237,9 +237,9 @@ function installModeSwitch(){
         modeButton(ENGINEER,"Flight Engineer","Flight Engineer Mode · troubleshooting, diagnostics, controls, and Flight Manual")
     );
 
-    const manual=document.getElementById("openFlightManual");
-    if(manual) actions.insertBefore(group,manual);
-    else actions.prepend(group);
+    const themeToggle=document.getElementById("themeToggle");
+    if(themeToggle) topbar.insertBefore(group,themeToggle);
+    else topbar.appendChild(group);
 }
 
 function installMissionModes(){

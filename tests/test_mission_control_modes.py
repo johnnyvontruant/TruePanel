@@ -103,5 +103,8 @@ def test_mission_mode_switch_preserves_mobile_and_accessibility_contracts():
     assert 'role","group"' in source
     assert 'aria-label","Mission Control operating mode"' in source
     assert 'aria-pressed' in source
+    assert 'document.querySelector(".topbar")' in source
+    assert 'getElementById("themeToggle")' in source
+    assert 'topbar.insertBefore(group,themeToggle)' in source
     assert '@media(max-width:640px)' in source
-    assert "min-height:40px" in source
+    assert "min-height:36px" in source
