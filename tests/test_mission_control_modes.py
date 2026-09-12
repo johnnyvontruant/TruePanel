@@ -46,7 +46,7 @@ def test_pilot_mode_keeps_deep_diagnostics_out_of_the_day_to_day_view():
         assert f'body[data-mission-mode="pilot"] {selector}' in source
 
     assert 'modeButton(PILOT,"Pilot"' in source
-    assert 'modeButton(ENGINEER,"Engineer"' in source
+    assert 'modeButton(ENGINEER,"Flight Engineer"' in source
     assert "Flight Engineer Mode" in source
 
 
@@ -64,6 +64,23 @@ def test_pilot_preflight_is_a_compact_mirror_of_existing_status():
     assert 'getElementById("preflightPanel")' in source
     assert 'Open Flight Engineer details' in source
     assert 'body[data-mission-mode="engineer"] #${SUMMARY_ID}' in source
+
+
+def test_operator_facing_control_labels_use_cockpit_semantics():
+    index_source = (server.STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    glass_source = _source()
+
+    assert 'id="virtualLcdEnter"' in index_source
+    assert 'aria-label="Virtual LCD up"' in index_source
+    assert 'title="Up"' in index_source
+    assert '>▲</button>' in index_source
+
+    assert 'id="virtualLcdSelect"' in index_source
+    assert 'aria-label="Virtual LCD down"' in index_source
+    assert 'title="Down"' in index_source
+    assert '>▼</button>' in index_source
+
+    assert 'modeButton(ENGINEER,"Flight Engineer"' in glass_source
 
 
 def test_mission_mode_switch_is_presentation_only():

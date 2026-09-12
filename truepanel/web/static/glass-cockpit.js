@@ -234,7 +234,7 @@ function installModeSwitch(){
     group.setAttribute("aria-label","Mission Control operating mode");
     group.append(
         modeButton(PILOT,"Pilot","Pilot Mode · day-to-day system health and action items"),
-        modeButton(ENGINEER,"Engineer","Flight Engineer Mode · troubleshooting, diagnostics, controls, and Flight Manual")
+        modeButton(ENGINEER,"Flight Engineer","Flight Engineer Mode · troubleshooting, diagnostics, controls, and Flight Manual")
     );
 
     const manual=document.getElementById("openFlightManual");
