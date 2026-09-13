@@ -28,8 +28,13 @@ TruePanel began by adapting earlier QNAP LCD utilities, but the current project 
 
 ### Mission Control
 
-- Live CPU, memory, network, storage, fan, thermal, service, and front-panel state
-- Responsive cockpit layout designed to remain usable on phones
+- **Pilot mode** for daily operation: consequences first, with NOW / WHY / SAFEST MOVE / PROOF and only the information needed to decide what to do next
+- **Flight Engineer mode** for diagnosis: evidence, topology, recovery readiness, history, and deeper subsystem detail without cluttering the daily cockpit
+- System-aware light and dark appearance with the Glass Cockpit visual system
+- Live CPU, memory, network, storage, fan, thermal, service, front-panel, and workload-activity state
+- OBSERVATORY CURRENT ACTIVITY built on the shared status stream, with neutral idle and unavailable states rather than invented activity
+- SENTINEL Flight Director impact explanations with bounded recovery references and explicit evidence limits
+- Responsive single-column behavior designed to preserve operator usability on phones
 - Virtual Front Panel that follows the same dispatcher as the physical buttons
 - Preflight readiness for Host, Storage, Cooling, Front Panel, and Safety Interlocks
 - Privacy-safe compatibility support bundles
@@ -150,6 +155,16 @@ See the [Mission Control Guide](docs/MISSION_CONTROL.md) for the cockpit, Prefli
        alt="TruePanel Mission Control dashboard with live virtual LCD"
        width="1000">
 </p>
+
+### Pilot and Flight Engineer
+
+Mission Control now has two deliberate information densities rather than one dashboard trying to serve every moment. **Pilot** is the calm daily-driver view: it leads with system consequence and the safest useful next step. **Flight Engineer** exposes the underlying evidence, topology, readiness gates, recovery references, and diagnostics used to justify that conclusion.
+
+The mode switch is persistent in the browser, both modes share the same read-only status stream, and the phone layout remains a hard acceptance constraint. Light and dark appearance are independent of mission mode.
+
+### OBSERVATORY activity awareness
+
+OBSERVATORY adds normalized CURRENT ACTIVITY without creating another polling loop. Storage work such as scrub/resilver and optional privacy-preserving application activity can be projected into Mission Control from the existing snapshot chain. Idle means no observed activity; unavailable means the provider cannot currently establish activity. Neither state is presented as a fault.
 
 ## LCD Flight Deck
 
