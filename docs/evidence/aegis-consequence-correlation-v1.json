@@ -1,0 +1,69 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "2e7c27b121e78080b100528f4aa85f55578abdc8b0dae75c67e3fe1ce835767f",
+  "hardware_isolated": true,
+  "measurements": {
+    "additional_telemetry_reads": 0,
+    "diagnostic_confidence_after": 0.62,
+    "diagnostic_confidence_before": 0.62,
+    "diagnostic_confidence_increases": 0,
+    "false_joins": 0,
+    "hold_contexts": 4,
+    "proved_contexts": 1,
+    "recovery_actions": 0,
+    "scenarios": 5
+  },
+  "outcomes": {
+    "ambiguous_incident": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": null,
+      "reason": "Impact topology requires exactly one detector-proved source device; observed 2.",
+      "source_device": null,
+      "state": "HOLD"
+    },
+    "exact_identity": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": {
+        "applications": 1,
+        "cargo": 1,
+        "proved_objects": 6,
+        "running_applications": 1,
+        "storage_objects": 3,
+        "verified_backup_evidence": 1
+      },
+      "reason": "One exact device identity joins the incident to proved SENTINEL paths.",
+      "source_device": "/dev/sdc",
+      "state": "PROVED"
+    },
+    "identity_mismatch": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": null,
+      "reason": "Impact topology requires one exact SENTINEL source-device match; observed 0.",
+      "source_device": "/dev/sdd",
+      "state": "HOLD"
+    },
+    "malformed_path": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": null,
+      "reason": "Matched SENTINEL explanation contains no complete proved path set.",
+      "source_device": "/dev/sdc",
+      "state": "HOLD"
+    },
+    "missing_identity": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": null,
+      "reason": "Impact topology requires exactly one detector-proved source device; observed 0.",
+      "source_device": null,
+      "state": "HOLD"
+    }
+  },
+  "production_mutation": false,
+  "scenario": "aegis-sentinel-consequence-correlation",
+  "schema_version": 1,
+  "simulation": true
+}

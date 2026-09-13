@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.02.5 · refreshed 2026-09-02 · 14 experiment(s)
+Registry version 2026.09.13.1 · refreshed 2026-09-13 · 15 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -115,3 +115,11 @@ The governed runtime first failed closed on missing restore proof, then a contro
 - Safety: `READ_ONLY_EVIDENCE`
 - Strongest follow-up: Review the field-validated passive runtime for deployment without expanding AEGIS control authority, and formalize the controlled restore-test procedure as a supported TrueNAS API/CLI runbook before broader use.
 - Revisit when: TrueNAS API, RBAC, transport, or replication-task state semantics change; production deployment is proposed; receipt issuance or restore-test trust policy changes
+
+## TP-EXP-0020 · AEGIS consequence-aware incident correlation
+
+The exact /dev/sdc scenario exposes six proved reachable objects while four unsafe identity/path cases hold closed; false joins, confidence increases, additional telemetry reads, recovery actions, and control authority are all zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Replace snapshot-local /dev path joining with a Lifeline stable fingerprint and rehearse path reassignment plus cloned-serial conflicts.
+- Revisit when: Lifeline stable fingerprints become available in both AEGIS and SENTINEL snapshots; device-path reassignment can be rehearsed; a new consequence kind is added
