@@ -46,6 +46,11 @@ def test_production_candidate_reuses_shared_stream_and_has_no_polling():
     assert "prefers-reduced-motion:reduce" in source
     assert "min-height:44px" in source
     assert 'role="img"' in source
+    assert 'payload?.fans?.channels?.[0]?.rpm' in source
+    assert 'payload?.fans?.fan1_rpm' in source
+    assert 'rememberTrend("fan",fan)' in source
+    assert 'hottestIdentity' in source
+    assert 'masterWasOpen' in source
 
 
 def test_server_exposes_glass_cockpit_asset_in_full_stack():

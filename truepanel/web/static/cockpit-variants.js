@@ -165,16 +165,34 @@ function updateBayStrip(data){
     const mirror=data?.storage?.bay_mirror||{};
     const records=Array.isArray(mirror.bays)?mirror.bays:[];
     const byBay=new Map(records.map(item=>[Number(item?.bay),item]));
+    const smartRecords=Array.isArray(data?.storage?.smart)?data.storage.smart:[];
+    const smartSeverityByBay=new Map();
+    smartRecords.forEach(item=>{
+        const bay=Number(item?.physical_bay??item?.bay);
+        if(!Number.isInteger(bay)||bay<1||bay>6) return;
+        const health=String(item?.health??item?.state??"").toUpperCase();
+        if(["FAILED","CRITICAL","FAULT","FAULTED"].includes(health)){
+            smartSeverityByBay.set(bay,"fault");
+        }else if(
+            ["WARNING","WARN","DEGRADED","ATTENTION"].includes(health)
+            &&smartSeverityByBay.get(bay)!=="fault"
+        ){
+            smartSeverityByBay.set(bay,"attention");
+        }
+    });
     for(let number=1;number<=6;number+=1){
         const element=document.querySelector(`.cockpit-bay[data-bay="${number}"]`);
         if(!element) continue;
         const record=byBay.get(number)||{};
-        const state=String(record.state||"unknown").toLowerCase();
+        const mirroredState=String(record.state||"unknown").toLowerCase();
+        const healthState=smartSeverityByBay.get(number);
+        const state=healthState||mirroredState;
         const led=element.querySelector(".cockpit-bay-led");
         const stateNode=element.querySelector(".cockpit-bay-state");
         led.className=`cockpit-bay-led ${state}`;
         stateNode.textContent=state;
         const parts=[`Bay ${number}`,state];
+        if(healthState&&healthState!==mirroredState) parts.push(`health override from ${mirroredState}`);
         if(record.pool) parts.push(String(record.pool));
         if(record.zfs_state) parts.push(String(record.zfs_state));
         if(record.mapping_source) parts.push(String(record.mapping_source));
@@ -184,7 +202,7 @@ function updateBayStrip(data){
     const source=document.getElementById("cockpitBaySource");
     if(source){
         source.textContent=mirror.available===true
-            ?`${records.length} bays · read-only mirror`
+            ?`${records.length} bays · health-reconciled read-only mirror`
             :"Bay identity unavailable · no inference";
     }
 }
