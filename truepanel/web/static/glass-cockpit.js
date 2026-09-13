@@ -87,6 +87,7 @@ function explanationMarkup(explanation,index){
 }
 
 function renderSentinel(view,payload){
+    const masterWasOpen=Boolean(view.querySelector(".sentinel-master")?.open);
     const sentinel=payload?.sentinel||{};
     const explanations=array(sentinel?.explanations);
     const assessment=sentinel?.assessment||{};
@@ -101,7 +102,7 @@ function renderSentinel(view,payload){
     const proved=explanations.reduce((total,item)=>total+array(item?.known_impact).length,0);
     const recoveryRefs=explanations.reduce((total,item)=>total+array(item?.recovery?.references).length,0);
     const applications=explanations.reduce((total,item)=>total+array(item?.consequences?.applications).length,0);
-    view.innerHTML=`<details class="sentinel-master"><summary class="sentinel-master-summary"><div class="sentinel-master-title"><span class="sentinel-state sentinel-${esc(assessmentState.toLowerCase())}">${esc(assessmentState)}</span><div><small>SENTINEL</small><strong>Flight Director</strong></div></div><div class="sentinel-master-counts"><span>${proved} proved</span><span>${applications} app${applications===1?"":"s"}</span><span>${recoveryRefs} recovery</span></div></summary><div class="sentinel-master-body"><header class="sentinel-header"><div><small>SENTINEL</small><h3>Flight Director</h3></div><div class="sentinel-header-state"><span>${explanations.length} active explanation${explanations.length===1?"":"s"}</span><span class="sentinel-assessment">Assessment ${esc(assessmentState)}</span></div></header>${explanations.map(explanationMarkup).join("")}</div></details>`;
+    view.innerHTML=`<details class="sentinel-master"${masterWasOpen?" open":""}><summary class="sentinel-master-summary"><div class="sentinel-master-title"><span class="sentinel-state sentinel-${esc(assessmentState.toLowerCase())}">${esc(assessmentState)}</span><div><small>SENTINEL</small><strong>Flight Director</strong></div></div><div class="sentinel-master-counts"><span>${proved} proved</span><span>${applications} app${applications===1?"":"s"}</span><span>${recoveryRefs} recovery</span></div></summary><div class="sentinel-master-body"><header class="sentinel-header"><div><small>SENTINEL</small><h3>Flight Director</h3></div><div class="sentinel-header-state"><span>${explanations.length} active explanation${explanations.length===1?"":"s"}</span><span class="sentinel-assessment">Assessment ${esc(assessmentState)}</span></div></header>${explanations.map(explanationMarkup).join("")}</div></details>`;
 }
 
 function install(){
