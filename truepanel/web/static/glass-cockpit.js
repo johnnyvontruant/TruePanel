@@ -57,8 +57,8 @@ function render(view,payload){
         "unknown"
     );
     const fan=number(first(thermal?.fan_rpm,thermal?.rpm,payload?.fans?.channels?.[0]?.rpm,payload?.fans?.fan1_rpm,payload?.fans?.fan2_rpm));
-    const fanTrend=trend(first(thermal?.fan_history,thermal?.rpm_history,[]));
-    const driveTrend=trend(first(hottest?.history,storage?.temperature_history,[]));
+    const fanTrend=trend(first(thermal?.fan_history,thermal?.rpm_history,rememberTrend("fan",fan)));
+    const driveTrend=trend(first(hottest?.history,storage?.temperature_history,rememberTrend("drive",hottestValue)));
     const pools=Array.isArray(storage.pools)?storage.pools:[];
     const pool=pools[0]||{};
     const overall=String(first(health.overall,health.state,incident?"ATTENTION":"UNKNOWN")).toUpperCase();
