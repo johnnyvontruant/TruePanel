@@ -33,7 +33,25 @@ def event(
     )
 
 
-def test_fault_turns_matching_bay_on():
+def test_warning_uses_flashing_identify_channel():
+    commands = []
+    controller = TVS671BayLedController(
+        command_writer=commands.append
+    )
+    indicator = StorageBayIndicator(controller)
+
+    assert indicator(
+        event(
+            bay=4,
+            priority=Priority.WARNING,
+            new_state="warning",
+        )
+    )
+    assert commands == [0x08, 0x89]
+    assert controller.active_bays == (4,)
+
+
+def test_critical_uses_steady_error_channel():
     commands = []
     controller = TVS671BayLedController(
         command_writer=commands.append
@@ -41,11 +59,49 @@ def test_fault_turns_matching_bay_on():
     indicator = StorageBayIndicator(controller)
 
     assert indicator(event(bay=4))
-    assert commands == [0x08]
-    assert controller.active_bays == (4,)
+    assert commands == [0x09, 0x88]
+    assert controller.active_bays == ()
 
 
-def test_recovery_turns_matching_bay_off():
+def test_critical_state_wins_even_when_event_priority_is_warning():
+    commands = []
+    controller = TVS671BayLedController(
+        command_writer=commands.append
+    )
+    indicator = StorageBayIndicator(controller)
+
+    assert indicator(
+        event(
+            bay=3,
+            priority=Priority.WARNING,
+            change_type="media_counter_increased",
+            new_state="critical",
+        )
+    )
+    assert commands == [0x07, 0x86]
+
+
+def test_warning_to_critical_switches_red_channels():
+    commands = []
+    controller = TVS671BayLedController(
+        command_writer=commands.append
+    )
+    indicator = StorageBayIndicator(controller)
+
+    indicator(
+        event(
+            bay=3,
+            priority=Priority.WARNING,
+            new_state="warning",
+        )
+    )
+    indicator(event(bay=3))
+
+    assert commands == [0x06, 0x87, 0x07, 0x86]
+    assert controller.active_bays == ()
+
+
+def test_recovery_clears_both_red_channels():
     commands = []
     controller = TVS671BayLedController(
         command_writer=commands.append
@@ -62,22 +118,35 @@ def test_recovery_turns_matching_bay_off():
         )
     )
 
-    assert commands == [0x06, 0x07]
+    assert commands == [0x07, 0x86, 0x87]
     assert controller.active_bays == ()
 
 
-def test_multiple_bay_faults_remain_active():
+def test_clear_on_start_clears_identify_and_error_channels():
     commands = []
     controller = TVS671BayLedController(
         command_writer=commands.append
     )
-    indicator = StorageBayIndicator(controller)
 
-    indicator(event(bay=1))
-    indicator(event(bay=6))
+    StorageBayIndicator(
+        controller,
+        clear_on_start=True,
+    )
 
-    assert commands == [0x02, 0x0C]
-    assert controller.active_bays == (1, 6)
+    assert commands == [
+        0x03,
+        0x05,
+        0x07,
+        0x09,
+        0x0B,
+        0x0D,
+        0x83,
+        0x85,
+        0x87,
+        0x89,
+        0x8B,
+        0x8D,
+    ]
 
 
 def test_unstructured_event_does_not_touch_hardware():
