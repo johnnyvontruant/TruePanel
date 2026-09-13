@@ -66,3 +66,31 @@ def test_hangar_closed_experiment_and_evidence_agree():
     assert status_summary(registry) == {
         "FUTURE": 2, "IN_PROGRESS": 1, "COMPLETED": 14, "FAILED": 2,
     }
+
+
+def test_glass_cockpit_reads_backend_fan_channels():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    assert "fans?.channels" in source
+    assert "fans?.fan1_rpm" in source
+    assert "payload?.fans?.[0]?.rpm" not in source
+
+
+def test_glass_cockpit_preserves_open_flight_director():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    assert "masterWasOpen" in source
+    assert "openExplanations" in source
+    assert "item.open=openExplanations.includes(index)" in source
+
+
+def test_glass_cockpit_builds_bounded_live_trends():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    assert "liveTrendHistory" in source
+    assert "history.length>24" in source
+    assert "rememberTrend" in source
+
+
+def test_glass_cockpit_uses_incident_bay_fallback():
+    source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
+    assert "function incidentBay(incident)" in source
+    assert "supporting_signals" in source
+    assert "hottestBay" in source
