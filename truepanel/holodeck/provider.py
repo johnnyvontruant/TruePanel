@@ -151,6 +151,7 @@ class HoloDeckHostProvider:
             "telemetry_stale": lambda _v: self._state.__setitem__("telemetry_fresh", False),
             "telemetry_fresh": lambda _v: self._state.__setitem__("telemetry_fresh", True),
             "pool_health": self._pool_health,
+            "zfs_activity": self._zfs_activity,
         }
         handlers[event.type](event.values)
 
@@ -229,3 +230,11 @@ class HoloDeckHostProvider:
                 pool["health"] = str(values["health"]).upper()
                 return
         raise ValueError(f"unknown simulated pool: {name}")
+
+    def _zfs_activity(self, values: Mapping[str, Any]) -> None:
+        allowed = {"scrub_running", "resilver_running", "percent"}
+        self._state["zfs_activity"] = {
+            key: copy.deepcopy(value)
+            for key, value in values.items()
+            if key in allowed
+        }

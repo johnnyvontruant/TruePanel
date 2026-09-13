@@ -8,10 +8,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from truepanel.activity.runtime import activity_providers_from_environment
+from truepanel.config.loader import load_config
 from truepanel.paths import installation_root
 
+from .observatory_snapshot import ObservatorySnapshotService
 from .pathfinder_server import serve
-from .sentinel_snapshot import SentinelSnapshotService
 
 
 class ServiceConfigurationError(ValueError):
@@ -120,6 +122,11 @@ def main():
         .from_environment()
     )
 
+    snapshot_service = ObservatorySnapshotService(
+        config=load_config(settings.config_path),
+        activity_providers=activity_providers_from_environment(),
+    )
+
     serve(
         host=settings.host,
         port=settings.port,
@@ -127,7 +134,7 @@ def main():
             settings.allow_config_writes
         ),
         config_path=settings.config_path,
-        snapshot_service=SentinelSnapshotService(),
+        snapshot_service=snapshot_service,
     )
 
 
