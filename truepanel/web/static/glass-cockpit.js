@@ -45,7 +45,7 @@ function render(view,payload){
     const drives=Array.isArray(storage.drives)?storage.drives:Array.isArray(storage.temperatures)?storage.temperatures:[];
     const hottest=drives.reduce((best,item)=>number(first(item?.temperature,item?.temperature_c,item?.temp))>(number(first(best?.temperature,best?.temperature_c,best?.temp))??-Infinity)?item:best,{});
     const hottestValue=number(first(hottest?.temperature,hottest?.temperature_c,hottest?.temp));
-    const fan=number(first(thermal?.fan_rpm,thermal?.rpm,payload?.fans?.[0]?.rpm));
+    const fan=number(first(thermal?.fan_rpm,thermal?.rpm,payload?.fans?.channels?.[0]?.rpm,payload?.fans?.fan1_rpm,payload?.fans?.fan2_rpm));
     const fanTrend=trend(first(thermal?.fan_history,thermal?.rpm_history,[]));
     const driveTrend=trend(first(hottest?.history,storage?.temperature_history,[]));
     const pools=Array.isArray(storage.pools)?storage.pools:[];
