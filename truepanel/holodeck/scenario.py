@@ -28,6 +28,7 @@ SUPPORTED_EVENTS = frozenset(
         "telemetry_stale",
         "telemetry_fresh",
         "pool_health",
+        "zfs_activity",
     }
 )
 

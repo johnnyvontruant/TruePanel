@@ -348,3 +348,334 @@ if(document.readyState==="loading"){
     installPilotPreflightSummary();
 }
 })();
+
+(()=>{
+"use strict";
+
+const ACTIVITY_ID="observatoryCurrentActivity";
+const ACTIVITY_STYLE_ID="observatoryCurrentActivityStyles";
+
+const esc=value=>String(value??"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+
+const number=value=>Number.isFinite(Number(value))
+    ? Number(value)
+    : null;
+
+function normalizeActivity(payload){
+    const block=payload?.activity;
+
+    if(!block||typeof block!=="object"||block.unavailable===true){
+        return {
+            state:"unavailable",
+            label:"ACTIVITY UNAVAILABLE",
+            detail:"OBSERVATORY evidence unavailable",
+            observations:[],
+        };
+    }
+
+    const observations=Array.isArray(block.observations)
+        ? block.observations
+        : [];
+
+    if(!observations.length){
+        return {
+            state:"idle",
+            label:"NO OBSERVED ACTIVITY",
+            detail:"No normalized workload evidence",
+            observations:[],
+        };
+    }
+
+    const item=observations[0]||{};
+    const progress=number(item.progress);
+    const bounded=progress===null
+        ? null
+        : Math.max(0,Math.min(1,progress));
+
+    const progressText=bounded===null
+        ? ""
+        : ` · ${Math.round(bounded*100)}%`;
+
+    const extra=observations.length>1
+        ? ` · +${observations.length-1} more`
+        : "";
+
+    return {
+        state:"active",
+        label:`${item.title||item.kind||"Observed activity"}${progressText}${extra}`,
+        detail:item.subtitle||item.source||"Normalized activity evidence",
+        observations,
+    };
+}
+
+function observationMarkup(item,index){
+    const progress=number(item?.progress);
+    const bounded=progress===null
+        ? null
+        : Math.max(0,Math.min(1,progress));
+
+    const meta=[
+        item?.provider||item?.source,
+        item?.state,
+        item?.confidence,
+        item?.intensity,
+    ].filter(Boolean);
+
+    return `
+        <li class="observatory-activity-item">
+            <div>
+                <strong>${esc(item?.title||item?.kind||`Activity ${index+1}`)}</strong>
+                <span>${esc(item?.subtitle||"Normalized workload evidence")}</span>
+            </div>
+            <div class="observatory-activity-meta">
+                ${meta.map(value=>`<span>${esc(value)}</span>`).join("")}
+                ${bounded===null?"":`<span>${Math.round(bounded*100)}%</span>`}
+            </div>
+        </li>
+    `;
+}
+
+function renderActivity(view,payload){
+    const current=normalizeActivity(payload);
+
+    view.dataset.activityState=current.state;
+
+    const evidence=current.observations.length
+        ? `<ul class="observatory-activity-list">${current.observations
+            .slice(0,8)
+            .map(observationMarkup)
+            .join("")}</ul>`
+        : `<p class="observatory-activity-empty">${esc(current.detail)}</p>`;
+
+    view.innerHTML=`
+        <button
+            type="button"
+            class="observatory-pilot-summary"
+            aria-label="Current activity: ${esc(current.label)}. Open Flight Engineer details."
+        >
+            <span>
+                <small>CURRENT ACTIVITY</small>
+                <strong>${esc(current.label)}</strong>
+            </span>
+            <span class="observatory-activity-detail">${esc(current.detail)}</span>
+        </button>
+
+        <div class="observatory-engineer-detail">
+            <header>
+                <div>
+                    <small>OBSERVATORY</small>
+                    <h3>Current Activity</h3>
+                </div>
+                <span class="observatory-activity-state">${esc(current.state.toUpperCase())}</span>
+            </header>
+
+            <p class="observatory-activity-lead">
+                ${esc(current.label)}
+            </p>
+
+            ${evidence}
+        </div>
+    `;
+
+    const pilot=view.querySelector(".observatory-pilot-summary");
+    pilot?.addEventListener("click",()=>{
+        window.TruePanelMissionMode?.setMode("engineer");
+        window.requestAnimationFrame(()=>{
+            view.classList.add("gc-jump-focus");
+            const behavior=window.matchMedia?.(
+                "(prefers-reduced-motion: reduce)"
+            ).matches
+                ?"auto"
+                :"smooth";
+
+            view.scrollIntoView({behavior,block:"center"});
+            window.setTimeout(
+                ()=>view.classList.remove("gc-jump-focus"),
+                1300
+            );
+        });
+    });
+}
+
+function installActivityStyles(){
+    if(document.getElementById(ACTIVITY_STYLE_ID)) return;
+
+    const style=document.createElement("style");
+    style.id=ACTIVITY_STYLE_ID;
+    style.textContent=`
+#${ACTIVITY_ID}{
+    grid-column:1/-1;
+    padding:.85rem 1rem;
+}
+#${ACTIVITY_ID} small{
+    color:var(--muted);
+    font-size:.62rem;
+    font-weight:850;
+    letter-spacing:.1em;
+}
+.observatory-pilot-summary{
+    width:100%;
+    min-height:44px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:.8rem;
+    align-items:center;
+    padding:.65rem .75rem;
+    text-align:left;
+    border:1px solid var(--gc-border,var(--edge));
+    border-radius:8px;
+    background:color-mix(in srgb,var(--accent-soft) 32%,transparent);
+    color:var(--text);
+    cursor:pointer;
+}
+.observatory-pilot-summary>span:first-child{
+    display:grid;
+    gap:.18rem;
+    min-width:0;
+}
+.observatory-pilot-summary strong{
+    overflow-wrap:anywhere;
+}
+.observatory-activity-detail{
+    color:var(--muted);
+    font-size:.68rem;
+    text-align:right;
+}
+.observatory-engineer-detail{
+    display:grid;
+    gap:.65rem;
+}
+.observatory-engineer-detail header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+}
+.observatory-engineer-detail h3{
+    margin:.12rem 0 0;
+}
+.observatory-activity-state{
+    color:var(--muted);
+    font-size:.62rem;
+    font-weight:850;
+    letter-spacing:.08em;
+}
+.observatory-activity-lead{
+    margin:0;
+    font-weight:700;
+}
+.observatory-activity-list{
+    display:grid;
+    gap:.5rem;
+    margin:0;
+    padding:0;
+    list-style:none;
+}
+.observatory-activity-item{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:.8rem;
+    padding:.65rem .7rem;
+    border:1px solid var(--gc-border,var(--edge));
+    border-radius:8px;
+}
+.observatory-activity-item>div:first-child{
+    display:grid;
+    gap:.18rem;
+}
+.observatory-activity-item span,
+.observatory-activity-empty{
+    color:var(--muted);
+    font-size:.68rem;
+}
+.observatory-activity-meta{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:.3rem;
+}
+.observatory-activity-meta span{
+    padding:.2rem .35rem;
+    border:1px solid var(--gc-border,var(--edge));
+    border-radius:6px;
+}
+body[data-mission-mode="pilot"] .observatory-engineer-detail{
+    display:none!important;
+}
+body[data-mission-mode="engineer"] .observatory-pilot-summary{
+    display:none!important;
+}
+#${ACTIVITY_ID}[data-activity-state="idle"] .observatory-pilot-summary,
+#${ACTIVITY_ID}[data-activity-state="idle"] .observatory-activity-state{
+    color:var(--muted);
+}
+#${ACTIVITY_ID}[data-activity-state="unavailable"] .observatory-pilot-summary,
+#${ACTIVITY_ID}[data-activity-state="unavailable"] .observatory-activity-state{
+    color:var(--muted);
+}
+@media(max-width:760px){
+    #${ACTIVITY_ID}{
+        padding:.75rem;
+    }
+    .observatory-pilot-summary,
+    .observatory-activity-item{
+        grid-template-columns:1fr;
+    }
+    .observatory-activity-detail{
+        text-align:left;
+    }
+    .observatory-activity-meta{
+        justify-content:flex-start;
+    }
+}
+`;
+    document.head.appendChild(style);
+}
+
+function installCurrentActivity(){
+    installActivityStyles();
+
+    if(document.getElementById(ACTIVITY_ID)) return;
+
+    const grid=document.querySelector("main .grid");
+    const situation=document.getElementById("glassCockpitSituation");
+
+    if(!grid||!situation){
+        window.setTimeout(installCurrentActivity,50);
+        return;
+    }
+
+    const view=document.createElement("article");
+    view.id=ACTIVITY_ID;
+    view.className="card";
+    view.setAttribute(
+        "aria-label",
+        "OBSERVATORY current activity"
+    );
+    view.innerHTML="<p>Waiting for the shared status stream.</p>";
+
+    situation.insertAdjacentElement("afterend",view);
+
+    window.addEventListener("truepanel:status",event=>{
+        if(event?.detail&&typeof event.detail==="object"){
+            renderActivity(view,event.detail);
+        }
+    });
+}
+
+installActivityStyles();
+
+if(document.readyState==="loading"){
+    document.addEventListener(
+        "DOMContentLoaded",
+        installCurrentActivity,
+        {once:true}
+    );
+}else{
+    installCurrentActivity();
+}
+})();
