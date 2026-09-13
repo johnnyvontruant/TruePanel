@@ -11,6 +11,7 @@ from typing import Any
 from truepanel.oracle import OracleEngine
 
 from .checkride import compose_storage_checkride
+from .consequences import correlate_consequences
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
 from .flight_director import run_flight_director_proof
@@ -259,6 +260,11 @@ class AegisReliabilityEngine:
             hard_faults=self._hard_faults(cards),
         )
         incident = correlate_incident(cards, outlook, policy=self.correlation_policy)
+        if incident:
+            incident["consequence_context"] = correlate_consequences(
+                incident,
+                _dict(payload.get("sentinel")),
+            )
         working_payload = payload
         passive_evidence = None
         if incident and self.protection_evidence_provider is not None:
