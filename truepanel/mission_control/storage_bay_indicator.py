@@ -10,7 +10,6 @@ from typing import Any
 
 from .constants import Category, Priority
 
-
 LOGGER = logging.getLogger(__name__)
 
 
