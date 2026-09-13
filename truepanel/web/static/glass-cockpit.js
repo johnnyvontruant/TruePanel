@@ -6,6 +6,16 @@ const number=value=>Number.isFinite(Number(value))?Number(value):null;
 const first=(...values)=>values.find(value=>value!==undefined&&value!==null&&value!=="");
 const array=value=>Array.isArray(value)?value:[];
 
+const liveTrendSeries={fan:[],drive:[]};
+
+function rememberTrend(key,value){
+    if(value===null) return liveTrendSeries[key];
+    const series=liveTrendSeries[key];
+    series.push(value);
+    if(series.length>8) series.shift();
+    return series;
+}
+
 function trend(values){
     const points=(Array.isArray(values)?values:[]).map(number).filter(value=>value!==null).slice(-8);
     if(points.length<2) return {word:"trend unavailable",symbol:"—",points:""};
