@@ -1,5 +1,5 @@
 """
-Translate structured storage-health events into bay identify LED state.
+Translate structured storage-health events into physical bay LED state.
 """
 
 from __future__ import annotations
@@ -9,7 +9,6 @@ from collections.abc import Mapping
 from typing import Any
 
 from .constants import Category, Priority
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,7 +22,11 @@ def _integer(value: Any) -> int | None:
 
 class StorageBayIndicator:
     """
-    Maintain the verified identify LED for each unhealthy physical bay.
+    Maintain verified warning/fault LED semantics for unhealthy physical bays.
+
+    Warning storage health uses the flashing red identify channel. Critical
+    storage health uses the steady red error channel. Recovery clears both red
+    channels. The independent green presence channel is never modified here.
 
     Hardware failures are logged and deliberately do not interrupt Mission
     Control, LCD rendering, or storage-health polling.
@@ -40,9 +43,15 @@ class StorageBayIndicator:
         if clear_on_start:
             try:
                 self.controller.clear_all()
+                for bay in range(1, 7):
+                    self.controller.set_error(
+                        bay,
+                        False,
+                        force=True,
+                    )
             except Exception:
                 LOGGER.exception(
-                    "Could not initialize bay identify LEDs"
+                    "Could not initialize bay warning/fault LEDs"
                 )
 
     def __call__(self, event) -> bool:
@@ -78,35 +87,68 @@ class StorageBayIndicator:
             metadata.get("new_state", "")
         ).strip().lower()
 
+        priority = getattr(
+            event,
+            "priority",
+            Priority.NONE,
+        )
+
         clear = (
             change_type == "recovered"
             or new_state == "healthy"
         )
 
-        activate = (
+        critical = (
             not clear
-            and getattr(
-                event,
-                "priority",
-                Priority.NONE,
+            and (
+                new_state == "critical"
+                or priority >= Priority.CRITICAL
             )
-            >= Priority.WARNING
         )
 
-        if not clear and not activate:
+        warning = (
+            not clear
+            and not critical
+            and (
+                new_state == "warning"
+                or priority >= Priority.WARNING
+            )
+        )
+
+        if not clear and not warning and not critical:
             return False
 
+        identify_enabled = warning
+        error_enabled = critical
+        changed = False
+
         try:
-            return self.controller.set_identify(
-                bay,
-                activate,
-            )
+            changed = bool(
+                self.controller.set_identify(
+                    bay,
+                    identify_enabled,
+                )
+            ) or changed
         except Exception:
             LOGGER.exception(
                 "Could not update identify LED for Bay %d",
                 bay,
             )
-            return False
+
+        try:
+            changed = bool(
+                self.controller.set_error(
+                    bay,
+                    error_enabled,
+                )
+            ) or changed
+        except Exception:
+            LOGGER.exception(
+                "Could not update error LED for Bay %d",
+                bay,
+            )
+
+        return changed
 
 
 __all__ = ["StorageBayIndicator"]

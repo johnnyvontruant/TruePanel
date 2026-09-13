@@ -39,6 +39,8 @@ from truepanel.guidance.storage_evidence import (
     StorageRecoveryEvidenceProvider,
     normalize_device,
 )
+from truepanel.hardware.health import classify_storage_telemetry
+from truepanel.hardware.telemetry import StorageTelemetry
 from truepanel.lifeline import (
     DriveFingerprintProvider,
     DriveFingerprintStore,
@@ -73,6 +75,19 @@ def _smart_counter(record: dict[str, Any], key: str) -> int:
         return int(record.get(key) or 0)
     except (TypeError, ValueError):
         return 0
+
+
+def _smart_optional_counter(
+    record: dict[str, Any],
+    key: str,
+) -> int | None:
+    if key not in record or record.get(key) is None:
+        return None
+
+    try:
+        return int(record[key])
+    except (TypeError, ValueError):
+        return None
 
 
 def _smart_requires_evidence(record: Any) -> bool:
@@ -572,6 +587,52 @@ class SnapshotService(_base.SnapshotService):
                     value = evidence.get(key)
                     if value is not None:
                         item[key] = value
+
+            smart_passed = None
+            health = str(item.get("health") or "").strip().upper()
+            if health == "PASSED":
+                smart_passed = True
+            elif health == "FAILED":
+                smart_passed = False
+
+            telemetry = StorageTelemetry(
+                device=device or "",
+                smart_passed=smart_passed,
+                reallocated_sectors=_smart_optional_counter(
+                    item,
+                    "reallocated",
+                ),
+                pending_sectors=_smart_optional_counter(
+                    item,
+                    "pending",
+                ),
+                offline_uncorrectable=_smart_optional_counter(
+                    item,
+                    "offline_uncorrectable",
+                ),
+                interface_errors=_smart_optional_counter(
+                    item,
+                    "interface_errors",
+                ),
+                power_on_hours=_smart_optional_counter(
+                    item,
+                    "power_on_hours",
+                ),
+                percentage_used=_smart_optional_counter(
+                    item,
+                    "percentage_used",
+                ),
+                available_spare=_smart_optional_counter(
+                    item,
+                    "available_spare",
+                ),
+            )
+
+            health_state, health_message = classify_storage_telemetry(
+                telemetry
+            )
+            item["health_state"] = health_state.value
+            item["health_message"] = health_message
 
             enriched.append(item)
 
