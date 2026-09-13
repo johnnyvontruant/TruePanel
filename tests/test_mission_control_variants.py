@@ -66,7 +66,11 @@ def test_drive_bay_mirror_renders_six_chassis_positions_and_unknown_fails_closed
     assert 'strip.id="cockpitBayStrip"' in script
     assert 'for(let number=1;number<=6;number+=1)' in script
     assert 'const mirror=data?.storage?.bay_mirror||{}' in script
-    assert 'const state=String(record.state||"unknown")' in script
+    assert 'const mirroredState=String(record.state||"unknown")' in script
+    assert 'const smartRecords=Array.isArray(data?.storage?.smart)' in script
+    assert 'smartSeverityByBay.set(bay,"fault")' in script
+    assert 'const state=healthState||mirroredState' in script
+    assert "health-reconciled read-only mirror" in script
     assert 'Bay identity unavailable · no inference' in script
     assert '.cockpit-bay-led.online' in script
     assert '.cockpit-bay-led.attention' in script
