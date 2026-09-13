@@ -45,6 +45,17 @@ function render(view,payload){
     const drives=Array.isArray(storage.drives)?storage.drives:Array.isArray(storage.temperatures)?storage.temperatures:[];
     const hottest=drives.reduce((best,item)=>number(first(item?.temperature,item?.temperature_c,item?.temp))>(number(first(best?.temperature,best?.temperature_c,best?.temp))??-Infinity)?item:best,{});
     const hottestValue=number(first(hottest?.temperature,hottest?.temperature_c,hottest?.temp));
+    const hottestDevice=String(first(hottest?.device,hottest?.drive,"")).replace("/dev/","");
+    const hottestIdentity=[...array(storage?.smart),...array(storage?.devices)].find(item=>
+        String(first(item?.device,item?.drive,"")).replace("/dev/","")===hottestDevice
+    )||{};
+    const hottestBay=first(
+        hottest?.bay,
+        hottest?.physical_bay,
+        hottestIdentity?.physical_bay,
+        hottestIdentity?.bay,
+        "unknown"
+    );
     const fan=number(first(thermal?.fan_rpm,thermal?.rpm,payload?.fans?.channels?.[0]?.rpm,payload?.fans?.fan1_rpm,payload?.fans?.fan2_rpm));
     const fanTrend=trend(first(thermal?.fan_history,thermal?.rpm_history,[]));
     const driveTrend=trend(first(hottest?.history,storage?.temperature_history,[]));
@@ -54,7 +65,7 @@ function render(view,payload){
     const cause=incident?.likely_cause||"No active correlated incident";
     const move=(flightBound&&flight?.safest_action)||incident?.safest_next_action||"Continue passive monitoring";
     const verify=(flightBound&&flight?.verification_signature?.status)||incident?.verification_state||"not required";
-    view.innerHTML=`<div class="gc-now"><div><small>NOW</small><strong class="gc-state">${esc(overall)}</strong></div><div><small>WHY</small><strong>${esc(cause)}</strong></div><div><small>SAFEST MOVE</small><strong>${esc(move)}</strong></div><div><small>PROOF</small><strong>${esc(verify)}</strong></div></div><div class="gc-domains"><section><small>COOLING</small><strong>${fan===null?"RPM unknown":`${fan.toLocaleString()} RPM`}</strong>${spark(fanTrend,"Fan delivery")}</section><section><small>HOTTEST DRIVE</small><strong>${hottestValue===null?"Temperature unknown":`${hottestValue}°C`} · Bay ${esc(first(hottest?.bay,"unknown"))}</strong>${spark(driveTrend,"Hottest drive temperature")}</section><section><small>STORAGE</small><strong>${esc(first(pool?.name,"Pool unknown"))} · ${esc(first(pool?.health,pool?.status,"state unknown"))}</strong><span>Redundancy ${esc(first(pool?.redundancy,"unknown"))}</span></section></div><details><summary>Evidence, history, and advanced diagnostics</summary><p>Safety-critical incident, action, and proof remain outside this drawer. Trend graphics have text alternatives; unknown topology stays unknown.</p></details>`;
+    view.innerHTML=`<div class="gc-now"><div><small>NOW</small><strong class="gc-state">${esc(overall)}</strong></div><div><small>WHY</small><strong>${esc(cause)}</strong></div><div><small>SAFEST MOVE</small><strong>${esc(move)}</strong></div><div><small>PROOF</small><strong>${esc(verify)}</strong></div></div><div class="gc-domains"><section><small>COOLING</small><strong>${fan===null?"RPM unknown":`${fan.toLocaleString()} RPM`}</strong>${spark(fanTrend,"Fan delivery")}</section><section><small>HOTTEST DRIVE</small><strong>${hottestValue===null?"Temperature unknown":`${hottestValue}°C`} · Bay ${esc(hottestBay)}</strong>${spark(driveTrend,"Hottest drive temperature")}</section><section><small>STORAGE</small><strong>${esc(first(pool?.name,"Pool unknown"))} · ${esc(first(pool?.health,pool?.status,"state unknown"))}</strong><span>Redundancy ${esc(first(pool?.redundancy,"unknown"))}</span></section></div><details><summary>Evidence, history, and advanced diagnostics</summary><p>Safety-critical incident, action, and proof remain outside this drawer. Trend graphics have text alternatives; unknown topology stays unknown.</p></details>`;
 }
 
 function pathMarkup(item){
