@@ -6,7 +6,7 @@ TruePanel 1.2.0 is the stable foundation. The accepted post-1.2 development line
 
 AEGIS, HANGAR, Flight Director, and GLASS COCKPIT (PRs #78, #80, #90–#96) are merged to `main` and deployed to BattleStation. Live validation included a genuine active incident (critical SMART evidence on a front-bay drive), which the deployment correctly kept prominent and which directly surfaced and led to fixing a real defect in how lab-rehearsal evidence was scoped.
 
-A further Apple Human Interface Guidelines-inspired visual pass (light/dark mode, translucent glass cards, a restructured Flight Manual card) is deployed on BattleStation's static assets but is **not yet committed back into this repository** — reconciling that is an open 1.3.0 item, tracked below.
+The Apple Human Interface Guidelines-inspired visual pass is now represented in the repository: light/dark mode, translucent Glass Cockpit cards, Pilot / Flight Engineer presentation modes, and the restructured operator-facing reliability surfaces have graduated. The remaining visual-record work is screenshot and documentation synchronization plus live truth-polish.
 
 The platform now includes:
 
@@ -78,21 +78,18 @@ recordings is collected.
 - replace stale screenshots after the final cockpit layout is accepted;
 - document stable versus experimental features plainly;
 - publish the Prior-Art Field Report and adopted-code provenance before incorporating external work;
-- **new:** commit the deployed Apple HIG-inspired Mission Control visual
-  system (light/dark mode, glass cards, restructured Flight Manual card)
-  back into this repository — it currently exists only on BattleStation's
-  static assets, deployed by hand rather than through the guarded upgrade
-  lifecycle, which is a real gap between the repository and the running
-  system that should close before 1.3.0.
+- keep the current Pilot / Flight Engineer, light/dark, OBSERVATORY, and
+  Flight Director screenshots synchronized with the repository;
+- close cockpit truth gaps where summary state and detailed evidence disagree;
+- preserve operator disclosure state across live refreshes.
 
 ## Toward 1.3.0
 
 With gates 1 and 4 closed and gate 5 nearly closed by this changelog and
 roadmap update, the remaining work for a `v1.3.0` tag is:
 
-1. Commit the Mission Control visual redesign into this repository (gate 5),
-   reconciling it with `claude/mission-control-apple-redesign-oitcxc`, an
-   independent unmerged branch covering similar ground.
+1. Finish the current screenshot/documentation refresh and cockpit truth
+   reconciliation (gate 5).
 2. Close gate 3 (localization) — move fan and drive-temperature evidence
    from aggregate to per-bay/per-zone.
 3. Scope the diagnostic half of Project CHECKRIDE: bind a real storage
