@@ -29,11 +29,14 @@ TruePanel began by adapting earlier QNAP LCD utilities, but the current project 
 ### Mission Control
 
 - Live CPU, memory, network, storage, fan, thermal, service, and front-panel state
-- Responsive cockpit layout designed to remain usable on phones
-- Virtual Front Panel that follows the same dispatcher as the physical buttons
+- Pilot mode for consequence-first daily operation; Flight Engineer mode for evidence, gates, and deep diagnostics
+- Light and dark appearance modes over the responsive Glass Cockpit layout
+- NOW / WHY / SAFEST MOVE / PROOF command status plus Flight Director incident evidence
+- OBSERVATORY CURRENT ACTIVITY on the shared status stream, with neutral idle and unavailable states
+- Virtual Front Panel and six-bay read-only chassis mirror tied to the same physical-to-logical topology
 - Preflight readiness for Host, Storage, Cooling, Front Panel, and Safety Interlocks
-- Privacy-safe compatibility support bundles
-- Historical telemetry, event evidence, and guarded configuration surfaces
+- Privacy-safe compatibility support bundles, historical telemetry, event evidence, and guarded configuration surfaces
+- Phone-safe single-column behavior is a release constraint, not optional polish
 
 ### Health, recovery, and reliability
 
@@ -44,7 +47,7 @@ TruePanel began by adapting earlier QNAP LCD utilities, but the current project 
 - Project AEGIS correlation of related signals into an evidence-backed probable cause
 - A Recovery Coverage Matrix that requires guidance, a fault-specific verifier, deterministic regression coverage, and a passed safe rehearsal
 
-AEGIS is deployed and live-validated on the reference NAS. It remains read-only, preserves the underlying component alerts and evidence, and does not gain hardware or destructive storage authority.
+AEGIS, Flight Director, Glass Cockpit, SENTINEL, and OBSERVATORY are deployed and live-validated on the reference NAS. The reliability stack remains read-only, preserves underlying component alerts and evidence, and does not gain hardware or destructive storage authority.
 
 ### Safe development and operations
 
@@ -194,6 +197,9 @@ See the [CLI Reference](docs/CLI.md), [Upgrade and Rollback Guide](docs/UPGRADIN
 
 - [Documentation map](docs/README.md)
 - [Mission Control and reliability](docs/MISSION_CONTROL.md)
+- [Project OBSERVATORY](docs/OBSERVATORY.md)
+- [TruePanel Core and hardware modules](docs/TRUEPANEL_CORE.md)
+- [Project CHRONOS](docs/CHRONOS.md)
 - [Installation](docs/INSTALLATION.md)
 - [Upgrade and rollback](docs/UPGRADING.md)
 - [Architecture](docs/ARCHITECTURE.md)
