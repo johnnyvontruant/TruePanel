@@ -1,9 +1,11 @@
-from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 
-from truepanel.hardware.health import StorageHealthService
+from truepanel.hardware.health import (
+    StorageHealthService,
+    classify_storage_telemetry,
+)
 from truepanel.hardware.inventory import Drive, StorageDevice
 from truepanel.hardware.telemetry import HealthState, StorageTelemetry
 
@@ -58,6 +60,26 @@ def service_for(telemetry):
     return StorageHealthService(
         FakeInventory([entry]),
         provider,
+    )
+
+
+
+def test_classify_helper_matches_service_policy():
+    telemetry = StorageTelemetry(
+        device="sda",
+        smart_passed=True,
+        pending_sectors=4,
+        offline_uncorrectable=2,
+        reallocated_sectors=12,
+        temperature_c=40,
+    )
+
+    service = service_for(telemetry)
+
+    assert classify_storage_telemetry(telemetry) == service.classify(telemetry)
+    assert classify_storage_telemetry(telemetry) == (
+        HealthState.CRITICAL,
+        "pending sectors: 4",
     )
 
 

@@ -164,23 +164,62 @@ function installBayStrip(){
 function updateBayStrip(data){
     const mirror=data?.storage?.bay_mirror||{};
     const records=Array.isArray(mirror.bays)?mirror.bays:[];
+    const smart=Array.isArray(data?.storage?.smart)?data.storage.smart:[];
     const byBay=new Map(records.map(item=>[Number(item?.bay),item]));
+    const healthByBay=new Map();
+
+    for(const item of smart){
+        const bay=Number(item?.physical_bay);
+        if(!Number.isInteger(bay)||bay<1||bay>6) continue;
+
+        const healthState=String(item?.health_state||"unknown").toLowerCase();
+        if(!["warning","critical"].includes(healthState)) continue;
+
+        const current=healthByBay.get(bay);
+        if(current==="critical") continue;
+        healthByBay.set(bay,healthState);
+    }
+
     for(let number=1;number<=6;number+=1){
         const element=document.querySelector(`.cockpit-bay[data-bay="${number}"]`);
         if(!element) continue;
+
         const record=byBay.get(number)||{};
-        const state=String(record.state||"unknown").toLowerCase();
+        const mirrorState=String(record.state||"unknown").toLowerCase();
+        const healthState=healthByBay.get(number)||"";
+
+        const visualState=healthState==="critical"
+            ?"fault"
+            :healthState==="warning"
+                ?"attention"
+                :mirrorState;
+
+        const displayState=healthState
+            ?healthState.toUpperCase()
+            :mirrorState;
+
         const led=element.querySelector(".cockpit-bay-led");
         const stateNode=element.querySelector(".cockpit-bay-state");
-        led.className=`cockpit-bay-led ${state}`;
-        stateNode.textContent=state;
-        const parts=[`Bay ${number}`,state];
+
+        led.className=`cockpit-bay-led ${visualState}`;
+        stateNode.textContent=displayState;
+
+        const parts=[`Bay ${number}`];
+
+        if(healthState){
+            parts.push(`Drive health ${healthState.toUpperCase()}`);
+        }else{
+            parts.push(mirrorState);
+        }
+
         if(record.pool) parts.push(String(record.pool));
-        if(record.zfs_state) parts.push(String(record.zfs_state));
+        if(record.zfs_state) parts.push(`ZFS ${String(record.zfs_state)}`);
         if(record.mapping_source) parts.push(String(record.mapping_source));
+
         element.title=parts.join(" · ");
         element.setAttribute("aria-label",parts.join(", "));
     }
+
     const source=document.getElementById("cockpitBaySource");
     if(source){
         source.textContent=mirror.available===true
