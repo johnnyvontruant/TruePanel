@@ -195,3 +195,21 @@ mission_control:
     # Preserve real hardware transitions for future replay tests.
     record_events: true
     event_log: /var/lib/truepanel/storage/events.jsonl
+
+  cargo_bay:
+    enabled: true
+    cache_seconds: 60
+    window_seconds: 86400
+    history_limit: 250
+
+    sonarr:
+      url: http://127.0.0.1:30113
+      config_path: /mnt/SSDs/Applications/sonarr/config.xml
+      media_prefix: /media/tv
+      host_prefix: /mnt/HDDs/Shows
+
+    radarr:
+      url: http://127.0.0.1:30025
+      config_path: /mnt/SSDs/Applications/radarr/config.xml
+      media_prefix: /media/movies
+      host_prefix: /mnt/HDDs/Movies

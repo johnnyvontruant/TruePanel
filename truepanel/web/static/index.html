@@ -387,6 +387,44 @@ button.danger .profile-target{color:var(--bad)}
     var(--edge)
   )
 }
+.cargo-glance{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:.7rem;
+  margin-top:.9rem
+}
+
+.cargo-glance>div{
+  min-width:0;
+  padding:.72rem .8rem;
+  border:1px solid var(--edge);
+  border-radius:var(--radius-sm);
+  background:color-mix(
+    in srgb,
+    var(--panel-solid) 28%,
+    transparent
+  )
+}
+
+.cargo-glance-label{
+  display:block;
+  margin-bottom:.2rem;
+  color:var(--muted);
+  font-size:.66rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase
+}
+
+.cargo-glance strong{
+  display:block;
+  min-width:0;
+  overflow-wrap:anywhere;
+  color:var(--text);
+  font-size:.84rem;
+  line-height:1.35
+}
+
 .cargo-drawers{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
@@ -575,6 +613,9 @@ button.danger .profile-target{color:var(--bad)}
   .cargo-state{
     display:inline-block;
     margin-top:.65rem
+  }
+  .cargo-glance{
+    grid-template-columns:1fr
   }
   .cargo-drawers{
     grid-template-columns:1fr
@@ -798,6 +839,21 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
   </div>
   <div id="cargoState" class="cargo-state bad">
     UNAVAILABLE
+  </div>
+</div>
+
+<div class="cargo-glance" id="cargoGlance">
+  <div>
+    <span class="cargo-glance-label">Bay</span>
+    <strong id="cargoGlancePrimary">Telemetry unavailable</strong>
+  </div>
+  <div>
+    <span class="cargo-glance-label">Activity</span>
+    <strong id="cargoGlanceSecondary">--</strong>
+  </div>
+  <div>
+    <span class="cargo-glance-label">Flight note</span>
+    <strong id="cargoGlanceTertiary">--</strong>
   </div>
 </div>
 
@@ -3270,21 +3326,25 @@ function renderCargoBay(cargo){
 
     const stateElement=q("cargoState");
 
-    if(stateElement){
-        stateElement.textContent=state;
+    const setCargoState=(displayState)=>{
+        if(!stateElement){
+            return;
+        }
+
+        stateElement.textContent=displayState;
 
         const tone=(
-            state==="NOMINAL"
-            ||state==="CLEAR"
+            displayState==="NOMINAL"
+            ||displayState==="CLEAR"
         )
             ?"good"
-            :state==="REVIEW"
+            :displayState==="REVIEW"
                 ?"warn"
                 :"bad";
 
         stateElement.className=
             `cargo-state ${tone}`;
-    }
+    };
 
     const summary=(
         payload.summary
@@ -3330,43 +3390,148 @@ function renderCargoBay(cargo){
             backupState;
     }
 
+    const resolved=Number(summary.resolved)||0;
+    const moved=Number(
+        summary.moved_since_import
+    )||0;
+
+    const downloads=(
+        payload.downloads
+        &&typeof payload.downloads==="object"
+    )?payload.downloads:{};
+
+    const downloadItems=Array.isArray(
+        downloads.items
+    )?downloads.items:[];
+
+    const downloadTotal=Number(
+        downloads.total
+    )||downloadItems.length;
+
+    const downloadReview=Number(
+        downloads.review
+    )||0;
+
+    const effectiveState=(
+        state!=="UNAVAILABLE"
+        &&downloadReview>0
+    )
+        ?"REVIEW"
+        :state;
+
+    setCargoState(effectiveState);
+
+    const windowHours=Math.max(
+        1,
+        Math.round(
+            (Number(payload.window_seconds)||86400)
+            /3600
+        )
+    );
+
+    const reviewItem=downloadItems.find(
+        item=>String(
+            item&&item.classification||""
+        ).toUpperCase()==="REVIEW"
+    )||downloadItems[0]||null;
+
+    const reviewTitle=String(
+        reviewItem&&reviewItem.title||""
+    );
+
+    const reviewTracked=String(
+        reviewItem&&reviewItem.tracked_state||""
+    ).replace(/([a-z])([A-Z])/g,"$1 $2")
+     .trim()
+     .toUpperCase();
+
+    const reviewProgress=Number(
+        reviewItem&&reviewItem.progress_percent
+    );
+
+    let primary;
+    let secondary;
+    let tertiary;
     let summaryText;
 
     if(state==="UNAVAILABLE"){
+        primary="Telemetry unavailable";
+        secondary="Cargo provider offline";
+        tertiary="Check configuration";
         summaryText="Cargo telemetry unavailable";
-    }else if(state==="CLEAR"){
+    }else if(downloadReview>0){
+        primary=`${downloadReview} import${
+            downloadReview===1?"":"s"
+        } pending`;
+
+        secondary=reviewTitle||"Intake requires review";
+
+        tertiary=[
+            Number.isFinite(reviewProgress)
+                ?`${reviewProgress.toFixed(0)}%`
+                :"",
+            reviewTracked
+        ].filter(Boolean).join(" • ")
+            ||"Review intake";
+
+        summaryText="Intake requires attention";
+    }else if(total===0){
+        primary="Bay clear";
+        secondary=`No arrivals in last ${windowHours}h`;
+        tertiary=downloadTotal>0
+            ?`${downloadTotal} incoming`
+            :"Downloads clear";
         summaryText=
-            "No recent arrivals • "
-            +(
-                backupTracking
-                ?`${Number(backup.verified)||0} of ${
-                    Number(backup.total)||0
-                } recent arrivals backup verified`
-                :"Backup tracking not configured"
-            );
-    }else if(state==="REVIEW"){
-        summaryText=
-            `${total} recent ${
-                total===1?"arrival":"arrivals"
-            } • ${unresolved} need review • `
-            +cargoBytes(totalBytes);
+            `No completed arrivals in last ${windowHours}h`;
     }else{
-        summaryText=
-            `${total} recent ${
-                total===1?"arrival":"arrivals"
-            } • ${cargoBytes(totalBytes)} • `
+        primary=
+            `${total} ${total===1?"arrival":"arrivals"}`
+            +` • ${cargoBytes(totalBytes)}`;
+
+        secondary=
+            `${resolved} resolved`
             +(
-                backupTracking
-                ?`${Number(backup.verified)||0} of ${
-                    Number(backup.total)||0
-                } recent arrivals backup verified`
-                :"Backup tracking not configured"
+                unresolved>0
+                ?` • ${unresolved} need review`
+                :" • All resolved"
             );
+
+        tertiary=
+            `${moved} moved since import`;
+
+        summaryText=effectiveState==="REVIEW"
+            ?`${unresolved} recent ${
+                unresolved===1?"arrival needs":"arrivals need"
+            } review`
+            :`${total} recent ${
+                total===1?"arrival":"arrivals"
+            }`;
+    }
+
+    if(
+        state!=="UNAVAILABLE"
+        &&backupTracking
+    ){
+        summaryText+=
+            ` • ${Number(backup.verified)||0} of ${
+                Number(backup.total)||0
+            } recent arrivals backup verified`;
+    }
+
+    if(q("cargoGlancePrimary")){
+        q("cargoGlancePrimary").textContent=primary;
+    }
+
+    if(q("cargoGlanceSecondary")){
+        q("cargoGlanceSecondary").textContent=secondary;
+    }
+
+    if(q("cargoGlanceTertiary")){
+        q("cargoGlanceTertiary").textContent=tertiary;
     }
 
     if(q("cargoSummary")){
-        q("cargoSummary").textContent=
-            summaryText;
+        q("cargoSummary").textContent=summaryText;
     }
 
     const groups=(
