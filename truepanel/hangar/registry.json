@@ -306,7 +306,7 @@
       "value": "Prevents a reboot-time /dev rename from hiding proved consequences while holding closed on cloned identities and path reuse.",
       "prior_art": ["systemd persistent-storage rules", "OpenZFS vdev GUID", "smartmontools device identity", "TruePanel Lifeline resolver"],
       "safety_class": "SIMULATION_ONLY",
-      "development": {"branch": "feature/aegis-stable-consequence-identity", "pr": null, "commits": ["db0fe4b8"]},
+      "development": {"branch": "feature/aegis-stable-consequence-identity", "pr": 151, "commits": ["f0b00014190429ffec7b240c75abb7cc52b54ce7", "788a924f0d80efdde155075fff798e979745e9e4"]},
       "protocol": ["consume existing Lifeline sessions", "accept only strong opaque identities", "index current and historical device paths", "reject cloned identity and path reuse", "validate current SENTINEL path", "preserve diagnostic confidence", "render identity and path-change state"],
       "fixtures": ["aegis-sentinel-consequence-correlation", "tests/test_aegis_consequences.py", "sentinel-bay3-storage-impact"],
       "success_criteria": ["same-path identity proves context", "device-path reassignment preserves proof", "missing cloned and reused identities hold", "raw identifiers remain absent", "no added telemetry reads", "control authority remains false"],
