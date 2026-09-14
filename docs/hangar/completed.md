@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.13.1 · refreshed 2026-09-13 · 15 experiment(s)
+Registry version 2026.09.14.1 · refreshed 2026-09-14 · 16 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -118,8 +118,16 @@ The governed runtime first failed closed on missing restore proof, then a contro
 
 ## TP-EXP-0020 · AEGIS consequence-aware incident correlation
 
-The exact /dev/sdc scenario exposes six proved reachable objects while four unsafe identity/path cases hold closed; false joins, confidence increases, additional telemetry reads, recovery actions, and control authority are all zero.
+The initial exact-device consequence projection exposed six proved reachable objects without changing diagnostic confidence. TP-EXP-0021 subsequently hardened the join with Lifeline stable identity and preserved the same proof across device-path reassignment.
 
 - Safety: `SIMULATION_ONLY`
-- Strongest follow-up: Replace snapshot-local /dev path joining with a Lifeline stable fingerprint and rehearse path reassignment plus cloned-serial conflicts.
+- Strongest follow-up: Track the stable-identity hardening and device-path reassignment proof in TP-EXP-0021.
 - Revisit when: Lifeline stable fingerprints become available in both AEGIS and SENTINEL snapshots; device-path reassignment can be rehearsed; a new consequence kind is added
+
+## TP-EXP-0021 · AEGIS stable consequence identity
+
+One stable identity preserves six proved consequences across /dev/sdc to /dev/sda reassignment; missing identity, cloned identity, reused path, and malformed graph cases hold with zero false joins or confidence increases.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.
+- Revisit when: identity migration from serial-model to WWN or ZFS GUID is implemented; Lifeline identity coverage becomes a Recovery Coverage Matrix condition; TrueNAS exposes a supported leaf-vdev GUID

@@ -58,13 +58,18 @@ def test_server_exposes_glass_cockpit_asset_in_full_stack():
 
 def test_hangar_closed_experiment_and_evidence_agree():
     registry = load_registry()
-    experiment = next(item for item in registry["experiments"] if item["id"] == "TP-EXP-0014")
+    experiment = next(
+        item for item in registry["experiments"] if item["id"] == "TP-EXP-0014"
+    )
     evidence = json.loads((ROOT / experiment["evidence"][0]["path"]).read_text())
     assert experiment["state"] == "COMPLETED"
     assert evidence["winner"] == "B"
     assert evidence["corpus"]["total"] == 100
     assert status_summary(registry) == {
-        "FUTURE": 2, "IN_PROGRESS": 1, "COMPLETED": 15, "FAILED": 2,
+        "FUTURE": 2,
+        "IN_PROGRESS": 1,
+        "COMPLETED": 16,
+        "FAILED": 2,
     }
 
 

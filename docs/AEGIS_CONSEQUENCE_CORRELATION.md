@@ -1,12 +1,13 @@
 # AEGIS consequence-aware incident correlation
 
-Reviewed 2026-09-13 against accepted `main` at `7137f555`.
+Reviewed 2026-09-14 against accepted `main` at `f4ef8fda`. Stable-identity
+follow-up details are in `docs/AEGIS_STABLE_CONSEQUENCE_IDENTITY.md`.
 
 ## Outcome
 
 AEGIS can now add proved dependency reach to a storage incident when, and only
-when, one exact detector-proved device identity matches one read-only SENTINEL
-explanation. The context describes what is reachable through proved graph
+when, one detector-proved device and one read-only SENTINEL explanation resolve
+to the same trusted Lifeline identity. The context describes what is reachable through proved graph
 edges. It never reclassifies a running application as failed and never raises
 the diagnostic confidence of AEGIS's probable-cause hypothesis.
 
@@ -16,7 +17,7 @@ control path.
 
 ## Contract
 
-- One incident device and one exact SENTINEL source-device match are required.
+- One incident device and one shared, unambiguous Lifeline identity are required.
 - Every displayed path must begin at `disk:<exact device>`, end at its declared
   node, and contain a valid positive depth.
 - Missing identity, multiple devices, duplicate explanations, malformed paths,
@@ -29,12 +30,15 @@ control path.
 
 ## HoloDeck evidence
 
-The deterministic `/dev/sdc` scenario proves six reachable objects: the RAIDZ
+The deterministic scenarios prove six reachable objects even when `/dev/sdc`
+becomes `/dev/sda`: the RAIDZ
 VDEV, HDDs pool, Movies dataset, running Radarr application, one cargo item,
-and verified backup evidence. Four adversarial cases—identity mismatch,
-ambiguous source, missing source, and malformed path—hold closed.
+and verified backup evidence. Missing identity, cloned identity, reused device
+path, and malformed graph paths hold closed.
 
-- 5 scenarios: 1 `PROVED`, 4 `HOLD`
+- 6 scenarios: 2 `PROVED`, 4 `HOLD`
+- path reassignments preserved: 1
+- cloned-identity and reused-path holds: 1 each
 - false joins: 0
 - diagnostic confidence: 0.62 before and 0.62 after
 - additional telemetry reads: 0
@@ -90,8 +94,7 @@ embedding the alpha connector.
 
 ## Open risks and next step
 
-Linux device paths are exact within one current snapshot but are not durable
-hardware identities across reboots. The next increment should bind this join
-to Lifeline's stable drive fingerprint while preserving `/dev/*` as observed
-evidence, then rehearse device-path reassignment and cloned-serial conflicts.
-Until then, this feature remains advisory and snapshot-local.
+Lifeline identity must already be present in the shared snapshot; absence holds
+closed. The next increment should make identity coverage explicit in the
+Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration
+without splitting one incident or merging two drives.

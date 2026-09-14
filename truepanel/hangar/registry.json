@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.13.1",
-  "updated_at": "2026-09-13",
+  "registry_version": "2026.09.14.1",
+  "updated_at": "2026-09-14",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -292,13 +292,32 @@
       "fixtures": ["aegis-sentinel-consequence-correlation", "tests/test_aegis_consequences.py", "sentinel-bay3-storage-impact"],
       "success_criteria": ["one exact identity produces proved context", "mismatch ambiguity and malformed paths hold", "confidence does not increase", "no added telemetry reads", "no outage claim", "control authority remains false"],
       "abort_criteria": ["fuzzy identity join", "dependency reach presented as outage", "consequence evidence raises diagnosis confidence", "new polling or runtime dependency", "live host access or mutation"],
-      "evidence": [{"path": "docs/evidence/aegis-consequence-correlation-v1.json", "sha256": "e664e46f1379f51bad1db7bb9a7b9919f227b55a970aa7f6fef18150223dcc52"}],
-      "outcome": {"conclusion": "The exact /dev/sdc scenario exposes six proved reachable objects while four unsafe identity/path cases hold closed; false joins, confidence increases, additional telemetry reads, recovery actions, and control authority are all zero."},
+      "evidence": [{"path": "docs/evidence/aegis-consequence-correlation-v1.json", "sha256": "2be730f7820301d6e78e53664080b0311aa0ad06d73c599a3bdfc3a04dda5714"}],
+      "outcome": {"conclusion": "The initial exact-device consequence projection exposed six proved reachable objects without changing diagnostic confidence. TP-EXP-0021 subsequently hardened the join with Lifeline stable identity and preserved the same proof across device-path reassignment."},
       "invalidated_assumptions": ["dependency reach proves service outage", "downstream consequences should raise root-cause confidence", "a bay pool or title is sufficient join identity", "a general RCA dependency is needed before using the existing proved graph"],
       "reproduction": ["pytest -q tests/test_aegis_consequences.py", "python -c \"from truepanel.holodeck.aegis_consequences import run_consequence_correlation_rehearsal as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
       "revisit_conditions": ["Lifeline stable fingerprints become available in both AEGIS and SENTINEL snapshots", "device-path reassignment can be rehearsed", "a new consequence kind is added"],
-      "strongest_follow_up": "Replace snapshot-local /dev path joining with a Lifeline stable fingerprint and rehearse path reassignment plus cloned-serial conflicts.",
+      "strongest_follow_up": "Track the stable-identity hardening and device-path reassignment proof in TP-EXP-0021.",
       "freshness": {"reviewed_at": "2026-09-13", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0021", "title": "AEGIS stable consequence identity", "state": "COMPLETED",
+      "hypothesis": "An incident and current dependency graph can remain safely correlated across Linux device-path reassignment when both resolve through one unambiguous privacy-safe Lifeline identity.",
+      "value": "Prevents a reboot-time /dev rename from hiding proved consequences while holding closed on cloned identities and path reuse.",
+      "prior_art": ["systemd persistent-storage rules", "OpenZFS vdev GUID", "smartmontools device identity", "TruePanel Lifeline resolver"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-stable-consequence-identity", "pr": null, "commits": ["db0fe4b8"]},
+      "protocol": ["consume existing Lifeline sessions", "accept only strong opaque identities", "index current and historical device paths", "reject cloned identity and path reuse", "validate current SENTINEL path", "preserve diagnostic confidence", "render identity and path-change state"],
+      "fixtures": ["aegis-sentinel-consequence-correlation", "tests/test_aegis_consequences.py", "sentinel-bay3-storage-impact"],
+      "success_criteria": ["same-path identity proves context", "device-path reassignment preserves proof", "missing cloned and reused identities hold", "raw identifiers remain absent", "no added telemetry reads", "control authority remains false"],
+      "abort_criteria": ["runtime address accepted as durable identity", "weak identity fallback accepted", "duplicate identity selected automatically", "new hardware query or polling", "raw serial or WWN exposed", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-consequence-correlation-v1.json", "sha256": "2be730f7820301d6e78e53664080b0311aa0ad06d73c599a3bdfc3a04dda5714"}],
+      "outcome": {"conclusion": "One stable identity preserves six proved consequences across /dev/sdc to /dev/sda reassignment; missing identity, cloned identity, reused path, and malformed graph cases hold with zero false joins or confidence increases."},
+      "invalidated_assumptions": ["an exact /dev path is a durable identity", "by-path identifies the drive rather than its connection", "duplicate stable keys can be resolved safely", "AEGIS needs another hardware query"],
+      "reproduction": ["pytest -q tests/test_aegis_consequences.py", "python -c \"from truepanel.holodeck.aegis_consequences import run_consequence_correlation_rehearsal as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["identity migration from serial-model to WWN or ZFS GUID is implemented", "Lifeline identity coverage becomes a Recovery Coverage Matrix condition", "TrueNAS exposes a supported leaf-vdev GUID"],
+      "strongest_follow_up": "Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.",
+      "freshness": {"reviewed_at": "2026-09-14", "review_after": "2026-12-31"}
     }
   ]
 }
