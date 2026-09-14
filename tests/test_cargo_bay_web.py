@@ -130,3 +130,28 @@ def test_cargo_bay_backup_summary_is_evidence_based():
 
     assert "recent arrivals backup verified" in html
     assert "will not infer backup completion" in html
+
+
+def test_cargo_bay_has_compact_pilot_glance():
+    html = source()
+
+    assert 'id="cargoGlance"' in html
+    assert 'id="cargoGlancePrimary"' in html
+    assert 'id="cargoGlanceSecondary"' in html
+    assert 'id="cargoGlanceTertiary"' in html
+
+    assert "Bay clear" in html
+    assert "No arrivals in last" in html
+    assert "Downloads clear" in html
+    assert "moved since import" in html
+    assert "Intake requires attention" in html
+    assert "downloadReview>0" in html
+
+
+def test_cargo_bay_pilot_glance_preserves_mobile_layout():
+    html = source()
+
+    assert ".cargo-glance{" in html
+    assert "grid-template-columns:repeat(3,minmax(0,1fr))" in html
+    assert "@media(max-width:640px)" in html
+    assert "grid-template-columns:1fr" in html
