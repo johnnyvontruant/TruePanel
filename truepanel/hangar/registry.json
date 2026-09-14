@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.02.5",
-  "updated_at": "2026-09-02",
+  "registry_version": "2026.09.13.1",
+  "updated_at": "2026-09-13",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -280,6 +280,25 @@
       "revisit_conditions": ["TrueNAS API, RBAC, transport, or replication-task state semantics change", "production deployment is proposed", "receipt issuance or restore-test trust policy changes"],
       "strongest_follow_up": "Review the field-validated passive runtime for deployment without expanding AEGIS control authority, and formalize the controlled restore-test procedure as a supported TrueNAS API/CLI runbook before broader use.",
       "freshness": {"reviewed_at": "2026-09-02", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0020", "title": "AEGIS consequence-aware incident correlation", "state": "COMPLETED",
+      "hypothesis": "One exact device identity can join an AEGIS incident to SENTINEL's proved dependency graph without inflating diagnostic confidence or claiming dependent services are down.",
+      "value": "Shows operators which storage, application, cargo, and verified-backup objects are in the proved reach of an active fault while preserving evidence boundaries.",
+      "prior_art": ["OpenTelemetry Service Graph connector", "Prometheus Alertmanager grouping and inhibition", "Kubernetes UID dependency graph", "Salesforce PyRCA"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-consequence-aware-incidents", "pr": null, "commits": []},
+      "protocol": ["extract detector-proved device identities", "require one exact SENTINEL explanation", "validate every proved path", "preserve diagnosis confidence", "render mobile-safe dependency reach", "replay adversarial joins"],
+      "fixtures": ["aegis-sentinel-consequence-correlation", "tests/test_aegis_consequences.py", "sentinel-bay3-storage-impact"],
+      "success_criteria": ["one exact identity produces proved context", "mismatch ambiguity and malformed paths hold", "confidence does not increase", "no added telemetry reads", "no outage claim", "control authority remains false"],
+      "abort_criteria": ["fuzzy identity join", "dependency reach presented as outage", "consequence evidence raises diagnosis confidence", "new polling or runtime dependency", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-consequence-correlation-v1.json", "sha256": "e664e46f1379f51bad1db7bb9a7b9919f227b55a970aa7f6fef18150223dcc52"}],
+      "outcome": {"conclusion": "The exact /dev/sdc scenario exposes six proved reachable objects while four unsafe identity/path cases hold closed; false joins, confidence increases, additional telemetry reads, recovery actions, and control authority are all zero."},
+      "invalidated_assumptions": ["dependency reach proves service outage", "downstream consequences should raise root-cause confidence", "a bay pool or title is sufficient join identity", "a general RCA dependency is needed before using the existing proved graph"],
+      "reproduction": ["pytest -q tests/test_aegis_consequences.py", "python -c \"from truepanel.holodeck.aegis_consequences import run_consequence_correlation_rehearsal as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["Lifeline stable fingerprints become available in both AEGIS and SENTINEL snapshots", "device-path reassignment can be rehearsed", "a new consequence kind is added"],
+      "strongest_follow_up": "Replace snapshot-local /dev path joining with a Lifeline stable fingerprint and rehearse path reassignment plus cloned-serial conflicts.",
+      "freshness": {"reviewed_at": "2026-09-13", "review_after": "2026-12-31"}
     }
   ]
 }
