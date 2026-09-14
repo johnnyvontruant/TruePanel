@@ -11,14 +11,13 @@ and returning either one MissionEvent or None.
 
 from __future__ import annotations
 
-import logging
-
 import json
+import logging
 import time
 from collections import deque
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +25,6 @@ from truepanel.hardware.health_commands import build_health_report
 from truepanel.hardware.manager import HardwareManager
 from truepanel.mission_control.constants import Category, Priority
 from truepanel.mission_control.event import MissionEvent
-
 
 HealthReport = Mapping[str, Any]
 ReportProvider = Callable[[], HealthReport]
@@ -239,7 +237,32 @@ class StorageHealthChange:
 class StorageHealthDiffer:
     """
     Compare normalized storage-health snapshots.
+
+    Temperature state recovery uses hysteresis so small movements around a
+    threshold do not generate repeated healthy/warning/critical transitions.
     """
+
+    def __init__(
+        self,
+        *,
+        warning_temperature_recovery_c: int = 42,
+        critical_temperature_recovery_c: int = 52,
+    ) -> None:
+        self.warning_temperature_recovery_c = int(
+            warning_temperature_recovery_c
+        )
+        self.critical_temperature_recovery_c = int(
+            critical_temperature_recovery_c
+        )
+
+        if (
+            self.critical_temperature_recovery_c
+            <= self.warning_temperature_recovery_c
+        ):
+            raise ValueError(
+                "critical temperature recovery must exceed "
+                "warning temperature recovery"
+            )
 
     def snapshot(
         self,
@@ -349,7 +372,10 @@ class StorageHealthDiffer:
 
         for key in sorted(previous_keys & current_keys):
             old = previous[key]
-            new = current[key]
+            new = self._apply_temperature_hysteresis(
+                old,
+                current[key],
+            )
 
             state_change = self._state_change(key, old, new)
 
@@ -371,6 +397,43 @@ class StorageHealthDiffer:
                 changes.append(temperature_change)
 
         return self._ordered(changes)
+
+    def _apply_temperature_hysteresis(
+        self,
+        old: dict[str, Any],
+        new: dict[str, Any],
+    ) -> dict[str, Any]:
+        old_state = str(old.get("state") or "unknown")
+        new_state = str(new.get("state") or "unknown")
+        old_message = str(old.get("message") or "")
+        new_temp = new.get("temperature_c")
+
+        if new_temp is None or not old_message.startswith("temperature "):
+            return new
+
+        hold_state = None
+
+        if (
+            old_state == "warning"
+            and new_state == "healthy"
+            and new_temp > self.warning_temperature_recovery_c
+        ):
+            hold_state = "warning"
+
+        if (
+            old_state == "critical"
+            and new_state in {"warning", "healthy"}
+            and new_temp > self.critical_temperature_recovery_c
+        ):
+            hold_state = "critical"
+
+        if hold_state is None:
+            return new
+
+        held = dict(new)
+        held["state"] = hold_state
+        held["message"] = old_message
+        return held
 
     def _state_change(
         self,
@@ -558,7 +621,7 @@ class StorageEventRecorder:
 
         payload = {
             "recorded_at": datetime.now(
-                timezone.utc
+                UTC
             ).isoformat(),
             "change": {
                 **asdict(change),

@@ -22,7 +22,6 @@ from truepanel.watchers.storage_health import (
     StorageHealthWatcher,
 )
 
-
 DEFAULT_STORAGE_HEALTH_CONFIG = {
     "enabled": True,
     "interval": 300,
@@ -31,6 +30,8 @@ DEFAULT_STORAGE_HEALTH_CONFIG = {
     "event_log": "/var/lib/truepanel/storage/events.jsonl",
     "bay_leds_enabled": False,
     "bay_leds_clear_on_start": True,
+    "warning_temperature_recovery_c": 42,
+    "critical_temperature_recovery_c": 52,
 }
 
 
@@ -105,9 +106,29 @@ def build_storage_health_watcher(
             )
         )
 
+    differ = StorageHealthDiffer(
+        warning_temperature_recovery_c=int(
+            settings.get(
+                "warning_temperature_recovery_c",
+                DEFAULT_STORAGE_HEALTH_CONFIG[
+                    "warning_temperature_recovery_c"
+                ],
+            )
+        ),
+        critical_temperature_recovery_c=int(
+            settings.get(
+                "critical_temperature_recovery_c",
+                DEFAULT_STORAGE_HEALTH_CONFIG[
+                    "critical_temperature_recovery_c"
+                ],
+            )
+        ),
+    )
+
     watcher_kwargs: dict[str, Any] = {
         "manager": manager,
         "report_provider": report_provider,
+        "differ": differ,
         "recorder": recorder,
         "event_observers": tuple(event_observers),
         "interval": float(settings.get("interval", 300)),

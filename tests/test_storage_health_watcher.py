@@ -376,3 +376,143 @@ def test_recorder_writes_replayable_jsonl(tmp_path):
     assert payload["event"]["category"] == "storage"
     assert payload["change"]["new"]["physical_bay"] is None
     assert payload["change"]["new"]["pending_sectors"] == 1608
+
+
+def test_temperature_warning_hysteresis_suppresses_44_45_chatter():
+    differ = StorageHealthDiffer()
+
+    previous = {
+        "device:nvme0n1": {
+            "key": "device:nvme0n1",
+            "device": "nvme0n1",
+            "label": "NVMe",
+            "state": "warning",
+            "message": "temperature 45°C",
+            "temperature_c": 45,
+        }
+    }
+
+    for temperature in (44, 45, 44, 43):
+        raw_state = "warning" if temperature >= 45 else "healthy"
+        current = {
+            "device:nvme0n1": {
+                **previous["device:nvme0n1"],
+                "state": raw_state,
+                "message": (
+                    f"temperature {temperature}°C"
+                    if raw_state == "warning"
+                    else "healthy"
+                ),
+                "temperature_c": temperature,
+            }
+        }
+
+        changes = differ.compare(previous, current)
+        assert not [
+            change
+            for change in changes
+            if change.change_type in {
+                "recovered",
+                "health_degraded",
+                "health_improved",
+            }
+        ]
+
+        effective = differ._apply_temperature_hysteresis(
+            previous["device:nvme0n1"],
+            current["device:nvme0n1"],
+        )
+        previous = {"device:nvme0n1": effective}
+
+
+def test_temperature_warning_recovers_at_42_c():
+    differ = StorageHealthDiffer()
+
+    old = {
+        "key": "device:nvme0n1",
+        "device": "nvme0n1",
+        "label": "NVMe",
+        "state": "warning",
+        "message": "temperature 45°C",
+        "temperature_c": 43,
+    }
+    new = {
+        **old,
+        "state": "healthy",
+        "message": "healthy",
+        "temperature_c": 42,
+    }
+
+    changes = differ.compare(
+        {"device:nvme0n1": old},
+        {"device:nvme0n1": new},
+    )
+
+    assert len(changes) == 1
+    assert changes[0].change_type == "recovered"
+    assert changes[0].new_state == "healthy"
+
+
+def test_temperature_critical_hysteresis_recovers_at_52_c():
+    differ = StorageHealthDiffer()
+
+    old = {
+        "key": "device:nvme0n1",
+        "device": "nvme0n1",
+        "label": "NVMe",
+        "state": "critical",
+        "message": "temperature 55°C",
+        "temperature_c": 54,
+    }
+
+    held = {
+        **old,
+        "state": "warning",
+        "message": "temperature 53°C",
+        "temperature_c": 53,
+    }
+
+    assert not differ.compare(
+        {"device:nvme0n1": old},
+        {"device:nvme0n1": held},
+    )
+
+    recovered = {
+        **held,
+        "temperature_c": 52,
+    }
+
+    changes = differ.compare(
+        {"device:nvme0n1": old},
+        {"device:nvme0n1": recovered},
+    )
+
+    assert len(changes) == 1
+    assert changes[0].change_type == "health_improved"
+    assert changes[0].new_state == "warning"
+
+
+def test_non_temperature_recovery_is_not_held_by_hysteresis():
+    differ = StorageHealthDiffer()
+
+    old = {
+        "key": "device:sda",
+        "device": "sda",
+        "label": "Disk",
+        "state": "warning",
+        "message": "reallocated sectors: 4",
+        "temperature_c": 44,
+    }
+    new = {
+        **old,
+        "state": "healthy",
+        "message": "healthy",
+    }
+
+    changes = differ.compare(
+        {"device:sda": old},
+        {"device:sda": new},
+    )
+
+    assert len(changes) == 1
+    assert changes[0].change_type == "recovered"

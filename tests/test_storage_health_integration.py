@@ -171,3 +171,30 @@ def test_runtime_launcher_contains_registration():
 
     assert "build_storage_health_watcher(config)" in source
     assert "mission.register(storage_health_watcher)" in source
+
+
+def test_storage_health_default_hysteresis_thresholds():
+    settings = get_storage_health_config({})
+
+    assert settings["warning_temperature_recovery_c"] == 42
+    assert settings["critical_temperature_recovery_c"] == 52
+
+
+def test_storage_health_custom_hysteresis_thresholds():
+    config = {
+        "mission_control": {
+            "storage_health": {
+                "warning_temperature_recovery_c": 41,
+                "critical_temperature_recovery_c": 51,
+            }
+        }
+    }
+
+    watcher = build_storage_health_watcher(
+        config,
+        report_provider=lambda: {"devices": []},
+    )
+
+    assert watcher is not None
+    assert watcher.differ.warning_temperature_recovery_c == 41
+    assert watcher.differ.critical_temperature_recovery_c == 51
