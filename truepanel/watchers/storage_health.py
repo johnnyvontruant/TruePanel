@@ -330,6 +330,10 @@ class StorageHealthDiffer:
 
         previous_keys = set(previous)
         current_keys = set(current)
+        effective_current = self.effective_snapshot(
+            previous,
+            current,
+        )
 
         for key in sorted(previous_keys - current_keys):
             old = previous[key]
@@ -349,7 +353,7 @@ class StorageHealthDiffer:
             )
 
         for key in sorted(current_keys - previous_keys):
-            new = current[key]
+            new = effective_current[key]
             state = new["state"]
 
             changes.append(
@@ -372,10 +376,7 @@ class StorageHealthDiffer:
 
         for key in sorted(previous_keys & current_keys):
             old = previous[key]
-            new = self._apply_temperature_hysteresis(
-                old,
-                current[key],
-            )
+            new = effective_current[key]
 
             state_change = self._state_change(key, old, new)
 
@@ -397,6 +398,21 @@ class StorageHealthDiffer:
                 changes.append(temperature_change)
 
         return self._ordered(changes)
+
+    def effective_snapshot(
+        self,
+        previous: dict[str, dict[str, Any]],
+        current: dict[str, dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        effective = dict(current)
+
+        for key in set(previous) & set(current):
+            effective[key] = self._apply_temperature_hysteresis(
+                previous[key],
+                current[key],
+            )
+
+        return effective
 
     def _apply_temperature_hysteresis(
         self,
@@ -732,6 +748,10 @@ class StorageHealthWatcher:
             )
         else:
             changes = self.differ.compare(
+                self._snapshot,
+                current,
+            )
+            current = self.differ.effective_snapshot(
                 self._snapshot,
                 current,
             )

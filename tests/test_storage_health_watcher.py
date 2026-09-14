@@ -516,3 +516,96 @@ def test_non_temperature_recovery_is_not_held_by_hysteresis():
 
     assert len(changes) == 1
     assert changes[0].change_type == "recovered"
+
+
+def test_watcher_persists_temperature_hysteresis_between_polls():
+    reports = iter(
+        [
+            report(
+                device(
+                    name="nvme0n1",
+                    label="NVMe",
+                    state="healthy",
+                    message="healthy",
+                    temperature=40,
+                )
+            ),
+            report(
+                device(
+                    name="nvme0n1",
+                    label="NVMe",
+                    state="warning",
+                    message="temperature 45°C",
+                    temperature=45,
+                )
+            ),
+            report(
+                device(
+                    name="nvme0n1",
+                    label="NVMe",
+                    state="healthy",
+                    message="healthy",
+                    temperature=44,
+                )
+            ),
+            report(
+                device(
+                    name="nvme0n1",
+                    label="NVMe",
+                    state="warning",
+                    message="temperature 45°C",
+                    temperature=45,
+                )
+            ),
+            report(
+                device(
+                    name="nvme0n1",
+                    label="NVMe",
+                    state="healthy",
+                    message="healthy",
+                    temperature=44,
+                )
+            ),
+            report(
+                device(
+                    name="nvme0n1",
+                    label="NVMe",
+                    state="healthy",
+                    message="healthy",
+                    temperature=43,
+                )
+            ),
+            report(
+                device(
+                    name="nvme0n1",
+                    label="NVMe",
+                    state="healthy",
+                    message="healthy",
+                    temperature=42,
+                )
+            ),
+        ]
+    )
+
+    watcher = StorageHealthWatcher(
+        report_provider=lambda: next(reports),
+        interval=0,
+    )
+
+    assert watcher(None) is None
+
+    warning = watcher(None)
+    assert warning is not None
+    assert warning.event_id == "storage.nvme0n1.health_degraded"
+
+    # 44 → 45 → 44 → 43 must remain effectively WARNING.
+    assert watcher(None) is None
+    assert watcher(None) is None
+    assert watcher(None) is None
+    assert watcher(None) is None
+
+    recovered = watcher(None)
+    assert recovered is not None
+    assert recovered.event_id == "storage.nvme0n1.recovered"
+
+    assert watcher.pending_count == 0
