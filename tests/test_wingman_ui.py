@@ -87,3 +87,34 @@ def test_wingman_busy_state_reports_elapsed_time_without_fake_progress():
     assert "progress" not in source.lower()
     assert "percent complete" not in source.lower()
     assert "setInterval(" not in source
+
+
+def test_wingman_sources_have_compact_and_full_presentations():
+    source = _ui_source()
+
+    assert '"status:reliability":{' in source
+    assert 'full:"Mission Control Reliability"' in source
+    assert 'compact:"RELIABILITY"' in source
+
+    assert 'class="wm-source-prefix">SOURCE · ' in source
+    assert 'class="wm-source-full"' in source
+    assert 'class="wm-source-compact"' in source
+
+    assert 'data-source-id="${esc(sourceId)}"' in source
+    assert 'title="${esc(`${label.full} · ${sourceId}`)}"' in source
+
+
+def test_wingman_pilot_uses_compact_source_badges():
+    source = _ui_source()
+
+    assert (
+        'body[data-mission-mode="pilot"] '
+        '#${VIEW_ID} .wm-source-full'
+        in source
+    )
+    assert (
+        'body[data-mission-mode="pilot"] '
+        '#${VIEW_ID} .wm-source-compact'
+        in source
+    )
+    assert ".wm-source-compact{" in source

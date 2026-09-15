@@ -14,23 +14,59 @@ const esc=value=>String(value??"")
 
 function sourceLabel(sourceId){
     const known={
-        "status:reliability":"Mission Control Reliability",
-        "status:operator_guidance":"Operator Guidance",
-        "status:system":"System Status",
-        "status:storage":"Storage",
-        "status:fans":"Cooling",
-        "status:network":"Network",
-        "status:cargo":"Cargo",
-        "status:sentinel":"SENTINEL",
-        "status:lifeline":"LIFELINE",
-        "status:preflight":"Preflight",
+        "status:reliability":{
+            full:"Mission Control Reliability",
+            compact:"RELIABILITY",
+        },
+        "status:operator_guidance":{
+            full:"Operator Guidance",
+            compact:"GUIDANCE",
+        },
+        "status:system":{
+            full:"System Status",
+            compact:"SYSTEM",
+        },
+        "status:storage":{
+            full:"Storage",
+            compact:"STORAGE",
+        },
+        "status:fans":{
+            full:"Cooling",
+            compact:"COOLING",
+        },
+        "status:network":{
+            full:"Network",
+            compact:"NETWORK",
+        },
+        "status:cargo":{
+            full:"Cargo",
+            compact:"CARGO",
+        },
+        "status:sentinel":{
+            full:"SENTINEL",
+            compact:"SENTINEL",
+        },
+        "status:lifeline":{
+            full:"LIFELINE",
+            compact:"LIFELINE",
+        },
+        "status:preflight":{
+            full:"Preflight",
+            compact:"PREFLIGHT",
+        },
     };
+
     if(known[sourceId]) return known[sourceId];
 
-    return String(sourceId||"source")
+    const fallback=String(sourceId||"source")
         .replace(/^status:/,"")
         .replaceAll("_"," ")
         .replace(/\b\w/g,char=>char.toUpperCase());
+
+    return {
+        full:fallback,
+        compact:fallback.toUpperCase(),
+    };
 }
 
 function sourceBadges(sourceIds){
@@ -42,12 +78,22 @@ function sourceBadges(sourceIds){
         return '<span class="wm-source none">NO SOURCE ID</span>';
     }
 
-    return ids.map(sourceId=>`
-        <span
-            class="wm-source"
-            title="${esc(sourceId)}"
-        >${esc(sourceLabel(sourceId))}</span>
-    `).join("");
+    return ids.map(sourceId=>{
+        const label=sourceLabel(sourceId);
+
+        return `
+            <span
+                class="wm-source"
+                title="${esc(`${label.full} · ${sourceId}`)}"
+                data-source-id="${esc(sourceId)}"
+                data-source-compact="${esc(label.compact)}"
+            >
+                <span class="wm-source-prefix">SOURCE · </span>
+                <span class="wm-source-full">${esc(label.full)}</span>
+                <span class="wm-source-compact">${esc(label.compact)}</span>
+            </span>
+        `;
+    }).join("");
 }
 
 function installStyle(){
@@ -210,6 +256,14 @@ function installStyle(){
     border-radius:999px;
     color:var(--muted);
     font-size:.58rem;
+    font-weight:800;
+    letter-spacing:.035em;
+}
+.wm-source-prefix{
+    color:var(--accent);
+}
+.wm-source-compact{
+    display:none;
 }
 .wm-source.none{
     border-color:color-mix(in srgb,var(--warn) 32%,transparent);
@@ -275,6 +329,12 @@ body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-resu
 body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-summary{
     padding:.55rem .65rem;
     font-size:.72rem;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID} .wm-source-full{
+    display:none;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID} .wm-source-compact{
+    display:inline;
 }
 body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="busy"] .wm-footer,
 body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="hold"] .wm-footer{
