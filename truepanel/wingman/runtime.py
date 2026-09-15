@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -51,6 +53,15 @@ class RuntimePolicy:
     startup_timeout_seconds: float = 30.0
     shutdown_timeout_seconds: float = 5.0
     poll_interval_seconds: float = 0.10
+
+
+@dataclass(frozen=True)
+class RuntimeObservation:
+    """Read-only lifecycle state safe for diagnostics."""
+
+    running: bool
+    pid: int | None
+    endpoint: str | None
 
 
 @dataclass(frozen=True)
@@ -121,6 +132,27 @@ def read_host_resources() -> HostResources:
     )
 
 
+def http_health_check(
+    endpoint: str,
+    *,
+    timeout_seconds: float = 0.5,
+) -> bool:
+    """Return whether the loopback llama.cpp health endpoint is ready."""
+
+    try:
+        with urllib.request.urlopen(
+            endpoint,
+            timeout=timeout_seconds,
+        ) as response:
+            return response.status == 200
+    except (
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+        TimeoutError,
+    ):
+        return False
+
+
 def enforce_resource_gate(
     resources: HostResources,
     policy: RuntimePolicy,
@@ -150,7 +182,7 @@ class WingmanLocalRuntime:
         *,
         policy: RuntimePolicy | None = None,
         resource_reader: Callable[[], HostResources] = read_host_resources,
-        health_check: Callable[[str], bool],
+        health_check: Callable[[str], bool] = http_health_check,
         process_factory: Callable[..., ProcessLike] = subprocess.Popen,
         monotonic: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
@@ -176,6 +208,19 @@ class WingmanLocalRuntime:
                 "local inference endpoint requested while runtime is stopped"
             )
         return self.config.endpoint
+
+    @property
+    def observation(self) -> RuntimeObservation:
+        """Return lifecycle state without exposing the process object."""
+
+        process = self._process
+        running = process is not None and process.poll() is None
+
+        return RuntimeObservation(
+            running=running,
+            pid=process.pid if running else None,
+            endpoint=self.config.endpoint if running else None,
+        )
 
     def start(self) -> str:
         if self.running:

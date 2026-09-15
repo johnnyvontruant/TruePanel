@@ -269,3 +269,93 @@ def test_endpoint_is_unavailable_when_stopped(runtime_files):
         match="stopped",
     ):
         _ = runtime.endpoint
+
+
+class FakeHttpResponse:
+    def __init__(self, status: int) -> None:
+        self.status = status
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+
+def test_http_health_check_accepts_http_200(monkeypatch):
+    from truepanel.wingman.runtime import http_health_check
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen",
+        lambda endpoint, timeout: FakeHttpResponse(200),
+    )
+
+    assert http_health_check("http://127.0.0.1:18080/health") is True
+
+
+def test_http_health_check_rejects_non_200(monkeypatch):
+    from truepanel.wingman.runtime import http_health_check
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen",
+        lambda endpoint, timeout: FakeHttpResponse(503),
+    )
+
+    assert http_health_check("http://127.0.0.1:18080/health") is False
+
+
+def test_http_health_check_fails_closed_on_connection_error(monkeypatch):
+    import urllib.error
+
+    from truepanel.wingman.runtime import http_health_check
+
+    def unavailable(endpoint, timeout):
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen",
+        unavailable,
+    )
+
+    assert http_health_check("http://127.0.0.1:18080/health") is False
+
+
+def test_observation_is_empty_when_stopped(runtime_files):
+    runtime = WingmanLocalRuntime(
+        config_for(runtime_files),
+        resource_reader=healthy_resources,
+        health_check=lambda endpoint: True,
+    )
+
+    observation = runtime.observation
+
+    assert observation.running is False
+    assert observation.pid is None
+    assert observation.endpoint is None
+
+
+def test_observation_exposes_only_live_runtime_state(runtime_files):
+    process = FakeProcess(pid=8675309)
+
+    runtime = WingmanLocalRuntime(
+        config_for(runtime_files),
+        resource_reader=healthy_resources,
+        health_check=lambda endpoint: True,
+        process_factory=lambda *args, **kwargs: process,
+    )
+
+    runtime.start()
+
+    observation = runtime.observation
+
+    assert observation.running is True
+    assert observation.pid == 8675309
+    assert observation.endpoint == runtime.endpoint
+
+    runtime.stop()
+
+    stopped = runtime.observation
+
+    assert stopped.running is False
+    assert stopped.pid is None
+    assert stopped.endpoint is None
