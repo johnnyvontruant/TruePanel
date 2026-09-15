@@ -56,8 +56,9 @@ class LlamaCppProvider:
             ],
             "temperature": 0.1,
             "max_tokens": 900,
+            "stream": False,
             "response_format": {
-                "type": "json_schema",
+                "type": "json_object",
                 "schema": response_schema,
             },
         }
