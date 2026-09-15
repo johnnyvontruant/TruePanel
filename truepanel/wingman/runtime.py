@@ -163,13 +163,24 @@ def enforce_resource_gate(
         resources.available_memory_bytes
         < policy.minimum_available_memory_bytes
     ):
+        available_gib = (
+            resources.available_memory_bytes / 1024**3
+        )
+        required_gib = (
+            policy.minimum_available_memory_bytes / 1024**3
+        )
+
         raise WingmanResourceHold(
-            "insufficient memory headroom for local inference"
+            "insufficient memory headroom for local inference: "
+            f"available={available_gib:.3f} GiB "
+            f"required={required_gib:.3f} GiB"
         )
 
     if resources.load_1m > policy.maximum_load_1m:
         raise WingmanResourceHold(
-            "host load exceeds local-inference launch policy"
+            "host load exceeds local-inference launch policy: "
+            f"load_1m={resources.load_1m:.3f} "
+            f"maximum={policy.maximum_load_1m:.3f}"
         )
 
 

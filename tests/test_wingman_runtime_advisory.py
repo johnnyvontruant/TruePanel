@@ -205,3 +205,19 @@ def test_invalid_grounding_result_still_reaps_runtime():
     assert result.status == "HOLD"
     assert runtime.stop_calls == 1
     assert runtime.running is False
+
+
+def test_default_runtime_provider_uses_bounded_brief_contract():
+    from truepanel.wingman.provider import LlamaCppProvider
+    from truepanel.wingman.runtime_advisory import (
+        WingmanRuntimeAdvisory,
+    )
+
+    provider = WingmanRuntimeAdvisory._default_provider(
+        "http://127.0.0.1:18080/v1/chat/completions"
+    )
+
+    assert isinstance(provider, LlamaCppProvider)
+    assert provider.timeout_seconds == 60.0
+    assert provider.max_tokens == 512
+    assert provider.allow_remote is False

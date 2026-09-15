@@ -182,8 +182,17 @@ def test_service_rejects_malformed_nested_response():
 
 
 def test_service_fails_closed_when_model_is_unavailable():
+    from truepanel.wingman.contracts import GroundingSource
+
     service = WingmanAdvisoryService(FakeProvider(error=OSError("offline")))
-    sources = (source("status:system", "System status", "system healthy status"),)
+    sources = (
+        GroundingSource(
+            source_id="status:system",
+            kind="mission_control_status",
+            title="System status",
+            content="system healthy status",
+        ),
+    )
 
     result = service.advise(
         mode=WingmanMode.BRIEF,
@@ -267,3 +276,214 @@ def test_no_matching_source_skips_model_call():
 
     assert result.status == "INSUFFICIENT_EVIDENCE"
     assert provider.calls == []
+
+
+def test_selected_sources_are_bounded_before_provider():
+    from truepanel.wingman.contracts import GroundingSource, WingmanMode
+    from truepanel.wingman.service import (
+        MAX_SELECTED_SOURCE_CHARS,
+        WingmanAdvisoryService,
+    )
+
+    class RecordingProvider:
+        def __init__(self):
+            self.user_prompt = None
+
+        def complete(
+            self,
+            *,
+            system_prompt,
+            user_prompt,
+            response_schema,
+        ):
+            import json
+
+            del system_prompt, response_schema
+
+            self.user_prompt = user_prompt
+            request = json.loads(user_prompt)
+
+            source_ids = [
+                source["source_id"]
+                for source in request["sources"]
+            ]
+
+            return {
+                "schema_version": 1,
+                "mode": "brief",
+                "status": "EXPLAINED",
+                "summary": "Bounded grounded brief.",
+                "summary_source_ids": [source_ids[0]],
+                "observations": [],
+                "next_steps": [],
+                "uncertainty": [],
+                "control_authority": False,
+                "production_mutation": False,
+            }
+
+    provider = RecordingProvider()
+
+    service = WingmanAdvisoryService(
+        provider,
+        source_limit=6,
+    )
+
+    sources = tuple(
+        GroundingSource(
+            source_id=f"status:test-{index}",
+            kind="mission_control_status",
+            title=f"Test Source {index}",
+            content=(
+                "system status health reliability storage "
+                * 300
+            ),
+        )
+        for index in range(6)
+    )
+
+    result = service.advise(
+        mode=WingmanMode.BRIEF,
+        question="Give me the 30-second state of the system.",
+        sources=sources,
+    )
+
+    assert result.status == "EXPLAINED"
+
+    import json
+
+    request = json.loads(provider.user_prompt)
+
+    visible_chars = sum(
+        len(source["content"])
+        for source in request["sources"]
+    )
+
+    assert visible_chars <= MAX_SELECTED_SOURCE_CHARS
+    assert visible_chars > 0
+    assert len(request["sources"]) <= 6
+
+
+def test_source_budget_preserves_ranked_identity():
+    from truepanel.wingman.contracts import GroundingSource
+    from truepanel.wingman.service import _budget_sources
+
+    sources = (
+        GroundingSource(
+            source_id="status:first",
+            kind="mission_control_status",
+            title="First",
+            content="a" * 4000,
+        ),
+        GroundingSource(
+            source_id="status:second",
+            kind="mission_control_status",
+            title="Second",
+            content="b" * 4000,
+        ),
+    )
+
+    budgeted = _budget_sources(
+        sources,
+        maximum_chars=5000,
+    )
+
+    assert [
+        item.source_id
+        for item in budgeted
+    ] == [
+        "status:first",
+        "status:second",
+    ]
+
+    assert sum(
+        len(item.content)
+        for item in budgeted
+    ) <= 5000
+
+    assert budgeted[0].content == sources[0].content
+    assert "content bounded" in budgeted[1].content
+
+
+def test_brief_uses_only_bounded_status_evidence():
+    import json
+
+    from truepanel.wingman.contracts import GroundingSource, WingmanMode
+    from truepanel.wingman.service import (
+        MAX_BRIEF_SOURCE_CHARS,
+        WingmanAdvisoryService,
+    )
+
+    class RecordingProvider:
+        def __init__(self):
+            self.request = None
+
+        def complete(
+            self,
+            *,
+            system_prompt,
+            user_prompt,
+            response_schema,
+        ):
+            del system_prompt, response_schema
+
+            self.request = json.loads(user_prompt)
+            source_id = self.request["sources"][0]["source_id"]
+
+            return {
+                "schema_version": 1,
+                "mode": "brief",
+                "status": "EXPLAINED",
+                "summary": "Grounded brief.",
+                "summary_source_ids": [source_id],
+                "observations": [],
+                "next_steps": [],
+                "uncertainty": [],
+                "control_authority": False,
+                "production_mutation": False,
+            }
+
+    provider = RecordingProvider()
+    service = WingmanAdvisoryService(provider)
+
+    sources = (
+        GroundingSource(
+            source_id="status:reliability",
+            kind="mission_control_status",
+            title="Reliability",
+            content="HOLD SMART storage " * 500,
+        ),
+        GroundingSource(
+            source_id="manual:test",
+            kind="manual",
+            title="Manual",
+            content="HOLD SMART storage " * 500,
+        ),
+    )
+
+    result = service.advise(
+        mode=WingmanMode.BRIEF,
+        question="Give me the 30-second state of the system.",
+        sources=sources,
+    )
+
+    assert result.status == "EXPLAINED"
+
+    request = provider.request
+
+    assert {
+        item["kind"]
+        for item in request["sources"]
+    } == {"mission_control_status"}
+
+    assert request["allowed_source_ids"] == [
+        item["source_id"]
+        for item in request["sources"]
+    ]
+
+    assert sum(
+        len(item["content"])
+        for item in request["sources"]
+    ) <= MAX_BRIEF_SOURCE_CHARS
+
+    assert "no more than three observations" in request["question"]
+    assert "allowed_source_ids" in request["question"]

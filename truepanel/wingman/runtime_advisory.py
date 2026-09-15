@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -10,6 +11,8 @@ from .contracts import GroundingSource, WingmanMode
 from .provider import LlamaCppProvider, WingmanProvider
 from .runtime import WingmanLocalRuntime, WingmanRuntimeError
 from .service import WingmanAdvisoryService, WingmanServiceResult
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -41,7 +44,8 @@ class WingmanRuntimeAdvisory:
         return LlamaCppProvider(
             endpoint=endpoint,
             model="wingman-local",
-            timeout_seconds=45.0,
+            timeout_seconds=60.0,
+            max_tokens=512,
             allow_remote=False,
         )
 
@@ -80,6 +84,10 @@ class WingmanRuntimeAdvisory:
                 self.runtime.start()
                 runtime_started = True
             except (OSError, RuntimeError, WingmanRuntimeError) as exc:
+                LOGGER.warning(
+                    "WINGMAN local inference launch unavailable: %s",
+                    exc,
+                )
                 return (
                     self._unavailable(type(exc).__name__),
                     RuntimeAdvisoryObservation(

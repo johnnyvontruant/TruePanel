@@ -359,3 +359,41 @@ def test_observation_exposes_only_live_runtime_state(runtime_files):
     assert stopped.running is False
     assert stopped.pid is None
     assert stopped.endpoint is None
+
+
+def test_resource_hold_reports_measured_memory():
+    resources = HostResources(
+        available_memory_bytes=int(2.875 * 1024**3),
+        load_1m=1.0,
+    )
+
+    with pytest.raises(
+        WingmanResourceHold,
+        match=(
+            r"available=2\.875 GiB "
+            r"required=3\.000 GiB"
+        ),
+    ):
+        enforce_resource_gate(
+            resources,
+            RuntimePolicy(),
+        )
+
+
+def test_resource_hold_reports_measured_load():
+    resources = HostResources(
+        available_memory_bytes=4 * 1024**3,
+        load_1m=6.25,
+    )
+
+    with pytest.raises(
+        WingmanResourceHold,
+        match=(
+            r"load_1m=6\.250 "
+            r"maximum=6\.000"
+        ),
+    ):
+        enforce_resource_gate(
+            resources,
+            RuntimePolicy(),
+        )

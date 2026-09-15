@@ -28,6 +28,7 @@ class LlamaCppProvider:
     endpoint: str = "http://127.0.0.1:8080/v1/chat/completions"
     model: str = "wingman-local"
     timeout_seconds: float = 30.0
+    max_tokens: int = 900
     allow_remote: bool = False
 
     def __post_init__(self) -> None:
@@ -40,6 +41,8 @@ class LlamaCppProvider:
             raise ValueError("WINGMAN remote inference is disabled")
         if self.timeout_seconds <= 0:
             raise ValueError("WINGMAN timeout must be positive")
+        if self.max_tokens <= 0:
+            raise ValueError("WINGMAN max_tokens must be positive")
 
     def complete(
         self,
@@ -55,7 +58,7 @@ class LlamaCppProvider:
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.1,
-            "max_tokens": 900,
+            "max_tokens": self.max_tokens,
             "stream": False,
             "response_format": {
                 "type": "json_object",

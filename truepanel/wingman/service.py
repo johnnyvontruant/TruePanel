@@ -3,17 +3,73 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from .contracts import (
-    GroundingSource,
     WINGMAN_RESPONSE_SCHEMA,
+    GroundingSource,
     WingmanMode,
     validate_grounded_answer,
 )
 from .provider import WingmanProvider
 from .retrieval import rank_sources
+
+MAX_SELECTED_SOURCE_CHARS = 5000
+MAX_BRIEF_SOURCE_CHARS = 2500
+_MIN_SOURCE_CHARS = 256
+
+_BRIEF_INSTRUCTION = (
+    "Give me the 30-second state of the system. "
+    "Use no more than three observations and two next steps. "
+    "Keep the summary to two short sentences. "
+    "For every citation, use only an exact ID from "
+    "allowed_source_ids. Never use identifiers found inside "
+    "source content as citation IDs."
+)
+
+
+def _budget_sources(
+    sources: tuple[GroundingSource, ...],
+    *,
+    maximum_chars: int = MAX_SELECTED_SOURCE_CHARS,
+) -> tuple[GroundingSource, ...]:
+    """Bound model-visible evidence while preserving ranked source identity."""
+
+    if maximum_chars <= 0:
+        return ()
+
+    remaining = maximum_chars
+    budgeted: list[GroundingSource] = []
+
+    for source in sources:
+        if remaining <= 0:
+            break
+
+        content = source.content
+
+        if len(content) <= remaining:
+            budgeted.append(source)
+            remaining -= len(content)
+            continue
+
+        if remaining < _MIN_SOURCE_CHARS:
+            break
+
+        marker = "\n[content bounded for local context]"
+        keep = max(0, remaining - len(marker))
+
+        budgeted.append(
+            replace(
+                source,
+                content=content[:keep].rstrip() + marker,
+            )
+        )
+
+        remaining = 0
+
+    return tuple(budgeted)
+
 
 _SYSTEM_PROMPT = """You are TruePanel WINGMAN, a read-only advisory companion for a NAS.
 You explain only the evidence and documentation supplied in this request.
@@ -99,10 +155,30 @@ class WingmanAdvisoryService:
         question: str,
         sources: tuple[GroundingSource, ...],
     ) -> WingmanServiceResult:
+        candidate_sources = sources
+
+        if mode is WingmanMode.BRIEF:
+            candidate_sources = tuple(
+                source
+                for source in sources
+                if source.kind == "mission_control_status"
+            )
+
         selected = rank_sources(
             self._query(mode, question),
-            sources,
+            candidate_sources,
             limit=self.source_limit,
+        )
+
+        maximum_chars = (
+            MAX_BRIEF_SOURCE_CHARS
+            if mode is WingmanMode.BRIEF
+            else MAX_SELECTED_SOURCE_CHARS
+        )
+
+        selected = _budget_sources(
+            selected,
+            maximum_chars=maximum_chars,
         )
         if not selected:
             return WingmanServiceResult(
@@ -113,9 +189,16 @@ class WingmanAdvisoryService:
             )
 
         source_ids = tuple(item.source_id for item in selected)
+
+        request_question = question.strip()
+
+        if mode is WingmanMode.BRIEF:
+            request_question = _BRIEF_INSTRUCTION
+
         request = {
             "mode": mode.value,
-            "question": question.strip(),
+            "question": request_question,
+            "allowed_source_ids": list(source_ids),
             "sources": [item.as_dict() for item in selected],
         }
         try:
