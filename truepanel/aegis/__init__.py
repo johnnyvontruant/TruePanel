@@ -15,6 +15,7 @@ from .checkride import (
     evaluate_pre_service_clearance,
     run_storage_recovery_rehearsals,
 )
+from .consequences import correlate_consequences
 from .correlation import correlate_incident
 from .coverage import coverage_matrix, validate_recovery_coverage
 from .evidence_gate import (
@@ -74,6 +75,7 @@ __all__ = [
     "issue_recovery_attestation",
     "issue_restore_verification_receipt",
     "correlate_incident",
+    "correlate_consequences",
     "coverage_matrix",
     "evaluate_evidence_gate",
     "rehearse_recovery_paths",

@@ -22,7 +22,7 @@ def test_hangar_registry_is_packaged_valid_and_uses_exact_states():
     assert status_summary(registry) == {
         "FUTURE": 2,
         "IN_PROGRESS": 1,
-        "COMPLETED": 14,
+        "COMPLETED": 16,
         "FAILED": 2,
     }
 
@@ -33,8 +33,13 @@ def test_hangar_views_are_generated_and_do_not_move_dossiers(tmp_path):
 
     assert tuple(rendered) == HANGAR_STATES
     for state, generated in rendered.items():
-        assert generated.read_text() == (ROOT / "docs" / "hangar" / f"{state.lower()}.md").read_text()
-        assert "Generated from `truepanel/hangar/registry.json`" in generated.read_text()
+        assert (
+            generated.read_text()
+            == (ROOT / "docs" / "hangar" / f"{state.lower()}.md").read_text()
+        )
+        assert (
+            "Generated from `truepanel/hangar/registry.json`" in generated.read_text()
+        )
 
 
 def test_hangar_state_contracts_fail_closed():

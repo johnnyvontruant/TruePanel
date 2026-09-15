@@ -1,0 +1,99 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "95577abae03e3e87c0301f7a0183fe975dfeee6eff37ad6552491f6e9056981e",
+  "hardware_isolated": true,
+  "measurements": {
+    "additional_telemetry_reads": 0,
+    "cloned_identity_holds": 1,
+    "diagnostic_confidence_after": 0.62,
+    "diagnostic_confidence_before": 0.62,
+    "diagnostic_confidence_increases": 0,
+    "false_joins": 0,
+    "hold_contexts": 4,
+    "path_reassignments_preserved": 1,
+    "proved_contexts": 2,
+    "recovery_actions": 0,
+    "reused_path_holds": 1,
+    "scenarios": 6
+  },
+  "outcomes": {
+    "cloned_stable_identity": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": null,
+      "reason": "Impact topology requires one trusted Lifeline identity for the incident device; stable identity is claimed by multiple active Lifeline sessions.",
+      "sentinel_device": null,
+      "source_device": "/dev/sdc",
+      "stable_identity": null,
+      "state": "HOLD"
+    },
+    "device_path_reassigned": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": {
+        "applications": 1,
+        "cargo": 1,
+        "proved_objects": 6,
+        "running_applications": 1,
+        "storage_objects": 3,
+        "verified_backup_evidence": 1
+      },
+      "reason": "One trusted Lifeline identity joins the incident to proved SENTINEL paths, independent of the current Linux device address.",
+      "sentinel_device": "/dev/sda",
+      "source_device": "/dev/sdc",
+      "stable_identity": "wwn:aaaaaaaaaaaaaaaaaaaaaaaa",
+      "state": "PROVED"
+    },
+    "malformed_path": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": null,
+      "reason": "Matched SENTINEL explanation contains no complete proved path set.",
+      "sentinel_device": "/dev/sdc",
+      "source_device": "/dev/sdc",
+      "stable_identity": "wwn:aaaaaaaaaaaaaaaaaaaaaaaa",
+      "state": "HOLD"
+    },
+    "missing_stable_identity": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": null,
+      "reason": "Impact topology requires one trusted Lifeline identity for the incident device; observed 0 trusted Lifeline identities.",
+      "sentinel_device": null,
+      "source_device": "/dev/sdc",
+      "stable_identity": null,
+      "state": "HOLD"
+    },
+    "reused_device_path": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": null,
+      "reason": "Impact topology requires one trusted Lifeline identity for the incident device; observed 2 trusted Lifeline identities.",
+      "sentinel_device": null,
+      "source_device": "/dev/sdc",
+      "stable_identity": null,
+      "state": "HOLD"
+    },
+    "same_path_stable_identity": {
+      "confidence_effect": "none",
+      "control_authority": false,
+      "counts": {
+        "applications": 1,
+        "cargo": 1,
+        "proved_objects": 6,
+        "running_applications": 1,
+        "storage_objects": 3,
+        "verified_backup_evidence": 1
+      },
+      "reason": "One trusted Lifeline identity joins the incident to proved SENTINEL paths, independent of the current Linux device address.",
+      "sentinel_device": "/dev/sdc",
+      "source_device": "/dev/sdc",
+      "stable_identity": "wwn:aaaaaaaaaaaaaaaaaaaaaaaa",
+      "state": "PROVED"
+    }
+  },
+  "production_mutation": false,
+  "scenario": "aegis-sentinel-consequence-correlation",
+  "schema_version": 1,
+  "simulation": true
+}
