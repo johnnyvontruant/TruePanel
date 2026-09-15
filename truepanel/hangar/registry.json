@@ -325,7 +325,7 @@
       "value": "Makes identity availability and migration integrity an explicit, rehearsed candidate condition in the universal Recovery Coverage Matrix.",
       "prior_art": ["systemd persistent-storage rules", "OpenZFS vdev GUID", "Kubernetes object UID", "TUF trust transitions", "OpenTelemetry service instance identity"],
       "safety_class": "SIMULATION_ONLY",
-      "development": {"branch": "feature/aegis-identity-coverage", "pr": null, "commits": []},
+      "development": {"branch": "feature/aegis-identity-coverage", "pr": 155, "commits": ["0968fd9e82e02e563318093111f3fbfaf575de9f"]},
       "protocol": ["preserve accepted v1 matrix", "build content-bound v2 candidate", "require strong privacy-safe identity for all storage recovery codes", "replay real Lifeline serial-model to WWN migration", "reject cloned identity and path reuse", "render candidate review boundary"],
       "fixtures": ["aegis-stable-identity-migration", "tests/test_aegis_identity_coverage.py", "truepanel/holodeck/aegis_identity_coverage.py"],
       "success_criteria": ["serial-model to WWN preserves one session", "different drives remain distinct", "weaker evidence cannot downgrade identity", "all adversarial cases hold", "accepted matrix remains byte-semantically unchanged", "automatic acceptance and control authority remain false"],
