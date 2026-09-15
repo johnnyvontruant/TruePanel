@@ -130,20 +130,24 @@ WINGMAN_RESPONSE_SCHEMA: dict[str, Any] = {
     },
 }
 
+_REQUIRED_KEYS = frozenset(WINGMAN_RESPONSE_SCHEMA["required"])
+
 
 def validate_grounded_answer(
     answer: dict[str, Any],
     *,
     allowed_source_ids: set[str],
 ) -> tuple[str, ...]:
-    """Fail closed when generated advice is not grounded in supplied sources.
-
-    This is intentionally small and dependency-free. Schema-constrained model
-    output narrows the shape; this validator enforces the source and authority
-    invariants that matter even when a provider returns malformed output.
-    """
+    """Fail closed when generated advice is malformed or insufficiently grounded."""
 
     errors: list[str] = []
+
+    keys = set(answer)
+    if missing := _REQUIRED_KEYS - keys:
+        errors.append("RequiredFieldsMissing:" + ",".join(sorted(missing)))
+    if unexpected := keys - _REQUIRED_KEYS:
+        errors.append("UnexpectedFields:" + ",".join(sorted(unexpected)))
+
     if answer.get("schema_version") != 1:
         errors.append("SchemaVersionMismatch")
     if answer.get("mode") not in {item.value for item in WingmanMode}:
@@ -155,28 +159,66 @@ def validate_grounded_answer(
     if answer.get("production_mutation") is not False:
         errors.append("ProductionMutationMustRemainFalse")
 
+    def validate_text(value: Any, label: str, max_length: int) -> None:
+        if not isinstance(value, str):
+            errors.append(f"{label}TextInvalid")
+        elif len(value) > max_length:
+            errors.append(f"{label}TextTooLong")
+
     def validate_ids(value: Any, label: str) -> None:
         if not isinstance(value, list) or not value:
             errors.append(f"{label}SourcesMissing")
             return
+        if len(value) > 8:
+            errors.append(f"{label}SourcesTooMany")
+        if len(value) != len(set(item for item in value if isinstance(item, str))):
+            errors.append(f"{label}SourcesDuplicate")
         for source_id in value:
             if not isinstance(source_id, str) or source_id not in allowed_source_ids:
                 errors.append(f"{label}SourceUnknown")
                 return
 
+    validate_text(answer.get("summary"), "Summary", 1200)
     validate_ids(answer.get("summary_source_ids"), "Summary")
 
-    for index, item in enumerate(answer.get("observations") or []):
-        if not isinstance(item, dict):
-            errors.append(f"Observation{index}Malformed")
-            continue
-        validate_ids(item.get("source_ids"), f"Observation{index}")
+    observations = answer.get("observations")
+    if not isinstance(observations, list):
+        errors.append("ObservationsInvalid")
+    else:
+        if len(observations) > 8:
+            errors.append("ObservationsTooMany")
+        for index, item in enumerate(observations):
+            if not isinstance(item, dict) or set(item) != {"text", "source_ids"}:
+                errors.append(f"Observation{index}Malformed")
+                continue
+            validate_text(item.get("text"), f"Observation{index}", 800)
+            validate_ids(item.get("source_ids"), f"Observation{index}")
 
-    for index, item in enumerate(answer.get("next_steps") or []):
-        if not isinstance(item, dict):
-            errors.append(f"NextStep{index}Malformed")
-            continue
-        validate_ids(item.get("source_ids"), f"NextStep{index}")
+    next_steps = answer.get("next_steps")
+    required_step_keys = {"step", "why", "source_ids", "operator_action_required"}
+    if not isinstance(next_steps, list):
+        errors.append("NextStepsInvalid")
+    else:
+        if len(next_steps) > 8:
+            errors.append("NextStepsTooMany")
+        for index, item in enumerate(next_steps):
+            if not isinstance(item, dict) or set(item) != required_step_keys:
+                errors.append(f"NextStep{index}Malformed")
+                continue
+            validate_text(item.get("step"), f"NextStep{index}Step", 800)
+            validate_text(item.get("why"), f"NextStep{index}Why", 800)
+            validate_ids(item.get("source_ids"), f"NextStep{index}")
+            if not isinstance(item.get("operator_action_required"), bool):
+                errors.append(f"NextStep{index}OperatorActionInvalid")
+
+    uncertainty = answer.get("uncertainty")
+    if not isinstance(uncertainty, list):
+        errors.append("UncertaintyInvalid")
+    else:
+        if len(uncertainty) > 8:
+            errors.append("UncertaintyTooMany")
+        for index, item in enumerate(uncertainty):
+            validate_text(item, f"Uncertainty{index}", 500)
 
     return tuple(dict.fromkeys(errors))
 
