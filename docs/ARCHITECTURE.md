@@ -74,6 +74,14 @@ Mission Control view       HoloDeck rehearsal
 
 This is a data and decision flow, not an actuator chain. AEGIS, Pathfinder, ORACLE, HoloDeck, and Black Box do not acquire hardware-control authority through composition.
 
+## Product boundary: Core and hardware modules
+
+The normalized state flow is also the intended portability boundary. TruePanel Core owns evidence normalization, health interpretation, recovery reasoning, OBSERVATORY, history, HoloDeck, Black Box, and Mission Control. Model-specific front panels, bay LEDs, fan controllers, buzzers, and other actuators belong behind Hardware Module capability contracts.
+
+A host with no verified hardware module should remain a valid Core deployment. Missing hardware capability is reported as unavailable rather than silently healthy, while generic Linux, SMART, ZFS, service, and workload evidence can continue to feed the reasoning stack. Observation capability never grants write authority.
+
+See `TRUEPANEL_CORE.md` for the migration and acceptance contract.
+
 ## Core layers
 
 ### Collection
@@ -154,7 +162,7 @@ AEGIS:
 - reports Recovery Coverage Matrix gaps;
 - has no control-authority path.
 
-The accepted shared-cooling experiment identifies one correlated incident 27 samples before the first isolated lab threshold and reduces two terminal alerts to one operator incident. The AEGIS development increment remains undeployed on the reference NAS.
+The accepted shared-cooling experiment identifies one correlated incident 27 samples before the first isolated lab threshold and reduces two terminal alerts to one operator incident. AEGIS and its current Mission Control reliability surfaces are deployed and live-validated on the reference NAS while retaining read-only authority.
 
 ### Recovery Coverage Matrix
 
