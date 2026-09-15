@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.14.1",
-  "updated_at": "2026-09-14",
+  "registry_version": "2026.09.15.1",
+  "updated_at": "2026-09-15",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -318,6 +318,95 @@
       "revisit_conditions": ["identity migration from serial-model to WWN or ZFS GUID is implemented", "Lifeline identity coverage becomes a Recovery Coverage Matrix condition", "TrueNAS exposes a supported leaf-vdev GUID"],
       "strongest_follow_up": "Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.",
       "freshness": {"reviewed_at": "2026-09-14", "review_after": "2026-12-31"}
+    },
+    {
+          "id": "TP-EXP-0029",
+          "title": "WINGMAN grounded local advisory runtime",
+          "state": "IN_PROGRESS",
+          "hypothesis": "A small on-demand local model can transform existing trusted TruePanel evidence into concise grounded operator guidance without acquiring control authority, inventing unsupported facts, or creating an unacceptable host-resource burden.",
+          "value": "Adds a human-language co-pilot above TruePanel's deterministic evidence systems while keeping diagnosis, authority, and recovery decisions outside the model.",
+          "prior_art": [
+                "retrieval-augmented generation",
+                "schema-constrained local inference",
+                "llama.cpp OpenAI-compatible server",
+                "human-in-the-loop operations copilots"
+          ],
+          "safety_class": "READ_ONLY_EVIDENCE",
+          "development": {
+                "branch": "experiment/project-wingman",
+                "pr": 156,
+                "commits": [
+                      "494d99d60a3ffc9a16221457fb6ba87012c8076c"
+                ],
+                "next_test": "Prove bounded Granite startup, readiness, query, timeout, termination, reap, and unload behavior under host-resource gates.",
+                "exit_criteria": "On-demand lifecycle passes deterministic and BattleStation rehearsals with zero orphan processes, zero production mutation, safe fallback, preserved advisory-only authority, and acceptable host memory/thermal impact."
+          },
+          "protocol": [
+                "retrieve only allowlisted trusted TruePanel evidence",
+                "perform deterministic source selection before generation",
+                "bind local inference to loopback only",
+                "enforce structured citations and advisory-only authority",
+                "hold or fall back deterministically on validation failure",
+                "gate model launch on host resource headroom",
+                "load only on demand and unload after bounded use",
+                "replay HoloDeck safety and adversarial cases"
+          ],
+          "fixtures": [
+                "truepanel/holodeck/wingman.py",
+                "development/tools/benchmark_wingman.py",
+                "tests/test_wingman.py",
+                "tests/test_wingman_evaluation.py"
+          ],
+          "success_criteria": [
+                "all safety cases preserve zero control authority",
+                "unsupported claims and citations fail closed",
+                "AEGIS HOLD remains authoritative",
+                "model process binds only to loopback",
+                "pre-launch memory and load gates fail closed",
+                "timeout and exception paths leave zero llama-server processes",
+                "successful requests unload the model after bounded use",
+                "deterministic guidance remains available when inference is unavailable",
+                "production services remain unaffected"
+          ],
+          "abort_criteria": [
+                "model gains control or mutation authority",
+                "model bypasses AEGIS, Lifeline, Pathfinder, or deterministic evidence",
+                "server binds to a non-loopback interface",
+                "resource gate is bypassed",
+                "orphan inference process remains after timeout or failure",
+                "unsupported bay, device, cause, repair result, or part number is invented",
+                "production service or TrueNAS configuration is modified by the experiment"
+          ],
+          "evidence": [
+                {
+                      "path": "docs/evidence/wingman-model-bakeoff-v1.json",
+                      "sha256": "79611fae283728673d0a412366b9cfe1666f4c05e4bde0100a18995c400a2d39"
+                }
+          ],
+          "outcome": {
+                "conclusion": "Preliminary bake-off selected Granite 4.0 1B Q4_K_S for the next phase: 5/6 final quality and 6/6 safety versus Qwen3.5 0.8B at 4/6 quality and 6/6 safety. Granite requires roughly 2 GiB resident memory, so the proposed runtime remains on-demand rather than persistent."
+          },
+          "invalidated_assumptions": [
+                "the smallest candidate would necessarily be the best host fit",
+                "higher raw token throughput guarantees lower advisory latency",
+                "structured-output compatibility is independent of model reasoning mode"
+          ],
+          "reproduction": [
+                ".venv/bin/python development/tools/benchmark_wingman.py --endpoint http://127.0.0.1:18080/v1/chat/completions --model granite --timeout 60 --source-limit 6",
+                "pytest -q tests/test_wingman.py tests/test_wingman_evaluation.py",
+                "python -m truepanel.hangar validate --root ."
+          ],
+          "revisit_conditions": [
+                "Granite or llama.cpp runtime version changes",
+                "BattleStation memory or CPU configuration changes",
+                "WINGMAN evidence or structured-output contract changes",
+                "a lighter candidate matches or exceeds Granite on the frozen safety and quality corpus"
+          ],
+          "strongest_follow_up": "Build and rehearse the bounded on-demand Granite lifecycle wrapper before exposing any WINGMAN control in Mission Control.",
+          "freshness": {
+                "reviewed_at": "2026-09-15",
+                "review_after": "2026-12-15"
+          }
     }
   ]
 }
