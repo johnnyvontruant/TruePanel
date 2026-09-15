@@ -1,0 +1,76 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "609d5385b876504eab8f6f6f33e8c258f3c6a85bcd6f083df61f72e8cd9119e5",
+  "experiment_id": "TP-EXP-0023",
+  "measurements": {
+    "automatic_acceptances": 0,
+    "candidate_installations": 0,
+    "false_eligible_paths": 0,
+    "private_keys_persisted": 0,
+    "runtime_writes": 0
+  },
+  "old_envelope_after_upgrade": {
+    "reason": "PlatformDrift",
+    "status": "HOLD"
+  },
+  "production_mutation": false,
+  "production_signer_present": false,
+  "scenario": "aegis-independent-review-checkride-v1",
+  "scenarios": [
+    {
+      "expected": "ELIGIBLE_FOR_OPERATOR_PROMOTION",
+      "reason": "IndependentReviewVerified",
+      "scenario": "two-reviewer-quorum",
+      "status": "ELIGIBLE_FOR_OPERATOR_PROMOTION"
+    },
+    {
+      "expected": "HOLD",
+      "reason": "SignatureQuorumMissing",
+      "scenario": "one-reviewer",
+      "status": "HOLD"
+    },
+    {
+      "expected": "HOLD",
+      "reason": "SignatureQuorumMissing",
+      "scenario": "duplicate-reviewer",
+      "status": "HOLD"
+    },
+    {
+      "expected": "HOLD",
+      "reason": "SignatureQuorumMissing",
+      "scenario": "revoked-key",
+      "status": "HOLD"
+    },
+    {
+      "expected": "HOLD",
+      "reason": "CandidateDigestMismatch",
+      "scenario": "candidate-tamper",
+      "status": "HOLD"
+    },
+    {
+      "expected": "HOLD",
+      "reason": "ReceiptExpiredOrInvalid",
+      "scenario": "expired-receipt",
+      "status": "HOLD"
+    },
+    {
+      "expected": "HOLD",
+      "reason": "AppraisalDigestMismatch",
+      "scenario": "appraisal-not-ready",
+      "status": "HOLD"
+    },
+    {
+      "expected": "HOLD",
+      "reason": "SignatureQuorumMissing",
+      "scenario": "forged-signature",
+      "status": "HOLD"
+    }
+  ],
+  "schema_version": 1,
+  "signature_implementation": "deterministic-hmac-lab-only",
+  "simulation": true,
+  "status_counts": {
+    "ELIGIBLE_FOR_OPERATOR_PROMOTION": 1,
+    "HOLD": 7
+  }
+}

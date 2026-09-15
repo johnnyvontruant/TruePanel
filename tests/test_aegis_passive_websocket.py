@@ -6,12 +6,11 @@ import pytest
 from truepanel.aegis.passive_observation import observe_websocket
 from truepanel.aegis.passive_runtime import REQUIRED_ROLES
 from truepanel.aegis.passive_websocket import (
+    TRANSPORT_BOOTSTRAP_METHODS,
     GovernedAPIKeyFile,
     GovernedTLSCAFile,
-    TRANSPORT_BOOTSTRAP_METHODS,
     TrueNASWebSocketReadOnlyClient,
 )
-
 
 API_KEY = "k" * 64
 
@@ -124,6 +123,7 @@ def test_websocket_client_authenticates_once_and_keeps_key_out_of_argv_surface(t
     fake = FakeClient(
         {
             "auth.me": identity(*REQUIRED_ROLES),
+            "system.version": "TrueNAS-SCALE-25.10.5",
             "replication.query": [],
             "cloud_backup.query": [],
         }
@@ -245,6 +245,7 @@ def test_no_deploy_websocket_observation_is_sanitized_and_closes_session(tmp_pat
     fake = FakeClient(
         {
             "auth.me": identity(*REQUIRED_ROLES),
+            "system.version": "TrueNAS-SCALE-25.10.5",
             "replication.query": [],
             "cloud_backup.query": [],
         }
@@ -262,7 +263,9 @@ def test_no_deploy_websocket_observation_is_sanitized_and_closes_session(tmp_pat
     assert result["operation"] == "passive_no_deploy_observation"
     assert result["runtime_status"] == "HOLD"
     assert result["role_verification"]["least_privilege_verified"] is True
-    assert result["cache"]["delegate_calls"] == 3
+    assert result["cache"]["delegate_calls"] == 4
+    assert result["platform_witness"]["status"] == "VERIFIED"
+    assert result["platform_witness"]["truenas_version"] == "25.10.5"
     assert result["transport"]["authenticated"] is True
     assert result["transport"]["tls_verification"] is True
     assert result["transport"]["tls_trust"]["governed"] is True

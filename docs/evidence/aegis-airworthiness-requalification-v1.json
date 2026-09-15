@@ -1,0 +1,138 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "c5f238356f7b9c28963a23c704b8a46d1913e57a4f062b1edb8b49ccfa3023c8",
+  "experiment_id": "TP-EXP-0022",
+  "hardware_isolated": true,
+  "measurements": {
+    "automatic_acceptances": 0,
+    "candidate_installations": 0,
+    "false_review_ready_paths": 0,
+    "runtime_writes": 0
+  },
+  "old_envelope_after_upgrade": {
+    "reason": "PlatformDrift",
+    "status": "HOLD"
+  },
+  "production_mutation": false,
+  "renewal_contract_sha256": "e64f7375c4230c2f14818a0643a0320840ce2a444f6eadf623316a788b6dd544",
+  "scenario": "aegis-airworthiness-requalification-v1",
+  "scenarios": [
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "READY_FOR_OPERATOR_REVIEW",
+      "reason": "SuccessorEvidenceComplete",
+      "runtime_writes": 0,
+      "scenario": "coherent-upgrade",
+      "status": "READY_FOR_OPERATOR_REVIEW",
+      "transition": "UPGRADE"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "READY_FOR_OPERATOR_REVIEW",
+      "reason": "SuccessorEvidenceComplete",
+      "runtime_writes": 0,
+      "scenario": "same-platform-renewal",
+      "status": "READY_FOR_OPERATOR_REVIEW",
+      "transition": "SAME"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "REVIEW",
+      "reason": "PlatformOrderingRequiresReview",
+      "runtime_writes": 0,
+      "scenario": "prerelease-order-unknown",
+      "status": "REVIEW",
+      "transition": "UNSUPPORTED"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "REVIEW",
+      "reason": "PlatformWitnessUnbound",
+      "runtime_writes": 0,
+      "scenario": "platform-witness-missing",
+      "status": "REVIEW",
+      "transition": "UPGRADE"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "HOLD",
+      "reason": "PredecessorMismatch",
+      "runtime_writes": 0,
+      "scenario": "wrong-predecessor",
+      "status": "HOLD",
+      "transition": "UPGRADE"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "HOLD",
+      "reason": "PlatformDowngrade",
+      "runtime_writes": 0,
+      "scenario": "platform-downgrade",
+      "status": "HOLD",
+      "transition": "DOWNGRADE"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "HOLD",
+      "reason": "ValidityWindowInvalid",
+      "runtime_writes": 0,
+      "scenario": "overlong-validity",
+      "status": "HOLD",
+      "transition": "UPGRADE"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "HOLD",
+      "reason": "AutomaticAcceptanceForbidden",
+      "runtime_writes": 0,
+      "scenario": "automatic-acceptance",
+      "status": "HOLD",
+      "transition": "UPGRADE"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "HOLD",
+      "reason": "RenewalContractDrift",
+      "runtime_writes": 0,
+      "scenario": "renewal-contract-drift",
+      "status": "HOLD",
+      "transition": "UPGRADE"
+    },
+    {
+      "automatic_acceptance": false,
+      "candidate_installed": false,
+      "control_authority": false,
+      "expected": "HOLD",
+      "reason": "DigestDrift",
+      "runtime_writes": 0,
+      "scenario": "runtime-subject-drift",
+      "status": "HOLD",
+      "transition": "UPGRADE"
+    }
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "status_counts": {
+    "HOLD": 6,
+    "READY_FOR_OPERATOR_REVIEW": 2,
+    "REVIEW": 2
+  }
+}

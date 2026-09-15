@@ -1,0 +1,77 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "4a2c7758763b82bbcadaf66e138151d433b566221dedb71f0cf2bc23d2f19b95",
+  "experiment_id": "TP-EXP-0026",
+  "measurements": {
+    "false_ready_paths": 0,
+    "private_keys_persisted": 0,
+    "production_signers_present": 0,
+    "promotion_confirmations_supplied": 0,
+    "promotion_executions": 0,
+    "receipt_consumptions": 0,
+    "runtime_writes": 0,
+    "service_changes": 0
+  },
+  "production_mutation": false,
+  "scenario": "aegis-offline-signature-checkride-v1",
+  "scenarios": [
+    {
+      "reason": "ManualPromotionChecksPassed",
+      "scenario": "witnessed-two-reviewer-chain",
+      "status": "READY_FOR_MANUAL_PROMOTION"
+    },
+    {
+      "reason": "IndependentReviewMissing",
+      "scenario": "one-reviewer",
+      "status": "HOLD"
+    },
+    {
+      "reason": "IndependentReviewMissing",
+      "scenario": "malformed-signature",
+      "status": "HOLD"
+    },
+    {
+      "reason": "IndependentReviewMissing",
+      "scenario": "untrusted-public-key",
+      "status": "HOLD"
+    },
+    {
+      "reason": "IndependentReviewMissing",
+      "scenario": "namespace-mismatch",
+      "status": "HOLD"
+    },
+    {
+      "reason": "IndependentReviewMissing",
+      "scenario": "unsafe-trust-file-permissions",
+      "status": "HOLD"
+    },
+    {
+      "reason": "IndependentReviewMissing",
+      "scenario": "verifier-unavailable",
+      "status": "HOLD"
+    },
+    {
+      "reason": "IndependentReviewMissing",
+      "scenario": "request-binding-tamper",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PreflightHold",
+      "scenario": "active-incident",
+      "status": "HOLD"
+    },
+    {
+      "reason": "StageTreeDigestMismatch",
+      "scenario": "post-review-stage-tamper",
+      "status": "HOLD"
+    }
+  ],
+  "schema_version": 1,
+  "signature_implementation": "openssh-sshsig-ed25519",
+  "simulation": true,
+  "status_counts": {
+    "HOLD": 9,
+    "READY_FOR_MANUAL_PROMOTION": 1
+  },
+  "temporary_fixture_removed": true
+}
