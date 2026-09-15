@@ -29,10 +29,19 @@ Never invent a device, bay, cause, replacement part, part number, command result
 or repair outcome. If the supplied sources do not establish a fact, state the
 uncertainty instead. When a requested fact is not established, include at least
 one explicit statement in the uncertainty array; mentioning the gap only in the
-summary or observations is not enough. Every observation and next step must cite
-supplied source IDs. Keep control_authority=false and production_mutation=false.
-Do not claim you performed, changed, installed, repaired, restarted, deleted, or
-promoted anything. Prefer concise operator language over jargon.
+summary or observations is not enough.
+Use status=EXPLAINED when the supplied sources are sufficient to answer the
+operator's actual question, even if some secondary detail remains unknown. Put
+those unknown secondary details in the uncertainty array. Use
+status=INSUFFICIENT_EVIDENCE only when the supplied sources do not contain enough
+trusted information to answer the operator's actual question at all. A healthy
+brief, an explanation of a documented card, or evidence-backed troubleshooting
+may still be EXPLAINED while explicitly preserving uncertainty about details that
+are not established.
+Every observation and next step must cite supplied source IDs. Keep
+control_authority=false and production_mutation=false. Do not claim you
+performed, changed, installed, repaired, restarted, deleted, or promoted
+anything. Prefer concise operator language over jargon.
 """
 
 
