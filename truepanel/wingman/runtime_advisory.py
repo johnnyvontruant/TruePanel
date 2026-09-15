@@ -100,20 +100,20 @@ class WingmanRuntimeAdvisory:
                 question=question,
                 sources=sources,
             )
-
-            return (
-                result,
-                RuntimeAdvisoryObservation(
-                    runtime_started=True,
-                    model_invoked=True,
-                    runtime_reaped=False,
-                ),
-            )
         finally:
             if runtime_started or self.runtime.running:
                 self.runtime.stop()
 
             self._lock.release()
+
+        return (
+            result,
+            RuntimeAdvisoryObservation(
+                runtime_started=True,
+                model_invoked=True,
+                runtime_reaped=not self.runtime.running,
+            ),
+        )
 
 
 __all__ = [

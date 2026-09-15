@@ -103,6 +103,7 @@ def test_success_always_stops_runtime():
     assert result.status == "EXPLAINED"
     assert observation.runtime_started is True
     assert observation.model_invoked is True
+    assert observation.runtime_reaped is True
     assert runtime.start_calls == 1
     assert runtime.stop_calls == 1
     assert runtime.running is False
