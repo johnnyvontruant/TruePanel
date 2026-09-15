@@ -9,6 +9,7 @@ This directory is the operating manual for the current TruePanel platform.
 - [AEGIS Black Box calibration corpus](AEGIS_BLACK_BOX_CORPUS.md) for versioned privacy-safe replay evidence and calibration limits
 - [AEGIS field-evidence gate](AEGIS_FIELD_EVIDENCE_GATE.md) for opt-in admission, uncertainty bounds, and promotion holds
 - [AEGIS Airworthiness](AEGIS_AIRWORTHINESS.md) for the time-bounded acceptance envelope, passive platform witness, requalification, independent approval, staged-byte witness, signatures, and manual final-handoff boundary
+- [Project WINGMAN](PROJECT_WINGMAN.md) for the experimental local advisory layer, evidence grounding, model checkride, resource policy, and graduation gates
 - [Installation](INSTALLATION.md) for compatibility checks, native deployment, service activation, configuration, and removal
 - [Upgrade and rollback](UPGRADING.md) for guarded staging, promotion, verification, cleanup, repair, and recovery
 - [CLI reference](CLI.md) for diagnostics, lifecycle, simulation, plugins, hardware, and laboratory commands
@@ -49,7 +50,7 @@ Project Pathfinder and Lifeline are documented in the [Mission Control guide](MI
 - [Changelog](../CHANGELOG.md)
 - [Security policy](../SECURITY.md)
 - [Contributing](../CONTRIBUTING.md)
-- [Code of conduct](../CODE_OF_CONDUCT.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
 
 ## Documentation contract
 
