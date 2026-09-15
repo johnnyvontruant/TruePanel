@@ -47,20 +47,23 @@ def build_status_sources(payload: dict[str, Any]) -> tuple[GroundingSource, ...]
 
     Callers must pass the same privacy-safe snapshot exposed to Mission Control,
     not raw collectors or credential-bearing provider objects. Unknown sections
-    are ignored rather than forwarded to the model.
+    are ignored rather than forwarded to the model. Non-JSON section values are
+    skipped rather than stringified into model-visible text.
     """
 
     sources: list[GroundingSource] = []
     for section in STATUS_SECTIONS:
         if section not in payload:
             continue
-        content = json.dumps(
-            payload[section],
-            sort_keys=True,
-            separators=(",", ":"),
-            allow_nan=False,
-            default=str,
-        )
+        try:
+            content = json.dumps(
+                payload[section],
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+        except (TypeError, ValueError):
+            continue
         sources.append(
             GroundingSource(
                 source_id=f"status:{section}",
