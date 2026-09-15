@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.15.1",
+  "registry_version": "2026.09.15.2",
   "updated_at": "2026-09-15",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
@@ -336,9 +336,13 @@
                 "branch": "experiment/project-wingman",
                 "pr": 156,
                 "commits": [
-                      "494d99d60a3ffc9a16221457fb6ba87012c8076c"
+                      "494d99d60a3ffc9a16221457fb6ba87012c8076c",
+                      "38cc4889cfd3c78ed67064022f9a8b643bbc63bb",
+                      "cdbacefd2348f9ab1b8428103bfac070ad0e4a7c",
+                      "898aa72975c848b5c70327abc58d8f0ebdf82331",
+                      "3c2756d70977ec5bf2e331538e90d85aac2b2cdb"
                 ],
-                "next_test": "Prove bounded Granite startup, readiness, query, timeout, termination, reap, and unload behavior under host-resource gates.",
+                "next_test": "Rehearse the first advisory-only Mission Control integration through WingmanRuntimeAdvisory while preserving citations, HOLD semantics, single-flight behavior, and zero control authority.",
                 "exit_criteria": "On-demand lifecycle passes deterministic and BattleStation rehearsals with zero orphan processes, zero production mutation, safe fallback, preserved advisory-only authority, and acceptable host memory/thermal impact."
           },
           "protocol": [
@@ -355,7 +359,11 @@
                 "truepanel/holodeck/wingman.py",
                 "development/tools/benchmark_wingman.py",
                 "tests/test_wingman.py",
-                "tests/test_wingman_evaluation.py"
+                "tests/test_wingman_evaluation.py",
+                "truepanel/wingman/runtime.py",
+                "truepanel/wingman/runtime_advisory.py",
+                "tests/test_wingman_runtime.py",
+                "tests/test_wingman_runtime_advisory.py"
           ],
           "success_criteria": [
                 "all safety cases preserve zero control authority",
@@ -381,10 +389,14 @@
                 {
                       "path": "docs/evidence/wingman-model-bakeoff-v1.json",
                       "sha256": "79611fae283728673d0a412366b9cfe1666f4c05e4bde0100a18995c400a2d39"
+                },
+                {
+                      "path": "docs/evidence/wingman-runtime-lifecycle-v1.json",
+                      "sha256": "23b7fd204e32ea34918462828d54355ab40a7261cdcb17038a8ba17d38abc1df"
                 }
           ],
           "outcome": {
-                "conclusion": "Preliminary bake-off selected Granite 4.0 1B Q4_K_S for the next phase: 5/6 final quality and 6/6 safety versus Qwen3.5 0.8B at 4/6 quality and 6/6 safety. Granite requires roughly 2 GiB resident memory, so the proposed runtime remains on-demand rather than persistent."
+                "conclusion": "Granite 4.0 1B Q4_K_S remains the selected next-phase model. The bounded on-demand lifecycle is now proven live on BattleStation: wrapper-owned success, provider failure, resource-gate rejection, clean teardown, and 3/3 cold-start repeatability all passed with zero orphan llama-server processes and production TruePanel services remaining active. TP-EXP-0029 remains IN_PROGRESS pending advisory-only Mission Control integration and further host-headroom validation."
           },
           "invalidated_assumptions": [
                 "the smallest candidate would necessarily be the best host fit",
@@ -394,6 +406,7 @@
           "reproduction": [
                 ".venv/bin/python development/tools/benchmark_wingman.py --endpoint http://127.0.0.1:18080/v1/chat/completions --model granite --timeout 60 --source-limit 6",
                 "pytest -q tests/test_wingman.py tests/test_wingman_evaluation.py",
+                ".venv/bin/python -m pytest -q tests/test_wingman_runtime.py tests/test_wingman_runtime_advisory.py tests/test_wingman.py tests/test_wingman_evaluation.py tests/test_hangar.py",
                 "python -m truepanel.hangar validate --root ."
           ],
           "revisit_conditions": [
@@ -402,7 +415,7 @@
                 "WINGMAN evidence or structured-output contract changes",
                 "a lighter candidate matches or exceeds Granite on the frozen safety and quality corpus"
           ],
-          "strongest_follow_up": "Build and rehearse the bounded on-demand Granite lifecycle wrapper before exposing any WINGMAN control in Mission Control.",
+          "strongest_follow_up": "Expose one bounded advisory-only Mission Control entry point backed by WingmanRuntimeAdvisory, without exposing llama.cpp lifecycle or granting WINGMAN control authority.",
           "freshness": {
                 "reviewed_at": "2026-09-15",
                 "review_after": "2026-12-15"

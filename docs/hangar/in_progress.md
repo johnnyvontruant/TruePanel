@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.15.1 · refreshed 2026-09-15 · 2 experiment(s)
+Registry version 2026.09.15.2 · refreshed 2026-09-15 · 2 experiment(s)
 
 ## TP-EXP-0015 · CHECKRIDE live storage recovery
 
@@ -14,8 +14,8 @@ A verified SMART incident can be composed into an identity-bound advisory flight
 
 ## TP-EXP-0029 · WINGMAN grounded local advisory runtime
 
-Preliminary bake-off selected Granite 4.0 1B Q4_K_S for the next phase: 5/6 final quality and 6/6 safety versus Qwen3.5 0.8B at 4/6 quality and 6/6 safety. Granite requires roughly 2 GiB resident memory, so the proposed runtime remains on-demand rather than persistent.
+Granite 4.0 1B Q4_K_S remains the selected next-phase model. The bounded on-demand lifecycle is now proven live on BattleStation: wrapper-owned success, provider failure, resource-gate rejection, clean teardown, and 3/3 cold-start repeatability all passed with zero orphan llama-server processes and production TruePanel services remaining active. TP-EXP-0029 remains IN_PROGRESS pending advisory-only Mission Control integration and further host-headroom validation.
 
 - Safety: `READ_ONLY_EVIDENCE`
-- Strongest follow-up: Build and rehearse the bounded on-demand Granite lifecycle wrapper before exposing any WINGMAN control in Mission Control.
+- Strongest follow-up: Expose one bounded advisory-only Mission Control entry point backed by WingmanRuntimeAdvisory, without exposing llama.cpp lifecycle or granting WINGMAN control authority.
 - Revisit when: Granite or llama.cpp runtime version changes; BattleStation memory or CPU configuration changes; WINGMAN evidence or structured-output contract changes; a lighter candidate matches or exceeds Granite on the frozen safety and quality corpus
