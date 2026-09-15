@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.15.2",
+  "registry_version": "2026.09.15.3",
   "updated_at": "2026-09-15",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
@@ -340,9 +340,12 @@
                       "38cc4889cfd3c78ed67064022f9a8b643bbc63bb",
                       "cdbacefd2348f9ab1b8428103bfac070ad0e4a7c",
                       "898aa72975c848b5c70327abc58d8f0ebdf82331",
-                      "3c2756d70977ec5bf2e331538e90d85aac2b2cdb"
+                      "3c2756d70977ec5bf2e331538e90d85aac2b2cdb",
+                      "3d8107298106ec7d4a12ac644fbeac65dad6cd6c",
+                      "3d7ceb5219b7604e1ee723a11e4d4da7f86025d2",
+                      "ce56393a72591f71548f690b1273e381ef913e63"
                 ],
-                "next_test": "Rehearse the first advisory-only Mission Control integration through WingmanRuntimeAdvisory while preserving citations, HOLD semantics, single-flight behavior, and zero control authority.",
+                "next_test": "Rehearse the first explicit operator-triggered WINGMAN Mission Control UI presentation against the proven brief endpoint while preserving advisory-only authority, source badges, zero per-refresh inference, single-flight behavior, and hidden llama.cpp lifecycle.",
                 "exit_criteria": "On-demand lifecycle passes deterministic and BattleStation rehearsals with zero orphan processes, zero production mutation, safe fallback, preserved advisory-only authority, and acceptable host memory/thermal impact."
           },
           "protocol": [
@@ -363,7 +366,13 @@
                 "truepanel/wingman/runtime.py",
                 "truepanel/wingman/runtime_advisory.py",
                 "tests/test_wingman_runtime.py",
-                "tests/test_wingman_runtime_advisory.py"
+                "tests/test_wingman_runtime_advisory.py",
+                "truepanel/wingman/provider.py",
+                "truepanel/wingman/service.py",
+                "truepanel/web/pathfinder_server.py",
+                "tests/test_wingman_service.py",
+                "tests/test_wingman_web.py",
+                "tests/test_pathfinder_web.py"
           ],
           "success_criteria": [
                 "all safety cases preserve zero control authority",
@@ -393,10 +402,14 @@
                 {
                       "path": "docs/evidence/wingman-runtime-lifecycle-v1.json",
                       "sha256": "23b7fd204e32ea34918462828d54355ab40a7261cdcb17038a8ba17d38abc1df"
+                },
+                {
+                      "path": "docs/evidence/wingman-mission-control-integration-v1.json",
+                      "sha256": "7db6ff2af3a0f7634bc73cf0ac766b4ab0a96f657ea22effc45ac8be26522691"
                 }
           ],
           "outcome": {
-                "conclusion": "Granite 4.0 1B Q4_K_S remains the selected next-phase model. The bounded on-demand lifecycle is now proven live on BattleStation: wrapper-owned success, provider failure, resource-gate rejection, clean teardown, and 3/3 cold-start repeatability all passed with zero orphan llama-server processes and production TruePanel services remaining active. TP-EXP-0029 remains IN_PROGRESS pending advisory-only Mission Control integration and further host-headroom validation."
+                "conclusion": "Granite 4.0 1B Q4_K_S remains the selected next-phase model. The bounded on-demand lifecycle and first production-shaped advisory-only Mission Control integration are now proven live on BattleStation: an explicit brief request returned HTTP 200 with a grounded EXPLAINED advisory, status-only citations remained inside the allowed source set, zero control authority and zero production mutation were preserved, llama.cpp was reaped after the request, and production TruePanel services remained active. TP-EXP-0029 remains IN_PROGRESS pending operator-facing UI integration, source presentation, and further latency and host-headroom validation."
           },
           "invalidated_assumptions": [
                 "the smallest candidate would necessarily be the best host fit",
@@ -415,7 +428,7 @@
                 "WINGMAN evidence or structured-output contract changes",
                 "a lighter candidate matches or exceeds Granite on the frozen safety and quality corpus"
           ],
-          "strongest_follow_up": "Expose one bounded advisory-only Mission Control entry point backed by WingmanRuntimeAdvisory, without exposing llama.cpp lifecycle or granting WINGMAN control authority.",
+          "strongest_follow_up": "Add one explicit operator-triggered Mission Control WINGMAN control and advisory presentation backed by the proven brief endpoint, with visible source badges and advisory-only authority while preserving zero per-refresh inference and hiding llama.cpp lifecycle.",
           "freshness": {
                 "reviewed_at": "2026-09-15",
                 "review_after": "2026-12-15"
