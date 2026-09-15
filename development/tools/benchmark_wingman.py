@@ -38,7 +38,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     provider = LlamaCppProvider(
         endpoint=args.endpoint,
         model=args.model,
-        timeout=args.timeout,
+        timeout_seconds=args.timeout,
         allow_remote=args.allow_remote,
     )
     service = WingmanAdvisoryService(provider, source_limit=args.source_limit)
