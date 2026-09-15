@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.14.1 · refreshed 2026-09-14 · 16 experiment(s)
+Registry version 2026.09.15.1 · refreshed 2026-09-15 · 17 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -131,3 +131,11 @@ One stable identity preserves six proved consequences across /dev/sdc to /dev/sd
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.
 - Revisit when: identity migration from serial-model to WWN or ZFS GUID is implemented; Lifeline identity coverage becomes a Recovery Coverage Matrix condition; TrueNAS exposes a supported leaf-vdev GUID
+
+## TP-EXP-0029 · AEGIS identity coverage checkride
+
+The real Lifeline ledger preserved one active recovery through serial-model to WWN migration and device-path change; different drives remained distinct, weaker evidence could not downgrade identity, and three adversarial identity cases held with zero false outcomes.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Independently review the v2 candidate, bind it and the new evaluator into a successor airworthiness envelope, then rehearse ZFS-member to WWN migration before any deployment decision.
+- Revisit when: candidate receives independent acceptance review; TrueNAS exposes supported passive leaf-vdev GUID; identity mode or storage recovery code changes
