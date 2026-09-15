@@ -29,6 +29,7 @@ def _sanitized_result(incident_id: str, result: dict[str, Any]) -> dict[str, Any
         "successful_tasks": result.get("successful_tasks", 0),
         "restore_verified": result.get("restore_verified") is True,
         "hold_reason": result.get("hold_reason"),
+        "platform_witness": result.get("platform_witness"),
         "read_only": True,
         "control_authority": False,
         "deployment_changed": False,
@@ -40,6 +41,7 @@ def observe(incident_id: str, receipt_root: Path) -> dict[str, Any]:
     runtime = GovernedPassiveEvidenceRuntime(
         client,
         GovernedRestoreReceiptStore(receipt_root),
+        include_platform_witness=True,
     )
     return _sanitized_result(incident_id, runtime.observe(incident_id=incident_id))
 
@@ -65,6 +67,7 @@ def observe_websocket(
         runtime = GovernedPassiveEvidenceRuntime(
             client,
             GovernedRestoreReceiptStore(receipt_root),
+            include_platform_witness=True,
         )
         result = _sanitized_result(
             incident_id,

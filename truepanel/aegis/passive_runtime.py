@@ -20,6 +20,7 @@ from .passive_providers import (
     TrueNASProtectionEvidenceProvider,
     TrueNASReplacementInventoryProvider,
 )
+from .platform_witness import issue_platform_witness
 
 REQUIRED_ROLES = frozenset(
     {"READONLY_ADMIN", "REPLICATION_TASK_READ", "CLOUD_BACKUP_READ"}
@@ -301,11 +302,15 @@ class GovernedPassiveEvidenceRuntime:
         receipt_store: GovernedRestoreReceiptStore,
         *,
         candidate_delegate: Any | None = None,
+        include_platform_witness: bool = False,
+        wall_clock: Callable[[], float] = time.time,
     ) -> None:
         self.client = client
         self.receipt_store = receipt_store
         self.role_verifier = TrueNASRoleVerifier(client)
         self.candidate_delegate = candidate_delegate
+        self.include_platform_witness = include_platform_witness
+        self.wall_clock = wall_clock
 
     def observe(self, *, incident_id: str) -> dict[str, Any]:
         stale_before = self.client.metrics()["stale_hits"]
@@ -326,6 +331,13 @@ class GovernedPassiveEvidenceRuntime:
             base["hold_reason"] = role["reason"]
             base["cache"] = self.client.metrics()
             return base
+        platform_witness = None
+        if self.include_platform_witness:
+            platform_witness = issue_platform_witness(
+                self.client,
+                clock=self.wall_clock,
+            )
+            base["platform_witness"] = platform_witness
         if store["governed"] is not True:
             base["hold_reason"] = store["reason"]
             base["cache"] = self.client.metrics()
@@ -351,6 +363,8 @@ class GovernedPassiveEvidenceRuntime:
                 "cache": cache,
             }
         )
+        if platform_witness is not None:
+            result["platform_witness"] = platform_witness
         return result
 
     def candidates(
