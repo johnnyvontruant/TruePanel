@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "experiment_id": "TP-EXP-0027",
+  "scenario": "aegis-two-person-ceremony-v1",
+  "simulation": true,
+  "status_counts": {
+    "READY_FOR_MANUAL_PROMOTION": 1,
+    "HOLD": 8
+  },
+  "scenarios": [
+    {"scenario": "exact-two-person-ceremony", "status": "READY_FOR_MANUAL_PROMOTION", "reason": "ManualPromotionChecksPassed"},
+    {"scenario": "wildcard-principal", "status": "HOLD", "reason": "IndependentReviewMissing"},
+    {"scenario": "principal-alias", "status": "HOLD", "reason": "IndependentReviewMissing"},
+    {"scenario": "extra-roster-identity", "status": "HOLD", "reason": "IndependentReviewMissing"},
+    {"scenario": "certificate-authority-option", "status": "HOLD", "reason": "IndependentReviewMissing"},
+    {"scenario": "statement-digest-tamper", "status": "HOLD", "reason": "ReviewStatementDigestInvalid"},
+    {"scenario": "visible-subject-tamper", "status": "HOLD", "reason": "PromotionRequestBindingInvalid"},
+    {"scenario": "policy-presentation-tamper", "status": "HOLD", "reason": "ReviewTrustPolicyDigestInvalid"},
+    {"scenario": "one-signing-lane", "status": "HOLD", "reason": "IndependentReviewMissing"}
+  ],
+  "measurements": {
+    "false_ready_paths": 0,
+    "private_keys_in_bundle": 0,
+    "production_signers_present": 0,
+    "promotion_confirmations_supplied": 0,
+    "promotion_executions": 0,
+    "receipt_consumptions": 0,
+    "service_changes": 0,
+    "runtime_writes": 0
+  },
+  "temporary_fixture_removed": true,
+  "production_mutation": false,
+  "control_authority": false,
+  "evidence_sha256": "49dbfbd18db1d7bd6daaa86e8aa0437412224f26d7cac271b9f36b41b8a50159"
+}

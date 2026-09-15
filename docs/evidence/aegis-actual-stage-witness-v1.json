@@ -1,0 +1,53 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "1d68c7a41f0d12be8f9c438a44cec99182e9bfc84119232be46c5c07411dd11b",
+  "experiment_id": "TP-EXP-0025",
+  "measurements": {
+    "false_ready_paths": 0,
+    "production_stage_writes": 0,
+    "promotion_executions": 0,
+    "review_signatures_created": 0,
+    "service_changes": 0
+  },
+  "production_mutation": false,
+  "scenario": "aegis-actual-stage-witness-v1",
+  "scenarios": [
+    {
+      "reason": "StageWitnessBound",
+      "scenario": "actual-validated-stage",
+      "status": "READY_FOR_EXTERNAL_REVIEW"
+    },
+    {
+      "reason": "StageSymlinkRejected",
+      "scenario": "payload-symlink",
+      "status": "HOLD"
+    },
+    {
+      "reason": "StageNotPristine",
+      "scenario": "already-promoted-stage",
+      "status": "HOLD"
+    },
+    {
+      "reason": "StageManifestRootMismatch",
+      "scenario": "manifest-root-mismatch",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VersionMismatch",
+      "scenario": "candidate-version-mismatch",
+      "status": "HOLD"
+    },
+    {
+      "reason": "StageTreeDigestMismatch",
+      "scenario": "post-review-payload-tamper",
+      "status": "HOLD"
+    }
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "status_counts": {
+    "HOLD": 5,
+    "READY_FOR_EXTERNAL_REVIEW": 1
+  },
+  "temporary_fixture_removed": true
+}

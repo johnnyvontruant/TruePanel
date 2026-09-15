@@ -1,0 +1,32 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "262c4ba7c4d98e19e5cc26592c90d23978c97036f6a43edcd56878b3b18026d7",
+  "experiment_id": "TP-EXP-0028",
+  "measurements": {
+    "confirmation_phrases_supplied": 0,
+    "false_ready_paths": 0,
+    "promotion_executions": 0,
+    "runtime_writes": 0,
+    "seals_consumed": 0,
+    "service_changes": 0
+  },
+  "production_mutation": false,
+  "scenario": "aegis-final-handoff-seal-v1",
+  "scenarios": [
+    {"reason": "FinalHandoffChecksPassed", "scenario": "exact-reviewed-stage-at-handoff", "status": "READY_FOR_OPERATOR_CONFIRMATION"},
+    {"reason": "SealExpired", "scenario": "expired-seal", "status": "HOLD"},
+    {"reason": "ClockRollbackDetected", "scenario": "clock-rollback", "status": "HOLD"},
+    {"reason": "SealAlreadyConsumed", "scenario": "replayed-seal", "status": "HOLD"},
+    {"reason": "RequestDigestMismatch", "scenario": "request-tamper", "status": "HOLD"},
+    {"reason": "ReceiptDigestMismatch", "scenario": "receipt-tamper", "status": "HOLD"},
+    {"reason": "ManualGateHold", "scenario": "gate-downgrade", "status": "HOLD"},
+    {"reason": "ConfirmationContractMismatch", "scenario": "confirmation-contract-tamper", "status": "HOLD"},
+    {"reason": "SealFieldsUnexpected", "scenario": "unexpected-seal-field", "status": "HOLD"},
+    {"reason": "StageTreeChanged", "scenario": "post-seal-stage-tamper", "status": "HOLD"}
+  ],
+  "schema_version": 1,
+  "seal_lifetime_seconds": 300,
+  "simulation": true,
+  "status_counts": {"HOLD": 9, "READY_FOR_OPERATOR_CONFIRMATION": 1},
+  "temporary_fixture_removed": true
+}
