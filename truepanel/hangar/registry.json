@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.15.3",
+  "registry_version": "2026.09.15.4",
   "updated_at": "2026-09-15",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
@@ -343,9 +343,10 @@
                       "3c2756d70977ec5bf2e331538e90d85aac2b2cdb",
                       "3d8107298106ec7d4a12ac644fbeac65dad6cd6c",
                       "3d7ceb5219b7604e1ee723a11e4d4da7f86025d2",
-                      "ce56393a72591f71548f690b1273e381ef913e63"
+                      "ce56393a72591f71548f690b1273e381ef913e63",
+                      "048d35bcc582e51813c89d4aa3d6233bc14d8665"
                 ],
-                "next_test": "Rehearse the first explicit operator-triggered WINGMAN Mission Control UI presentation against the proven brief endpoint while preserving advisory-only authority, source badges, zero per-refresh inference, single-flight behavior, and hidden llama.cpp lifecycle.",
+                "next_test": "Rehearse a refined WINGMAN cockpit presentation in both Pilot and Flight Engineer modes, including compact standby and completed-brief states, visible grounding sources, and long-running request feedback while preserving zero per-refresh inference, advisory-only authority, and hidden llama.cpp lifecycle.",
                 "exit_criteria": "On-demand lifecycle passes deterministic and BattleStation rehearsals with zero orphan processes, zero production mutation, safe fallback, preserved advisory-only authority, and acceptable host memory/thermal impact."
           },
           "protocol": [
@@ -372,7 +373,9 @@
                 "truepanel/web/pathfinder_server.py",
                 "tests/test_wingman_service.py",
                 "tests/test_wingman_web.py",
-                "tests/test_pathfinder_web.py"
+                "tests/test_pathfinder_web.py",
+                "truepanel/web/static/wingman.js",
+                "tests/test_wingman_ui.py"
           ],
           "success_criteria": [
                 "all safety cases preserve zero control authority",
@@ -406,10 +409,14 @@
                 {
                       "path": "docs/evidence/wingman-mission-control-integration-v1.json",
                       "sha256": "7db6ff2af3a0f7634bc73cf0ac766b4ab0a96f657ea22effc45ac8be26522691"
+                },
+                {
+                      "path": "docs/evidence/wingman-operator-cockpit-v1.json",
+                      "sha256": "5ce62efa8045eb54ed7313d1ed899772e10e24d68c16291f3b7ab7c62bffc416"
                 }
           ],
           "outcome": {
-                "conclusion": "Granite 4.0 1B Q4_K_S remains the selected next-phase model. The bounded on-demand lifecycle and first production-shaped advisory-only Mission Control integration are now proven live on BattleStation: an explicit brief request returned HTTP 200 with a grounded EXPLAINED advisory, status-only citations remained inside the allowed source set, zero control authority and zero production mutation were preserved, llama.cpp was reaped after the request, and production TruePanel services remained active. TP-EXP-0029 remains IN_PROGRESS pending operator-facing UI integration, source presentation, and further latency and host-headroom validation."
+                "conclusion": "Granite 4.0 1B Q4_K_S remains the selected next-phase model. The bounded on-demand lifecycle, production-shaped advisory endpoint, and first operator-facing Mission Control cockpit path are now proven live on BattleStation. The WINGMAN instrument remained dormant without starting Granite, and one explicit operator-triggered brief returned HTTP 200 with a grounded EXPLAINED advisory using status:reliability while preserving zero control authority, zero production mutation, clean llama.cpp teardown, and unaffected production TruePanel services. TP-EXP-0029 remains IN_PROGRESS pending cockpit presentation refinement plus additional latency and host-headroom validation."
           },
           "invalidated_assumptions": [
                 "the smallest candidate would necessarily be the best host fit",
@@ -428,7 +435,7 @@
                 "WINGMAN evidence or structured-output contract changes",
                 "a lighter candidate matches or exceeds Granite on the frozen safety and quality corpus"
           ],
-          "strongest_follow_up": "Add one explicit operator-triggered Mission Control WINGMAN control and advisory presentation backed by the proven brief endpoint, with visible source badges and advisory-only authority while preserving zero per-refresh inference and hiding llama.cpp lifecycle.",
+          "strongest_follow_up": "Refine the proven operator-triggered WINGMAN cockpit instrument for Pilot and Flight Engineer modes, keeping standby compact, grounding sources visible, long-running inference understandable, and all inference explicit-click only while measuring latency and host headroom.",
           "freshness": {
                 "reviewed_at": "2026-09-15",
                 "review_after": "2026-12-15"
