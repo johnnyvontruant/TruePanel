@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.14.1",
-  "updated_at": "2026-09-14",
+  "registry_version": "2026.09.15.1",
+  "updated_at": "2026-09-15",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -318,6 +318,25 @@
       "revisit_conditions": ["identity migration from serial-model to WWN or ZFS GUID is implemented", "Lifeline identity coverage becomes a Recovery Coverage Matrix condition", "TrueNAS exposes a supported leaf-vdev GUID"],
       "strongest_follow_up": "Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.",
       "freshness": {"reviewed_at": "2026-09-14", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0029", "title": "AEGIS identity coverage checkride", "state": "COMPLETED",
+      "hypothesis": "Every storage recovery can require privacy-safe stable identity continuity while stronger identity becomes available without splitting one incident or merging different drives.",
+      "value": "Makes identity availability and migration integrity an explicit, rehearsed candidate condition in the universal Recovery Coverage Matrix.",
+      "prior_art": ["systemd persistent-storage rules", "OpenZFS vdev GUID", "Kubernetes object UID", "TUF trust transitions", "OpenTelemetry service instance identity"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-identity-coverage", "pr": 155, "commits": ["0968fd9e82e02e563318093111f3fbfaf575de9f"]},
+      "protocol": ["preserve accepted v1 matrix", "build content-bound v2 candidate", "require strong privacy-safe identity for all storage recovery codes", "replay real Lifeline serial-model to WWN migration", "reject cloned identity and path reuse", "render candidate review boundary"],
+      "fixtures": ["aegis-stable-identity-migration", "tests/test_aegis_identity_coverage.py", "truepanel/holodeck/aegis_identity_coverage.py"],
+      "success_criteria": ["serial-model to WWN preserves one session", "different drives remain distinct", "weaker evidence cannot downgrade identity", "all adversarial cases hold", "accepted matrix remains byte-semantically unchanged", "automatic acceptance and control authority remain false"],
+      "abort_criteria": ["accepted matrix silently changed", "weak or runtime-path identity trusted", "equal-strength ambiguity selected", "raw identifier exposed", "candidate self-accepted", "live provider access or production mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-identity-coverage-v1.json", "sha256": "26b48dff6c2a1a06bbeb80d646fa7ed84c5b221e11cf7451ec5a637396515e95"}],
+      "outcome": {"conclusion": "The real Lifeline ledger preserved one active recovery through serial-model to WWN migration and device-path change; different drives remained distinct, weaker evidence could not downgrade identity, and three adversarial identity cases held with zero false outcomes."},
+      "invalidated_assumptions": ["the accepted matrix can be edited without requalification", "bay or runtime path is durable drive identity", "identity upgrades need no predecessor lineage", "a new external dependency is needed for migration integrity"],
+      "reproduction": ["pytest -q tests/test_aegis_identity_coverage.py", "python -c \"from truepanel.holodeck.aegis_identity_coverage import run_identity_coverage_rehearsal as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["candidate receives independent acceptance review", "TrueNAS exposes supported passive leaf-vdev GUID", "identity mode or storage recovery code changes"],
+      "strongest_follow_up": "Independently review the v2 candidate, bind it and the new evaluator into a successor airworthiness envelope, then rehearse ZFS-member to WWN migration before any deployment decision.",
+      "freshness": {"reviewed_at": "2026-09-15", "review_after": "2026-12-31"}
     }
   ]
 }
