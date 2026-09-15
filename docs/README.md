@@ -50,7 +50,7 @@ Project Pathfinder and Lifeline are documented in the [Mission Control guide](MI
 - [Changelog](../CHANGELOG.md)
 - [Security policy](../SECURITY.md)
 - [Contributing](../CONTRIBUTING.md)
-- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Code of conduct](../CODE_OF_CONDUCT.md)
 
 ## Documentation contract
 
