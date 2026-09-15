@@ -26,6 +26,7 @@ _RECOVERY_TAG = (
     + b'\n<script src="/recovery-workflow.js" defer></script>\n'
 )
 _RECOVERY_TRANSITION_PATH = "/api/v1/recovery/transition"
+_WINGMAN_BRIEF_PATH = "/api/v1/wingman/brief"
 _RECOVERY_TRANSITION_INTENT = "pathfinder-recovery-transition"
 _RECOVERY_ACTIONS = {
     "begin_recovery": ("reviewing", "operator_began_recovery"),
@@ -75,6 +76,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        if parsed.path == _WINGMAN_BRIEF_PATH:
+            self._wingman_brief(parsed)
+            return
         if parsed.path == _RECOVERY_TRANSITION_PATH:
             self._recovery_transition(parsed)
             return
@@ -131,6 +135,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
 
     def _status(self, parsed):
         del parsed
+        self._json(self._compose_status_payload())
+
+    def _compose_status_payload(self):
         payload = self.snapshot_service.status()
         payload = {} if not isinstance(payload, dict) else dict(payload)
 
@@ -183,7 +190,83 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
                 "active_incident": None,
                 "unavailable": True,
             }
-        self._json(payload)
+        return payload
+
+    def _wingman_brief(self, parsed):
+        del parsed
+
+        try:
+            content_length = int(
+                self.headers.get("Content-Length", "0")
+            )
+        except (TypeError, ValueError):
+            content_length = 0
+
+        if content_length != 0:
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "WINGMAN brief accepts no request body."
+                    ),
+                },
+                status=400,
+            )
+            return
+
+        service = getattr(
+            self.server,
+            "wingman_brief_service",
+            None,
+        )
+
+        if service is None:
+            self._json(
+                {
+                    "schema_version": 1,
+                    "project": "WINGMAN",
+                    "status": "MODEL_UNAVAILABLE",
+                    "advisory": None,
+                    "source_ids": [],
+                    "errors": ["WingmanUnavailable"],
+                    "control_authority": False,
+                    "production_mutation": False,
+                    "advisory_only": True,
+                },
+                status=503,
+            )
+            return
+
+        snapshot = self._compose_status_payload()
+
+        try:
+            payload = service.brief(snapshot)
+        except (
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+            KeyError,
+            AttributeError,
+        ):
+            self._json(
+                {
+                    "schema_version": 1,
+                    "project": "WINGMAN",
+                    "status": "MODEL_UNAVAILABLE",
+                    "advisory": None,
+                    "source_ids": [],
+                    "errors": ["WingmanBriefUnavailable"],
+                    "control_authority": False,
+                    "production_mutation": False,
+                    "advisory_only": True,
+                },
+                status=503,
+            )
+            return
+
+        status = 503 if payload.get("status") == "MODEL_UNAVAILABLE" else 200
+        self._json(payload, status=status)
 
     def _read_recovery_json(self, maximum=2048):
         try:
@@ -304,6 +387,7 @@ class MissionControlServer(_server.MissionControlServer):
         *,
         recovery_session_store=None,
         aegis_reliability=None,
+        wingman_brief_service=None,
         **kwargs,
     ):
         super().__init__(
@@ -315,6 +399,7 @@ class MissionControlServer(_server.MissionControlServer):
             recovery_session_store or RecoverySessionStore()
         )
         self.aegis_reliability = aegis_reliability or AegisReliabilityEngine()
+        self.wingman_brief_service = wingman_brief_service
         self.RequestHandlerClass = MissionControlRequestHandler
 
 
@@ -330,6 +415,7 @@ def serve(
     lifeline_identify_service=None,
     bay_mirror_provider=None,
     recovery_session_store=None,
+    wingman_brief_service=None,
 ):
     server = MissionControlServer(
         (host, int(port)),
@@ -341,6 +427,7 @@ def serve(
         lifeline_identify_service=lifeline_identify_service,
         bay_mirror_provider=bay_mirror_provider,
         recovery_session_store=recovery_session_store,
+        wingman_brief_service=wingman_brief_service,
     )
     _server._base.LOGGER.info(
         "Mission Control listening on http://%s:%s",
