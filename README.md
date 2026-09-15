@@ -33,6 +33,7 @@ TruePanel began by adapting earlier QNAP LCD utilities, but the current project 
 - System-aware light and dark appearance with the Glass Cockpit visual system
 - Live CPU, memory, network, storage, fan, thermal, service, front-panel, and workload-activity state
 - OBSERVATORY CURRENT ACTIVITY built on the shared status stream, with neutral idle and unavailable states rather than invented activity
+- Cargo Bay visibility into recent Sonarr/Radarr arrivals, intake state, current-file resolution, and evidence-backed independent backup status
 - SENTINEL Flight Director impact explanations with bounded recovery references and explicit evidence limits
 - Responsive single-column behavior designed to preserve operator usability on phones
 - Virtual Front Panel that follows the same dispatcher as the physical buttons
@@ -209,6 +210,7 @@ See the [CLI Reference](docs/CLI.md), [Upgrade and Rollback Guide](docs/UPGRADIN
 
 - [Documentation map](docs/README.md)
 - [Mission Control and reliability](docs/MISSION_CONTROL.md)
+- [Cargo Bay](docs/CARGO_BAY.md)
 - [Installation](docs/INSTALLATION.md)
 - [Upgrade and rollback](docs/UPGRADING.md)
 - [Architecture](docs/ARCHITECTURE.md)
