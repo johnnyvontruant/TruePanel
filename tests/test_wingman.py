@@ -243,6 +243,23 @@ def test_status_sources_ignore_unknown_sections_and_bound_content():
     assert "must-not-enter-wingman" not in published
 
 
+def test_status_sources_skip_non_json_objects_instead_of_stringifying_them():
+    class SecretObject:
+        def __str__(self):
+            return "secret-from-object-stringification"
+
+    sources = build_status_sources(
+        {
+            "system": SecretObject(),
+            "storage": {"pool": "ONLINE"},
+        }
+    )
+    published = json.dumps([item.as_dict() for item in sources])
+
+    assert {item.source_id for item in sources} == {"status:storage"}
+    assert "secret-from-object-stringification" not in published
+
+
 def test_manual_loader_uses_only_allowlisted_files(tmp_path: Path):
     (tmp_path / "MISSION_CONTROL.md").write_text(
         "# Mission Control\n\n## Storage\nSMART guidance and physical service holds.\n",
