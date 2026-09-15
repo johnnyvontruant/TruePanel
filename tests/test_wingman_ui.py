@@ -56,3 +56,34 @@ def test_pathfinder_serves_and_injects_wingman_ui():
     assert 'b\'\\n<script src="/wingman.js" defer></script>\\n\'' in source
     assert 'if parsed.path == f"/{_WINGMAN_SCRIPT}":' in source
     assert "if _WINGMAN_MARKER not in body:" in source
+
+
+def test_wingman_ui_has_mode_aware_compact_presentation():
+    source = _ui_source()
+
+    assert 'data-wingman-state="standby"' in source
+    assert 'data-wingman-state="ready"' in source
+    assert 'body[data-mission-mode="pilot"]' in source
+    assert ".wm-columns" in source
+    assert ".wm-uncertainty" in source
+
+    # Flight Engineer is the default/full presentation. Pilot mode
+    # applies only narrowing overrides.
+    assert 'setWingmanState(view,"standby")' in source
+    assert 'setWingmanState(view,"busy")' in source
+    assert 'setWingmanState(view,"ready")' in source
+    assert 'setWingmanState(view,"hold")' in source
+
+
+def test_wingman_busy_state_reports_elapsed_time_without_fake_progress():
+    source = _ui_source()
+
+    assert "REVIEWING VERIFIED INSTRUMENTS" in source
+    assert 'class="wm-elapsed"' in source
+    assert "performance.now()" in source
+    assert "window.setTimeout(updateElapsed,1000)" in source
+    assert "elapsedTimerActive=false" in source
+
+    assert "progress" not in source.lower()
+    assert "percent complete" not in source.lower()
+    assert "setInterval(" not in source

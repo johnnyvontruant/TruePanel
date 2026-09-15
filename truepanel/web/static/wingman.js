@@ -239,6 +239,56 @@ function installStyle(){
     outline:3px solid var(--warn);
     outline-offset:3px;
 }
+
+/* Pilot mode keeps WINGMAN glanceable. Flight Engineer retains
+   the complete advisory instrument. */
+body[data-mission-mode="pilot"] #${VIEW_ID}{
+    padding:.68rem .85rem;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID} .wm-head{
+    min-height:40px;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID} .wm-title small{
+    font-size:.58rem;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID} .wm-title h3{
+    margin:.08rem 0 0;
+    font-size:.78rem;
+    color:var(--muted);
+}
+body[data-mission-mode="pilot"] #${VIEW_ID} .wm-authority{
+    display:none;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="standby"] .wm-body,
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="standby"] .wm-footer{
+    display:none;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-columns,
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-uncertainty,
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-footer{
+    display:none;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-result{
+    margin-top:.55rem;
+    gap:.4rem;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-summary{
+    padding:.55rem .65rem;
+    font-size:.72rem;
+}
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="busy"] .wm-footer,
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="hold"] .wm-footer{
+    display:none;
+}
+.wm-elapsed{
+    display:inline-block;
+    margin-top:.35rem;
+    color:var(--accent);
+    font-size:.63rem;
+    font-weight:850;
+    letter-spacing:.05em;
+}
+
 @media(max-width:760px){
     .wm-head{
         align-items:flex-start;
@@ -361,6 +411,10 @@ function failureMessage(payload,responseStatus){
     return `WINGMAN unavailable · HTTP ${responseStatus}`;
 }
 
+function setWingmanState(view,state){
+    view.dataset.wingmanState=state;
+}
+
 function install(){
     installStyle();
 
@@ -381,6 +435,7 @@ function install(){
     const view=document.createElement("article");
     view.id=VIEW_ID;
     view.className="card";
+    setWingmanState(view,"standby");
     view.setAttribute(
         "aria-label",
         "WINGMAN advisory copilot"
@@ -429,15 +484,39 @@ function install(){
         button.setAttribute("aria-busy","true");
         button.textContent="BRIEFING…";
 
+        setWingmanState(view,"busy");
+
         body.innerHTML=`
             <div class="wm-state busy">
-                <strong>WINGMAN · ANALYZING VERIFIED INSTRUMENTS</strong>
+                <strong>WINGMAN · REVIEWING VERIFIED INSTRUMENTS</strong>
                 <p>
                     Local advisory inference is running on demand.
                     Mission Control remains authoritative.
                 </p>
+                <span class="wm-elapsed">0s elapsed</span>
             </div>
         `;
+
+        const startedAt=performance.now();
+        let elapsedTimerActive=true;
+
+        const updateElapsed=()=>{
+            if(!elapsedTimerActive) return;
+
+            const elapsedNode=body.querySelector(".wm-elapsed");
+
+            if(elapsedNode){
+                const seconds=Math.floor(
+                    (performance.now()-startedAt)/1000
+                );
+
+                elapsedNode.textContent=`${seconds}s elapsed`;
+            }
+
+            window.setTimeout(updateElapsed,1000);
+        };
+
+        updateElapsed();
 
         try{
             const response=await fetch(
@@ -480,8 +559,11 @@ function install(){
             }
 
             body.innerHTML=advisoryMarkup(payload);
+            setWingmanState(view,"ready");
 
         }catch(error){
+            setWingmanState(view,"hold");
+
             body.innerHTML=`
                 <div class="wm-state hold">
                     <strong>WINGMAN · UNAVAILABLE</strong>
@@ -498,6 +580,7 @@ function install(){
                 </div>
             `;
         }finally{
+            elapsedTimerActive=false;
             button.disabled=false;
             button.removeAttribute("aria-busy");
             button.textContent="BRIEF ME";
