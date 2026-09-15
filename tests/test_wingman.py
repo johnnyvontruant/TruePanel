@@ -15,6 +15,11 @@ from truepanel.wingman import (
     rank_sources,
 )
 
+_GUIDANCE_CONTENT = (
+    "storage SMART warning drive replacement physical service HOLD "
+    "operator guidance explain check fix"
+)
+
 
 class FakeProvider:
     def __init__(self, answer=None, error: Exception | None = None):
@@ -71,6 +76,14 @@ def valid_answer(source_id="status:operator_guidance", mode="troubleshoot"):
     }
 
 
+def guidance_source() -> GroundingSource:
+    return source(
+        "status:operator_guidance",
+        "Mission Control Operator Guidance",
+        _GUIDANCE_CONTENT,
+    )
+
+
 def test_retrieval_prefers_matching_source_and_is_deterministic():
     sources = (
         source("manual:fan", "Cooling fan replacement", "fan stall rpm cooling"),
@@ -88,18 +101,11 @@ def test_retrieval_prefers_matching_source_and_is_deterministic():
 def test_service_accepts_only_grounded_advice():
     provider = FakeProvider(valid_answer())
     service = WingmanAdvisoryService(provider)
-    sources = (
-        source(
-            "status:operator_guidance",
-            "Mission Control Operator Guidance",
-            "storage.smart_warning physical service HOLD",
-        ),
-    )
 
     result = service.advise(
         mode=WingmanMode.TROUBLESHOOT,
         question="What is wrong with the drive and what should I do?",
-        sources=sources,
+        sources=(guidance_source(),),
     )
 
     assert result.status == "EXPLAINED"
@@ -117,18 +123,11 @@ def test_service_accepts_only_grounded_advice():
 def test_service_rejects_claim_from_unknown_source():
     answer = valid_answer(source_id="invented:part-catalog")
     service = WingmanAdvisoryService(FakeProvider(answer))
-    sources = (
-        source(
-            "status:operator_guidance",
-            "Mission Control Operator Guidance",
-            "storage.smart_warning physical service HOLD",
-        ),
-    )
 
     result = service.advise(
         mode=WingmanMode.TROUBLESHOOT,
         question="Which replacement drive do I need?",
-        sources=sources,
+        sources=(guidance_source(),),
     )
 
     assert result.status == "HOLD"
@@ -140,18 +139,11 @@ def test_service_rejects_model_that_claims_control_authority():
     answer = valid_answer()
     answer["control_authority"] = True
     service = WingmanAdvisoryService(FakeProvider(answer))
-    sources = (
-        source(
-            "status:operator_guidance",
-            "Mission Control Operator Guidance",
-            "storage.smart_warning physical service HOLD",
-        ),
-    )
 
     result = service.advise(
         mode=WingmanMode.TROUBLESHOOT,
         question="Fix it for me",
-        sources=sources,
+        sources=(guidance_source(),),
     )
 
     assert result.status == "HOLD"
@@ -162,18 +154,11 @@ def test_service_rejects_missing_required_fields():
     answer = valid_answer()
     del answer["uncertainty"]
     service = WingmanAdvisoryService(FakeProvider(answer))
-    sources = (
-        source(
-            "status:operator_guidance",
-            "Mission Control Operator Guidance",
-            "storage.smart_warning physical service HOLD",
-        ),
-    )
 
     result = service.advise(
         mode=WingmanMode.TROUBLESHOOT,
         question="What should I check?",
-        sources=sources,
+        sources=(guidance_source(),),
     )
 
     assert result.status == "HOLD"
@@ -185,18 +170,11 @@ def test_service_rejects_malformed_nested_response():
     answer = valid_answer()
     answer["observations"] = "not-an-array"
     service = WingmanAdvisoryService(FakeProvider(answer))
-    sources = (
-        source(
-            "status:operator_guidance",
-            "Mission Control Operator Guidance",
-            "storage.smart_warning physical service HOLD",
-        ),
-    )
 
     result = service.advise(
         mode=WingmanMode.TROUBLESHOOT,
         question="Explain the warning",
-        sources=sources,
+        sources=(guidance_source(),),
     )
 
     assert result.status == "HOLD"
