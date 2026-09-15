@@ -27,6 +27,12 @@ _RECOVERY_TAG = (
 )
 _RECOVERY_TRANSITION_PATH = "/api/v1/recovery/transition"
 _WINGMAN_BRIEF_PATH = "/api/v1/wingman/brief"
+_WINGMAN_SCRIPT = "wingman.js"
+_WINGMAN_MARKER = b"<!-- truepanel-wingman -->"
+_WINGMAN_TAG = (
+    _WINGMAN_MARKER
+    + b'\n<script src="/wingman.js" defer></script>\n'
+)
 _RECOVERY_TRANSITION_INTENT = "pathfinder-recovery-transition"
 _RECOVERY_ACTIONS = {
     "begin_recovery": ("reviewing", "operator_began_recovery"),
@@ -71,6 +77,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             return
         if parsed.path == f"/{_THEME_TOGGLE_SYNC_SCRIPT}":
             self._static_script(_THEME_TOGGLE_SYNC_SCRIPT, "theme_toggle_sync_unavailable")
+            return
+        if parsed.path == f"/{_WINGMAN_SCRIPT}":
+            self._static_script(_WINGMAN_SCRIPT, "wingman_ui_unavailable")
             return
         super().do_GET()
 
@@ -124,6 +133,8 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             tags += _RELIABILITY_TAG
         if _THEME_TOGGLE_SYNC_MARKER not in body:
             tags += _THEME_TOGGLE_SYNC_TAG
+        if _WINGMAN_MARKER not in body:
+            tags += _WINGMAN_TAG
 
         if tags:
             if b"</body>" in body:
