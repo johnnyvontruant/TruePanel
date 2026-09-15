@@ -11,6 +11,12 @@ from pathlib import Path
 from truepanel.activity.runtime import activity_providers_from_environment
 from truepanel.config.loader import load_config
 from truepanel.paths import installation_root
+from truepanel.wingman.runtime import (
+    LlamaRuntimeConfig,
+    WingmanLocalRuntime,
+)
+from truepanel.wingman.runtime_advisory import WingmanRuntimeAdvisory
+from truepanel.wingman.web import WingmanBriefService
 
 from .observatory_snapshot import ObservatorySnapshotService
 from .pathfinder_server import serve
@@ -18,6 +24,105 @@ from .pathfinder_server import serve
 
 class ServiceConfigurationError(ValueError):
     """Raised when Mission Control service settings are invalid."""
+
+
+@dataclass(frozen=True)
+class WingmanServiceSettings:
+    """Explicit opt-in settings for on-demand local WINGMAN inference."""
+
+    enabled: bool = False
+    server_path: Path | None = None
+    model_path: Path | None = None
+
+    @classmethod
+    def from_environment(
+        cls,
+        environment: Mapping[str, str] | None = None,
+    ):
+        values = environment or os.environ
+
+        raw_enabled = values.get(
+            "TRUEPANEL_WINGMAN_ENABLED",
+            "false",
+        ).strip().lower()
+
+        if raw_enabled not in {
+            "0",
+            "1",
+            "false",
+            "true",
+            "no",
+            "yes",
+            "off",
+            "on",
+        }:
+            raise ServiceConfigurationError(
+                "TRUEPANEL_WINGMAN_ENABLED must be boolean."
+            )
+
+        enabled = raw_enabled in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+        if not enabled:
+            return cls(enabled=False)
+
+        raw_server = values.get(
+            "TRUEPANEL_WINGMAN_SERVER",
+            "",
+        ).strip()
+
+        raw_model = values.get(
+            "TRUEPANEL_WINGMAN_MODEL",
+            "",
+        ).strip()
+
+        if not raw_server:
+            raise ServiceConfigurationError(
+                "TRUEPANEL_WINGMAN_SERVER is required when WINGMAN is enabled."
+            )
+
+        if not raw_model:
+            raise ServiceConfigurationError(
+                "TRUEPANEL_WINGMAN_MODEL is required when WINGMAN is enabled."
+            )
+
+        return cls(
+            enabled=True,
+            server_path=Path(raw_server).expanduser().resolve(),
+            model_path=Path(raw_model).expanduser().resolve(),
+        )
+
+
+def build_wingman_brief_service(
+    settings: WingmanServiceSettings,
+) -> WingmanBriefService | None:
+    """Build the dormant on-demand WINGMAN stack when explicitly enabled."""
+
+    if not settings.enabled:
+        return None
+
+    if settings.server_path is None or settings.model_path is None:
+        raise ServiceConfigurationError(
+            "enabled WINGMAN settings require server and model paths."
+        )
+
+    runtime = WingmanLocalRuntime(
+        LlamaRuntimeConfig(
+            server_path=settings.server_path,
+            model_path=settings.model_path,
+        )
+    )
+
+    advisory = WingmanRuntimeAdvisory(runtime)
+
+    return WingmanBriefService(
+        advisory,
+        docs_root=installation_root() / "docs",
+    )
 
 
 @dataclass(frozen=True)
@@ -122,6 +227,15 @@ def main():
         .from_environment()
     )
 
+    wingman_settings = (
+        WingmanServiceSettings
+        .from_environment()
+    )
+
+    wingman_brief_service = build_wingman_brief_service(
+        wingman_settings
+    )
+
     snapshot_service = ObservatorySnapshotService(
         config=load_config(settings.config_path),
         activity_providers=activity_providers_from_environment(),
@@ -135,6 +249,7 @@ def main():
         ),
         config_path=settings.config_path,
         snapshot_service=snapshot_service,
+        wingman_brief_service=wingman_brief_service,
     )
 
 

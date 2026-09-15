@@ -67,7 +67,7 @@ def test_hangar_closed_experiment_and_evidence_agree():
     assert evidence["corpus"]["total"] == 100
     assert status_summary(registry) == {
         "FUTURE": 2,
-        "IN_PROGRESS": 1,
+        "IN_PROGRESS": 2,
         "COMPLETED": 16,
         "FAILED": 2,
     }
