@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.15.1 · refreshed 2026-09-15 · 17 experiment(s)
+Registry version 2026.09.16.1 · refreshed 2026-09-16 · 18 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -139,3 +139,11 @@ The real Lifeline ledger preserved one active recovery through serial-model to W
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Independently review the v2 candidate, bind it and the new evaluator into a successor airworthiness envelope, then rehearse ZFS-member to WWN migration before any deployment decision.
 - Revisit when: candidate receives independent acceptance review; TrueNAS exposes supported passive leaf-vdev GUID; identity mode or storage recovery code changes
+
+## TP-EXP-0030 · AEGIS identity coverage appraisal
+
+The exact candidate reached READY_FOR_INDEPENDENT_REVIEW; five binding and self-promotion challenges held with zero false-ready outcomes, acceptances, or writes.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Complete two-person review of the exact candidate and appraisal, then bind both into a separately reviewed successor AIRWORTHINESS envelope without automatic promotion.
+- Revisit when: PR #155 candidate changes; appraisal policy or evaluator changes; independent review signatures become available; successor AIRWORTHINESS envelope is proposed
