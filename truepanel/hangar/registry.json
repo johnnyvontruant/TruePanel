@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.15.1",
-  "updated_at": "2026-09-15",
+  "registry_version": "2026.09.16.1",
+  "updated_at": "2026-09-16",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -337,6 +337,25 @@
       "revisit_conditions": ["candidate receives independent acceptance review", "TrueNAS exposes supported passive leaf-vdev GUID", "identity mode or storage recovery code changes"],
       "strongest_follow_up": "Independently review the v2 candidate, bind it and the new evaluator into a successor airworthiness envelope, then rehearse ZFS-member to WWN migration before any deployment decision.",
       "freshness": {"reviewed_at": "2026-09-15", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0030", "title": "AEGIS identity coverage appraisal", "state": "COMPLETED",
+      "hypothesis": "An unaccepted identity-aware Recovery Coverage Matrix candidate can be appraised against its exact predecessor, evidence, policy, and evaluator without granting acceptance authority.",
+      "value": "Turns the v2 candidate into content-bound independent-review material while preventing silent schema drift, evidence substitution, or self-promotion.",
+      "prior_art": ["in-toto Attestation Statement v1", "SLSA Verification Summary Attestation v1", "IETF RATS RFC 9334", "TUF trust transitions"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-identity-coverage-appraisal", "pr": 157, "commits": ["dd7c320e954824a4ec7565d24262a95a295f0e5f"]},
+      "protocol": ["preserve accepted matrix v1", "bind accepted predecessor digest", "bind complete v2 candidate digest", "bind identity rehearsal digest", "bind appraisal policy and evaluator implementation", "reject unknown fields and self-promotion", "render incomplete-review boundary"],
+      "fixtures": ["aegis-identity-coverage-appraisal", "tests/test_aegis_coverage_appraisal.py", "truepanel/holodeck/aegis_coverage_appraisal.py"],
+      "success_criteria": ["exact candidate reaches only ready for independent review", "every changed binding holds", "unknown candidate fields hold", "candidate remains unaccepted and uninstalled", "zero false-ready outcomes", "control authority remains false"],
+      "abort_criteria": ["appraisal presented as independent approval", "candidate accepted or installed", "unbound evidence or evaluator accepted", "unknown schema extension ignored", "new key credential service or runtime dependency", "live provider access or production mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-identity-appraisal-v1.json", "sha256": "b1f6e13c4aeb82b405e8ca1329e98f389a1ae867d66e1b664beeb0af7ef7574d"}],
+      "outcome": {"conclusion": "The exact candidate reached READY_FOR_INDEPENDENT_REVIEW; five binding and self-promotion challenges held with zero false-ready outcomes, acceptances, or writes."},
+      "invalidated_assumptions": ["candidate self-digests are sufficient review evidence", "appraisal and acceptance are the same decision", "unknown candidate fields can cross an acceptance boundary silently", "a third-party attestation runtime is required"],
+      "reproduction": ["pytest -q tests/test_aegis_coverage_appraisal.py", "python -c \"from truepanel.holodeck.aegis_coverage_appraisal import run_coverage_appraisal_rehearsal as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["PR #155 candidate changes", "appraisal policy or evaluator changes", "independent review signatures become available", "successor AIRWORTHINESS envelope is proposed"],
+      "strongest_follow_up": "Complete two-person review of the exact candidate and appraisal, then bind both into a separately reviewed successor AIRWORTHINESS envelope without automatic promotion.",
+      "freshness": {"reviewed_at": "2026-09-16", "review_after": "2026-12-31"}
     }
   ]
 }

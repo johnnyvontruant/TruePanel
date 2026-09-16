@@ -15,6 +15,7 @@ from .checkride import compose_storage_checkride
 from .consequences import correlate_consequences
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
+from .coverage_appraisal import appraise_identity_coverage_candidate
 from .flight_director import run_flight_director_proof
 from .identity_coverage import (
     build_identity_coverage_candidate,
@@ -79,6 +80,10 @@ class AegisReliabilityEngine:
         self.identity_coverage_candidate = build_identity_coverage_candidate(
             self.matrix,
             rehearse_identity_coverage_contract(),
+        )
+        self.identity_coverage_appraisal = appraise_identity_coverage_candidate(
+            accepted_matrix=self.matrix,
+            candidate=self.identity_coverage_candidate,
         )
         proof = run_flight_director_proof()
         self.flight_director = {
@@ -342,6 +347,7 @@ class AegisReliabilityEngine:
             },
             "coverage_matrix": self.matrix,
             "coverage_candidate": self.identity_coverage_candidate,
+            "coverage_appraisal": self.identity_coverage_appraisal,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

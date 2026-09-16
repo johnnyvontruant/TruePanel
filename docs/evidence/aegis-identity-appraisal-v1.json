@@ -1,0 +1,89 @@
+{
+  "bindings": {
+    "accepted_matrix_sha256": "8b206f8bfa897eb454f53506301d50384db64ac8d1d2515eb02817f931d2ca98",
+    "appraisal_policy_sha256": "0218671a188754aa554bd9f91502cbbfbc5eca0d3c5e9fa80dec83595807cb5f",
+    "candidate_sha256": "dad5f9cd697c2cb6ecefafc0246bfa1d6de6447b24ac6418633d464c4333b099",
+    "identity_evidence_sha256": "60ef2b5bb3746952ad1a3b5552a63bcb598c9af21c9cd468e45fae08f86ebcb2"
+  },
+  "evidence_sha256": "4e601cad0a4bd046dd95b7e487235b7ba2e3823d13f655a319a3fa35e6ecc1b2",
+  "experiment_id": "TP-EXP-0030",
+  "field_validated": false,
+  "measurements": {
+    "candidate_acceptances": 0,
+    "false_outcomes": 0,
+    "false_ready": 0,
+    "holds": 5,
+    "production_writes": 0,
+    "ready": 1,
+    "runtime_writes": 0,
+    "scenarios": 6
+  },
+  "result": "PASS",
+  "safety": {
+    "automatic_acceptance": false,
+    "control_authority": false,
+    "hardware_actions": 0,
+    "live_provider_access": false,
+    "recovery_actions": 0
+  },
+  "scenarios": [
+    {
+      "actual": "READY_FOR_INDEPENDENT_REVIEW",
+      "expected": "READY_FOR_INDEPENDENT_REVIEW",
+      "failed_conditions": [],
+      "name": "exact-candidate",
+      "reason": "CoverageCandidateAppraised"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "failed_conditions": [
+        "accepted_predecessor",
+        "candidate_contract"
+      ],
+      "name": "accepted-predecessor-drift",
+      "reason": "AcceptedPredecessorMismatch"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "failed_conditions": [
+        "candidate_integrity",
+        "candidate_contract"
+      ],
+      "name": "unknown-candidate-field",
+      "reason": "CandidateDigestMismatch"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "failed_conditions": [
+        "candidate_integrity",
+        "identity_evidence"
+      ],
+      "name": "identity-evidence-drift",
+      "reason": "CandidateDigestMismatch"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "failed_conditions": [
+        "appraiser_integrity"
+      ],
+      "name": "appraiser-implementation-drift",
+      "reason": "AppraiserDigestMismatch"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "failed_conditions": [
+        "candidate_integrity",
+        "candidate_contract"
+      ],
+      "name": "candidate-self-promotion",
+      "reason": "CandidateDigestMismatch"
+    }
+  ],
+  "schema": "truepanel.holodeck-aegis-coverage-appraisal/v1",
+  "simulation": true
+}
