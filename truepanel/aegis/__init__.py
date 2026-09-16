@@ -31,6 +31,13 @@ from .checkride import (
 from .consequences import correlate_consequences
 from .correlation import correlate_incident
 from .coverage import coverage_matrix, validate_recovery_coverage
+from .coverage_appraisal import (
+    APPRAISAL_POLICY_SCHEMA,
+    APPRAISAL_SCHEMA,
+    appraise_identity_coverage_candidate,
+    appraiser_sha256,
+    load_identity_appraisal_policy,
+)
 from .evidence_gate import (
     EvidencePromotionPolicy,
     evaluate_evidence_gate,
@@ -111,6 +118,8 @@ from .stage_witness import witness_validated_stage
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
+    "APPRAISAL_POLICY_SCHEMA",
+    "APPRAISAL_SCHEMA",
     "AegisReliabilityEngine",
     "ACCEPTED_IDENTITY_MODES",
     "BoundedTrueNASQueryCache",
@@ -131,6 +140,8 @@ __all__ = [
     "TrueNASWebSocketReadOnlyClient",
     "TRUST_POLICY_SCHEMA",
     "acceptance_statement",
+    "appraise_identity_coverage_candidate",
+    "appraiser_sha256",
     "bind_platform_witness",
     "build_promotion_request",
     "build_witnessed_promotion_request",
@@ -153,6 +164,7 @@ __all__ = [
     "issue_restore_verification_receipt",
     "issue_platform_witness",
     "load_assurance_envelope",
+    "load_identity_appraisal_policy",
     "normalize_truenas_version",
     "correlate_incident",
     "correlate_consequences",

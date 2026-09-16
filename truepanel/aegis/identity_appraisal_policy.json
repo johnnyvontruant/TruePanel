@@ -1,0 +1,12 @@
+{
+  "accepted_matrix_sha256": "8b206f8bfa897eb454f53506301d50384db64ac8d1d2515eb02817f931d2ca98",
+  "appraiser_sha256": "962071e4d0df4988bb2088375b9eb39c04c9fb171dd62eb773b42b1cd04a975b",
+  "automatic_acceptance": false,
+  "candidate_sha256": "dad5f9cd697c2cb6ecefafc0246bfa1d6de6447b24ac6418633d464c4333b099",
+  "expected_candidate_schema": "truepanel.aegis-recovery-coverage/v2-candidate",
+  "expected_candidate_status": "READY_FOR_OPERATOR_REVIEW",
+  "identity_evidence_sha256": "60ef2b5bb3746952ad1a3b5552a63bcb598c9af21c9cd468e45fae08f86ebcb2",
+  "policy_id": "truepanel.aegis.identity-coverage-review/2026-09-16",
+  "review_required": true,
+  "schema": "truepanel.aegis-coverage-appraisal-policy/v1"
+}

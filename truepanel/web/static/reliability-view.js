@@ -148,6 +148,7 @@ function render(view,payload){
     const incident=reliability?.active_incident||null;
     const matrix=reliability?.coverage_matrix||{};
     const candidate=reliability?.coverage_candidate||{};
+    const appraisal=reliability?.coverage_appraisal||{};
     const summary=reliability?.coverage_summary||{};
     const policy=reliability?.correlation_policy||{};
     const calibration=policy?.calibration||{};
@@ -169,7 +170,8 @@ function render(view,payload){
     const gaps=Number(summary.gaps||0);
     const candidateStatus=candidate?.status||"HOLD";
     const identityCodes=Array.isArray(candidate?.identity_required_codes)?candidate.identity_required_codes:[];
-    const candidatePanel=Object.keys(candidate).length?`<details class="ag-coverage ag-coverage-candidate"><summary>Recovery Coverage Next · Identity <span>${esc(title(candidateStatus))}</span></summary><div class="ag-evidence-metric"><strong>${esc(identityCodes.length)} storage recovery classes identity-bound</strong><br>Serial-model, ZFS-member, and WWN continuity are rehearsed across device-path change. This candidate is not accepted and cannot alter the current airworthiness envelope.<br>Independent review: ${candidate.review_required===true?"REQUIRED":"HOLD"} · Automatic acceptance: ${candidate.automatic_acceptance===false?"DISABLED":"HOLD"} · Control authority: NO</div></details>`:"";
+    const appraisalStatus=appraisal.status||"HOLD";
+    const candidatePanel=Object.keys(candidate).length?`<details class="ag-coverage ag-coverage-candidate"><summary>Recovery Coverage Next · Identity <span>${esc(title(candidateStatus))}</span></summary><div class="ag-evidence-metric"><strong>${esc(identityCodes.length)} storage recovery classes identity-bound</strong><br>Serial-model, ZFS-member, and WWN continuity are rehearsed across device-path change. This candidate is not accepted and cannot alter the current airworthiness envelope.<br>Appraisal: ${esc(title(appraisalStatus))} · Independent review: ${candidate.review_required===true?"REQUIRED":"HOLD"} · Automatic acceptance: ${candidate.automatic_acceptance===false?"DISABLED":"HOLD"} · Control authority: NO</div><div class="ag-evidence-metric"><strong>Content bindings</strong><br>Accepted predecessor, candidate, identity evidence, appraisal policy, and evaluator implementation must all match. Independent review complete: ${appraisal.independent_review_complete===true?"YES":"NO"} · Candidate accepted: ${appraisal.candidate_accepted===true?"YES":"NO"}</div></details>`:"";
     const roleGate=passiveEvidence.role_verification||{};
     const receiptStore=passiveEvidence.receipt_store||{};
     const passiveCache=passiveEvidence.cache||{};
