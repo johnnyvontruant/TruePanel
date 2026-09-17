@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.16.1",
-  "updated_at": "2026-09-16",
+  "registry_version": "2026.09.17.1",
+  "updated_at": "2026-09-17",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -356,6 +356,25 @@
       "revisit_conditions": ["PR #155 candidate changes", "appraisal policy or evaluator changes", "independent review signatures become available", "successor AIRWORTHINESS envelope is proposed"],
       "strongest_follow_up": "Complete two-person review of the exact candidate and appraisal, then bind both into a separately reviewed successor AIRWORTHINESS envelope without automatic promotion.",
       "freshness": {"reviewed_at": "2026-09-16", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0031", "title": "AEGIS identity coverage review handoff", "state": "COMPLETED",
+      "hypothesis": "Two independent operators can sign one exact appraised Recovery Coverage candidate without granting acceptance, envelope-creation, promotion, or control authority.",
+      "value": "Turns content-bound appraisal material into an externally reviewable decision while keeping candidate acceptance and successor-envelope drafting separate.",
+      "prior_art": ["OpenSSH SSHSIG and allowed-signers", "in-toto functionary thresholds", "TUF threshold roles and expiry", "Sigstore Cosign bundles"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-identity-review-handoff", "pr": null, "commits": []},
+      "protocol": ["bind accepted matrix, candidate, appraisal, and appraisal policy", "prepare unsigned portable packet", "require two distinct current Ed25519 reviewers", "verify fixed SSHSIG namespace", "expire receipt within 24 hours", "stop at eligibility to draft successor envelope", "render unsigned handoff boundary"],
+      "fixtures": ["aegis-identity-review", "tests/test_aegis_identity_review.py", "truepanel/holodeck/aegis_identity_review.py"],
+      "success_criteria": ["exact two-reviewer receipt reaches only eligible for successor-envelope draft", "one or duplicate reviewer holds", "tamper expiry namespace roster and policy challenges hold", "zero false eligibility", "candidate remains unaccepted", "no successor envelope or production key exists"],
+      "abort_criteria": ["signature treated as candidate acceptance", "TruePanel stores a production private key or signer", "one identity satisfies quorum twice", "unknown packet field accepted", "new crypto or hosted dependency", "live provider access or production mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-identity-review-v1.json", "sha256": "aaddd3dca8c27c104ab7890fadb4c2bc960bff57765ff7b6205020c3701f1406"}],
+      "outcome": {"conclusion": "Disposable HoloDeck keys proved one exact two-reviewer path and eight HOLD paths with zero false eligibility, candidate acceptances, successor envelopes, runtime writes, or production writes."},
+      "invalidated_assumptions": ["the older promotion receipt is the right semantic boundary", "content hashes authenticate reviewers", "two labels on one key provide separation of duty", "a heavyweight attestation runtime is required"],
+      "reproduction": ["pytest -q tests/test_aegis_identity_review.py", "python -c \"from truepanel.holodeck.aegis_identity_review import run_identity_review_rehearsal as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["PR #155 or #157 changes", "operator public-key lifecycle is defined", "review signatures become available", "successor AIRWORTHINESS envelope draft is proposed"],
+      "strongest_follow_up": "Obtain two operator-owned signatures over the exact packet, then separately draft and rehearse a successor AIRWORTHINESS envelope without automatic acceptance.",
+      "freshness": {"reviewed_at": "2026-09-17", "review_after": "2026-12-31"}
     }
   ]
 }
