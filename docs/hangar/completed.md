@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.16.1 · refreshed 2026-09-16 · 18 experiment(s)
+Registry version 2026.09.17.1 · refreshed 2026-09-17 · 19 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -147,3 +147,11 @@ The exact candidate reached READY_FOR_INDEPENDENT_REVIEW; five binding and self-
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Complete two-person review of the exact candidate and appraisal, then bind both into a separately reviewed successor AIRWORTHINESS envelope without automatic promotion.
 - Revisit when: PR #155 candidate changes; appraisal policy or evaluator changes; independent review signatures become available; successor AIRWORTHINESS envelope is proposed
+
+## TP-EXP-0031 · AEGIS identity coverage review handoff
+
+Disposable HoloDeck keys proved one exact two-reviewer path and eight HOLD paths with zero false eligibility, candidate acceptances, successor envelopes, runtime writes, or production writes.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Obtain two operator-owned signatures over the exact packet, then separately draft and rehearse a successor AIRWORTHINESS envelope without automatic acceptance.
+- Revisit when: PR #155 or #157 changes; operator public-key lifecycle is defined; review signatures become available; successor AIRWORTHINESS envelope draft is proposed

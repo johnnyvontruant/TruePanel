@@ -1,0 +1,83 @@
+{
+  "experiment_id": "TP-EXP-0031",
+  "field_validated": false,
+  "measurements": {
+    "candidate_acceptances": 0,
+    "eligible": 1,
+    "false_eligible": 0,
+    "false_outcomes": 0,
+    "holds": 8,
+    "production_writes": 0,
+    "runtime_writes": 0,
+    "scenarios": 9,
+    "successor_envelopes_created": 0
+  },
+  "result": "PASS",
+  "safety": {
+    "automatic_acceptance": false,
+    "control_authority": false,
+    "hardware_actions": 0,
+    "live_provider_access": false,
+    "private_keys": "disposable-holodeck-only",
+    "production_keys": 0,
+    "recovery_actions": 0
+  },
+  "scenarios": [
+    {
+      "actual": "ELIGIBLE_FOR_SUCCESSOR_ENVELOPE_DRAFT",
+      "expected": "ELIGIBLE_FOR_SUCCESSOR_ENVELOPE_DRAFT",
+      "name": "two-independent-reviewers",
+      "reason": "IndependentCoverageReviewVerified"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "one-reviewer",
+      "reason": "IndependentReviewQuorumMissing"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "duplicate-reviewer",
+      "reason": "IndependentReviewQuorumMissing"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "expired-review",
+      "reason": "ReviewExpiredOrInvalid"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "packet-extension",
+      "reason": "ReviewPacketShapeInvalid"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "candidate-tamper",
+      "reason": "ReviewSubjectBindingInvalid"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "namespace-mismatch",
+      "reason": "IndependentReviewQuorumMissing"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "unsafe-roster-permissions",
+      "reason": "IndependentReviewQuorumMissing"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "duplicate-policy-identity",
+      "reason": "TwoPersonPolicyInvalid"
+    }
+  ],
+  "schema": "truepanel.holodeck-aegis-identity-review/v1",
+  "simulation": true
+}
