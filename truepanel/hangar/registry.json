@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.17.1",
-  "updated_at": "2026-09-17",
+  "registry_version": "2026.09.18.1",
+  "updated_at": "2026-09-18",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -375,6 +375,25 @@
       "revisit_conditions": ["PR #155 or #157 changes", "operator public-key lifecycle is defined", "review signatures become available", "successor AIRWORTHINESS envelope draft is proposed"],
       "strongest_follow_up": "Obtain two operator-owned signatures over the exact packet, then separately draft and rehearse a successor AIRWORTHINESS envelope without automatic acceptance.",
       "freshness": {"reviewed_at": "2026-09-17", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0032", "title": "AEGIS identity coverage successor envelope draft", "state": "COMPLETED",
+      "hypothesis": "An independently reviewed identity-aware Recovery Coverage Matrix can be bound into an expiring successor AIRWORTHINESS draft without accepting, installing, or deploying it.",
+      "value": "Carries exact candidate, appraisal, review, predecessor, evaluator, and runtime subjects to the final independent envelope-review boundary.",
+      "prior_art": ["TUF successive root rotation", "Uptane repository separation", "in-toto subject binding", "SLSA verification summaries"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-identity-envelope-draft", "pr": null, "commits": []},
+      "protocol": ["require eligible two-person review result", "bind review packet and receipt digests", "replace only the coverage subject", "bind new evaluator and review modules", "preserve all accepted runtime subjects", "produce an unaccepted expiring draft", "evaluate the draft with the existing requalification verifier"],
+      "fixtures": ["aegis-coverage-envelope", "tests/test_aegis_coverage_envelope.py", "truepanel/holodeck/aegis_coverage_envelope.py"],
+      "success_criteria": ["exact reviewed evidence creates one draft", "unsigned or spoofed review holds", "candidate appraisal coverage and subject drift hold", "automatic acceptance and expiry hold", "zero false-ready outcomes", "draft remains unaccepted and uninstalled"],
+      "abort_criteria": ["signature interpreted as envelope acceptance", "predecessor runtime subject omitted", "unknown evidence accepted", "candidate or appraisal substitution", "production key or signer added", "live provider access or production mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-coverage-envelope-v1.json", "sha256": "f2911671a590ea35290d8f18cb0aa90c9a204f40c4d5acfa849dc8fe202b44b3"}],
+      "outcome": {"conclusion": "One exact reviewed path produced an unaccepted draft ready only for independent envelope review; eight unsigned, spoofed, tampered, drifted, auto-accepted, and expired paths held with zero false-ready outcomes or writes."},
+      "invalidated_assumptions": ["coverage acceptance and envelope drafting are one decision", "reviewer count alone proves a valid receipt", "unchanged runtime subjects need not be rebound", "a draft can inherit acceptance from its predecessor"],
+      "reproduction": ["pytest -q tests/test_aegis_coverage_envelope.py", "python -c \"from truepanel.holodeck.aegis_coverage_envelope import run_coverage_envelope_rehearsal as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["PR #155 #157 or #158 changes", "two operator-owned signatures become available", "coverage evaluator or runtime subject changes", "successor envelope receives independent review"],
+      "strongest_follow_up": "Obtain the two operator signatures, reproduce this exact draft, and independently review it before any separate manual acceptance or deployment decision.",
+      "freshness": {"reviewed_at": "2026-09-18", "review_after": "2026-12-31"}
     }
   ]
 }

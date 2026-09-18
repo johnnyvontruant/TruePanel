@@ -10,12 +10,13 @@ from typing import Any
 
 from truepanel.oracle import OracleEngine
 
-from .assurance import evaluate_airworthiness
+from .assurance import evaluate_airworthiness, load_assurance_envelope
 from .checkride import compose_storage_checkride
 from .consequences import correlate_consequences
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
 from .coverage_appraisal import appraise_identity_coverage_candidate
+from .coverage_envelope import prepare_coverage_successor_draft
 from .coverage_review import prepare_identity_review_handoff
 from .flight_director import run_flight_director_proof
 from .identity_coverage import (
@@ -90,6 +91,15 @@ class AegisReliabilityEngine:
             accepted_matrix=self.matrix,
             candidate=self.identity_coverage_candidate,
             appraisal=self.identity_coverage_appraisal,
+        )
+        self.identity_coverage_envelope_draft = prepare_coverage_successor_draft(
+            accepted_envelope=load_assurance_envelope(),
+            accepted_matrix=self.matrix,
+            candidate_matrix=self.identity_coverage_candidate,
+            appraisal=self.identity_coverage_appraisal,
+            review_result=self.identity_coverage_review,
+            issued_at="2026-09-18T04:05:00Z",
+            expires_at="2026-12-15T04:05:00Z",
         )
         proof = run_flight_director_proof()
         self.flight_director = {
@@ -355,6 +365,7 @@ class AegisReliabilityEngine:
             "coverage_candidate": self.identity_coverage_candidate,
             "coverage_appraisal": self.identity_coverage_appraisal,
             "coverage_review": self.identity_coverage_review,
+            "coverage_envelope_draft": self.identity_coverage_envelope_draft,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

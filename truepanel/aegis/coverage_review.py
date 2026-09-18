@@ -313,6 +313,8 @@ def evaluate_identity_review_receipt(
         "schema": REVIEW_RECEIPT_SCHEMA,
         "status": "ELIGIBLE_FOR_SUCCESSOR_ENVELOPE_DRAFT" if not failed else "HOLD",
         "reason": "IndependentCoverageReviewVerified" if not failed else failed[0]["reason"],
+        "packet_sha256": semantic_sha256(packet),
+        "receipt_sha256": semantic_sha256(receipt),
         "conditions": conditions,
         "valid_reviewer_count": len(valid_reviewers),
         "required_reviewer_count": 2,

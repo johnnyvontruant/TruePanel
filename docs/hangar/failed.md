@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.17.1 · refreshed 2026-09-17 · 2 experiment(s)
+Registry version 2026.09.18.1 · refreshed 2026-09-18 · 2 experiment(s)
 
 ## TP-EXP-0009 · Signal-count shared-cause heuristic
 

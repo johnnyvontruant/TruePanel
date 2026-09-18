@@ -1,0 +1,82 @@
+{
+  "experiment_id": "TP-EXP-0032",
+  "field_validated": false,
+  "measurements": {
+    "draft_artifacts_created": 1,
+    "envelopes_accepted": 0,
+    "envelopes_installed": 0,
+    "false_outcomes": 0,
+    "false_ready": 0,
+    "holds": 8,
+    "production_writes": 0,
+    "ready": 1,
+    "runtime_writes": 0,
+    "scenarios": 9
+  },
+  "result": "PASS",
+  "safety": {
+    "automatic_acceptance": false,
+    "control_authority": false,
+    "hardware_actions": 0,
+    "live_provider_access": false,
+    "production_keys": 0
+  },
+  "scenarios": [
+    {
+      "actual": "READY_FOR_INDEPENDENT_ENVELOPE_REVIEW",
+      "expected": "READY_FOR_INDEPENDENT_ENVELOPE_REVIEW",
+      "name": "reviewed-exact-draft",
+      "reason": "SuccessorEvidenceComplete"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "unsigned-review-handoff",
+      "reason": "IndependentReviewRequired"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "review-count-spoof",
+      "reason": "IndependentReviewRequired"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "candidate-after-review-tamper",
+      "reason": "CoverageCandidateInvalid"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "appraisal-after-review-tamper",
+      "reason": "CoverageAppraisalInvalid"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "draft-coverage-drift",
+      "reason": "CoverageDrift"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "draft-subject-drift",
+      "reason": "DigestDrift"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "draft-automatic-acceptance",
+      "reason": "AutomaticAcceptanceForbidden"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "draft-expired",
+      "reason": "ValidityWindowInvalid"
+    }
+  ],
+  "schema": "truepanel.holodeck-aegis-coverage-envelope/v1",
+  "simulation": true
+}
