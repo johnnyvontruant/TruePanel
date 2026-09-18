@@ -38,6 +38,10 @@ from .coverage_appraisal import (
     appraiser_sha256,
     load_identity_appraisal_policy,
 )
+from .coverage_envelope import (
+    COVERAGE_ENVELOPE_DRAFT_SCHEMA,
+    prepare_coverage_successor_draft,
+)
 from .coverage_review import (
     REVIEW_DECISION,
     REVIEW_PACKET_SCHEMA,
@@ -130,6 +134,7 @@ __all__ = [
     "ACCEPTANCE_SCHEMA",
     "APPRAISAL_POLICY_SCHEMA",
     "APPRAISAL_SCHEMA",
+    "COVERAGE_ENVELOPE_DRAFT_SCHEMA",
     "REVIEW_DECISION",
     "REVIEW_PACKET_SCHEMA",
     "REVIEW_RECEIPT_SCHEMA",
@@ -183,6 +188,7 @@ __all__ = [
     "load_identity_appraisal_policy",
     "normalize_truenas_version",
     "prepare_identity_review_handoff",
+    "prepare_coverage_successor_draft",
     "correlate_incident",
     "correlate_consequences",
     "coverage_matrix",
