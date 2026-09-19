@@ -18,6 +18,7 @@ from .coverage import coverage_matrix
 from .coverage_appraisal import appraise_identity_coverage_candidate
 from .coverage_envelope import prepare_coverage_successor_draft
 from .coverage_review import prepare_identity_review_handoff
+from .envelope_review import prepare_envelope_review_handoff
 from .flight_director import run_flight_director_proof
 from .identity_coverage import (
     build_identity_coverage_candidate,
@@ -100,6 +101,14 @@ class AegisReliabilityEngine:
             review_result=self.identity_coverage_review,
             issued_at="2026-09-18T04:05:00Z",
             expires_at="2026-12-15T04:05:00Z",
+        )
+        self.identity_envelope_review = prepare_envelope_review_handoff(
+            accepted_envelope=load_assurance_envelope(),
+            accepted_matrix=self.matrix,
+            candidate=self.identity_coverage_candidate,
+            appraisal=self.identity_coverage_appraisal,
+            coverage_review=self.identity_coverage_review,
+            draft_result=self.identity_coverage_envelope_draft,
         )
         proof = run_flight_director_proof()
         self.flight_director = {
@@ -366,6 +375,7 @@ class AegisReliabilityEngine:
             "coverage_appraisal": self.identity_coverage_appraisal,
             "coverage_review": self.identity_coverage_review,
             "coverage_envelope_draft": self.identity_coverage_envelope_draft,
+            "coverage_envelope_review": self.identity_envelope_review,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

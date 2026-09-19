@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.18.1 · refreshed 2026-09-18 · 20 experiment(s)
+Registry version 2026.09.19.1 · refreshed 2026-09-19 · 21 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -163,3 +163,11 @@ One exact reviewed path produced an unaccepted draft ready only for independent 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Obtain the two operator signatures, reproduce this exact draft, and independently review it before any separate manual acceptance or deployment decision.
 - Revisit when: PR #155 #157 or #158 changes; two operator-owned signatures become available; coverage evaluator or runtime subject changes; successor envelope receives independent review
+
+## TP-EXP-0033 · AEGIS successor envelope independent review
+
+Disposable HoloDeck keys proved one exact independent-review path and nine HOLD paths with zero false eligibility, envelope acceptances, installations, runtime writes, or production writes.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Obtain two operator-owned signatures over the exact envelope-review packet, then design a separately confirmed manual acceptance record that cannot install or deploy the envelope.
+- Revisit when: PR #159 draft changes; operator public-key lifecycle is defined; two operator-owned envelope-review signatures become available; manual envelope acceptance contract is proposed
