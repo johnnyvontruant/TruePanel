@@ -122,6 +122,46 @@ def test_recovery_clears_both_red_channels():
     assert controller.active_bays == ()
 
 
+def test_transient_warning_priority_does_not_latch_healthy_bay():
+    commands = []
+    controller = TVS671BayLedController(
+        command_writer=commands.append
+    )
+    indicator = StorageBayIndicator(controller)
+
+    assert indicator(
+        event(
+            bay=6,
+            priority=Priority.WARNING,
+            change_type="temperature_increased",
+            new_state="healthy",
+        )
+    )
+
+    assert commands == [0x0D, 0x8D]
+    assert controller.active_bays == ()
+
+
+def test_missing_drive_still_uses_steady_error_channel():
+    commands = []
+    controller = TVS671BayLedController(
+        command_writer=commands.append
+    )
+    indicator = StorageBayIndicator(controller)
+
+    assert indicator(
+        event(
+            bay=3,
+            priority=Priority.CRITICAL,
+            change_type="device_missing",
+            new_state=None,
+        )
+    )
+
+    assert commands == [0x07, 0x86]
+    assert controller.active_bays == ()
+
+
 def test_clear_on_start_clears_identify_and_error_channels():
     commands = []
     controller = TVS671BayLedController(
