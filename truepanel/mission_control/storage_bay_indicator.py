@@ -8,7 +8,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from .constants import Category, Priority
+from .constants import Category
 
 LOGGER = logging.getLogger(__name__)
 
@@ -87,12 +87,12 @@ class StorageBayIndicator:
             metadata.get("new_state", "")
         ).strip().lower()
 
-        priority = getattr(
-            event,
-            "priority",
-            Priority.NONE,
-        )
-
+        # Event priority describes the importance of a single observation,
+        # not a persistent drive-health state. For example, a five-degree
+        # temperature jump is emitted at WARNING priority even when the drive
+        # remains healthy. Driving a persistent LED from that priority latches
+        # the identify channel because no later health-state recovery event is
+        # guaranteed. Keep physical LEDs aligned with persistent health state.
         clear = (
             change_type == "recovered"
             or new_state == "healthy"
@@ -102,17 +102,14 @@ class StorageBayIndicator:
             not clear
             and (
                 new_state == "critical"
-                or priority >= Priority.CRITICAL
+                or change_type == "device_missing"
             )
         )
 
         warning = (
             not clear
             and not critical
-            and (
-                new_state == "warning"
-                or priority >= Priority.WARNING
-            )
+            and new_state == "warning"
         )
 
         if not clear and not warning and not critical:
