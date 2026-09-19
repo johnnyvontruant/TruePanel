@@ -1,0 +1,89 @@
+{
+  "experiment_id": "TP-EXP-0033",
+  "field_validated": false,
+  "measurements": {
+    "candidate_acceptances": 0,
+    "eligible": 1,
+    "envelopes_accepted": 0,
+    "envelopes_installed": 0,
+    "false_eligible": 0,
+    "false_outcomes": 0,
+    "holds": 9,
+    "production_writes": 0,
+    "runtime_writes": 0,
+    "scenarios": 10
+  },
+  "result": "PASS",
+  "safety": {
+    "automatic_acceptance": false,
+    "control_authority": false,
+    "hardware_actions": 0,
+    "live_provider_access": false,
+    "manual_acceptance_required": true,
+    "production_keys": 0
+  },
+  "scenarios": [
+    {
+      "actual": "ELIGIBLE_FOR_MANUAL_ENVELOPE_ACCEPTANCE",
+      "expected": "ELIGIBLE_FOR_MANUAL_ENVELOPE_ACCEPTANCE",
+      "name": "exact-independent-review",
+      "reason": "IndependentEnvelopeReviewVerified"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "one-reviewer",
+      "reason": "EnvelopeReviewSignaturesInvalid"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "expired-receipt",
+      "reason": "EnvelopeReviewExpiredOrInvalid"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "packet-extension",
+      "reason": "EnvelopeReviewPacketShapeInvalid"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "draft-after-review-tamper",
+      "reason": "EnvelopeDraftNotReviewable"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "automatic-acceptance",
+      "reason": "EnvelopeDraftNotReviewable"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "candidate-substitution",
+      "reason": "EnvelopeDraftNotReviewable"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "predecessor-substitution",
+      "reason": "EnvelopeDraftNotReviewable"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "namespace-mismatch",
+      "reason": "EnvelopeReviewQuorumMissing"
+    },
+    {
+      "actual": "HOLD",
+      "expected": "HOLD",
+      "name": "duplicate-policy-identity",
+      "reason": "EnvelopeReviewPolicyInvalid"
+    }
+  ],
+  "schema": "truepanel.holodeck-aegis-envelope-review/v1",
+  "simulation": true
+}

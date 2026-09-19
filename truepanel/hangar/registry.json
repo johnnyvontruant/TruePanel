@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.18.1",
-  "updated_at": "2026-09-18",
+  "registry_version": "2026.09.19.1",
+  "updated_at": "2026-09-19",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -394,6 +394,25 @@
       "revisit_conditions": ["PR #155 #157 or #158 changes", "two operator-owned signatures become available", "coverage evaluator or runtime subject changes", "successor envelope receives independent review"],
       "strongest_follow_up": "Obtain the two operator signatures, reproduce this exact draft, and independently review it before any separate manual acceptance or deployment decision.",
       "freshness": {"reviewed_at": "2026-09-18", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0033", "title": "AEGIS successor envelope independent review", "state": "COMPLETED",
+      "hypothesis": "Two independent operators can review one exact successor AIRWORTHINESS draft without accepting, installing, or deploying it.",
+      "value": "Closes the final cryptographic review gap while preserving a separate, explicit manual acceptance decision.",
+      "prior_art": ["TUF successive root rotation", "Uptane repository separation", "in-toto functionary thresholds", "OpenSSH SSHSIG"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-envelope-review", "pr": null, "commits": []},
+      "protocol": ["bind accepted envelope and matrix", "bind exact candidate appraisal and coverage review", "independently reconstruct the successor draft", "require two distinct current Ed25519 reviewers", "verify fixed SSHSIG namespace", "expire receipts within 24 hours", "stop at eligibility for manual envelope acceptance"],
+      "fixtures": ["aegis-envelope-review", "tests/test_aegis_envelope_review.py", "truepanel/holodeck/aegis_envelope_review.py"],
+      "success_criteria": ["exact two-reviewer receipt reaches only manual-acceptance eligibility", "one reviewer expiry and namespace mismatch hold", "packet draft candidate and predecessor substitution hold", "automatic acceptance holds", "zero false eligibility", "no envelope acceptance installation or production key"],
+      "abort_criteria": ["review interpreted as envelope acceptance", "TruePanel stores a production private key or signer", "draft reconstruction omitted", "unknown packet field accepted", "new crypto or hosted dependency", "live provider access or production mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-envelope-review-v1.json", "sha256": "c39962ef1b2a68afc86202daf52e16dbf5b106b7b1e55c9afc5c12878b21a73e"}],
+      "outcome": {"conclusion": "Disposable HoloDeck keys proved one exact independent-review path and nine HOLD paths with zero false eligibility, envelope acceptances, installations, runtime writes, or production writes."},
+      "invalidated_assumptions": ["reviewing a draft is equivalent to accepting it", "signed subject hashes are sufficient without independently reconstructing the draft", "reviewer count alone proves separation of duty", "a hosted signing service is required"],
+      "reproduction": ["pytest -q tests/test_aegis_envelope_review.py", "python -c \"from truepanel.holodeck.aegis_envelope_review import run_envelope_review_rehearsal as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["PR #159 draft changes", "operator public-key lifecycle is defined", "two operator-owned envelope-review signatures become available", "manual envelope acceptance contract is proposed"],
+      "strongest_follow_up": "Obtain two operator-owned signatures over the exact envelope-review packet, then design a separately confirmed manual acceptance record that cannot install or deploy the envelope.",
+      "freshness": {"reviewed_at": "2026-09-19", "review_after": "2026-12-31"}
     }
   ]
 }
