@@ -401,7 +401,7 @@
       "value": "Closes the final cryptographic review gap while preserving a separate, explicit manual acceptance decision.",
       "prior_art": ["TUF successive root rotation", "Uptane repository separation", "in-toto functionary thresholds", "OpenSSH SSHSIG"],
       "safety_class": "SIMULATION_ONLY",
-      "development": {"branch": "feature/aegis-envelope-review", "pr": null, "commits": []},
+      "development": {"branch": "feature/aegis-envelope-review", "pr": 160, "commits": ["38b6b0fcfd26eeaccc7b41d2fdfb7273c1318bcd"]},
       "protocol": ["bind accepted envelope and matrix", "bind exact candidate appraisal and coverage review", "independently reconstruct the successor draft", "require two distinct current Ed25519 reviewers", "verify fixed SSHSIG namespace", "expire receipts within 24 hours", "stop at eligibility for manual envelope acceptance"],
       "fixtures": ["aegis-envelope-review", "tests/test_aegis_envelope_review.py", "truepanel/holodeck/aegis_envelope_review.py"],
       "success_criteria": ["exact two-reviewer receipt reaches only manual-acceptance eligibility", "one reviewer expiry and namespace mismatch hold", "packet draft candidate and predecessor substitution hold", "automatic acceptance holds", "zero false eligibility", "no envelope acceptance installation or production key"],
