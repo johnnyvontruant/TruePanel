@@ -8,7 +8,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from .constants import Category, Priority
+from .constants import Category
 
 LOGGER = logging.getLogger(__name__)
 
