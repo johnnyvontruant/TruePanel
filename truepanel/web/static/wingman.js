@@ -847,7 +847,7 @@ function install(){
             elapsedTimerActive=false;
             button.disabled=false;
             button.removeAttribute("aria-busy");
-            button.textContent="BRIEF ME";
+            button.textContent="AI BRIEF";
         }
     });
 }
