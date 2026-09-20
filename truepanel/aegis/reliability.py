@@ -342,6 +342,18 @@ class AegisReliabilityEngine:
             "topology": self._topology(payload),
             "passive_evidence": passive_evidence,
             "airworthiness": airworthiness,
+            "development_review": {
+                "policy": "SINGLE_OPERATOR_DEVELOPMENT_V1",
+                "label": "Single operator · development only",
+                "status": "AWAITING_OPERATOR_SIGNATURE",
+                "human_approver": "JT",
+                "ai_assisted_review": "EVIDENCE_ONLY",
+                "production_authority": False,
+                "deployment_authority": False,
+                "hardware_authority": False,
+                "storage_write_authority": False,
+                "automatic_promotion": False,
+            },
             "flight_director": active_flight_director or self.flight_director,
         }
 

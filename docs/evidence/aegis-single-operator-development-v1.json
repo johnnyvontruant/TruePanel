@@ -1,0 +1,38 @@
+{
+  "control_authority": false,
+  "measurements": {
+    "automatic_promotions": 0,
+    "deployments": 0,
+    "development_eligible": 1,
+    "false_eligible_paths": 0,
+    "hardware_actions": 0,
+    "network_changes": 0,
+    "production_acceptances": 0,
+    "runtime_writes": 0,
+    "storage_writes": 0,
+    "stronger_consumers_denied": 5
+  },
+  "policy_model": "ONE_ACCOUNTABLE_HUMAN_PLUS_AI_ASSISTED_EVIDENCE",
+  "private_keys": 0,
+  "production_mutation": false,
+  "recovery_coverage": {"gaps": 0, "total": 8, "trusted": 8},
+  "scenario": "aegis-single-operator-development-v1",
+  "scenarios": [
+    {"reason": "SingleOperatorDevelopmentReviewVerified", "scenario": "exact-jt-signature", "status": "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW"},
+    {"reason": "OperatorSignatureInvalid", "scenario": "missing-signature", "status": "HOLD"},
+    {"reason": "ReceiptExpiredOrInvalid", "scenario": "expired-receipt", "status": "HOLD"},
+    {"reason": "PacketFieldsInvalid", "scenario": "packet-extension", "status": "HOLD"},
+    {"reason": "ReviewInputDigestMismatch", "scenario": "candidate-tampering", "status": "HOLD"},
+    {"reason": "DevelopmentPolicyInvalid", "scenario": "production-namespace", "status": "HOLD"},
+    {"reason": "AuthorityEscalationRejected", "scenario": "authority-escalation", "status": "HOLD"},
+    {"reason": "ReceiptAlreadyConsumed", "scenario": "receipt-replay", "status": "HOLD"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-production-acceptance", "status": "DENIED"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-deployment", "status": "DENIED"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-hardware-actuation", "status": "DENIED"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-storage-write", "status": "DENIED"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-network-reconfiguration", "status": "DENIED"},
+    {"reason": "SignatureQuorumMissing", "scenario": "one-human-two-keys", "status": "HOLD"},
+    {"reason": "RequestSchemaInvalid", "scenario": "manual-promotion-consumer", "status": "HOLD"}
+  ],
+  "status_counts": {"DENIED": 5, "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1, "HOLD": 9}
+}
