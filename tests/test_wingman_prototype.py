@@ -46,7 +46,7 @@ def test_only_wingman_brief_post_is_delegated(monkeypatch):
     assert delegated == ["/api/v1/wingman/brief?request=manual"]
 
 
-def test_prototype_requires_real_local_resources(tmp_path):
+def test_prototype_accepts_missing_local_model_for_offline_mode(tmp_path):
     parser = prototype.build_parser()
     args = parser.parse_args(
         [
@@ -55,9 +55,26 @@ def test_prototype_requires_real_local_resources(tmp_path):
             "--docs-root", str(tmp_path),
         ]
     )
-    with pytest.raises(SystemExit) as error:
-        prototype.validate_options(args, parser)
-    assert error.value.code == 2
+    prototype.validate_options(args, parser)
+    service = prototype.build_brief_service(
+        llama_server=args.llama_server,
+        model=args.model,
+        docs_root=args.docs_root,
+    )
+    assert service.advisory.runtime.running is False
+    from truepanel.wingman.readiness import (
+        file_availability, inference_readiness,
+    )
+    from truepanel.wingman.runtime import HostResources
+
+    report = inference_readiness(
+        HostResources(available_memory_bytes=4 * 1024**3, load_1m=1.0),
+        file_availability(args.llama_server, args.model),
+    )
+    assert report["status"] == "HOLD"
+    assert set(report["reason_codes"]) == {
+        "LLAMA_SERVER_MISSING", "MODEL_FILE_MISSING",
+    }
 
 
 def test_production_port_is_rejected_even_with_valid_resources(tmp_path):
@@ -151,3 +168,24 @@ def test_prototype_always_closes_its_listener(tmp_path, monkeypatch):
         )
 
     assert recorded["closed"] is True
+
+
+def test_prototype_can_start_offline_without_any_model_arguments(monkeypatch):
+    result = {}
+
+    class FakeServer:
+        def __init__(self, address, **kwargs):
+            result["address"] = address
+            result["service"] = kwargs["wingman_brief_service"]
+        def serve_forever(self):
+            result["served"] = True
+        def server_close(self):
+            result["closed"] = True
+
+    monkeypatch.setattr(prototype, "MissionControlServer", FakeServer)
+    prototype.main([])
+    assert result["address"] == ("127.0.0.1", prototype.PROTOTYPE_PORT)
+    assert result["served"] is True
+    assert result["closed"] is True
+    assert result["service"].advisory.runtime.running is False
+    assert not result["service"].advisory.runtime.config.model_path.is_file()
