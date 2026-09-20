@@ -131,3 +131,15 @@ def test_invalid_memory_and_load_fail_closed():
     assert result["reason_codes"] == [
         "MEMORY_READING_INVALID", "LOAD_READING_INVALID",
     ]
+
+
+def test_holodeck_offline_checkride_is_hardware_isolated():
+    from truepanel.holodeck.wingman_offline import run_offline_checkride
+
+    result = run_offline_checkride()
+    assert result["hardware_isolated"] is True
+    assert result["model_invoked"] is False
+    assert result["control_authority"] is False
+    assert result["production_mutation"] is False
+    assert len(result["cases"]) == 5
+    assert result["passed"] is True
