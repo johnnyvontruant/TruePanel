@@ -223,6 +223,32 @@ BattleStation experiment began around 2.99 GiB and therefore would not pass
 the current gate. Do not lower that threshold merely to make a demonstration
 work. Reassess with fresh host telemetry under representative workloads.
 
+## Model-free ground school
+
+The experimental checkout now includes `truepanel.wingman.offline.offline_brief`
+and `truepanel.wingman.readiness.inference_readiness`. Both are bounded,
+read-only functions over explicitly supplied snapshot and host-resource
+evidence. They do not import or invoke a language-model provider.
+
+The isolated prototype exposes two GET-only routes:
+
+- `/api/v1/wingman/offline-brief`: a bounded, source-labeled summary of
+  recognized storage pool states, AEGIS HOLD/REVIEW, and operator guidance
+  HOLD/REVIEW counts. Unsupported, malformed, or missing fields are not
+  converted into healthy verdicts. A missing pool record is explicitly
+  uncertain.
+- `/api/v1/wingman/readiness`: an observational report of the existing
+  memory and load policy plus configured local model and executable
+  availability. `READY_FOR_RECHECK` is **not** launch authorization; the
+  actual runtime repeats its resource gate immediately before spawning.
+
+The readiness report never returns model paths, credentials, or the raw
+snapshot. Both endpoints remain confined to the experimental prototype;
+normal Mission Control's route table is unchanged. Hardware-isolated tests
+cover absent evidence, HOLD/REVIEW preservation, untrusted status strings,
+memory pressure, missing model files, and errors reading host resources.
+No production deployment or live checkride is implied by a green CI result.
+
 ## Current state
 
 WINGMAN remains on an experiment branch. The brief UI, API composition and
