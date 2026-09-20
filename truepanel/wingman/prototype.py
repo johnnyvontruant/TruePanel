@@ -80,20 +80,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--llama-server",
         type=Path,
-        required=True,
-        help="Path to the local llama-server executable.",
+        default=Path("/__wingman_unconfigured__/llama-server"),
+        help="Optional local llama-server path for on-demand AI inference.",
     )
     parser.add_argument(
         "--model",
         type=Path,
-        required=True,
-        help="Path to the local GGUF model; never downloaded automatically.",
+        default=Path("/__wingman_unconfigured__/model.gguf"),
+        help="Optional local GGUF path; offline briefing needs no model.",
     )
     parser.add_argument(
         "--docs-root",
         type=Path,
-        required=True,
-        help="Path to the checked-out TruePanel docs directory.",
+        default=Path("docs"),
+        help="Optional TruePanel docs path for model grounding.",
     )
     parser.add_argument(
         "--port",
@@ -109,12 +109,9 @@ def validate_options(args: argparse.Namespace, parser: argparse.ArgumentParser) 
 
     if args.port == PRODUCTION_PORT or not (1024 <= args.port <= 65535):
         parser.error("prototype port must be 1024-65535 and must not be 8787")
-    if not args.llama_server.is_file():
-        parser.error("local llama-server executable does not exist")
-    if not args.model.is_file():
-        parser.error("local GGUF model does not exist")
-    if not args.docs_root.is_dir():
-        parser.error("TruePanel docs directory does not exist")
+    # Missing local model, executable, or docs must not prevent an offline
+    # cockpit from starting. Readiness returns HOLD; the actual runtime
+    # independently checks resources and files before every model launch.
 
 
 def build_brief_service(
