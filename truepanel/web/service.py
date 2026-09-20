@@ -241,16 +241,19 @@ def main():
         activity_providers=activity_providers_from_environment(),
     )
 
-    serve(
-        host=settings.host,
-        port=settings.port,
-        allow_config_writes=(
-            settings.allow_config_writes
-        ),
-        config_path=settings.config_path,
-        snapshot_service=snapshot_service,
-        wingman_brief_service=wingman_brief_service,
-    )
+    serve_options = {
+        "host": settings.host,
+        "port": settings.port,
+        "allow_config_writes": settings.allow_config_writes,
+        "config_path": settings.config_path,
+        "snapshot_service": snapshot_service,
+    }
+    # Preserve the exact normal production launcher contract when the
+    # optional experiment is disabled. Do not inject a dormant model service.
+    if wingman_brief_service is not None:
+        serve_options["wingman_brief_service"] = wingman_brief_service
+
+    serve(**serve_options)
 
 
 if __name__ == "__main__":
