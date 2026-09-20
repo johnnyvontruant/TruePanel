@@ -154,6 +154,7 @@ function render(view,payload){
     const fieldWorkflow=calibration?.field_workflow||{};
     const flightDirector=reliability?.flight_director||{};
     const passiveEvidence=reliability?.passive_evidence||{};
+    const developmentReview=reliability?.development_review||{};
     const oracleConfidence=Number(reliability?.oracle?.confidence||0);
     const confidence=Math.round(Number(incident?.confidence??oracleConfidence)*100);
     const state=incident
@@ -172,6 +173,7 @@ function render(view,payload){
     const cacheAge=Number(passiveCache.last_age_seconds);
     const hasCacheAge=passiveCache.last_age_seconds!==null&&passiveCache.last_age_seconds!==undefined&&Number.isFinite(cacheAge);
     const passivePanel=Object.keys(passiveEvidence).length?`<details class="ag-coverage ag-passive-evidence"><summary>Passive TrueNAS Evidence <span>${passiveEvidence.restore_verified?"restore verified":"HOLD"}</span></summary><div class="ag-evidence-metric"><strong>${esc(passiveEvidence.successful_tasks??0)} successful protection task(s)</strong><br>${esc(passiveEvidence.restore_verified?"A separate restore-verification receipt matched the active incident.":passiveEvidence.hold_reason||"No governed restore verification is available.")}<br>Role gate: ${esc(roleGate.status||"not checked")} · ${esc(roleGate.reason||"No session-role evidence.")}<br>Receipt store: ${receiptStore.governed===true?"GOVERNED":"HOLD"} · ${esc(receiptStore.reason||"Not configured.")}<br>Cache: ${esc(passiveCache.last_source||"inactive")}${hasCacheAge?` · ${Math.round(cacheAge)}s old`:""} · TTL ${esc(passiveCache.ttl_seconds??"unknown")}s<br>Read-only: ${passiveEvidence.read_only===true?"YES":"UNKNOWN"} · Control authority: ${passiveEvidence.control_authority===false?"NO":"UNKNOWN"}</div></details>`:"";
+    const developmentPanel=Object.keys(developmentReview).length?`<section class="ag-dev-review" aria-label="AEGIS development review authority"><div><span>DEVELOPMENT REVIEW</span><strong>${esc(developmentReview.label||"Single operator · development only")}</strong><small>${esc(title(developmentReview.status||"hold"))} · JT is the sole human approver; Vega review is evidence only.</small></div><div class="ag-dev-authority"><span>Production authority · NO</span><span>Deployment · NO</span><span>Hardware · NO</span><span>Storage writes · NO</span></div></section>`:"";
 
     view.classList.toggle("incident",Boolean(incident));
     view.innerHTML=`
@@ -193,6 +195,7 @@ function render(view,payload){
         <details class="ag-coverage ag-evidence"><summary>Evidence Promotion Gate <span>${evidenceGate?.eligible_for_field_validation?"field candidate":`${Number(evidenceGate?.gaps?.length||0)} holds`}</span></summary>${evidenceGateRows(evidenceGate)}</details>
         <details class="ag-coverage ag-field-workflow"><summary>Field Evidence Workflow <span>${esc(title(fieldWorkflow?.state||"not started"))}</span></summary>${fieldWorkflowRows(fieldWorkflow)}</details>
         ${passivePanel}
+        ${developmentPanel}
         <p class="ag-safety">Correlation uses ${esc(policy?.semantics||"evidence grouping")}; it retains raw alerts, grants no control authority, and performs no repair.</p>
     `;
 }
@@ -219,6 +222,7 @@ function install(){
 
 `;
     style.textContent+=`.ag-consequence{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:.5rem 1rem;align-items:center;margin-top:.8rem;padding:.75rem .8rem;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:9px}.ag-consequence.hold{border-color:color-mix(in srgb,var(--warn) 35%,transparent)}.ag-consequence>div:first-child{display:grid;gap:.2rem}.ag-consequence>div:first-child span{color:var(--accent);font-size:.58rem;font-weight:900;letter-spacing:.1em}.ag-consequence.hold>div:first-child span{color:var(--warn)}.ag-consequence h4,.ag-consequence p{margin:0}.ag-consequence-counts{display:grid;gap:.15rem}.ag-consequence-counts span,.ag-consequence p,.ag-consequence small{color:var(--muted);font-size:.66rem;line-height:1.4}.ag-consequence small{grid-column:1/-1}@media(max-width:760px){.ag-consequence{grid-template-columns:1fr}.ag-consequence small{grid-column:1}}`;
+    style.textContent+=`.ag-dev-review{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.8rem;margin-top:.8rem;padding:.75rem .8rem;border:1px solid color-mix(in srgb,var(--warn) 32%,transparent);border-radius:9px}.ag-dev-review>div:first-child{display:grid;gap:.22rem}.ag-dev-review>div:first-child>span{color:var(--warn);font-size:.58rem;font-weight:900;letter-spacing:.1em}.ag-dev-review small{color:var(--muted);font-size:.65rem;line-height:1.4}.ag-dev-authority{display:grid;grid-template-columns:repeat(2,auto);gap:.3rem}.ag-dev-authority span{padding:.3rem .45rem;border:1px solid color-mix(in srgb,var(--edge) 18%,transparent);border-radius:999px;color:var(--muted);font-size:.58rem;font-weight:800}@media(max-width:760px){.ag-dev-review,.ag-dev-authority{grid-template-columns:1fr}}`;
     document.head.appendChild(style);
 
     const view=document.createElement("article");

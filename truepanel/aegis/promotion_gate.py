@@ -7,6 +7,7 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from .acceptance import semantic_sha256
+from .development_review import DEVELOPMENT_RESULT_SCHEMA
 
 PROMOTION_REQUEST_SCHEMA = "truepanel.aegis-promotion-request/v1"
 PROMOTION_GATE_SCHEMA = "truepanel.aegis-manual-promotion-gate/v1"
@@ -121,11 +122,15 @@ def evaluate_manual_promotion(
         if request.get("schema") == PROMOTION_REQUEST_SCHEMA
         else "RequestSchemaInvalid",
     )
+    production_review = (
+        acceptance.get("schema") != DEVELOPMENT_RESULT_SCHEMA
+        and acceptance.get("status") == "ELIGIBLE_FOR_OPERATOR_PROMOTION"
+    )
     add(
         "independent_review",
-        acceptance.get("status") == "ELIGIBLE_FOR_OPERATOR_PROMOTION",
+        production_review,
         "IndependentReviewVerified"
-        if acceptance.get("status") == "ELIGIBLE_FOR_OPERATOR_PROMOTION"
+        if production_review
         else "IndependentReviewMissing",
     )
     add(
