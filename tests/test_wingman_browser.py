@@ -46,7 +46,7 @@ async function exercise(ready) {
     const document = {
         readyState: "complete",
         head: {appendChild() {}},
-        createElement() {return {};},
+        createElement(tag) {return tag === "article" ? view : {};},
         getElementById(id) {
             return id === "glassCockpitSituation"
                 ? {insertAdjacentElement() {}} : null;
