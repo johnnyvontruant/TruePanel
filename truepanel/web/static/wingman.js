@@ -2,6 +2,8 @@
 "use strict";
 
 const BRIEF_URL="/api/v1/wingman/brief";
+const OFFLINE_URL="/api/v1/wingman/offline-brief";
+const READINESS_URL="/api/v1/wingman/readiness";
 const VIEW_ID="wingmanAdvisory";
 const STYLE_ID="wingmanAdvisoryStyles";
 
@@ -318,7 +320,7 @@ body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="standby"] .wm-fo
     display:none;
 }
 body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-columns,
-body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-uncertainty,
+body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-body .wm-uncertainty,
 body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="ready"] .wm-footer{
     display:none;
 }
@@ -349,6 +351,30 @@ body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="hold"] .wm-foote
     letter-spacing:.05em;
 }
 
+.wm-offline-panel:not(:empty),
+.wm-readiness-panel:not(:empty){
+    margin-top:.65rem;
+}
+.wm-offline-panel .wm-result,
+.wm-readiness-panel .wm-state{
+    margin-top:0;
+}
+.wm-details{
+    margin-top:.5rem;
+    color:var(--muted);
+    font-size:.67rem;
+}
+.wm-details summary{
+    cursor:pointer;
+    font-weight:850;
+}
+.wm-readiness-metrics{
+    display:flex;
+    gap:.8rem;
+    flex-wrap:wrap;
+    margin-top:.5rem;
+    font-size:.68rem;
+}
 @media(max-width:760px){
     .wm-head{
         align-items:flex-start;
@@ -370,7 +396,7 @@ function standbyMarkup(){
         <div class="wm-state">
             <strong>STANDBY · ON-DEMAND ONLY</strong>
             <p>
-                WINGMAN is dormant until you request a brief.
+                Instrument briefs do not load a model. AI briefs run only on request and after a fresh resource check.
                 Mission Control remains the source of truth.
             </p>
         </div>
@@ -475,6 +501,110 @@ function setWingmanState(view,state){
     view.dataset.wingmanState=state;
 }
 
+
+function isReadOnly(payload){
+    return payload
+        && payload.project==="WINGMAN"
+        && payload.schema_version===1
+        && payload.advisory_only===true
+        && payload.control_authority===false
+        && payload.production_mutation===false
+        && payload.model_invoked===false;
+}
+
+function offlineMarkup(payload){
+    const observations=Array.isArray(payload.observations)
+        ? payload.observations : [];
+    const uncertainty=Array.isArray(payload.uncertainty)
+        ? payload.uncertainty : [];
+    const evidence=observations.map(item=>
+        "<article class='wm-item'><strong>"+esc(item.text||"")+"</strong>"
+        +"<div class='wm-sources'>"+sourceBadges(item.source_ids)+"</div></article>"
+    ).join("");
+    const uncertaintyHtml=uncertainty.length
+        ? "<p class='wm-uncertainty'><strong>UNCERTAINTY · </strong>"
+          +esc(uncertainty.join(" · "))+"</p>"
+        : "";
+    return "<div class='wm-result' data-brief-kind='deterministic'>"
+        +"<div class='wm-state'><strong>INSTRUMENT BRIEF · "
+        +esc(payload.status)+" · NO MODEL</strong></div>"
+        +"<p class='wm-summary'>"+esc(payload.summary||"No instrument evidence.")+"</p>"
+        +"<div class='wm-sources'>"+sourceBadges(payload.source_ids)+"</div>"
+        +uncertaintyHtml
+        +(evidence
+            ? "<details class='wm-details'><summary>View cited observations</summary>"
+              +evidence+"</details>"
+            : "")
+        +"</div>";
+}
+
+const READINESS_REASONS={
+    HOST_RESOURCES_UNAVAILABLE:"Host resource measurements are unavailable.",
+    MEMORY_READING_INVALID:"Available-memory measurement is invalid.",
+    LOAD_READING_INVALID:"CPU-load measurement is invalid.",
+    MEMORY_BELOW_POLICY:"Available memory is below the inference threshold.",
+    LOAD_ABOVE_POLICY:"CPU load is above the inference threshold.",
+    LLAMA_SERVER_MISSING:"Local inference executable is unavailable.",
+    MODEL_FILE_MISSING:"Local model file is unavailable.",
+};
+
+function readinessMarkup(payload){
+    const ready=payload.status==="READY_FOR_RECHECK";
+    const reasons=Array.isArray(payload.reason_codes)
+        ? payload.reason_codes : [];
+    const reasonHtml=reasons.map(code=>
+        "<p>"+esc(READINESS_REASONS[code]||"Unrecognized readiness blocker.")+"</p>"
+    ).join("");
+    const mem=Number.isFinite(payload.available_memory_gib)
+        ? esc(payload.available_memory_gib.toFixed(2))+" GiB"
+        : "Unknown";
+    const required=Number.isFinite(payload.minimum_memory_gib)
+        ? esc(payload.minimum_memory_gib.toFixed(2))+" GiB" : "Unknown";
+    const load=Number.isFinite(payload.load_1m)
+        ? esc(payload.load_1m.toFixed(2)) : "Unknown";
+    const maximum=Number.isFinite(payload.maximum_load_1m)
+        ? esc(payload.maximum_load_1m.toFixed(2)) : "Unknown";
+    return "<div class='wm-state "+(ready?"":"hold")+"' data-inference-readiness='"
+        +esc(payload.status)+"'><strong>LOCAL AI · "
+        +(ready?"READY FOR RECHECK":"RESOURCE HOLD")+"</strong>"
+        +"<div class='wm-readiness-metrics'><span>Memory: "+mem+" / "+required
+        +" required</span><span>Load: "+load+" / "+maximum+" maximum</span></div>"
+        +reasonHtml
+        +"<p>Readiness is observational, not launch authorization. "
+        +"The runtime rechecks resources before starting.</p></div>";
+}
+
+async function requestReadiness(){
+    const response=await fetch(READINESS_URL,{
+        method:"GET",cache:"no-store",headers:{Accept:"application/json"},
+    });
+    if(!response.ok) throw new Error("Readiness endpoint unavailable.");
+    const payload=await response.json();
+    if(!isReadOnly(payload) || payload.launch_authorized!==false
+        || !Array.isArray(payload.reason_codes)
+        || (payload.status!=="HOLD" && payload.status!=="READY_FOR_RECHECK")
+        || (payload.status==="READY_FOR_RECHECK" && payload.reason_codes.length)){
+        throw new Error("Readiness response failed its read-only contract.");
+    }
+    return payload;
+}
+
+async function requestOffline(){
+    const response=await fetch(OFFLINE_URL,{
+        method:"GET",cache:"no-store",headers:{Accept:"application/json"},
+    });
+    if(!response.ok) throw new Error("Instrument brief endpoint unavailable.");
+    const payload=await response.json();
+    if(!isReadOnly(payload) || payload.mode!=="offline_brief"
+        || !["OBSERVED","INSUFFICIENT_EVIDENCE"].includes(payload.status)
+        || !Array.isArray(payload.source_ids)
+        || !Array.isArray(payload.observations)
+        || !Array.isArray(payload.uncertainty)){
+        throw new Error("Instrument brief response failed its read-only contract.");
+    }
+    return payload;
+}
+
 function install(){
     installStyle();
 
@@ -513,32 +643,106 @@ function install(){
                 <span class="wm-authority">
                     ADVISORY ONLY · CONTROL AUTHORITY FALSE
                 </span>
-                <button
-                    class="wm-brief"
-                    type="button"
-                >BRIEF ME</button>
+                <button class="wm-brief wm-offline" type="button">INSTRUMENT BRIEF</button>
+                <button class="wm-brief wm-readiness" type="button">CHECK READINESS</button>
+                <button class="wm-brief wm-ai" type="button">AI BRIEF</button>
             </div>
         </div>
 
         <div class="wm-body">
             ${standbyMarkup()}
         </div>
+        <div class="wm-offline-panel" aria-live="polite"></div>
+        <div class="wm-readiness-panel" aria-live="polite"></div>
 
         <div class="wm-footer">
-            <span>Operator triggered · no automatic inference</span>
+            <span>Instrument brief: model free · AI: operator triggered</span>
             <span>Trusted Mission Control evidence only</span>
         </div>
     `;
 
     situation.insertAdjacentElement("afterend",view);
 
-    const button=view.querySelector(".wm-brief");
+    const button=view.querySelector(".wm-ai");
+    const offlineButton=view.querySelector(".wm-offline");
+    const readinessButton=view.querySelector(".wm-readiness");
     const body=view.querySelector(".wm-body");
+    const offlinePanel=view.querySelector(".wm-offline-panel");
+    const readinessPanel=view.querySelector(".wm-readiness-panel");
 
-    if(!button||!body) return;
+    if(!button||!body||!offlineButton||!readinessButton
+        ||!offlinePanel||!readinessPanel) return;
+
+    async function loadReadiness(){
+        const payload=await requestReadiness();
+        readinessPanel.innerHTML=readinessMarkup(payload);
+        return payload;
+    }
+
+    offlineButton.addEventListener("click",async()=>{
+        if(offlineButton.disabled) return;
+        offlineButton.disabled=true;
+        offlineButton.textContent="READING…";
+        try{
+            const payload=await requestOffline();
+            offlinePanel.innerHTML=offlineMarkup(payload);
+        }catch(_error){
+            offlinePanel.innerHTML="<div class='wm-state hold'>"
+                +"<strong>INSTRUMENT BRIEF UNAVAILABLE</strong>"
+                +"<p>No verified offline briefing was returned. "
+                +"Mission Control remains authoritative.</p></div>";
+        }finally{
+            offlineButton.disabled=false;
+            offlineButton.textContent="INSTRUMENT BRIEF";
+        }
+    });
+
+    readinessButton.addEventListener("click",async()=>{
+        if(readinessButton.disabled) return;
+        readinessButton.disabled=true;
+        readinessButton.textContent="CHECKING…";
+        try{
+            await loadReadiness();
+        }catch(_error){
+            readinessPanel.innerHTML="<div class='wm-state hold'>"
+                +"<strong>LOCAL AI · READINESS UNKNOWN</strong>"
+                +"<p>Could not verify the inference gates. AI remains unavailable.</p>"
+                +"</div>";
+        }finally{
+            readinessButton.disabled=false;
+            readinessButton.textContent="CHECK READINESS";
+        }
+    });
 
     button.addEventListener("click",async()=>{
         if(button.disabled) return;
+
+        button.disabled=true;
+        try{
+            const readiness=await loadReadiness();
+            if(readiness.status!=="READY_FOR_RECHECK"){
+                body.innerHTML="<div class='wm-state hold'>"
+                    +"<strong>AI BRIEF · RESOURCE HOLD</strong>"
+                    +"<p>Instrument briefs remain available without loading a model. "
+                    +"Review the readiness report below.</p></div>";
+                setWingmanState(view,"hold");
+                return;
+            }
+        }catch(_error){
+            readinessPanel.innerHTML="<div class='wm-state hold'>"
+                +"<strong>LOCAL AI · READINESS UNKNOWN</strong>"
+                +"<p>Unable to verify launch policy. AI remains unavailable.</p></div>";
+            body.innerHTML="<div class='wm-state hold'>"
+                +"<strong>AI BRIEF · SAFETY HOLD</strong>"
+                +"<p>No model request was made. Instrument briefs remain available.</p>"
+                +"</div>";
+            setWingmanState(view,"hold");
+            return;
+        }finally{
+            // The inference request below owns the button only after its
+            // independent, fail-closed readiness check has completed.
+            button.disabled=false;
+        }
 
         button.disabled=true;
         button.setAttribute("aria-busy","true");
