@@ -25,8 +25,10 @@ def test_wingman_ui_is_explicit_operator_trigger_only():
     assert 'truepanel:status' not in source
     assert "setInterval(" not in source
 
-    assert "BRIEF ME" in source
-    assert "Operator triggered · no automatic inference" in source
+    assert "INSTRUMENT BRIEF" in source
+    assert "CHECK READINESS" in source
+    assert "AI BRIEF" in source
+    assert "Instrument brief: model free · AI: operator triggered" in source
 
 
 def test_wingman_ui_preserves_advisory_only_authority():
@@ -118,3 +120,36 @@ def test_wingman_pilot_uses_compact_source_badges():
         in source
     )
     assert ".wm-source-compact{" in source
+
+
+def test_wingman_offline_routes_are_get_only_and_keep_model_optional():
+    source = _ui_source()
+    assert 'const OFFLINE_URL="/api/v1/wingman/offline-brief";' in source
+    assert 'const READINESS_URL="/api/v1/wingman/readiness";' in source
+    assert 'offlineButton.addEventListener("click",async()=>{' in source
+    assert 'readinessButton.addEventListener("click",async()=>{' in source
+    assert 'method:"GET",cache:"no-store"' in source
+    assert 'payload.model_invoked===false' in source
+    assert 'payload.launch_authorized!==false' in source
+    assert 'if(readiness.status!=="READY_FOR_RECHECK"){' in source
+    assert 'body.innerHTML="<div class=\'wm-state hold\'>"' in source
+    assert 'offlinePanel.innerHTML=offlineMarkup(payload);' in source
+    assert 'readinessPanel.innerHTML=readinessMarkup(payload);' in source
+
+
+def test_pilot_mode_does_not_hide_offline_uncertainty_or_readiness_hold():
+    source = _ui_source()
+    # Prior CSS hid every uncertainty when an AI brief succeeded, even
+    # when a separate offline briefing still needed to display its caveats.
+    assert (
+        'body[data-mission-mode="pilot"] '
+        '#${VIEW_ID}[data-wingman-state="ready"] .wm-body .wm-uncertainty,'
+        in source
+    )
+    assert (
+        'body[data-mission-mode="pilot"] '
+        '#${VIEW_ID}[data-wingman-state="ready"] .wm-uncertainty,'
+        not in source
+    )
+    assert 'wm-readiness-panel' in source
+    assert 'wm-offline-panel' in source
