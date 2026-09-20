@@ -143,3 +143,19 @@ def test_holodeck_offline_checkride_is_hardware_isolated():
     assert result["production_mutation"] is False
     assert len(result["cases"]) == 5
     assert result["passed"] is True
+
+
+def test_many_pools_cannot_push_an_aegis_hold_out_of_pilot_summary():
+    result = offline_brief({
+        "storage": {
+            "pools": [
+                {"name": f"pool{index}", "health": "ONLINE"}
+                for index in range(8)
+            ],
+        },
+        "reliability": {"state": "HOLD"},
+        "operator_guidance": [{"status": "REVIEW"}],
+    })
+    assert "AEGIS reports HOLD" in result["summary"]
+    assert "1 REVIEW" in result["summary"]
+    assert result["model_invoked"] is False
