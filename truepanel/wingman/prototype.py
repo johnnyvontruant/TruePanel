@@ -36,7 +36,9 @@ class WingmanPrototypeHandler(MissionControlRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/v1/wingman/offline-brief":
             try:
-                snapshot = self.snapshot_service.status()
+                # Reuse the dashboard's composed, privacy-safe status so
+                # its AEGIS reliability HOLD/REVIEW state is not omitted.
+                snapshot = self._compose_status_payload()
                 self._json(offline_brief(snapshot))
             except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
                 self._json(offline_brief({}))
