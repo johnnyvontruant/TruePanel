@@ -192,7 +192,17 @@ The experiment branch now includes a separate, opt-in cockpit entry point:
 `python -m truepanel.wingman.prototype`. This does **not** alter the regular
 Mission Control service or enable inference on normal status refresh.
 
-From an experimental checkout with the existing Python environment, run:
+From an experimental checkout with the existing Python environment,
+launch the **offline-only** prototype without any model dependency:
+
+```bash
+python -m truepanel.wingman.prototype
+```
+
+The prototype remains usable when the model or executable is missing. The
+readiness report shows the missing-file HOLD, and the AI button refuses to
+issue an inference request. To enable an optional **AI** checkride, supply
+explicit, previously verified local paths:
 
 ```bash
 python -m truepanel.wingman.prototype \
@@ -201,9 +211,10 @@ python -m truepanel.wingman.prototype \
   --docs-root docs
 ```
 
-The paths above are placeholders, not installation instructions. Use only
-a previously obtained and verified local executable and model. No model is
-downloaded automatically. A missing file fails before the prototype binds.
+Those paths are examples, not installation commands. No model is downloaded
+automatically. A missing model never prevents the offline briefing from
+starting. An AI request still requires a fresh readiness check and the
+runtime's independent resource gate.
 
 The prototype binds only to `127.0.0.1:18787` by default, refuses the
 production port `8787`, disables configuration writes, and denies all POST
@@ -229,6 +240,12 @@ The experimental checkout now includes `truepanel.wingman.offline.offline_brief`
 and `truepanel.wingman.readiness.inference_readiness`. Both are bounded,
 read-only functions over explicitly supplied snapshot and host-resource
 evidence. They do not import or invoke a language-model provider.
+
+The isolated prototype exposes two GET-only routes, with explicit
+**INSTRUMENT BRIEF** and **CHECK READINESS** controls in the Mission Control
+WINGMAN card. **AI BRIEF** first requests fresh readiness and does not POST
+when any HOLD is present. An AI failure cannot remove the separate
+model-free briefing or conceal its existing HOLD/REVIEW wording.
 
 The isolated prototype exposes two GET-only routes:
 
