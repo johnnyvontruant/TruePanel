@@ -17,8 +17,8 @@ GIB = 1024**3
 def handler_for(path, snapshot, runtime):
     handler = object.__new__(prototype.WingmanPrototypeHandler)
     handler.path = path
-    handler.snapshot_service = SimpleNamespace(status=lambda: snapshot)
     handler.server = SimpleNamespace(
+        snapshot_service=SimpleNamespace(status=lambda: snapshot),
         wingman_brief_service=SimpleNamespace(
             advisory=SimpleNamespace(runtime=runtime)
         )
