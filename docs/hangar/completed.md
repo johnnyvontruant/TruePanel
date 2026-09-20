@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.14.1 · refreshed 2026-09-14 · 16 experiment(s)
+Registry version 2026.09.20.1 · refreshed 2026-09-20 · 17 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -131,3 +131,11 @@ One stable identity preserves six proved consequences across /dev/sdc to /dev/sd
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.
 - Revisit when: identity migration from serial-model to WWN or ZFS GUID is implemented; Lifeline identity coverage becomes a Recovery Coverage Matrix condition; TrueNAS exposes a supported leaf-vdev GUID
+
+## TP-EXP-0022 · AEGIS single-operator development receipt
+
+One exact simulated operator signature reaches development-candidate review; nine adversarial paths hold and five stronger consumers deny with zero production acceptance, deployment, hardware, storage, network, or runtime mutation.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public key and reproduce the exact packet with a real detached signature without widening its authority.
+- Revisit when: JT provisions a protected development public-key roster; a new approval consumer is introduced; production review policy changes

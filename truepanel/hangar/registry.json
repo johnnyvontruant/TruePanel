@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.14.1",
-  "updated_at": "2026-09-14",
+  "registry_version": "2026.09.20.1",
+  "updated_at": "2026-09-20",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -318,6 +318,25 @@
       "revisit_conditions": ["identity migration from serial-model to WWN or ZFS GUID is implemented", "Lifeline identity coverage becomes a Recovery Coverage Matrix condition", "TrueNAS exposes a supported leaf-vdev GUID"],
       "strongest_follow_up": "Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.",
       "freshness": {"reviewed_at": "2026-09-14", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0022", "title": "AEGIS single-operator development receipt", "state": "COMPLETED",
+      "hypothesis": "One accountable human signature can advance an exactly bound development candidate without being coercible into production, deployment, storage, network, or hardware authority.",
+      "value": "Represents the real JT plus Vega team honestly while preserving every stronger safety gate.",
+      "prior_art": ["TUF scoped roles and thresholds", "in-toto functionaries", "SLSA Verification Summary Attestation", "OpenSSH SSHSIG"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-single-operator-dev-receipt", "pr": null, "commits": []},
+      "protocol": ["bind exact source policy candidate HoloDeck coverage and AI-assisted report", "verify one operator signature", "separate schema namespace and decision", "deny every stronger consumer", "replay adversarial changes"],
+      "fixtures": ["aegis-single-operator-development-v1", "tests/test_aegis_single_operator_development.py"],
+      "success_criteria": ["one development-only result", "all unsafe paths hold or deny", "one human with two keys fails two-human quorum", "production consumers reject the result", "zero live action"],
+      "abort_criteria": ["AI review counted as human approval", "development receipt accepted for production", "private key enters repository", "deployment or hardware path added", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-single-operator-development-v1.json", "sha256": "0734e3d9f6dcc8ea9d6246fa876af01f862e153c7c0f79bf33c37d2e7a94a6bd"}],
+      "outcome": {"conclusion": "One exact simulated operator signature reaches development-candidate review; nine adversarial paths hold and five stronger consumers deny with zero production acceptance, deployment, hardware, storage, network, or runtime mutation."},
+      "invalidated_assumptions": ["AI-assisted review is a second human signature", "two keys imply two accountable people", "one approval type can safely cover every environment", "a development receipt must integrate with deployment to prove rejection"],
+      "reproduction": ["pytest -q tests/test_aegis_single_operator_development.py", "python -c \"from truepanel.holodeck.aegis_single_operator_development import run_single_operator_development_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT provisions a protected development public-key roster", "a new approval consumer is introduced", "production review policy changes"],
+      "strongest_follow_up": "Provision JT's protected development public key and reproduce the exact packet with a real detached signature without widening its authority.",
+      "freshness": {"reviewed_at": "2026-09-20", "review_after": "2026-12-31"}
     }
   ]
 }
