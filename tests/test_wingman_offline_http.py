@@ -17,6 +17,7 @@ GIB = 1024**3
 def handler_for(path, snapshot, runtime):
     handler = object.__new__(prototype.WingmanPrototypeHandler)
     handler.path = path
+    handler._compose_status_payload = lambda: snapshot
     handler.server = SimpleNamespace(
         snapshot_service=SimpleNamespace(status=lambda: snapshot),
         wingman_brief_service=SimpleNamespace(
@@ -89,3 +90,23 @@ def test_readiness_get_fails_closed_when_resource_reader_raises(tmp_path):
     assert responses[0]["status"] == "HOLD"
     assert "HOST_RESOURCES_UNAVAILABLE" in responses[0]["reason_codes"]
     assert "MODEL_FILE_MISSING" in responses[0]["reason_codes"]
+
+
+def test_offline_get_preserves_composed_aegis_hold():
+    runtime = SimpleNamespace()
+    handler, responses = handler_for(
+        "/api/v1/wingman/offline-brief",
+        {
+            "storage": {"pools": [{"name": "HDDs", "health": "ONLINE"}]},
+            "reliability": {"state": "HOLD"},
+        },
+        runtime,
+    )
+    # Raw collector status alone does not contain this composed AEGIS state.
+    handler.server.snapshot_service.status = lambda: {
+        "storage": {"pools": [{"name": "HDDs", "health": "ONLINE"}]}
+    }
+    handler.do_GET()
+    assert len(responses) == 1
+    assert "AEGIS reports HOLD" in responses[0]["summary"]
+    assert "status:reliability" in responses[0]["source_ids"]
