@@ -98,7 +98,17 @@ def offline_brief(snapshot: dict[str, Any]) -> dict[str, Any]:
         summary = "No verified instrument observations are available."
         status = "INSUFFICIENT_EVIDENCE"
     else:
-        summary = " ".join(item["text"] for item in observations[:3])
+        # Safety states must remain visible even when several pools are listed.
+        safety = [
+            item for item in observations
+            if item["source_ids"][0] in {
+                "status:reliability", "status:operator_guidance"
+            }
+        ]
+        ordinary = [item for item in observations if item not in safety]
+        summary = " ".join(
+            item["text"] for item in (safety + ordinary)[:3]
+        )
         status = "OBSERVED"
 
     return {
