@@ -186,6 +186,47 @@ WINGMAN remains experimental until all of the following are true:
 
 A failed graduation is a valid result. The experiment may conclude that deterministic help and better cockpit design are superior to local generation on this hardware.
 
+## Isolated Mission Control prototype
+
+The experiment branch now includes a separate, opt-in cockpit entry point:
+`python -m truepanel.wingman.prototype`. This does **not** alter the regular
+Mission Control service or enable inference on normal status refresh.
+
+From an experimental checkout with the existing Python environment, run:
+
+```bash
+python -m truepanel.wingman.prototype \
+  --llama-server /absolute/path/to/llama-server \
+  --model /absolute/path/to/granite-4.0-1b-q4_k_s.gguf \
+  --docs-root docs
+```
+
+The paths above are placeholders, not installation instructions. Use only
+a previously obtained and verified local executable and model. No model is
+downloaded automatically. A missing file fails before the prototype binds.
+
+The prototype binds only to `127.0.0.1:18787` by default, refuses the
+production port `8787`, disables configuration writes, and denies all POST
+requests except `/api/v1/wingman/brief`. The full cockpit is visible for
+context, but its normal POST controls are **not available in prototype mode**.
+For a remote browser, use an explicitly established SSH tunnel rather than
+exposing the prototype on the LAN.
+
+A click on **BRIEF ME** uses the privacy-safe current status, starts the
+bounded local runtime on demand if the existing resource gate permits it,
+returns a validated advisory or a fail-closed unavailable/HOLD result, and
+reaps the model process. The normal Mission Control service is not restarted
+or replaced. No production deployment is part of this experiment.
+
+The 3 GiB MemAvailable gate is still provisional; the recorded first
+BattleStation experiment began around 2.99 GiB and therefore would not pass
+the current gate. Do not lower that threshold merely to make a demonstration
+work. Reassess with fresh host telemetry under representative workloads.
+
 ## Current state
 
-WINGMAN is an experiment branch only. No model has been installed as a production dependency, no production service has been changed, and no Mission Control UI has been wired to generation yet.
+WINGMAN remains on an experiment branch. The brief UI, API composition and
+isolated prototype entry point are implemented in that branch. No model is
+installed as a production dependency and no production service is changed.
+The isolated prototype and its tests still require local CI and real-host
+validation before any promotion decision.
