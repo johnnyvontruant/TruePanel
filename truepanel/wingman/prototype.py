@@ -18,6 +18,8 @@ from truepanel.web.pathfinder_server import (
     MissionControlServer,
 )
 
+from .offline import offline_brief
+from .readiness import file_availability, inference_readiness
 from .runtime import LlamaRuntimeConfig, WingmanLocalRuntime
 from .runtime_advisory import WingmanRuntimeAdvisory
 from .web import WingmanBriefService
@@ -29,6 +31,35 @@ PRODUCTION_PORT = 8787
 
 class WingmanPrototypeHandler(MissionControlRequestHandler):
     """Permit brief generation without exposing other mutation endpoints."""
+
+    def do_GET(self):
+        path = urlparse(self.path).path
+        if path == "/api/v1/wingman/offline-brief":
+            try:
+                snapshot = self.snapshot_service.status()
+                self._json(offline_brief(snapshot))
+            except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+                self._json(offline_brief({}))
+            return
+        if path == "/api/v1/wingman/readiness":
+            runtime = self.server.wingman_brief_service.advisory.runtime
+            try:
+                resources = runtime._resource_reader()
+            except (OSError, RuntimeError, TypeError, ValueError):
+                resources = None
+            try:
+                files = file_availability(
+                    runtime.config.server_path, runtime.config.model_path
+                )
+            except (OSError, RuntimeError, TypeError, ValueError):
+                from .readiness import FileAvailability
+
+                files = FileAvailability(
+                    server_present=False, model_present=False
+                )
+            self._json(inference_readiness(resources, files, runtime.policy))
+            return
+        return super().do_GET()
 
     def do_POST(self):
         if urlparse(self.path).path == "/api/v1/wingman/brief":
