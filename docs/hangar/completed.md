@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.20.1 · refreshed 2026-09-20 · 17 experiment(s)
+Registry version 2026.09.21.1 · refreshed 2026-09-21 · 18 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -139,3 +139,11 @@ One exact simulated operator signature reaches development-candidate review; nin
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision JT's protected development public key and reproduce the exact packet with a real detached signature without widening its authority.
 - Revisit when: JT provisions a protected development public-key roster; a new approval consumer is introduced; production review policy changes
+
+## TP-EXP-0023 · AEGIS operator-owned key handoff
+
+One protected public roster and real disposable SSHSIG reach development-review eligibility; ten adversarial cases hold and five stronger consumers deny with no retained private or production key.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Let JT provision only the protected public roster, export the exact current packet, and return one detached development signature for a read-only field checkride.
+- Revisit when: JT provisions an operator-owned public roster; JT rotates or revokes the development key; a production approval policy is proposed

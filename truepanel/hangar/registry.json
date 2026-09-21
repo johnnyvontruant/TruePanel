@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.20.1",
-  "updated_at": "2026-09-20",
+  "registry_version": "2026.09.21.1",
+  "updated_at": "2026-09-21",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -337,6 +337,25 @@
       "revisit_conditions": ["JT provisions a protected development public-key roster", "a new approval consumer is introduced", "production review policy changes"],
       "strongest_follow_up": "Provision JT's protected development public key and reproduce the exact packet with a real detached signature without widening its authority.",
       "freshness": {"reviewed_at": "2026-09-20", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0023", "title": "AEGIS operator-owned key handoff", "state": "COMPLETED",
+      "hypothesis": "TruePanel can bind an operator-owned public key and verify a real detached SSHSIG while retaining no private key and granting only development-review eligibility.",
+      "value": "Turns the approved lone-human plus Vega model into an honest offline signing boundary without widening authority.",
+      "prior_art": ["OpenSSH SSHSIG protocol and regression suite", "TUF scoped trust and offline keys", "SLSA Verification Summary Attestation", "Sigstore Cosign"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-operator-key-handoff", "pr": null, "commits": []},
+      "protocol": ["validate exactly one protected Ed25519 public roster identity", "export a canonical unsigned development statement", "sign with a disposable HoloDeck key outside TruePanel", "verify through OpenSSH SSHSIG", "reject roster statement namespace freshness and replay drift", "deny every stronger consumer"],
+      "fixtures": ["aegis-operator-key-handoff-v1", "tests/test_aegis_operator_handoff.py"],
+      "success_criteria": ["one offline-signing-ready bundle", "one real SSHSIG development result", "all adversarial paths hold", "all stronger consumers deny", "no private key retained", "zero live action"],
+      "abort_criteria": ["JT private key generated or stored", "AI evidence counted as signature", "development signature accepted for production", "deployment or hardware path added", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-operator-key-handoff-v1.json", "sha256": "aa926c2714cfeec17f6d6015527a81c4a565525137daff2e9ae838c4a151c25b"}],
+      "outcome": {"conclusion": "One protected public roster and real disposable SSHSIG reach development-review eligibility; ten adversarial cases hold and five stronger consumers deny with no retained private or production key."},
+      "invalidated_assumptions": ["a real signature proof requires committing a private fixture key", "the public roster itself grants authority", "development and production can safely share a namespace", "a valid development signature should be accepted by stronger consumers"],
+      "reproduction": ["pytest -q tests/test_aegis_operator_handoff.py", "python -c \"from truepanel.holodeck.aegis_operator_handoff import run_operator_handoff_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT provisions an operator-owned public roster", "JT rotates or revokes the development key", "a production approval policy is proposed"],
+      "strongest_follow_up": "Let JT provision only the protected public roster, export the exact current packet, and return one detached development signature for a read-only field checkride.",
+      "freshness": {"reviewed_at": "2026-09-21", "review_after": "2026-12-31"}
     }
   ]
 }

@@ -1,0 +1,40 @@
+{
+  "control_authority": false,
+  "fixture_private_keys_retained": 0,
+  "measurements": {
+    "adversarial_holds": 10,
+    "deployments": 0,
+    "development_eligible": 1,
+    "false_eligible_paths": 0,
+    "hardware_actions": 0,
+    "offline_signing_ready": 1,
+    "production_acceptances": 0,
+    "runtime_writes": 0,
+    "stronger_consumers_denied": 5
+  },
+  "policy_model": "ONE_ACCOUNTABLE_HUMAN_PLUS_AI_ASSISTED_EVIDENCE",
+  "production_keys": 0,
+  "production_mutation": false,
+  "recovery_coverage": {"gaps": 0, "total": 8, "trusted": 8},
+  "scenario": "aegis-operator-key-handoff-v1",
+  "scenarios": [
+    {"reason": "PublicRosterBound", "scenario": "protected-public-roster", "status": "READY_FOR_OFFLINE_SIGNATURE"},
+    {"reason": "SingleOperatorDevelopmentReviewVerified", "scenario": "exact-detached-signature", "status": "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW"},
+    {"reason": "OperatorSignatureInvalid", "scenario": "missing-signature", "status": "HOLD"},
+    {"reason": "OperatorHandoffMismatch", "scenario": "handoff-scope-tampering", "status": "HOLD"},
+    {"reason": "OperatorHandoffMismatch", "scenario": "packet-tampering", "status": "HOLD"},
+    {"reason": "OperatorSignatureInvalid", "scenario": "signature-tampering", "status": "HOLD"},
+    {"reason": "ReceiptExpiredOrInvalid", "scenario": "expired-receipt", "status": "HOLD"},
+    {"reason": "ReceiptAlreadyConsumed", "scenario": "receipt-replay", "status": "HOLD"},
+    {"reason": "OperatorHandoffMismatch", "scenario": "unsafe-roster-permissions", "status": "HOLD"},
+    {"reason": "OperatorHandoffMismatch", "scenario": "symlinked-roster", "status": "HOLD"},
+    {"reason": "OperatorHandoffMismatch", "scenario": "wildcard-identity", "status": "HOLD"},
+    {"reason": "OperatorHandoffMismatch", "scenario": "production-namespace", "status": "HOLD"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-production-acceptance", "status": "DENIED"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-deployment", "status": "DENIED"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-hardware-actuation", "status": "DENIED"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-storage-write", "status": "DENIED"},
+    {"reason": "DevelopmentReceiptHasNoRequestedAuthority", "scenario": "consumer-network-reconfiguration", "status": "DENIED"}
+  ],
+  "status_counts": {"DENIED": 5, "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1, "HOLD": 10, "READY_FOR_OFFLINE_SIGNATURE": 1}
+}

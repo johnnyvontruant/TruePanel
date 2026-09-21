@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.20.1 · refreshed 2026-09-20 · 2 experiment(s)
+Registry version 2026.09.21.1 · refreshed 2026-09-21 · 2 experiment(s)
 
 ## TP-EXP-0011 · Opt-in real workload corpus
 
