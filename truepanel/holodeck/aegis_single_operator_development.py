@@ -25,7 +25,7 @@ from truepanel.aegis.promotion_gate import evaluate_manual_promotion
 NOW = 1_789_819_200.0
 
 
-def _materials() -> dict[str, Any]:
+def development_fixture_materials() -> dict[str, Any]:
     source_commit = "9" * 40
     policy = {
         "schema": DEVELOPMENT_POLICY_SCHEMA,
@@ -102,7 +102,7 @@ def _verifier(key_id: str, statement: bytes, signature: str) -> bool:
     expected = (
         __import__("json")
         .dumps(
-            development_statement(_materials()["receipt"]),
+            development_statement(development_fixture_materials()["receipt"]),
             sort_keys=True,
             separators=(",", ":"),
             allow_nan=False,
@@ -135,7 +135,7 @@ def _evaluate(values: dict[str, Any], **overrides: Any) -> dict[str, Any]:
 def run_single_operator_development_checkride() -> dict[str, Any]:
     """Rehearse bounded eligibility plus every stronger denied capability."""
 
-    base = _materials()
+    base = development_fixture_materials()
     scenarios: list[dict[str, str]] = []
 
     def record(name: str, result: dict[str, Any]) -> None:
@@ -274,4 +274,7 @@ def run_single_operator_development_checkride() -> dict[str, Any]:
     }
 
 
-__all__ = ["run_single_operator_development_checkride"]
+__all__ = [
+    "development_fixture_materials",
+    "run_single_operator_development_checkride",
+]

@@ -31,12 +31,6 @@ from .checkride import (
 from .consequences import correlate_consequences
 from .correlation import correlate_incident
 from .coverage import coverage_matrix, validate_recovery_coverage
-from .evidence_gate import (
-    EvidencePromotionPolicy,
-    evaluate_evidence_gate,
-    validate_field_manifest,
-    wilson_interval,
-)
 from .development_review import (
     DEVELOPMENT_NAMESPACE,
     DEVELOPMENT_PACKET_SCHEMA,
@@ -48,12 +42,25 @@ from .development_review import (
     development_statement,
     evaluate_development_receipt,
 )
+from .evidence_gate import (
+    EvidencePromotionPolicy,
+    evaluate_evidence_gate,
+    validate_field_manifest,
+    wilson_interval,
+)
 from .final_handoff import (
     confirmation_contract_sha256,
     evaluate_final_handoff,
     issue_final_handoff_seal,
 )
 from .flight_director import run_flight_director_proof
+from .operator_handoff import (
+    OPERATOR_HANDOFF_SCHEMA,
+    OPERATOR_KEY_ID,
+    build_operator_handoff,
+    canonical_development_statement,
+    verify_operator_handoff,
+)
 from .passive_providers import (
     TrueNASProtectionEvidenceProvider,
     TrueNASReadOnlyQueryClient,
@@ -127,6 +134,8 @@ __all__ = [
     "GovernedAPIKeyFile",
     "GovernedTLSCAFile",
     "HypothesisRule",
+    "OPERATOR_HANDOFF_SCHEMA",
+    "OPERATOR_KEY_ID",
     "GovernedPassiveEvidenceRuntime",
     "GovernedRestoreReceiptStore",
     "TrueNASProtectionEvidenceProvider",
@@ -139,11 +148,13 @@ __all__ = [
     "authority_boundary",
     "bind_platform_witness",
     "build_promotion_request",
+    "build_operator_handoff",
     "build_development_packet",
     "build_witnessed_promotion_request",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "classify_platform_transition",
+    "canonical_development_statement",
     "coverage_contract_sha256",
     "evaluate_airworthiness",
     "evaluate_development_receipt",
@@ -178,6 +189,7 @@ __all__ = [
     "validate_recovery_attestation",
     "validate_repository_evidence",
     "validate_platform_witness",
+    "verify_operator_handoff",
     "witness_validated_stage",
     "DEFAULT_NAMESPACE",
     "OpenSshSignatureVerifier",
