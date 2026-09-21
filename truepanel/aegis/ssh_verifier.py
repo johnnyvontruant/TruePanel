@@ -99,6 +99,16 @@ class OpenSshSignatureVerifier:
         self.timeout = float(timeout)
         self.expected_key_ids = expected_key_ids
 
+    def inspect_roster(self) -> dict[str, str]:
+        """Return validated public identities without attempting verification."""
+
+        allowed = self._snapshot(
+            self.allowed_signers_path, maximum=MAX_ALLOWED_SIGNERS_BYTES
+        )
+        return validate_allowed_signers_roster(
+            allowed, expected_key_ids=self.expected_key_ids
+        )
+
     @staticmethod
     def _snapshot(path: Path, *, maximum: int) -> bytes:
         if not path.is_absolute() or not hasattr(os, "O_NOFOLLOW"):
