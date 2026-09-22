@@ -162,7 +162,7 @@ def test_missing_drive_still_uses_steady_error_channel():
     assert controller.active_bays == ()
 
 
-def test_clear_on_start_clears_identify_and_error_channels():
+def test_clear_on_start_preserves_steady_error_channels():
     commands = []
     controller = TVS671BayLedController(
         command_writer=commands.append
@@ -180,13 +180,9 @@ def test_clear_on_start_clears_identify_and_error_channels():
         0x09,
         0x0B,
         0x0D,
-        0x83,
-        0x85,
-        0x87,
-        0x89,
-        0x8B,
-        0x8D,
     ]
+    # Startup clearing may not erase a legitimate persistent SMART fault.
+    assert 0x87 not in commands
 
 
 def test_unstructured_event_does_not_touch_hardware():
