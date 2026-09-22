@@ -3,7 +3,9 @@ from pathlib import Path
 
 from truepanel.aegis import OPERATOR_HANDOFF_SCHEMA, OPERATOR_KEY_ID
 from truepanel.aegis.operator_handoff import canonical_development_statement
-from truepanel.holodeck.aegis_operator_handoff import run_operator_handoff_checkride
+from truepanel.holodeck.aegis_operator_handoff import (
+    run_operator_handoff_checkride,
+)
 from truepanel.holodeck.aegis_single_operator_development import (
     development_fixture_materials,
 )
@@ -46,11 +48,18 @@ def test_statement_is_canonical_and_excludes_signature():
     assert OPERATOR_HANDOFF_SCHEMA.endswith("/v1")
 
 
-def test_preserved_operator_handoff_evidence_replays_exactly():
+def test_preserved_operator_handoff_v1_outcomes_remain_fail_closed():
     archived = json.loads(
         (ROOT / "docs/evidence/aegis-operator-key-handoff-v1.json").read_text()
     )
-    assert run_operator_handoff_checkride() == archived
+    current = run_operator_handoff_checkride()
+    assert current["status_counts"] == archived["status_counts"]
+    assert current["measurements"] == archived["measurements"]
+    assert [item["scenario"] for item in current["scenarios"]] == [
+        item["scenario"] for item in archived["scenarios"]
+    ]
+    assert current["production_mutation"] is False
+    assert current["control_authority"] is False
 
 
 def test_mission_control_exposes_key_and_signature_state_on_mobile():

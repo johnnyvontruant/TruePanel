@@ -44,7 +44,7 @@ def _sign(key: Path, statement: bytes) -> str:
     return statement_path.with_suffix(".json.sig").read_text()
 
 
-def run_operator_handoff_checkride() -> dict[str, Any]:
+def run_operator_handoff_checkride(*, include_preflight: bool = False) -> dict[str, Any]:
     """Use a disposable Ed25519 key to prove the real SSHSIG verification path."""
 
     scenarios: list[dict[str, str]] = []
@@ -83,9 +83,63 @@ def run_operator_handoff_checkride() -> dict[str, Any]:
             packet=values["packet"],
             unsigned_receipt=unsigned,
             policy=values["policy"],
+            candidate=values["candidate"],
+            holodeck_evidence=values["evidence"],
+            coverage_matrix=values["coverage"],
+            reviewer_report=values["report"],
             allowed_signers_path=roster,
+            expected_source_commit=values["packet"]["source_commit"],
+            now=NOW,
         )
         record("protected-public-roster", "READY_FOR_OFFLINE_SIGNATURE", "PublicRosterBound")
+
+        def preflight(**changes: Any) -> None:
+            case = changes.pop("case")
+            arguments = {
+                "packet": values["packet"],
+                "unsigned_receipt": unsigned,
+                "policy": values["policy"],
+                "candidate": values["candidate"],
+                "holodeck_evidence": values["evidence"],
+                "coverage_matrix": values["coverage"],
+                "reviewer_report": values["report"],
+                "allowed_signers_path": roster,
+                "expected_source_commit": values["packet"]["source_commit"],
+                "now": NOW,
+            }
+            arguments.update(changes)
+            try:
+                build_operator_handoff(**arguments)
+            except ValueError as error:
+                record(f"preflight-{case}", "HOLD", str(error))
+            else:
+                record(f"preflight-{case}", "UNSAFE_READY", "InvalidBundleIssued")
+
+        if include_preflight:
+            preflight(case="expired", now=NOW + 24 * 60 * 60)
+            preflight(case="source-drift", expected_source_commit="e" * 40)
+            changed = deepcopy(values["packet"])
+            changed["unsigned_note"] = "not signed"
+            preflight(case="unknown-packet-field", packet=changed)
+            changed = deepcopy(unsigned)
+            changed["production_authority"] = True
+            preflight(case="authority-escalation", unsigned_receipt=changed)
+            changed = deepcopy(values["policy"])
+            changed["maximum_age_seconds"] = 25 * 60 * 60
+            preflight(case="overlong-policy", policy=changed)
+            changed = deepcopy(values["candidate"])
+            changed["evaluator_sha256"] = "f" * 64
+            preflight(case="candidate-drift", candidate=changed)
+            changed = deepcopy(values["evidence"])
+            changed["status"] = "HOLD"
+            preflight(case="rehearsal-failed", holodeck_evidence=changed)
+            changed = deepcopy(values["coverage"])
+            changed["gaps"] = 1
+            preflight(case="coverage-gap", coverage_matrix=changed)
+            changed = deepcopy(values["report"])
+            changed["open_blockers"] = ["unreviewed"]
+            preflight(case="review-blocker", reviewer_report=changed)
+
         signature = _sign(private_key, canonical_development_statement(unsigned))
 
         def verify(**changes: Any) -> dict[str, Any]:
@@ -100,6 +154,7 @@ def run_operator_handoff_checkride() -> dict[str, Any]:
                 "coverage_matrix": values["coverage"],
                 "reviewer_report": values["report"],
                 "allowed_signers_path": roster,
+                "expected_source_commit": values["packet"]["source_commit"],
                 "now": NOW,
             }
             arguments.update(changes)
@@ -164,7 +219,11 @@ def run_operator_handoff_checkride() -> dict[str, Any]:
     for scenario in scenarios:
         status_counts[scenario["status"]] = status_counts.get(scenario["status"], 0) + 1
     return {
-        "scenario": "aegis-operator-key-handoff-v1",
+        "scenario": (
+            "aegis-operator-key-preflight-v1"
+            if include_preflight
+            else "aegis-operator-key-handoff-v1"
+        ),
         "policy_model": "ONE_ACCOUNTABLE_HUMAN_PLUS_AI_ASSISTED_EVIDENCE",
         "status_counts": status_counts,
         "scenarios": scenarios,
@@ -187,4 +246,10 @@ def run_operator_handoff_checkride() -> dict[str, Any]:
     }
 
 
-__all__ = ["run_operator_handoff_checkride"]
+def run_operator_handoff_preflight_checkride() -> dict[str, Any]:
+    """Extend the original checkride without changing its archived evidence."""
+
+    return run_operator_handoff_checkride(include_preflight=True)
+
+
+__all__ = ["run_operator_handoff_checkride", "run_operator_handoff_preflight_checkride"]
