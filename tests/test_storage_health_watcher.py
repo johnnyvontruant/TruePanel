@@ -609,3 +609,68 @@ def test_watcher_persists_temperature_hysteresis_between_polls():
     assert recovered.event_id == "storage.nvme0n1.recovered"
 
     assert watcher.pending_count == 0
+
+
+def test_watcher_reconciles_temperature_led_on_poll_without_recovery_event():
+    from truepanel.hardware.bay_leds import TVS671BayLedController
+    from truepanel.mission_control.storage_bay_indicator import (
+        StorageBayIndicator,
+    )
+
+    commands = []
+    controller = TVS671BayLedController(
+        command_writer=commands.append
+    )
+    indicator = StorageBayIndicator(controller)
+
+    def snapshot(temperature):
+        state = "warning" if temperature >= 45 else "healthy"
+        return report({
+            **device(
+                name="sdc",
+                serial="SERIAL-4",
+                label="Bay 4",
+                state=state,
+                message=(
+                    f"temperature {temperature}°C"
+                    if state == "warning"
+                    else "healthy"
+                ),
+                temperature=temperature,
+            ),
+            "physical_bay": 4,
+        })
+
+    reports = iter(
+        snapshot(temp)
+        for temp in (40, 45, 46, 48, 49, 45, 42)
+    )
+    watcher = StorageHealthWatcher(
+        report_provider=lambda: next(reports),
+        event_observers=[indicator],
+        interval=0,
+    )
+
+    watcher.poll()
+    assert commands == [0x09]
+
+    entered = watcher.poll()
+    assert len(entered) == 1
+    assert entered[0].event_id.endswith("health_degraded")
+    assert commands == [0x09]
+
+    watcher.poll()
+    watcher.poll()
+    assert commands == [0x09]
+
+    watcher.poll()
+    assert commands == [0x09, 0x08]
+
+    # At 45 C the health state is still WARNING and no recovery event fires.
+    # The separate thermal LED policy must clear the stale identify channel.
+    assert watcher.poll() == []
+    assert commands == [0x09, 0x08, 0x09]
+    assert controller.active_bays == ()
+
+    watcher.poll()
+    assert controller.active_bays == ()

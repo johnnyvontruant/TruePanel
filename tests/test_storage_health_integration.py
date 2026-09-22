@@ -198,3 +198,44 @@ def test_storage_health_custom_hysteresis_thresholds():
     assert watcher is not None
     assert watcher.differ.warning_temperature_recovery_c == 41
     assert watcher.differ.critical_temperature_recovery_c == 51
+
+
+def test_no_startup_led_clear_when_initial_conditions_suppressed():
+    from types import SimpleNamespace
+
+    from truepanel.hardware.bay_leds import TVS671BayLedController
+
+    commands = []
+    controller = TVS671BayLedController(command_writer=commands.append)
+    config = {
+        "mission_control": {
+            "storage_health": {
+                "bay_leds_enabled": True,
+                "bay_leds_clear_on_start": True,
+                "emit_initial_conditions": False,
+                "record_events": False,
+                "interval": 0,
+            }
+        }
+    }
+
+    watcher = build_storage_health_watcher(
+        config,
+        manager=SimpleNamespace(bay_leds=controller),
+        report_provider=lambda: report({
+            **device(
+                state="critical",
+                message="pending sectors: 1608",
+                pending=1608,
+            ),
+            "physical_bay": 3,
+        }),
+    )
+    assert watcher is not None
+
+    # Construction must not erase a previously asserted critical LED.
+    assert commands == []
+    assert watcher(None) is None
+    # The first fresh critical snapshot reasserts Bay 3's steady-red channel.
+    assert commands == [0x86]
+    assert 0x87 not in commands
