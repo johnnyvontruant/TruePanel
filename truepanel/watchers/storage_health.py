@@ -777,6 +777,20 @@ class StorageHealthWatcher:
             if self.recorder is not None:
                 self.recorder.record(change, event)
 
+        # Event observers receive transitions; indicators also need the
+        # latest effective state when no transition event was emitted.
+        # Reconciliation only runs after a completed report collection.
+        for observer in self.event_observers:
+            reconcile = getattr(observer, "reconcile_snapshot", None)
+            if not callable(reconcile):
+                continue
+            try:
+                reconcile(current)
+            except Exception:
+                LOGGER.exception(
+                    "Storage snapshot observer failed: %s", observer
+                )
+
         return events
 
     @property
