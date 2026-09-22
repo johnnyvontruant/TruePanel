@@ -62,16 +62,13 @@ class StorageBayIndicator:
 
         if clear_on_start:
             try:
+                # A fresh assessment may be delayed or unavailable at boot.
+                # Never wipe the independent steady-red error channel merely
+                # because a service restarted.
                 self.controller.clear_all()
-                for bay in range(1, 7):
-                    self.controller.set_error(
-                        bay,
-                        False,
-                        force=True,
-                    )
             except Exception:
                 LOGGER.exception(
-                    "Could not initialize bay warning/fault LEDs"
+                    "Could not initialize bay identify LEDs"
                 )
 
     def __call__(self, event) -> bool:
