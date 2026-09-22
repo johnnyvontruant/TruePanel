@@ -49,9 +49,9 @@ low-temperature observations. Unknown or duplicate physical-bay mappings do
 not authorize a clear. Snapshot reconciliation does not clear the steady-red
 error channel. Critical errors require the existing explicit recovery event.
 
-Startup safety: if initial health-condition emission is disabled, configured
-`bay_leds_clear_on_start: true` is suppressed to avoid blanking a real
-steady-red drive-failure lamp without an initial event to restore it.
+Startup safety: `bay_leds_clear_on_start: true` clears the flashing
+identify channels only, never steady-red critical-error LEDs. If initial
+health-condition emission is disabled, startup clearing is suppressed entirely.
 A successful subsequent poll reasserts any observed critical state.
 
 No disk, ZFS, fan, storage configuration, or boot actions are performed by
