@@ -185,6 +185,12 @@ mission_control:
   storage_health:
     bay_leds_clear_on_start: true
     bay_leds_enabled: true
+    # Keep the 45°C storage-health advisory. The physical flashing red
+    # temperature indicator uses a separate, sustained threshold.
+    bay_led_temperature_on_c: 48
+    bay_led_temperature_off_c: 45
+    bay_led_temperature_immediate_c: 50
+    bay_led_temperature_consecutive_polls: 2
     # Poll full SMART health less frequently than the lightweight collector.
     enabled: true
     interval: 300
