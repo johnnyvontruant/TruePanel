@@ -6,7 +6,9 @@ no signer, private-key input, promotion consumer, or production authority.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -59,33 +61,72 @@ def build_operator_handoff(
     packet: Mapping[str, Any],
     unsigned_receipt: Mapping[str, Any],
     policy: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+    holodeck_evidence: Mapping[str, Any],
+    coverage_matrix: Mapping[str, Any],
+    reviewer_report: Mapping[str, Any],
     allowed_signers_path: str | Path,
+    expected_source_commit: str,
+    now: float,
 ) -> dict[str, Any]:
-    """Build a portable, unsigned bundle after validating JT's public roster."""
+    """Issue a signing bundle only after every unsigned review check passes."""
 
     verifier = OpenSshSignatureVerifier(
         allowed_signers_path,
         namespace=DEVELOPMENT_NAMESPACE,
         expected_key_ids=(OPERATOR_KEY_ID,),
     )
-    roster = verifier.inspect_roster()
     if (
         packet.get("schema") != DEVELOPMENT_PACKET_SCHEMA
         or unsigned_receipt.get("schema") != DEVELOPMENT_RECEIPT_SCHEMA
         or unsigned_receipt.get("signature") != ""
-        or unsigned_receipt.get("packet_sha256") != semantic_sha256(packet)
+        or not isinstance(expected_source_commit, str)
+        or re.fullmatch(r"[0-9a-f]{40}", expected_source_commit) is None
+        or packet.get("source_commit") != expected_source_commit
         or policy.get("operator_id") != "jt"
         or policy.get("key_id") != OPERATOR_KEY_ID
         or policy.get("namespace") != DEVELOPMENT_NAMESPACE
     ):
         raise ValueError("DevelopmentHandoffInputsInvalid")
+    try:
+        # This is a preflight, not an approval. A deliberately false verifier
+        # proves that all other checks pass before a signature is requested.
+        preflight = evaluate_development_receipt(
+            packet=packet,
+            receipt=unsigned_receipt,
+            policy=policy,
+            candidate=candidate,
+            holodeck_evidence=holodeck_evidence,
+            coverage_matrix=coverage_matrix,
+            reviewer_report=reviewer_report,
+            verifier=lambda *_: False,
+            now=now,
+        )
+    except (TypeError, ValueError, OverflowError) as error:
+        raise ValueError("DevelopmentHandoffPreflightInvalid") from error
+    failures = [
+        condition["reason"]
+        for condition in preflight["conditions"]
+        if not condition["passed"] and condition["condition"] != "operator_signature"
+    ]
+    if (
+        preflight["status"] != "HOLD"
+        or not any(
+            condition["condition"] == "operator_signature" and not condition["passed"]
+            for condition in preflight["conditions"]
+        )
+    ):
+        raise ValueError("DevelopmentHandoffPreflightInvariantFailed")
+    if failures:
+        raise ValueError(f"DevelopmentHandoffPreflightFailed:{failures[0]}")
+    roster = verifier.inspect_roster()
     statement = canonical_development_statement(unsigned_receipt)
     return {
         "schema": OPERATOR_HANDOFF_SCHEMA,
         "packet_sha256": semantic_sha256(packet),
         "receipt_sha256_without_signature": semantic_sha256(unsigned_receipt),
         "statement": statement.decode(),
-        "statement_sha256": __import__("hashlib").sha256(statement).hexdigest(),
+        "statement_sha256": hashlib.sha256(statement).hexdigest(),
         "namespace": DEVELOPMENT_NAMESPACE,
         "operator_id": "jt",
         "key_id": OPERATOR_KEY_ID,
@@ -111,6 +152,7 @@ def verify_operator_handoff(
     coverage_matrix: Mapping[str, Any],
     reviewer_report: Mapping[str, Any],
     allowed_signers_path: str | Path,
+    expected_source_commit: str,
     now: float,
     consumed_receipts: Sequence[str] = (),
 ) -> dict[str, Any]:
@@ -121,7 +163,13 @@ def verify_operator_handoff(
             packet=packet,
             unsigned_receipt=unsigned_receipt,
             policy=policy,
+            candidate=candidate,
+            holodeck_evidence=holodeck_evidence,
+            coverage_matrix=coverage_matrix,
+            reviewer_report=reviewer_report,
             allowed_signers_path=allowed_signers_path,
+            expected_source_commit=expected_source_commit,
+            now=now,
         )
     except (OSError, ValueError):
         expected = None
@@ -144,6 +192,7 @@ def verify_operator_handoff(
         allowed_signers_path,
         namespace=DEVELOPMENT_NAMESPACE,
         expected_key_ids=(OPERATOR_KEY_ID,),
+        expected_fingerprint=handoff["public_key_fingerprint"],
     )
     return evaluate_development_receipt(
         packet=packet,

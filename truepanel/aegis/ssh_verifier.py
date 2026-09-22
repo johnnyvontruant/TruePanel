@@ -92,12 +92,14 @@ class OpenSshSignatureVerifier:
         executable: str = "/usr/bin/ssh-keygen",
         timeout: float = 5.0,
         expected_key_ids: tuple[str, ...] | None = None,
+        expected_fingerprint: str | None = None,
     ) -> None:
         self.allowed_signers_path = Path(allowed_signers_path)
         self.namespace = namespace
         self.executable = executable
         self.timeout = float(timeout)
         self.expected_key_ids = expected_key_ids
+        self.expected_fingerprint = expected_fingerprint
 
     def inspect_roster(self) -> dict[str, str]:
         """Return validated public identities without attempting verification."""
@@ -200,6 +202,11 @@ class OpenSshSignatureVerifier:
                 allowed, expected_key_ids=self.expected_key_ids
             )
             if key_id not in roster:
+                return False
+            if (
+                self.expected_fingerprint is not None
+                and roster[key_id] != self.expected_fingerprint
+            ):
                 return False
             allowed_fd = self._memfd("truepanel-allowed-signers", allowed)
             signature_fd = self._memfd("truepanel-review-signature", encoded_signature)

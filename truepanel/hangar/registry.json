@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.21.1",
-  "updated_at": "2026-09-21",
+  "registry_version": "2026.09.22.1",
+  "updated_at": "2026-09-22",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -356,6 +356,25 @@
       "revisit_conditions": ["JT provisions an operator-owned public roster", "JT rotates or revokes the development key", "a production approval policy is proposed"],
       "strongest_follow_up": "Let JT provision only the protected public roster, export the exact current packet, and return one detached development signature for a read-only field checkride.",
       "freshness": {"reviewed_at": "2026-09-21", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0024", "title": "AEGIS fail-closed pre-signing handoff", "state": "COMPLETED",
+      "hypothesis": "An unsigned development handoff can reject stale or incomplete evidence before asking the sole human operator to sign, and verification can pin the exact public key across a roster rotation.",
+      "value": "Prevents apparently signing-ready packets that a verifier would later hold and closes the key-substitution interval without adding approval or control authority.",
+      "prior_art": ["OpenSSH SSHSIG namespace and negative tests", "TUF scoped trust and expiry", "in-toto layout verification", "SLSA Verification Summary Attestation"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-handoff-preflight", "pr": null, "commits": []},
+      "protocol": ["compare externally pinned source commit", "evaluate every unsigned evidence and policy condition", "reject before signature request", "pin public key fingerprint in verifier snapshot", "recheck signature and conditions", "deny stronger consumers"],
+      "fixtures": ["aegis-operator-key-preflight-v1", "tests/test_aegis_operator_preflight.py", "tests/test_aegis_ssh_verifier.py"],
+      "success_criteria": ["one signing-ready fixture", "one valid fixture signature", "nine negative cases hold before signing", "five stronger consumers deny", "historical evidence retained", "zero live actions"],
+      "abort_criteria": ["preflight treated as human approval", "stale evidence exported as ready", "rotated key accepted against old fingerprint", "JT private key or signature fabricated", "production or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-operator-key-preflight-v1.json", "sha256": "095e1390440afaf9a792bc271f5e6563cc115080e5a0dffe9bd6b67b9caaf3c9"}],
+      "outcome": {"conclusion": "Nine new unsafe cases fail before signing; 26 total scenarios yield one signing-ready, one fixture-eligible, 19 HOLD and five DENIED with no production key or mutation."},
+      "invalidated_assumptions": ["verification after a signature is enough to make an operator handoff trustworthy", "the roster fingerprint remains stable between inspection and verification"],
+      "reproduction": ["pytest -q tests/test_aegis_operator_preflight.py tests/test_aegis_operator_handoff.py tests/test_aegis_ssh_verifier.py", "python -c \"from truepanel.holodeck.aegis_operator_handoff import run_operator_handoff_preflight_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT provisions a protected public roster", "a real development candidate is frozen for review", "a new approval consumer is introduced"],
+      "strongest_follow_up": "Build a read-only, independently source-pinned packet export for a real candidate, then let JT inspect and sign it offline with an operator-owned key.",
+      "freshness": {"reviewed_at": "2026-09-22", "review_after": "2026-12-31"}
     }
   ]
 }

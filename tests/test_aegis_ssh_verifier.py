@@ -53,6 +53,18 @@ def test_openssh_verifier_accepts_exact_statement(tmp_path):
     assert verifier("other-reviewer", statement, signature) is False
 
 
+def test_verifier_pins_public_key_fingerprint_at_verification(tmp_path):
+    statement = b'{"request":"exact"}'
+    allowed, signature = _key_and_signature(tmp_path, statement)
+    fingerprint = OpenSshSignatureVerifier(allowed).inspect_roster()["reviewer-a"]
+    assert OpenSshSignatureVerifier(
+        allowed, expected_fingerprint=fingerprint
+    )("reviewer-a", statement, signature)
+    assert not OpenSshSignatureVerifier(
+        allowed, expected_fingerprint="SHA256:substituted"
+    )("reviewer-a", statement, signature)
+
+
 def test_openssh_verifier_rejects_unsafe_trust_file(tmp_path):
     statement = b"bounded statement"
     allowed, signature = _key_and_signature(tmp_path, statement)
