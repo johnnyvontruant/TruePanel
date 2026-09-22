@@ -30,6 +30,12 @@ DEFAULT_STORAGE_HEALTH_CONFIG = {
     "event_log": "/var/lib/truepanel/storage/events.jsonl",
     "bay_leds_enabled": False,
     "bay_leds_clear_on_start": True,
+    # Dashboard SMART advisories still start at 45 C; physical thermal LEDs
+    # use their own guarded, sustained higher-temperature policy.
+    "bay_led_temperature_on_c": 48,
+    "bay_led_temperature_off_c": 45,
+    "bay_led_temperature_immediate_c": 50,
+    "bay_led_temperature_consecutive_polls": 2,
     "warning_temperature_recovery_c": 42,
     "critical_temperature_recovery_c": 52,
 }
@@ -97,11 +103,23 @@ def build_storage_health_watcher(
         event_observers.append(
             StorageBayIndicator(
                 manager.bay_leds,
-                clear_on_start=bool(
-                    settings.get(
-                        "bay_leds_clear_on_start",
-                        True,
-                    )
+                # Never blank a previously asserted fault at startup
+                # when initial health conditions will not be re-emitted.
+                clear_on_start=(
+                    bool(settings.get("bay_leds_clear_on_start", True))
+                    and bool(settings.get("emit_initial_conditions", True))
+                ),
+                temperature_led_on_c=int(
+                    settings["bay_led_temperature_on_c"]
+                ),
+                temperature_led_off_c=int(
+                    settings["bay_led_temperature_off_c"]
+                ),
+                temperature_led_immediate_c=int(
+                    settings["bay_led_temperature_immediate_c"]
+                ),
+                temperature_led_consecutive_polls=int(
+                    settings["bay_led_temperature_consecutive_polls"]
                 ),
             )
         )
