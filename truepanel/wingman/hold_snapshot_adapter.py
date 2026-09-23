@@ -100,12 +100,12 @@ def _verified_current_bay(
             or identity.get("serial_last4") != suffix
         ):
             continue
-        if not any(
+        gates = repair.get("gates")
+        if not isinstance(gates, list) or not any(
             isinstance(gate, dict)
             and gate.get("code") == "physical_identity"
             and gate.get("satisfied") is True
-            for gate in repair.get("gates", [])
-            if isinstance(repair.get("gates"), list)
+            for gate in gates
         ):
             continue
         matches.append(session)
