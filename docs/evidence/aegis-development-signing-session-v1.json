@@ -1,0 +1,39 @@
+{
+  "control_authority": false,
+  "fixture_private_keys_retained": 0,
+  "measurements": {
+    "adversarial_holds": 9,
+    "deployments": 0,
+    "development_eligible": 1,
+    "false_ready": 0,
+    "hardware_actions": 0,
+    "offline_signing_ready": 1,
+    "production_acceptances": 0,
+    "runtime_writes": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-development-signing-session-v1",
+  "scenarios": [
+    {"reason": "SessionSubjectsBound", "scenario": "clean-pinned-checkout", "status": "READY_FOR_OFFLINE_SIGNATURE"},
+    {"reason": "SingleOperatorDevelopmentReviewVerified", "scenario": "exact-session-signature", "status": "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW"},
+    {"reason": "OperatorSignatureInvalid", "scenario": "missing-signature", "status": "HOLD"},
+    {"reason": "OperatorSignatureInvalid", "scenario": "wrong-namespace-signature", "status": "HOLD"},
+    {"reason": "SigningSessionMismatch", "scenario": "clock-substitution", "status": "HOLD"},
+    {"reason": "SigningSessionMismatch", "scenario": "checkout-path-substitution", "status": "HOLD"},
+    {"reason": "SigningSessionMismatch", "scenario": "tree-tampering", "status": "HOLD"},
+    {"reason": "SigningSessionMismatch", "scenario": "authority-escalation", "status": "HOLD"},
+    {"reason": "CheckoutWitnessHold", "scenario": "dirty-checkout-before-signing", "status": "HOLD"},
+    {"reason": "SigningSessionMismatch", "scenario": "dirty-checkout-after-signing", "status": "HOLD"},
+    {"reason": "ReceiptAlreadyConsumed", "scenario": "receipt-replay", "status": "HOLD"}
+  ],
+  "status_counts": {
+    "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1,
+    "HOLD": 9,
+    "READY_FOR_OFFLINE_SIGNATURE": 1
+  }
+}
