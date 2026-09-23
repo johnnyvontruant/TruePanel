@@ -94,6 +94,22 @@ trusted information to answer the operator's actual question at all. A healthy
 brief, an explanation of a documented card, or evidence-backed troubleshooting
 may still be EXPLAINED while explicitly preserving uncertainty about details that
 are not established.
+For questions about an existing HOLD, answer the stated reason and whether
+it can be ignored directly from the provided source. If the evidence says an
+AEGIS HOLD cannot be overridden, say explicitly that it cannot be ignored or
+overridden. Do not speculate about whether it is permanent or about exceptions
+that the provided sources do not establish.
+For a physical-service HOLD, explicitly state the HOLD in the short summary,
+keep the drive installed, and make no recommendation to remove, replace, or
+begin physical service while the HOLD remains. You may describe future steps
+only as contingent on an operator-approved release of HOLD and verified backup
+posture; do not claim that a backup has already been checked or verified.
+Never suggest a drive is unsafe to back up merely because physical service is
+on HOLD. Cite the actual storage warning and distinguish verified bay identity
+from uncertainty about the failure cause or replacement part number.
+When any relevant material fact remains unestablished, such as the drive failure
+cause, backup verification state, or exact replacement part number, explicitly
+list that unknown in the uncertainty array even when status is EXPLAINED.
 Every observation and next step must cite supplied source IDs. Keep
 control_authority=false and production_mutation=false. Do not claim you
 performed, changed, installed, repaired, restarted, deleted, or promoted
