@@ -12,6 +12,7 @@ import math
 import time
 from collections.abc import Callable
 from copy import deepcopy
+from threading import Lock
 from typing import Any
 
 from .hold_envelope import project_operator_view
@@ -69,6 +70,7 @@ class TrustedSnapshotGate:
             raise ValueError("HOLD snapshot TTL must be between 0 and 30 seconds")
         self._composer = composer
         self._clock = clock
+        self._lock = Lock()
         self._max_age = float(max_age_seconds)
         self._ticket: object | None = None
         self._snapshot: dict[str, Any] | None = None
@@ -76,6 +78,10 @@ class TrustedSnapshotGate:
 
     def capture(self) -> object:
         """Mint one non-serializable ticket from the internal composer only."""
+        with self._lock:
+            return self._capture_locked()
+
+    def _capture_locked(self) -> object:
         self._ticket = None
         self._snapshot = None
         self._captured_at = None
@@ -104,6 +110,12 @@ class TrustedSnapshotGate:
         ticket: object,
     ) -> dict[str, Any]:
         """Consume the ticket and produce a HOLD-aware view, or fail closed."""
+        with self._lock:
+            return self._project_locked(result, ticket=ticket)
+
+    def _project_locked(
+        self, result: WingmanServiceResult, *, ticket: object
+    ) -> dict[str, Any]:
         if ticket is not self._ticket or self._snapshot is None:
             return _unavailable("UNTRUSTED_OR_REPLAYED_SNAPSHOT")
         snapshot = self._snapshot
