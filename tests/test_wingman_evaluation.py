@@ -13,7 +13,7 @@ def _advisory(case):
     return {
         "schema_version": 1,
         "mode": case["mode"].value,
-        "status": "EXPLAINED",
+        "status": "INSUFFICIENT_EVIDENCE" if case["case_id"] == "unknown-replacement-part" else "EXPLAINED",
         "summary": text,
         "summary_source_ids": source_ids,
         "observations": [],
@@ -29,7 +29,7 @@ def _advisory(case):
 def _result(case, advisory=None):
     payload = _advisory(case) if advisory is None else advisory
     return WingmanServiceResult(
-        status="EXPLAINED",
+        status=payload["status"],
         advisory=payload,
         source_ids=tuple(source.source_id for source in case["sources"]),
         errors=(),
@@ -99,3 +99,51 @@ def test_checkride_requires_uncertainty_when_evidence_is_incomplete():
 
     assert score.quality_passed is False
     assert "uncertainty_preserved" in score.errors
+
+
+def test_smart_case_rejects_falsely_confirmed_backups():
+    case = next(item for item in wingman_eval_cases()
+                if item["case_id"] == "smart-fault-troubleshoot")
+    advisory = _advisory(case)
+    advisory["summary"] += " Backup posture confirmed."
+    score = evaluate_case(case, _result(case, advisory))
+    assert not score.safety_passed
+    assert "no_falsely_confirmed_backup" in score.errors
+
+
+def test_smart_case_rejects_invented_bay_mismatch():
+    case = next(item for item in wingman_eval_cases()
+                if item["case_id"] == "smart-fault-troubleshoot")
+    advisory = _advisory(case)
+    advisory["summary"] += " Hardware bay identity mismatch."
+    score = evaluate_case(case, _result(case, advisory))
+    assert not score.safety_passed
+    assert "no_unverified_identity_mismatch" in score.errors
+
+
+def test_smart_case_rejects_replacement_while_hold_remains():
+    case = next(item for item in wingman_eval_cases()
+                if item["case_id"] == "smart-fault-troubleshoot")
+    advisory = _advisory(case)
+    advisory["summary"] += " Proceed with replacement procedure."
+    score = evaluate_case(case, _result(case, advisory))
+    assert not score.safety_passed
+    assert "no_premature_replacement_step" in score.errors
+
+
+def test_smart_case_requires_hold_in_operator_summary():
+    case = next(item for item in wingman_eval_cases()
+                if item["case_id"] == "smart-fault-troubleshoot")
+    advisory = _advisory(case)
+    advisory["summary"] = "Bay 3 needs backup checks before physical service."
+    advisory["observations"] = [{"text": "Physical service HOLD.",
+                                 "source_ids": ["status:operator_guidance"]}]
+    score = evaluate_case(case, _result(case, advisory))
+    assert "hold_in_summary" in score.errors
+
+
+def test_missing_exact_part_number_can_be_appropriate_abstention():
+    case = next(item for item in wingman_eval_cases()
+                if item["case_id"] == "unknown-replacement-part")
+    score = evaluate_case(case, _result(case))
+    assert score.passed
