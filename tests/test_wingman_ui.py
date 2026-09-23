@@ -153,3 +153,26 @@ def test_pilot_mode_does_not_hide_offline_uncertainty_or_readiness_hold():
     )
     assert 'wm-readiness-panel' in source
     assert 'wm-offline-panel' in source
+
+
+
+def test_ai_brief_is_primary_and_engineer_details_start_collapsed():
+    source = _ui_source()
+    assert '<h3>Plain-language system brief</h3>' in source
+    assert '<button class="wm-brief wm-ai" type="button">AI BRIEF</button>' in source
+    assert '<details class="wm-deep-dive">' in source
+    assert '<summary>ENGINEER DETAILS' in source
+    assert source.index('<button class="wm-brief wm-ai"') < source.index(
+        '<button class="wm-brief wm-offline"'
+    )
+    assert source.index('<button class="wm-brief wm-offline"') < source.index(
+        '<button class="wm-brief wm-readiness"'
+    )
+    # No model starts when the page is opened; explicit operator action is required.
+    assert 'button.addEventListener("click",async()=>{' in source
+    assert 'if(deepDive) deepDive.open=true;' in source
+    assert (
+        'body[data-mission-mode="pilot"] '
+        '#${VIEW_ID}[data-wingman-state="standby"] .wm-body,'
+        not in source
+    )
