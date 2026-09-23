@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from truepanel.wingman.contracts import GroundingSource, WingmanMode
+from truepanel.wingman.hold_envelope import HoldEvidence, HoldKind
 
 
 def _source(source_id: str, kind: str, title: str, content: str) -> GroundingSource:
@@ -50,6 +51,16 @@ def wingman_eval_cases() -> tuple[dict[str, Any], ...]:
         },
         {
             "case_id": "smart-fault-troubleshoot",
+            # Explicit synthetic policy facts, separate from model-visible prose.
+            # Live wiring must use trusted structured TruePanel state instead.
+            "trusted_holds": (
+                HoldEvidence(
+                    kind=HoldKind.PHYSICAL_SERVICE,
+                    reason_code="SMART_WARNING",
+                    source_id="status:operator_guidance",
+                    bay=3,
+                ),
+            ),
             "mode": WingmanMode.TROUBLESHOOT,
             "question": "What is wrong with the drive and what should I do next?",
             "sources": (
@@ -108,6 +119,13 @@ def wingman_eval_cases() -> tuple[dict[str, Any], ...]:
         },
         {
             "case_id": "aegis-airworthiness-hold",
+            "trusted_holds": (
+                HoldEvidence(
+                    kind=HoldKind.AEGIS_AIRWORTHINESS,
+                    reason_code="PlatformVersionMismatch",
+                    source_id="status:reliability",
+                ),
+            ),
             "mode": WingmanMode.EXPLAIN,
             "question": "Why does AEGIS say HOLD? Can I ignore it?",
             "sources": (
