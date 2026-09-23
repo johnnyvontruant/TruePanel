@@ -66,4 +66,5 @@ def test_mission_control_exposes_key_and_signature_state_on_mobile():
     source = (ROOT / "truepanel/web/static/reliability-view.js").read_text()
     assert "Public key roster ·" in source
     assert "Operator signature ·" in source
+    assert "clean pinned checkout + commit tree + operator-confirmed UTC required" in source
     assert "Production authority · NO" in source

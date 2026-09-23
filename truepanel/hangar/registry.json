@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.22.1",
-  "updated_at": "2026-09-22",
+  "registry_version": "2026.09.23.1",
+  "updated_at": "2026-09-23",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -375,6 +375,25 @@
       "revisit_conditions": ["JT provisions a protected public roster", "a real development candidate is frozen for review", "a new approval consumer is introduced"],
       "strongest_follow_up": "Build a read-only, independently source-pinned packet export for a real candidate, then let JT inspect and sign it offline with an operator-owned key.",
       "freshness": {"reviewed_at": "2026-09-22", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0025", "title": "AEGIS content-bound development signing session", "state": "COMPLETED",
+      "hypothesis": "One detached development signature can bind a clean Git commit and tree, operator-confirmed UTC, preflight handoff, public-key fingerprint, and receipt without creating production authority.",
+      "value": "Prevents source, tree, clock, or handoff presentation data from being substituted around JT's offline signature.",
+      "prior_art": ["OpenSSH SSHSIG namespace", "in-toto Statement subject digests", "SLSA provenance", "Git porcelain status", "RFC 3161"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-signing-kit", "pr": null, "commits": []},
+      "protocol": ["inspect an absolute non-symlinked checkout read-only", "pin commit and tree with replacement objects disabled", "require clean tracked untracked and submodule state", "record operator-confirmed UTC", "bind all subjects into one SSHSIG namespace", "reconstruct before development eligibility"],
+      "fixtures": ["aegis-development-signing-session-v1", "tests/test_aegis_signing_session.py"],
+      "success_criteria": ["one signing-ready session", "one fixture development-eligible result", "all substitutions and dirty states hold", "zero false-ready", "no private key retained", "zero live action"],
+      "abort_criteria": ["checkout or clock remains unsigned presentation data", "local clock represented as an external timestamp authority", "private key enters TruePanel", "development signature gains stronger authority", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-development-signing-session-v1.json", "sha256": "3e0804a8a9dc800ca9c6e60983fe70f402333cf9544067f9f2db23474f7acd9e"}],
+      "outcome": {"conclusion": "One clean pinned fixture checkout reaches signing readiness and one exact session signature reaches development-review eligibility; nine adversarial cases hold with zero false-ready or live effects."},
+      "invalidated_assumptions": ["a receipt signature automatically authenticates nearby checkout metadata", "a commit hash alone captures the exact Git tree and clean working state", "a local clock should be described as independently trusted"],
+      "reproduction": ["pytest -q tests/test_aegis_signing_session.py", "python -c \"from truepanel.holodeck.aegis_signing_session import run_signing_session_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT provisions the protected development roster", "an RFC 3161 or Roughtime adapter is approved", "a real candidate is frozen for offline review"],
+      "strongest_follow_up": "Export the freshly reconstructed session from a pinned candidate checkout, let JT compare UTC and sign it offline, then verify the returned signature in a read-only field checkride.",
+      "freshness": {"reviewed_at": "2026-09-23", "review_after": "2026-12-31"}
     }
   ]
 }
