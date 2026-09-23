@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import copy
 
+import pytest
+
 from truepanel.wingman.hold_envelope import (
     HoldKind,
     project_operator_view,
@@ -94,9 +96,9 @@ def test_unknown_card_gate_is_not_mistaken_for_confirmed_readiness():
     snapshot["operator_guidance"][0]["runtime"]["action_gate"].pop(
         "physical_service_ready"
     )
-    holds = holds_from_trusted_snapshot(snapshot)
-    assert not any(h.kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED for h in holds)
-    # Missing readiness is not permission: this adapter is not a release gate.
+    with pytest.raises(ValueError, match="readiness unknown"):
+        holds_from_trusted_snapshot(snapshot)
+    # Missing readiness must not be translated into permission to explain.
 
 
 def test_invalid_airworthiness_reason_does_not_generate_unsafe_text():
@@ -120,5 +122,22 @@ def test_inputs_remain_unmodified():
 def test_only_structured_aegis_hold_can_trigger_aegis_envelope():
     snapshot = _snapshot()
     snapshot["reliability"]["airworthiness"]["status"] = "REVIEW"
-    holds = holds_from_trusted_snapshot(snapshot)
-    assert all(h.kind is not HoldKind.AEGIS_AIRWORTHINESS for h in holds)
+    with pytest.raises(ValueError, match="not resolved"):
+        holds_from_trusted_snapshot(snapshot)
+
+
+
+@pytest.mark.parametrize("missing", ["reliability", "operator_guidance"])
+def test_missing_authoritative_status_fails_closed(missing):
+    snapshot = _snapshot()
+    snapshot.pop(missing)
+    with pytest.raises(ValueError, match="unavailable"):
+        holds_from_trusted_snapshot(snapshot)
+
+
+@pytest.mark.parametrize("value", [None, "UNKNOWN", "REVIEW", "INVALID"])
+def test_unresolved_aegis_state_fails_closed(value):
+    snapshot = _snapshot()
+    snapshot["reliability"]["airworthiness"]["status"] = value
+    with pytest.raises(ValueError, match="not resolved"):
+        holds_from_trusted_snapshot(snapshot)
