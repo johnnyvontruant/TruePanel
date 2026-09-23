@@ -159,3 +159,90 @@ def test_many_pools_cannot_push_an_aegis_hold_out_of_pilot_summary():
     assert "AEGIS reports HOLD" in result["summary"]
     assert "1 REVIEW" in result["summary"]
     assert result["model_invoked"] is False
+
+
+
+def test_online_pool_does_not_hide_critical_drive_with_smart_passed():
+    result = offline_brief({
+        "storage": {
+            "pools": [{"name": "HDDs", "health": "ONLINE"}],
+            "smart": [{
+                "physical_bay": 3,
+                "health": "PASSED",
+                "health_state": "critical",
+                "reallocated": 16264,
+                "pending": 1608,
+                "offline_uncorrectable": 1608,
+                "reported_uncorrect": 905,
+                "media_errors": 0,
+                "serial_last4": "REDACTED",
+            }],
+        },
+        "reliability": {"state": "HOLD"},
+        "operator_guidance": [{"status": "REVIEW"}],
+    })
+
+    assert result["status"] == "OBSERVED"
+    assert "AEGIS reports HOLD" in result["summary"]
+    assert "Bay 3: reported drive-health state CRITICAL" in result["summary"]
+    assert "SMART overall PASSED does not clear this finding" in result["summary"]
+    assert "reallocated: 16,264" in result["summary"]
+    assert "pending: 1,608" in result["summary"]
+    assert "reported uncorrectable: 905" in result["summary"]
+    assert "Pool HDDs: reported ONLINE" in " ".join(
+        item["text"] for item in result["observations"]
+    )
+    assert "REDACTED" not in str(result)
+    assert result["model_invoked"] is False
+    assert result["control_authority"] is False
+    assert result["production_mutation"] is False
+
+
+def test_drive_finding_survives_eight_online_pools():
+    result = offline_brief({
+        "storage": {
+            "pools": [
+                {"name": f"pool{index}", "health": "ONLINE"}
+                for index in range(8)
+            ],
+            "smart": [{
+                "physical_bay": 3,
+                "health": "PASSED",
+                "health_state": "critical",
+                "pending": 1,
+            }],
+        },
+        "reliability": {"state": "HOLD"},
+        "operator_guidance": [{"status": "REVIEW"}],
+    })
+
+    assert "Bay 3" in result["summary"]
+    assert any("Bay 3" in item["text"] for item in result["observations"])
+    assert any("Pool pool0" in item["text"] for item in result["observations"])
+
+
+def test_unmapped_drive_error_counts_do_not_invent_a_bay():
+    result = offline_brief({
+        "storage": {
+            "pools": [{"name": "HDDs", "health": "ONLINE"}],
+            "smart": [{
+                "physical_bay": None,
+                "health": "PASSED",
+                "health_state": "healthy",
+                "pending": 2,
+            }],
+        }
+    })
+
+    assert "Unmapped drive" in result["summary"]
+    assert "Bay " not in result["summary"]
+    assert "despite drive-health state HEALTHY" in result["summary"]
+    assert any("physical bay was not verified" in item for item in result["uncertainty"])
+
+
+def test_missing_drive_records_are_not_treated_as_drive_clearance():
+    result = offline_brief({
+        "storage": {"pools": [{"name": "HDDs", "health": "ONLINE"}]}
+    })
+    assert "Pool HDDs: reported ONLINE" in result["summary"]
+    assert "Drive-health records are unavailable." in result["uncertainty"]
