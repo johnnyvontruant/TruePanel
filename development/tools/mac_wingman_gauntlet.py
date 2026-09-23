@@ -212,6 +212,12 @@ def checkride(
                 "--threads-batch", "4", "--parallel", "1",
                 "--n-gpu-layers", "99",
             ]
+            if name == "Granite 4.0 1B":
+                # The Mac build fails Granite's JSON grammar with an empty
+                # grammar stack. Avoid Jinja parsing for this model only.
+                # Record the deviation, as template changes affect quality.
+                args.append("--no-jinja")
+                result["server_chat_template_mode"] = "no-jinja"
             if name.startswith("Qwen3.5"):
                 # Previous Qwen evaluation disabled its thinking mode.
                 args.extend(["--reasoning", "off"])
@@ -262,6 +268,14 @@ def checkride(
 
             data = json.loads(report_file.read_text())
             rows = data["cases"]
+            if rows and all(row["service_status"] == "MODEL_UNAVAILABLE" for row in rows):
+                # A healthy endpoint does not prove the model can serve the
+                # structured request; never call 12 HTTP errors a quality score.
+                result["status"] = "INFERENCE_ERROR"
+                result["reason"] = "All requests unavailable; inspect server.log and responses.json"
+                result["cases_run"] = len(rows)
+                result["service_errors"] = [row["service_errors"] for row in rows]
+                return result
             result.update({
                 "status": data["status"], "cases_run": len(rows),
                 "cases_passed": sum(bool(row["passed"]) for row in rows),
