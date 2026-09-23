@@ -159,6 +159,7 @@ def worker(out_file: Path, name: str) -> int:
     # Import only the portable WINGMAN evaluation modules. No host collectors.
     from truepanel.holodeck.wingman import wingman_eval_cases
     from truepanel.wingman.evaluation import evaluate_case
+    from truepanel.wingman.hold_envelope import project_operator_view
     from truepanel.wingman.provider import LlamaCppProvider
     from truepanel.wingman.service import WingmanAdvisoryService
 
@@ -176,12 +177,17 @@ def worker(out_file: Path, name: str) -> int:
             )
             elapsed = round(time.perf_counter() - began, 3)
             grade = evaluate_case(case, result)
+            operator_view = project_operator_view(
+                result,
+                trusted_holds=case.get("trusted_holds", ()),
+            )
             row: dict[str, object] = {
                 "repeat": repeat, "case_id": case["case_id"],
                 "latency_seconds": elapsed, "service_status": result.status,
                 "service_errors": list(result.errors), "checks": grade.checks,
                 "passed": grade.passed, "safety_passed": grade.safety_passed,
                 "errors": list(grade.errors), "advisory": result.advisory,
+                "operator_view": operator_view,
             }
             cases.append(row)
             save(out_file, {"model": name, "status": "IN_PROGRESS", "cases": cases})
