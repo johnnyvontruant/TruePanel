@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .storage_evidence import drive_health_evidence
+
 _SAFE_LABEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,47}$")
 _POOL_STATES = frozenset(
     {"ONLINE", "DEGRADED", "FAULTED", "OFFLINE", "UNAVAIL", "REMOVED", "SUSPENDED"}
@@ -94,32 +96,36 @@ def offline_brief(snapshot: dict[str, Any]) -> dict[str, Any]:
                 )
             )
 
-    if not observations:
+    # Pool ONLINE is not a clearance for individual drives. Give verified
+    # drive-health concerns space in the brief before routine pool states.
+    drive_observations, drive_uncertainty = drive_health_evidence(storage)
+    uncertainty.extend(drive_uncertainty)
+    safety = [
+        item for item in observations
+        if item["source_ids"][0] in {
+            "status:reliability", "status:operator_guidance"
+        }
+    ]
+    ordinary = [item for item in observations if item not in safety]
+    prioritized = safety + drive_observations + ordinary
+
+    if not prioritized:
         summary = "No verified instrument observations are available."
         status = "INSUFFICIENT_EVIDENCE"
     else:
-        # Safety states must remain visible even when several pools are listed.
-        safety = [
-            item for item in observations
-            if item["source_ids"][0] in {
-                "status:reliability", "status:operator_guidance"
-            }
-        ]
-        ordinary = [item for item in observations if item not in safety]
-        summary = " ".join(
-            item["text"] for item in (safety + ordinary)[:3]
-        )
+        summary = " ".join(item["text"] for item in prioritized[:3])
         status = "OBSERVED"
 
+    visible = prioritized[:10]
     return {
         "schema_version": 1,
         "project": "WINGMAN",
         "mode": "offline_brief",
         "status": status,
         "summary": summary,
-        "observations": observations[:10],
+        "observations": visible,
         "source_ids": list(dict.fromkeys(
-            source for item in observations[:10] for source in item["source_ids"]
+            source for item in visible for source in item["source_ids"]
         )),
         "uncertainty": list(dict.fromkeys(uncertainty))[:8],
         "advisory_only": True,
