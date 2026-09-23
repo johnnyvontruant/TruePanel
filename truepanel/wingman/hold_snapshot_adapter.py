@@ -16,6 +16,104 @@ _SMART_WARNING_CODE = "storage.smart_warning"
 _AEGIS_STATUS = "HOLD"
 
 
+_CURRENT_IDENTITY_PROOFS = {
+    ("wwn", "udev_wwn_cross_checked_inventory"),
+    ("serial_model", "inventory_serial_cross_checked"),
+}
+
+
+def _verified_current_bay(
+    card: dict[str, Any],
+    lifeline: Any,
+) -> int | None:
+    """Require a unique active Lifeline session AND independent hardware proof.
+
+    Runtime Linux names, a guidance-card bay, a stored fingerprint count, a
+    high-confidence ZFS member identity, and an operator acknowledgement are
+    never sufficient on their own. All observable identity fields must agree.
+    """
+
+    runtime = card.get("runtime")
+    evidence = runtime.get("evidence") if isinstance(runtime, dict) else None
+    if not isinstance(evidence, dict) or not isinstance(lifeline, dict):
+        return None
+    sessions = lifeline.get("sessions")
+    if not isinstance(sessions, list):
+        return None
+    pool = evidence.get("pool")
+    vdev = evidence.get("vdev")
+    device = evidence.get("device")
+    suffix = evidence.get("serial_last4")
+    bay = evidence.get("bay")
+    member = evidence.get("member_id")
+    if (
+        not all(isinstance(value, str) and value.strip()
+                for value in (pool, vdev, device, suffix))
+        or type(bay) is not int
+        or not 1 <= bay <= 999
+    ):
+        return None
+
+    matches: list[dict[str, Any]] = []
+    for session in sessions:
+        if not isinstance(session, dict):
+            continue
+        original = session.get("original_fault")
+        identity = session.get("drive_identity")
+        repair = session.get("last_session")
+        if not all(isinstance(item, dict)
+                   for item in (original, identity, repair)):
+            continue
+        target = repair.get("target")
+        if not isinstance(target, dict):
+            continue
+        if (
+            session.get("status") != "active"
+            or session.get("trigger_code") != _SMART_WARNING_CODE
+            or (identity.get("mode"), identity.get("source"))
+            not in _CURRENT_IDENTITY_PROOFS
+            or identity.get("confidence") not in {"high", "very_high"}
+            or not isinstance(identity.get("stable_key"), str)
+            or not identity["stable_key"].strip()
+        ):
+            continue
+        # Require a current independently observed mapping, not historical
+        # provenance and not a stored ZFS-only identity. Every available
+        # member ID must agree, but do not use a Linux path as member proof.
+        if member and (
+            not isinstance(member, str)
+            or original.get("member_id") != member
+            or target.get("member_id") != member
+        ):
+            continue
+        if any(record.get("pool") != pool or record.get("vdev") != vdev
+               for record in (original, target)):
+            continue
+        if any(record.get("device") != device
+               for record in (original, target, identity)):
+            continue
+        if any(record.get("bay") != bay
+               for record in (original, target, identity)):
+            continue
+        if (
+            original.get("serial_last4") != suffix
+            or identity.get("serial_last4") != suffix
+        ):
+            continue
+        if not any(
+            isinstance(gate, dict)
+            and gate.get("code") == "physical_identity"
+            and gate.get("satisfied") is True
+            for gate in repair.get("gates", [])
+            if isinstance(repair.get("gates"), list)
+        ):
+            continue
+        matches.append(session)
+
+    # Ambiguous multiple identities must never publish a physical bay.
+    return bay if len(matches) == 1 else None
+
+
 def holds_from_trusted_snapshot(
     snapshot: dict[str, Any],
 ) -> tuple[HoldEvidence, ...]:
@@ -57,7 +155,7 @@ def holds_from_trusted_snapshot(
     cards = snapshot.get("operator_guidance")
     if not isinstance(cards, list):
         raise ValueError("Operator guidance evidence unavailable")
-    blocked_smart_cards = False
+    blocked_smart_cards: list[dict[str, Any]] = []
     for card in cards:
         if not isinstance(card, dict):
             raise ValueError("Malformed operator guidance card")
@@ -68,13 +166,22 @@ def holds_from_trusted_snapshot(
         if not isinstance(gate, dict) or type(gate.get("physical_service_ready")) is not bool:
             raise ValueError("SMART physical service readiness unknown")
         if gate["physical_service_ready"] is False:
-            blocked_smart_cards = True
+            blocked_smart_cards.append(card)
     if blocked_smart_cards:
+        # Multiple blocked cards or any unresolved identity stay unlocalized.
+        bay = (
+            _verified_current_bay(blocked_smart_cards[0], snapshot.get("lifeline"))
+            if len(blocked_smart_cards) == 1 else None
+        )
         holds.append(
             HoldEvidence(
-                kind=HoldKind.PHYSICAL_SERVICE_UNLOCALIZED,
+                kind=(
+                    HoldKind.PHYSICAL_SERVICE if bay is not None
+                    else HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
+                ),
                 reason_code="ServiceNotReady",
                 source_id="status:operator_guidance",
+                bay=bay,
             )
         )
 
