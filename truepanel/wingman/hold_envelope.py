@@ -42,6 +42,8 @@ class HoldEvidence:
     bay: int | None = None
 
     def __post_init__(self) -> None:
+        if not isinstance(self.kind, HoldKind):
+            raise ValueError("HOLD kind must be an explicit typed authority")
         if self.source_id != _TRUSTED_SOURCE_IDS[self.kind]:
             raise ValueError("HOLD source must match its trusted status section")
         if not _REASON_RE.fullmatch(self.reason_code):
@@ -131,7 +133,7 @@ def project_operator_view(
         "control_authority": False,
         "production_mutation": False,
         "hold_release_authorized": False,
-        "evidence_origin": "TRUSTED_STRUCTURED_STATE",
+        "evidence_origin": "TRUSTED_STRUCTURED_STATE" if holds else "NONE",
         "advisory_only": True,
     }
 
