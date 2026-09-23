@@ -210,14 +210,15 @@ def checkride(
                 server_bin, "--model", str(path), "--host", "127.0.0.1",
                 "--port", str(PORT), "--ctx-size", "4096", "--threads", "4",
                 "--threads-batch", "4", "--parallel", "1",
-                "--n-gpu-layers", "99",
+                "--n-gpu-layers", "0" if name == "Granite 4.0 1B" else "99",
             ]
             if name == "Granite 4.0 1B":
-                # The Mac build fails Granite's JSON grammar with an empty
-                # grammar stack. Avoid Jinja parsing for this model only.
-                # Record the deviation, as template changes affect quality.
-                args.append("--no-jinja")
-                result["server_chat_template_mode"] = "no-jinja"
+                # Mac Metal produced repeated '@' and broke the JSON grammar.
+                # CPU-only server successfully answered plain text and simple
+                # JSON in a separate diagnostic. Keep normal chat formatting.
+                result["inference_backend"] = "CPU_ONLY"
+            else:
+                result["inference_backend"] = "METAL"
             if name.startswith("Qwen3.5"):
                 # Previous Qwen evaluation disabled its thinking mode.
                 args.extend(["--reasoning", "off"])
@@ -311,6 +312,10 @@ def checkride(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", type=Path)
+    parser.add_argument(
+        "--only", choices=[item[0] for item in CANDIDATES],
+        help="Test one candidate only before running the complete gauntlet",
+    )
     parser.add_argument("name", nargs="?")
     args = parser.parse_args()
     if args.worker:
@@ -342,6 +347,8 @@ def main() -> int:
         log(f"RESULTS_DIR={run}")
         summary: list[dict[str, object]] = []
         for index, (name, filename, repo_id, expected_sha) in enumerate(CANDIDATES, 1):
+            if args.only and name != args.only:
+                continue
             if STOP:
                 break
             out = run / f"{index:02d}-{filename.removesuffix('.gguf')}"
