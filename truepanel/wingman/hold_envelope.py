@@ -17,11 +17,13 @@ from .service import WingmanServiceResult
 
 class HoldKind(StrEnum):
     PHYSICAL_SERVICE = "PHYSICAL_SERVICE"
+    PHYSICAL_SERVICE_UNLOCALIZED = "PHYSICAL_SERVICE_UNLOCALIZED"
     AEGIS_AIRWORTHINESS = "AEGIS_AIRWORTHINESS"
 
 
 _TRUSTED_SOURCE_IDS = {
     HoldKind.PHYSICAL_SERVICE: "status:operator_guidance",
+    HoldKind.PHYSICAL_SERVICE_UNLOCALIZED: "status:operator_guidance",
     HoldKind.AEGIS_AIRWORTHINESS: "status:reliability",
 }
 _REASON_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}\Z")
@@ -52,7 +54,7 @@ class HoldEvidence:
             if type(self.bay) is not int or not _BAY_RE.fullmatch(str(self.bay)):
                 raise ValueError("Physical-service HOLD requires a verified bay")
         elif self.bay is not None:
-            raise ValueError("Non-storage HOLD cannot assert a physical bay")
+            raise ValueError("Unlocalized or non-storage HOLD cannot assert a bay")
 
 
 def render_hold(evidence: HoldEvidence) -> dict[str, Any]:
@@ -64,6 +66,13 @@ def render_hold(evidence: HoldEvidence) -> dict[str, Any]:
         instructions = [
             f"Keep the drive in Bay {evidence.bay} installed.",
             "Backup verification is required before any operator-approved service.",
+            "WINGMAN cannot authorize removal, replacement, or release this HOLD.",
+        ]
+    elif evidence.kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED:
+        headline = "Storage: physical service HOLD (bay not verified)"
+        instructions = [
+            "Do not infer a drive bay from a Linux device path or unverified source.",
+            "Keep the affected drive installed until the identity and backup posture are verified.",
             "WINGMAN cannot authorize removal, replacement, or release this HOLD.",
         ]
     else:
