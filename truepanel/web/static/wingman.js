@@ -315,7 +315,6 @@ body[data-mission-mode="pilot"] #${VIEW_ID} .wm-title h3{
 body[data-mission-mode="pilot"] #${VIEW_ID} .wm-authority{
     display:none;
 }
-body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="standby"] .wm-body,
 body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="standby"] .wm-footer{
     display:none;
 }
@@ -351,6 +350,25 @@ body[data-mission-mode="pilot"] #${VIEW_ID}[data-wingman-state="hold"] .wm-foote
     letter-spacing:.05em;
 }
 
+/* The plain-language AI panel is visible; deeper instruments are disclosed on demand. */
+.wm-deep-dive{
+    margin-top:.75rem;
+    border:1px solid color-mix(in srgb,var(--edge) 28%,transparent);
+    border-radius:8px;
+    padding:.52rem .72rem;
+}
+.wm-deep-dive > summary{
+    cursor:pointer;
+    font-size:.7rem;
+    font-weight:850;
+    color:var(--muted);
+}
+.wm-deep-dive[open] > summary{
+    margin-bottom:.65rem;
+}
+.wm-deep-dive .wm-controls{
+    justify-content:flex-start;
+}
 .wm-offline-panel:not(:empty),
 .wm-readiness-panel:not(:empty){
     margin-top:.65rem;
@@ -396,7 +414,9 @@ function standbyMarkup(){
         <div class="wm-state">
             <strong>STANDBY · ON-DEMAND ONLY</strong>
             <p>
-                Instrument briefs do not load a model. AI briefs run only on request and after a fresh resource check.
+                Select AI BRIEF for a plain-language explanation of verified system evidence.
+                AI runs only on request when a local model and resource checks are available.
+                Instrument readings and readiness checks are under Engineer details.
                 Mission Control remains the source of truth.
             </p>
         </div>
@@ -636,15 +656,13 @@ function install(){
         <div class="wm-head">
             <div class="wm-title">
                 <small>WINGMAN · ADVISORY COPILOT</small>
-                <h3>Verified instrument brief</h3>
+                <h3>Plain-language system brief</h3>
             </div>
 
             <div class="wm-controls">
                 <span class="wm-authority">
                     ADVISORY ONLY · CONTROL AUTHORITY FALSE
                 </span>
-                <button class="wm-brief wm-offline" type="button">INSTRUMENT BRIEF</button>
-                <button class="wm-brief wm-readiness" type="button">CHECK READINESS</button>
                 <button class="wm-brief wm-ai" type="button">AI BRIEF</button>
             </div>
         </div>
@@ -652,8 +670,15 @@ function install(){
         <div class="wm-body">
             ${standbyMarkup()}
         </div>
-        <div class="wm-offline-panel" aria-live="polite"></div>
-        <div class="wm-readiness-panel" aria-live="polite"></div>
+        <details class="wm-deep-dive">
+            <summary>ENGINEER DETAILS · Instrument readings &amp; AI readiness</summary>
+            <div class="wm-controls">
+                <button class="wm-brief wm-offline" type="button">INSTRUMENT BRIEF</button>
+                <button class="wm-brief wm-readiness" type="button">CHECK READINESS</button>
+            </div>
+            <div class="wm-offline-panel" aria-live="polite"></div>
+            <div class="wm-readiness-panel" aria-live="polite"></div>
+        </details>
 
         <div class="wm-footer">
             <span>Instrument brief: model free · AI: operator triggered</span>
@@ -669,6 +694,7 @@ function install(){
     const body=view.querySelector(".wm-body");
     const offlinePanel=view.querySelector(".wm-offline-panel");
     const readinessPanel=view.querySelector(".wm-readiness-panel");
+    const deepDive=view.querySelector(".wm-deep-dive");
 
     if(!button||!body||!offlineButton||!readinessButton
         ||!offlinePanel||!readinessPanel) return;
@@ -704,6 +730,7 @@ function install(){
         try{
             await loadReadiness();
         }catch(_error){
+            if(deepDive) deepDive.open=true;
             readinessPanel.innerHTML="<div class='wm-state hold'>"
                 +"<strong>LOCAL AI · READINESS UNKNOWN</strong>"
                 +"<p>Could not verify the inference gates. AI remains unavailable.</p>"
@@ -721,6 +748,7 @@ function install(){
         try{
             const readiness=await loadReadiness();
             if(readiness.status!=="READY_FOR_RECHECK"){
+                if(deepDive) deepDive.open=true;
                 body.innerHTML="<div class='wm-state hold'>"
                     +"<strong>AI BRIEF · RESOURCE HOLD</strong>"
                     +"<p>Instrument briefs remain available without loading a model. "
