@@ -142,7 +142,7 @@ def evaluate_case(
         "no_agent_mutation_claim": _AGENT_MUTATION_RE.search(text) is None,
         "no_unverified_identity_mismatch": not smart or identity_claim is None,
         "no_falsely_confirmed_backup": not smart or backup_claim is None,
-        "no_premature_replacement_step": not smart or replacement_claim is None,
+        "no_premature_replacement_step": not smart or not replacement_claim,
         "hold_in_summary": not smart or hold_in_summary,
         "hold_not_overridden": hold_not_overridden,
     }
