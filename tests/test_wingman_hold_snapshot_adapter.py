@@ -141,3 +141,149 @@ def test_unresolved_aegis_state_fails_closed(value):
     snapshot["reliability"]["airworthiness"]["status"] = value
     with pytest.raises(ValueError, match="not resolved"):
         holds_from_trusted_snapshot(snapshot)
+
+
+
+def _verified_snapshot():
+    """One synthetic SMART card with independently corroborated Lifeline proof."""
+    snapshot = _snapshot()
+    evidence = snapshot["operator_guidance"][0]["runtime"]["evidence"]
+    evidence.update({
+        "pool": "HDDs", "vdev": "raidz1-0",
+        "bay": 3, "device": "/dev/sdc", "serial_last4": "A123",
+        "member_id": "12345",
+    })
+    original = dict(evidence)
+    identity = {
+        "mode": "wwn",
+        "source": "udev_wwn_cross_checked_inventory",
+        "confidence": "very_high",
+        "stable_key": "wwn:synthetic",
+        "device": "/dev/sdc",
+        "bay": 3,
+        "serial_last4": "A123",
+    }
+    repair = {
+        "target": dict(evidence),
+        "gates": [{"code": "physical_identity", "satisfied": True}],
+    }
+    snapshot["lifeline"] = {
+        "sessions": [{
+            "status": "active",
+            "trigger_code": "storage.smart_warning",
+            "original_fault": original,
+            "drive_identity": identity,
+            "last_session": repair,
+        }],
+    }
+    return snapshot
+
+
+def _storage_hold(snapshot):
+    return next(hold for hold in holds_from_trusted_snapshot(snapshot)
+                if hold.kind in {
+                    HoldKind.PHYSICAL_SERVICE,
+                    HoldKind.PHYSICAL_SERVICE_UNLOCALIZED,
+                })
+
+
+def test_independently_verified_current_identity_localizes_hold():
+    snapshot = _verified_snapshot()
+    hold = _storage_hold(snapshot)
+    assert hold.kind is HoldKind.PHYSICAL_SERVICE
+    assert hold.bay == 3
+    view = project_operator_view(
+        _model(), trusted_holds=holds_from_trusted_snapshot(snapshot)
+    )
+    assert "Bay 3: physical service HOLD" in str(view)
+    assert view["generated_explanation"] is None
+    assert view["hold_release_authorized"] is False
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda s: s.pop("lifeline"),
+        lambda s: s["lifeline"].update(sessions=[]),
+        lambda s: s["lifeline"]["sessions"][0]["drive_identity"].update(
+            mode="zfs_member", source="zfs_stable_member"
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["drive_identity"].update(
+            confidence="low"
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["drive_identity"].update(
+            bay=6
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["drive_identity"].update(
+            device="/dev/sdz"
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["drive_identity"].update(
+            serial_last4="B999"
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["original_fault"].update(
+            bay=6
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["original_fault"].update(
+            member_id="99999"
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["last_session"]["target"].update(
+            pool="not-HDDs"
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["last_session"]["gates"][0].update(
+            satisfied=False
+        ),
+        lambda s: s["lifeline"]["sessions"][0]["last_session"].update(
+            gates=None
+        ),
+        lambda s: s["lifeline"]["sessions"][0].update(status="completed"),
+        lambda s: s["lifeline"]["sessions"][0].update(
+            trigger_code="storage.disk_faulted"
+        ),
+        lambda s: s["operator_guidance"][0]["runtime"]["evidence"].update(
+            serial_last4=""
+        ),
+    ],
+)
+def test_unverified_conflicting_or_missing_proof_never_names_bay(mutate):
+    snapshot = _verified_snapshot()
+    mutate(snapshot)
+    hold = _storage_hold(snapshot)
+    assert hold.kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
+    assert hold.bay is None
+    view = project_operator_view(
+        _model(), trusted_holds=holds_from_trusted_snapshot(snapshot)
+    )
+    assert "Bay 3" not in str(view)
+    assert "Bay 6" not in str(view)
+    assert view["generated_explanation"] is None
+
+
+def test_ambiguous_duplicate_proof_never_names_bay():
+    snapshot = _verified_snapshot()
+    snapshot["lifeline"]["sessions"].append(
+        copy.deepcopy(snapshot["lifeline"]["sessions"][0])
+    )
+    assert _storage_hold(snapshot).kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
+
+
+def test_multiple_smart_incidents_do_not_collapse_into_a_single_bay():
+    snapshot = _verified_snapshot()
+    second = copy.deepcopy(snapshot["operator_guidance"][0])
+    second["runtime"]["evidence"]["bay"] = 6
+    second["runtime"]["evidence"]["device"] = "/dev/sdz"
+    snapshot["operator_guidance"].append(second)
+    assert _storage_hold(snapshot).kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
+
+
+def test_no_hold_can_be_released_by_a_model_claim():
+    snapshot = _verified_snapshot()
+    snapshot["operator_guidance"][0]["runtime"]["action_gate"][
+        "physical_service_ready"
+    ] = True
+    holds = holds_from_trusted_snapshot(snapshot)
+    assert not any(hold.kind in {
+        HoldKind.PHYSICAL_SERVICE,
+        HoldKind.PHYSICAL_SERVICE_UNLOCALIZED,
+    } for hold in holds)
+    view = project_operator_view(_model(), trusted_holds=holds)
+    assert view["hold_release_authorized"] is False
