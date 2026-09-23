@@ -95,9 +95,18 @@ class LabServerHoldBridge:
         return isolated
 
     def hold_view(self, model_result: WingmanServiceResult) -> dict[str, Any]:
-        """Fresh internal composition only; accepts no user-supplied status."""
+        """Fresh internal composition only; model text is disabled in this lab."""
+        del model_result
         ticket = self._gate.capture()
-        return self._gate.project(model_result, ticket=ticket)
+        return self._gate.project(
+            WingmanServiceResult(
+                status="MODEL_UNAVAILABLE",
+                advisory=None,
+                source_ids=(),
+                errors=("LabGenerationDisabled",),
+            ),
+            ticket=ticket,
+        )
 
 
 __all__ = ["LabServerHoldBridge"]
