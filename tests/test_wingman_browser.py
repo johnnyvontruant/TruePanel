@@ -36,11 +36,14 @@ async function exercise(ready) {
         ".wm-readiness-panel"]) {
         nodes[selector] = {innerHTML: "", querySelector() {return null;}};
     }
+    const deepDive = {open:false};
     const view = {
         dataset: {},
+        innerHTML: "",
         setAttribute() {},
         querySelector(selector) {
-            return controls[selector] || nodes[selector] || null;
+            return controls[selector] || nodes[selector]
+                || (selector === ".wm-deep-dive" ? deepDive : null);
         },
     };
     const document = {
@@ -97,6 +100,17 @@ async function exercise(ready) {
         console,
     });
     assert.equal(requests.length,0,"No automatic model or status requests");
+    assert(view.innerHTML.indexOf('class="wm-ai"') === -1 ||
+        view.innerHTML.includes('wm-ai'));
+    assert(view.innerHTML.indexOf('wm-ai"') < view.innerHTML.indexOf('wm-offline"'),
+        "AI brief is the first, primary control");
+    assert(view.innerHTML.includes('<details class="wm-deep-dive">'),
+        "Engineer details use a collapsed disclosure");
+    assert(!view.innerHTML.includes('<details class="wm-deep-dive" open'),
+        "Engineer details start closed");
+    assert.equal(deepDive.open,false);
+    assert(nodes[".wm-body"].innerHTML === "" ||
+        view.innerHTML.includes("Select AI BRIEF for a plain-language explanation"));
     await controls[".wm-offline"].click();
     assert.deepEqual(requests.map(r=>r[1]),["GET"]);
     assert(nodes[".wm-offline-panel"].innerHTML.includes("Pool HDDs"));
@@ -112,6 +126,7 @@ async function exercise(ready) {
         "An AI request must never erase a previously displayed offline HOLD.");
     if (!ready) {
         assert(nodes[".wm-body"].innerHTML.includes("RESOURCE HOLD"));
+        assert.equal(deepDive.open,true,"Show readiness reasons when AI is on HOLD");
         assert.equal(controls[".wm-ai"].disabled,false);
     } else {
         assert(nodes[".wm-body"].innerHTML.includes("Model report."));
