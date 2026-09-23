@@ -33,38 +33,50 @@ def holds_from_trusted_snapshot(
     holds: list[HoldEvidence] = []
 
     reliability = snapshot.get("reliability")
-    if isinstance(reliability, dict) and reliability.get("project") == "AEGIS":
-        airworthiness = reliability.get("airworthiness")
-        if isinstance(airworthiness, dict) and airworthiness.get("status") == _AEGIS_STATUS:
-            reason = airworthiness.get("reason")
-            if not isinstance(reason, str) or not reason:
-                reason = "ReasonUnavailable"
-            holds.append(
-                HoldEvidence(
-                    kind=HoldKind.AEGIS_AIRWORTHINESS,
-                    reason_code=reason,
-                    source_id="status:reliability",
-                )
+    if not isinstance(reliability, dict) or reliability.get("project") != "AEGIS":
+        raise ValueError("AEGIS reliability evidence unavailable or untrusted")
+    airworthiness = reliability.get("airworthiness")
+    if not isinstance(airworthiness, dict):
+        raise ValueError("AEGIS airworthiness evidence unavailable")
+    aegis_status = airworthiness.get("status")
+    if aegis_status not in {_AEGIS_STATUS, "CURRENT"}:
+        # REVIEW, UNKNOWN, and unexpected states must not become 'no HOLD'.
+        raise ValueError("AEGIS status is not resolved for the HOLD adapter")
+    if aegis_status == _AEGIS_STATUS:
+        reason = airworthiness.get("reason")
+        if not isinstance(reason, str) or not reason:
+            reason = "ReasonUnavailable"
+        holds.append(
+            HoldEvidence(
+                kind=HoldKind.AEGIS_AIRWORTHINESS,
+                reason_code=reason,
+                source_id="status:reliability",
             )
+        )
 
     cards = snapshot.get("operator_guidance")
-    if isinstance(cards, list):
-        blocked_smart_cards = [
-            card for card in cards
-            if isinstance(card, dict)
-            and card.get("code") == _SMART_WARNING_CODE
-            and isinstance(card.get("runtime"), dict)
-            and isinstance(card["runtime"].get("action_gate"), dict)
-            and card["runtime"]["action_gate"].get("physical_service_ready") is False
-        ]
-        if blocked_smart_cards:
-            holds.append(
-                HoldEvidence(
-                    kind=HoldKind.PHYSICAL_SERVICE_UNLOCALIZED,
-                    reason_code="ServiceNotReady",
-                    source_id="status:operator_guidance",
-                )
+    if not isinstance(cards, list):
+        raise ValueError("Operator guidance evidence unavailable")
+    blocked_smart_cards = False
+    for card in cards:
+        if not isinstance(card, dict):
+            raise ValueError("Malformed operator guidance card")
+        if card.get("code") != _SMART_WARNING_CODE:
+            continue
+        runtime = card.get("runtime")
+        gate = runtime.get("action_gate") if isinstance(runtime, dict) else None
+        if not isinstance(gate, dict) or type(gate.get("physical_service_ready")) is not bool:
+            raise ValueError("SMART physical service readiness unknown")
+        if gate["physical_service_ready"] is False:
+            blocked_smart_cards = True
+    if blocked_smart_cards:
+        holds.append(
+            HoldEvidence(
+                kind=HoldKind.PHYSICAL_SERVICE_UNLOCALIZED,
+                reason_code="ServiceNotReady",
+                source_id="status:operator_guidance",
             )
+        )
 
     return tuple(holds)
 
