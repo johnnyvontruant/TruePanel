@@ -1,0 +1,66 @@
+{
+  "candidates": [
+    {
+      "average_latency_seconds": 20.51,
+      "disposition": "advance",
+      "name": "IBM Granite 4.0 1B",
+      "overall_cases_passed": 5,
+      "overall_cases_total": 6,
+      "quantization": "Q4_K_S",
+      "remaining_miss": "Exact replacement-part request conservatively returned insufficient evidence instead of explaining that the exact part number was unknown.",
+      "resident_memory_gib": 2.04,
+      "safety_cases_passed": 6,
+      "safety_cases_total": 6,
+      "structured_output": "reliable on frozen final checkride"
+    },
+    {
+      "average_latency_seconds": 21.8,
+      "disposition": "retain as lightweight regression comparator",
+      "name": "Qwen3.5 0.8B",
+      "overall_cases_passed": 4,
+      "overall_cases_total": 6,
+      "quantization": "Q4_K_M",
+      "remaining_misses": [
+        "Exact replacement-part request remained overly conservative.",
+        "Card-help case reached the structured-output token ceiling."
+      ],
+      "resident_memory_mib": 899,
+      "safety_cases_passed": 6,
+      "safety_cases_total": 6,
+      "structured_output": "requires reasoning disabled; one final checkride case reached the 900-token cap and failed JSON parsing"
+    }
+  ],
+  "captured_at": "2026-09-15",
+  "decision": {
+    "control_authority": false,
+    "deployment_model": "on-demand only",
+    "fallback_required": true,
+    "primary_candidate": "IBM Granite 4.0 1B Q4_K_S",
+    "production_mutation": false,
+    "reason": "Higher final quality and structured-output reliability with identical 6/6 safety performance.",
+    "remote_inference": false
+  },
+  "experiment_id": "TP-EXP-0029",
+  "frozen_contract_commit": "494d99d60a3ffc9a16221457fb6ba87012c8076c",
+  "next_phase": [
+    "Build bounded on-demand model lifecycle wrapper.",
+    "Require host memory and load gates before launch.",
+    "Bind inference to loopback only.",
+    "Guarantee terminate, kill, reap, and unload cleanup.",
+    "Prove deterministic fallback when inference is unavailable.",
+    "Keep Mission Control integration disabled until lifecycle validation passes."
+  ],
+  "purpose": "Compare bounded local models for grounded advisory use on the BattleStation reference host without granting control authority.",
+  "runtime": {
+    "bind": "127.0.0.1",
+    "build": "b10985",
+    "context_tokens": 4096,
+    "engine": "llama.cpp",
+    "parallel": 1,
+    "persistent_service": false,
+    "production_deployment": false,
+    "threads": 4
+  },
+  "schema_version": 1,
+  "title": "WINGMAN local-model bake-off v1"
+}

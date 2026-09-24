@@ -1,0 +1,92 @@
+{
+  "branch": "experiment/project-wingman",
+  "captured_at": "2026-09-15",
+  "commit": "048d35bcc582e51813c89d4aa3d6233bc14d8665",
+  "conclusion": "The first operator-facing WINGMAN cockpit path is proven live on BattleStation. The dashboard serves a dormant advisory instrument without starting Granite, and one explicit operator request produced a grounded HTTP 200 EXPLAINED brief using status:reliability while preserving advisory-only authority, zero production mutation, clean llama.cpp teardown, and unaffected production TruePanel services. TP-EXP-0029 remains IN_PROGRESS because UI refinement, latency margin, and host-headroom validation remain open.",
+  "dormant_rehearsal": {
+    "brief_post_count": 0,
+    "dashboard_injected_wingman_asset": true,
+    "granite_running_after": false,
+    "granite_running_before": false,
+    "granite_started": false,
+    "production_mission_control_active_after": true,
+    "production_mission_control_active_before": true,
+    "production_truepanel_active_after": true,
+    "production_truepanel_active_before": true,
+    "status": "PASS",
+    "temporary_mission_control_port": 8798,
+    "temporary_mission_control_survived": true,
+    "wingman_asset_served": true
+  },
+  "experiment_id": "TP-EXP-0029",
+  "observations": {
+    "latency_margin_seconds_below_provider_timeout": 1.022,
+    "latency_requires_follow_up": true,
+    "provider_timeout_seconds": 60.0,
+    "safety_or_grounding_failure": false,
+    "summary_sentence_preference_not_strictly_followed": true
+  },
+  "operator_triggered_rehearsal": {
+    "advisory_only": true,
+    "brief_bounds": "PASS",
+    "brief_post_count": 1,
+    "citation_validation": "PASS",
+    "control_authority": false,
+    "duration_seconds": 58.978,
+    "granite_running_after_request": false,
+    "granite_running_before_request": false,
+    "http_status": 200,
+    "lifecycle": {
+      "model_invoked": true,
+      "runtime_reaped": true,
+      "runtime_started": true
+    },
+    "production_mission_control_active_after": true,
+    "production_mission_control_active_before": true,
+    "production_mutation": false,
+    "production_truepanel_active_after": true,
+    "production_truepanel_active_before": true,
+    "response_status": "EXPLAINED",
+    "source_ids": [
+      "status:reliability"
+    ],
+    "status": "PASS",
+    "temporary_mission_control_port": 8799,
+    "temporary_mission_control_survived": true
+  },
+  "pr": 156,
+  "remaining_work": [
+    "refine Pilot and Flight Engineer presentation",
+    "refine compact source presentation",
+    "improve long-running request feedback",
+    "validate latency margin and host headroom",
+    "preserve zero per-refresh inference",
+    "preserve single-flight lifecycle behavior"
+  ],
+  "schema_version": 1,
+  "test_results": {
+    "combined_web_wingman_regression": {
+      "failed": 0,
+      "passed": 123
+    },
+    "diff_check": "PASS",
+    "ruff": "PASS",
+    "wingman_ui_contract_tests": {
+      "failed": 0,
+      "passed": 4
+    }
+  },
+  "title": "WINGMAN operator-triggered Mission Control cockpit rehearsal",
+  "ui_contract": {
+    "advisory_only": true,
+    "automatic_inference": false,
+    "control_authority": false,
+    "fetch_call_count": 1,
+    "llama_lifecycle_hidden_from_ui": true,
+    "operator_triggered": true,
+    "polling": false,
+    "production_mutation": false,
+    "source_badges": true,
+    "status_refresh_subscription": false
+  }
+}

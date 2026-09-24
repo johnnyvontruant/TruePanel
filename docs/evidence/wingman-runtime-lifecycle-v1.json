@@ -1,0 +1,113 @@
+{
+  "branch": "experiment/project-wingman",
+  "candidate": {
+    "bind": "127.0.0.1",
+    "context_size": 4096,
+    "model": "Granite 4.0 1B Q4_K_S",
+    "parallel": 1,
+    "persistent_service": false,
+    "runtime": "llama.cpp",
+    "threads": 4
+  },
+  "captured_at": "2026-09-15",
+  "commits": {
+    "bounded_runtime_lifecycle": "38cc4889cfd3c78ed67064022f9a8b643bbc63bb",
+    "post_teardown_observation": "3c2756d70977ec5bf2e331538e90d85aac2b2cdb",
+    "runtime_advisory_wrapper": "898aa72975c848b5c70327abc58d8f0ebdf82331",
+    "runtime_health_and_observation": "cdbacefd2348f9ab1b8428103bfac070ad0e4a7c"
+  },
+  "conclusion": "The bounded on-demand Granite lifecycle passed live BattleStation rehearsal for successful advisory generation, provider failure, resource-gate rejection, clean teardown, and three consecutive cold-start wrapper-owned advisories. No llama-server process remained after any tested path and production TruePanel services remained active.",
+  "experiment_id": "TP-EXP-0029",
+  "live_rehearsals": {
+    "cold_start_repeatability": {
+      "all_quality_passed": true,
+      "all_runtime_reaped": true,
+      "all_safety_passed": true,
+      "all_service_explained": true,
+      "average_duration_seconds": 19.08,
+      "duration_spread_seconds": 0.468,
+      "durations_seconds": [
+        19.382,
+        18.914,
+        18.945
+      ],
+      "final_host": {
+        "load_1m": 3.49,
+        "mem_available_gib": 3.2,
+        "swap_bytes": 0
+      },
+      "final_orphan_process": false,
+      "production_services_active": true,
+      "runs_completed": 3,
+      "runs_requested": 3,
+      "status": "PASS"
+    },
+    "provider_failure": {
+      "error": "URLError",
+      "lifecycle": {
+        "model_invoked": true,
+        "runtime_reaped": true,
+        "runtime_started": true
+      },
+      "orphan_process_after": false,
+      "resources_before": {
+        "load_1m": 0.77,
+        "mem_available_gib": 3.23
+      },
+      "runtime_running_after": false,
+      "service_status": "MODEL_UNAVAILABLE",
+      "status": "PASS"
+    },
+    "resource_gate_rejection": {
+      "error": "WingmanResourceHold",
+      "lifecycle": {
+        "model_invoked": false,
+        "runtime_reaped": true,
+        "runtime_started": false
+      },
+      "orphan_process_after": false,
+      "runtime_running_after": false,
+      "service_status": "MODEL_UNAVAILABLE",
+      "status": "PASS",
+      "test_condition": "minimum available memory deliberately raised to 64 GiB"
+    },
+    "wrapper_owned_success": {
+      "evaluation": {
+        "all_seven_checks_passed": true,
+        "quality_passed": true,
+        "safety_passed": true
+      },
+      "lifecycle": {
+        "model_invoked": true,
+        "runtime_reaped": true,
+        "runtime_started": true
+      },
+      "orphan_process_after": false,
+      "production_services_active": true,
+      "resources_before": {
+        "load_1m": 2.52,
+        "mem_available_gib": 3.22
+      },
+      "runtime_running_after": false,
+      "service_status": "EXPLAINED",
+      "status": "PASS"
+    }
+  },
+  "pr": 156,
+  "remaining_work": [
+    "keep TP-EXP-0029 IN_PROGRESS",
+    "exercise first advisory-only Mission Control integration",
+    "preserve citations, HOLD semantics, and zero control authority in UI",
+    "keep llama.cpp lifecycle hidden behind WingmanRuntimeAdvisory",
+    "revisit the provisional 3 GiB memory floor under busier host conditions"
+  ],
+  "resource_policy": {
+    "maximum_load_1m": 6.0,
+    "minimum_available_memory_gib": 3.0,
+    "note": "The 3 GiB memory floor remains a provisional lifecycle safety margin rather than a finalized production threshold.",
+    "shutdown_timeout_seconds": 5.0,
+    "startup_timeout_seconds": 45.0
+  },
+  "schema_version": 1,
+  "title": "WINGMAN bounded local runtime lifecycle rehearsal"
+}

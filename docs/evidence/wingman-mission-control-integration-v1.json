@@ -1,0 +1,124 @@
+{
+  "branch": "experiment/project-wingman",
+  "brief_contract": {
+    "allowed_source_ids_explicit": true,
+    "control_authority": false,
+    "maximum_completion_tokens": 512,
+    "maximum_source_chars": 2500,
+    "operator_triggered_only": true,
+    "production_mutation": false,
+    "provider_timeout_seconds": 60.0,
+    "status_sources_only": true
+  },
+  "candidate": {
+    "bind": "127.0.0.1",
+    "context_size": 4096,
+    "model": "Granite 4.0 1B Q4_K_S",
+    "parallel": 1,
+    "persistent_service": false,
+    "runtime": "llama.cpp",
+    "threads": 4
+  },
+  "captured_at": "2026-09-15",
+  "commits": {
+    "brief_runtime_contract": "ce56393a72591f71548f690b1273e381ef913e63",
+    "dormant_production_wiring": "3d7ceb5219b7604e1ee723a11e4d4da7f86025d2",
+    "mission_control_brief_endpoint": "3d8107298106ec7d4a12ac644fbeac65dad6cd6c"
+  },
+  "conclusion": "The first production-shaped advisory-only Mission Control integration passed live on BattleStation. An explicit POST to /api/v1/wingman/brief started Granite on demand, returned HTTP 200 with a grounded EXPLAINED advisory, kept every citation inside allowlisted Mission Control status evidence, preserved zero control authority and zero production mutation, reaped llama.cpp after the request, and left production TruePanel services active. TP-EXP-0029 remains IN_PROGRESS pending operator-facing UI integration, source presentation, and further latency and host-headroom validation.",
+  "experiment_id": "TP-EXP-0029",
+  "integration_findings": {
+    "bounded_general_rough_user_prompt_tokens": 1468,
+    "bounded_general_user_prompt_chars": 5871,
+    "conclusions": [
+      "Mission Control integration requires bounded model-visible evidence under the 4096-token context contract.",
+      "BRIEF benefits from status-only retrieval rather than spending its context budget on manuals.",
+      "Explicit allowed_source_ids prevents identifiers inside evidence content from being reused as citation IDs.",
+      "On-demand single-flight operation remains appropriate because post-inference host load reached 5.3 against the provisional 6.0 launch ceiling."
+    ],
+    "original_rough_user_prompt_tokens": 4533,
+    "original_unbounded_user_prompt_chars": 18132,
+    "specialized_brief_diagnostic": {
+      "completion_tokens": 428,
+      "finish_reason": "stop",
+      "grounding_validation_errors": [],
+      "inference_seconds": 48.798,
+      "prompt_tokens": 1179,
+      "source_chars": 2500
+    },
+    "timing_diagnostic": {
+      "completion_finish_reason": "length",
+      "completion_seconds": 31.258539,
+      "completion_tokens": 384,
+      "prompt_seconds": 26.306609,
+      "prompt_tokens": 1770
+    }
+  },
+  "live_mission_control_rehearsal": {
+    "duration_seconds": 59.742,
+    "endpoint": "/api/v1/wingman/brief",
+    "final_host": {
+      "load_1m": 5.3,
+      "mem_available_gib": 3.665
+    },
+    "granite_dormant_before_request": true,
+    "http_status": 200,
+    "lifecycle": {
+      "model_invoked": true,
+      "runtime_reaped": true,
+      "runtime_started": true
+    },
+    "orphan_process_after": false,
+    "production_services_active_after": true,
+    "production_services_active_before": true,
+    "resources_after_brief": {
+      "load_1m": 5.3,
+      "mem_available_gib": 3.633
+    },
+    "resources_before_brief": {
+      "load_1m": 2.6,
+      "mem_available_gib": 3.19
+    },
+    "resources_before_test": {
+      "load_1m": 2.6,
+      "mem_available_gib": 3.208
+    },
+    "response_contract": {
+      "advisory_only": true,
+      "citation_ids_valid": true,
+      "control_authority": false,
+      "errors": [],
+      "next_step_count": 2,
+      "observation_count": 3,
+      "production_mutation": false,
+      "status_sources_only": true
+    },
+    "service_status": "EXPLAINED",
+    "source_ids": [
+      "status:reliability"
+    ],
+    "status": "PASS",
+    "temporary_mission_control_survived": true
+  },
+  "pr": 156,
+  "remaining_work": [
+    "keep TP-EXP-0029 IN_PROGRESS",
+    "add an explicit operator-triggered Mission Control presentation for WINGMAN",
+    "show advisory-only authority and source badges in the UI",
+    "preserve zero per-refresh inference and hide llama.cpp lifecycle from the browser",
+    "continue host-headroom and latency validation under busier BattleStation conditions",
+    "revisit operator-facing prose quality without weakening deterministic grounding validation"
+  ],
+  "safety": {
+    "loopback_only": true,
+    "maximum_load_1m": 6.0,
+    "minimum_available_memory_gib": 3.0,
+    "persistent_inference_service_created": false,
+    "production_deployment_performed": false,
+    "read_only": true,
+    "resource_gate_preserved": true,
+    "single_flight": true
+  },
+  "schema_version": 1,
+  "title": "WINGMAN advisory-only Mission Control integration rehearsal"
+}
