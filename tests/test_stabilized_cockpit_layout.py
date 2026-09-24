@@ -66,6 +66,10 @@ def test_reorder_moves_existing_dom_nodes_without_mutating_safety():
     assert "const sentinel=document.getElementById(\"sentinelFlightDirector\")" in source
     assert "const warning=document.getElementById(\"healthAdvisory\")" in source
     assert "commandStatus.appendChild(strip)" in source
+    assert 'const activity=document.getElementById("observatoryCurrentActivity")' in source
+    assert "command,commandRow,activity," in source
+    assert 'activity.style.gridColumn="1 / -1"' in source
+    assert 'activity.style.width="100%"' in source
     assert "cpuSlot.append(cpu,load)" in source
     assert "ramSlot.appendChild(ram)" in source
     assert "window.requestAnimationFrame(applyStabilizedDeckOrder)" in source
