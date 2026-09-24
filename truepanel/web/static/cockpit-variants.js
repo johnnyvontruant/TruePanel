@@ -74,6 +74,16 @@ function installStyle(){
 @media(max-width:640px){.cockpit-layout-switcher{padding:0 1rem;flex-wrap:wrap}.cockpit-preview-note{width:100%;margin-left:0}.cockpit-bays{gap:.25rem}.cockpit-bay-state{display:none}.cockpit-pool-grid{grid-template-columns:1fr}.cockpit-matrix-row{gap:1px}.cockpit-matrix-glyph{gap:.5px}}
 `;
     style.textContent+=`
+.cockpit-stabilized-order #cockpitOverview,
+.cockpit-stabilized-order .cockpit-command-row,
+.cockpit-stabilized-order #cockpitPreflightDock,
+.cockpit-stabilized-order #preflightPanel{
+ grid-column:1/-1!important;width:100%;min-width:0;max-width:none;
+}
+.cockpit-stabilized-order .cockpit-command-row>#preflightPanel,
+.cockpit-stabilized-order .cockpit-command-row>.health-command{
+ grid-column:1/-1!important;min-width:0;
+}
 .cockpit-stabilized-order #cockpitResourcesCard .cockpit-resources{
  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;
  margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--edge)
