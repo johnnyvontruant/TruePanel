@@ -73,6 +73,27 @@ function installStyle(){
 .cockpit-pool-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.7rem}.cockpit-pool{min-width:0;padding:.72rem .8rem;border:1px solid color-mix(in srgb,var(--edge) 18%,transparent);border-radius:10px;background:color-mix(in srgb,var(--panel-solid) 48%,transparent);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%)}.cockpit-pool-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem}.cockpit-pool-name{font-weight:800}.cockpit-pool-health{font-size:.68rem;font-weight:850;letter-spacing:.07em}.cockpit-pool-health.good{color:var(--good)}.cockpit-pool-health.warn{color:var(--warn)}.cockpit-pool-health.bad{color:var(--bad)}.cockpit-pool-meter{height:7px;margin:.58rem 0 .4rem;overflow:hidden;border:1px solid var(--edge);border-radius:999px;background:var(--panel-solid)}.cockpit-pool-fill{display:block;height:100%;background:var(--accent)}.cockpit-pool-meta{display:flex;justify-content:space-between;gap:.7rem;color:var(--muted);font-size:.62rem}.cockpit-preflight-dock{grid-column:1/-1}.cockpit-preflight-dock>.preflight-panel{margin:0}.cockpit-layout-b .cockpit-command-row{grid-template-columns:1fr}.cockpit-layout-b .cockpit-command-row>.health-command{grid-column:1/-1}
 @media(max-width:640px){.cockpit-layout-switcher{padding:0 1rem;flex-wrap:wrap}.cockpit-preview-note{width:100%;margin-left:0}.cockpit-bays{gap:.25rem}.cockpit-bay-state{display:none}.cockpit-pool-grid{grid-template-columns:1fr}.cockpit-matrix-row{gap:1px}.cockpit-matrix-glyph{gap:.5px}}
 `;
+    style.textContent+=`
+.cockpit-stabilized-order #cockpitOverview,
+.cockpit-stabilized-order .cockpit-command-row,
+.cockpit-stabilized-order #cockpitPreflightDock,
+.cockpit-stabilized-order #preflightPanel{
+ grid-column:1/-1!important;width:100%;min-width:0;max-width:none;
+}
+.cockpit-stabilized-order .cockpit-command-row>#preflightPanel,
+.cockpit-stabilized-order .cockpit-command-row>.health-command{
+ grid-column:1/-1!important;min-width:0;
+}
+.cockpit-stabilized-order #cockpitResourcesCard .cockpit-resources{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;
+ margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--edge)
+}
+.cockpit-resources>div{display:grid;gap:.3rem;min-width:0}
+.cockpit-resources>div>span{color:var(--muted);font-size:.7rem;font-weight:800;letter-spacing:.08em}
+.cockpit-resources .metric{font-size:clamp(1.3rem,2vw,2rem)}
+.cockpit-resources .detail{font-size:.68rem}
+@media(max-width:640px){.cockpit-resources{grid-template-columns:1fr!important}}
+`;
     document.head.appendChild(style);
 }
 
@@ -335,6 +356,91 @@ function applyLayout(rawMode){
     });
 }
 
+function applyStabilizedDeckOrder(){
+    // Reparent existing cards only: retain IDs, listeners, status subscriptions
+    // and every physical-service safety gate. Preview variants remain unchanged.
+    const params=new URLSearchParams(window.location.search);
+    if(params.get("cockpit-preview")==="1"||params.has("layout")) return;
+    const grid=document.querySelector("main .grid");
+    const lcd=document.getElementById("cardFrontPanel");
+    const warning=document.getElementById("healthAdvisory");
+    const sentinel=document.getElementById("sentinelFlightDirector");
+    const situation=document.getElementById("glassCockpitSituation");
+    const activity=document.getElementById("observatoryCurrentActivity");
+    if(!grid||!lcd||!warning||!sentinel||!situation||!activity) return;
+
+    const command=document.getElementById("cockpitOverview");
+    const commandRow=document.querySelector(".cockpit-command-row");
+    const health=document.querySelector(".health-command");
+    const preflight=document.getElementById("preflightPanel");
+    const commandStatus=document.getElementById("cardMissionControlStatus");
+    const storage=document.getElementById("cardStorage");
+    const temperatures=document.getElementById("temps")?.closest("article");
+    const network=document.getElementById("cardNetwork");
+    const cooling=document.getElementById("cardCooling");
+    const night=document.getElementById("nightEnabled")?.closest("article");
+    const cargo=document.getElementById("cardCargoBay");
+    const cards=[
+        lcd,warning,sentinel,situation,command,commandRow,activity,
+        commandRow?.contains(health)?null:health,
+        commandRow?.contains(preflight)?null:preflight,
+        commandStatus,storage,temperatures,network,cooling,night,cargo,
+    ];
+    // A missing optional card does not move, hide, or recreate another card.
+    grid.prepend(...cards.filter(node=>node&&node!==grid&&node!==cargo));
+    if(cargo) grid.appendChild(cargo);
+
+    // Reuse the existing CPU/Memory live nodes in a separate resources card.
+    // Preserve the original telemetry targets, listeners and their updates.
+    if(!document.getElementById("cockpitResources")){
+        const cpu=document.getElementById("cpu");
+        const ram=document.getElementById("ram");
+        const load=document.getElementById("load");
+        if(cpu&&ram&&load){
+            const cpuCard=cpu.closest("article");
+            const ramCard=ram.closest("article");
+            if(cpuCard&&ramCard&&cpuCard!==ramCard){
+                const strip=document.createElement("div");
+                strip.id="cockpitResources";
+                strip.className="cockpit-resources";
+                strip.setAttribute("aria-label","System resources");
+                const cpuSlot=document.createElement("div");
+                const ramSlot=document.createElement("div");
+                cpuSlot.innerHTML="<span>CPU</span>";
+                ramSlot.innerHTML="<span>Memory</span>";
+                cpuSlot.append(cpu,load);
+                ramSlot.appendChild(ram);
+                strip.append(cpuSlot,ramSlot);
+                const resourcesCard=document.createElement("article");
+                resourcesCard.id="cockpitResourcesCard";
+                resourcesCard.className="card";
+                resourcesCard.setAttribute("aria-label","System resources");
+                resourcesCard.innerHTML="<h2>System Resources</h2>";
+                resourcesCard.appendChild(strip);
+                grid.insertBefore(resourcesCard,cooling||cargo||null);
+                cpuCard.remove();
+                ramCard.remove();
+            }
+        }
+    }
+    // An existing card is moved after Network rather than duplicated.
+    const resourcesCard=document.getElementById("cockpitResourcesCard");
+    if(resourcesCard&&resourcesCard.parentElement===grid){
+        grid.insertBefore(resourcesCard,cooling||cargo||null);
+    }
+    activity.style.gridColumn="1 / -1";
+    activity.style.width="100%";
+    document.body.classList.add("cockpit-stabilized-order");
+}
+
+function scheduleStabilizedDeckOrder(){
+    // The other cockpit scripts populate and reorder their cards on startup.
+    // Apply the final ordering after their startup frames have completed.
+    window.requestAnimationFrame(()=>window.requestAnimationFrame(
+        ()=>window.requestAnimationFrame(applyStabilizedDeckOrder)
+    ));
+}
+
 function installVariantSwitcher(){
     const params=new URLSearchParams(window.location.search);
     const preview=params.get("cockpit-preview")==="1"||params.has("layout");
@@ -379,6 +485,7 @@ function install(){
     installMatrixLcd();
     installBayStrip();
     installVariantSwitcher();
+    scheduleStabilizedDeckOrder();
     installPoolStabilityGuard();
     refreshStatus();
     window.setInterval(refreshStatus,POLL_MS);
