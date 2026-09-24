@@ -15,8 +15,9 @@ from collections.abc import Callable
 from copy import deepcopy
 from typing import Any
 
+from .current_identity_witness import CurrentDriveWitness
 from .service import WingmanServiceResult
-from .trusted_snapshot_gate import TrustedSnapshotGate
+from .trusted_snapshot_gate import InternalStatusCapture, TrustedSnapshotGate
 
 
 class LabServerHoldBridge:
@@ -29,6 +30,7 @@ class LabServerHoldBridge:
         wall_clock: Callable[[], float] = time.time,
         monotonic_clock: Callable[[], float] = time.monotonic,
         maximum_source_age_seconds: float = 5.0,
+        current_identity_observer: Callable[[], CurrentDriveWitness | None] | None = None,
     ) -> None:
         if not callable(internal_compose) or not callable(wall_clock):
             raise ValueError("Internal composer and clock must be callable")
@@ -39,7 +41,12 @@ class LabServerHoldBridge:
             or not 0 < maximum_source_age_seconds <= 5
         ):
             raise ValueError("Maximum source age must be within 0 to 5 seconds")
+        if current_identity_observer is not None and not callable(
+            current_identity_observer
+        ):
+            raise ValueError("Live identity observer must be callable")
         self._compose = internal_compose
+        self._identity_observer = current_identity_observer
         self._wall_clock = wall_clock
         self._source_age = float(maximum_source_age_seconds)
         self._gate = TrustedSnapshotGate(
@@ -57,11 +64,10 @@ class LabServerHoldBridge:
             raise ValueError(f"{field} is not finite")
         return result
 
-    def _verified_compose(self) -> dict[str, Any]:
+    def _verified_compose(self) -> InternalStatusCapture:
         snapshot = self._compose()
         if not isinstance(snapshot, dict):
             raise ValueError("Internal composer returned invalid status")
-        now = self._finite_timestamp(self._wall_clock(), "wall_clock")
         composed_at = self._finite_timestamp(
             snapshot.get("timestamp"), "snapshot.timestamp"
         )
@@ -79,6 +85,20 @@ class LabServerHoldBridge:
         )
         if sampling.get("fresh_sample") is not True:
             raise ValueError("AEGIS status reused an old sampling window")
+
+        # A future trusted observer must perform an independent *current*
+        # hardware read, never replay session metadata or copy a snapshot
+        # timestamp. Nothing in this isolated module reads NAS hardware.
+        witness = None
+        if self._identity_observer is not None:
+            try:
+                candidate = self._identity_observer()
+                if type(candidate) is CurrentDriveWitness:
+                    witness = candidate
+            except (OSError, RuntimeError, TypeError, ValueError, AttributeError):
+                pass
+
+        now = self._finite_timestamp(self._wall_clock(), "wall_clock")
         for stamp in (composed_at, source_at, sampled_at):
             age = now - stamp
             if age < 0 or age > self._source_age:
@@ -87,12 +107,16 @@ class LabServerHoldBridge:
             raise ValueError("AEGIS source sampling chronology invalid")
 
         isolated = deepcopy(snapshot)
-        # Lifeline session state is persisted. Its identity is not certified
-        # fresh merely because this status response has a new timestamp.
-        # Until an independently timestamped live inventory witness is wired,
-        # this bridge refuses to publish a specific physical bay.
-        isolated.pop("lifeline", None)
-        return isolated
+        # Persisted Lifeline facts are considered only when corroborated by
+        # a separate and fresh current observation in this exact capture.
+        if witness is None or not (
+            composed_at <= witness.observed_at <= now
+            and source_at <= witness.observed_at
+            and now - witness.observed_at <= self._source_age
+        ):
+            witness = None
+            isolated.pop("lifeline", None)
+        return InternalStatusCapture(isolated, witness)
 
     def hold_view(self, model_result: WingmanServiceResult) -> dict[str, Any]:
         """Fresh internal composition only; model text is disabled in this lab."""
