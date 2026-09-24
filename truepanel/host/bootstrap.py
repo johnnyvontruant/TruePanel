@@ -383,9 +383,9 @@ def build_host_agent_bootstrap(
     # Do not retry other failures or a disabled controller.
     for attempt in range(3):
         if not (
-            fan_runtime.enabled
-            and fan_runtime.service is None
-            and fan_runtime.unavailable_reason
+            getattr(fan_runtime, "enabled", False)
+            and getattr(fan_runtime, "service", None) is None
+            and getattr(fan_runtime, "unavailable_reason", None)
             == "Fintek fan controller is unavailable."
         ):
             break
