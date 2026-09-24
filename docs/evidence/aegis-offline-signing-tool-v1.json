@@ -1,0 +1,80 @@
+{
+  "control_authority": false,
+  "fixture_private_keys_retained": 0,
+  "measurements": {
+    "adversarial_holds": 8,
+    "deployments": 0,
+    "development_eligible": 1,
+    "hardware_actions": 0,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "public_export_ready": 1,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_ready": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-offline-signing-tool-v1",
+  "scenarios": [
+    {
+      "reason": "PublicMaterialsOnly",
+      "scenario": "public-kit-export",
+      "status": "READY_FOR_OFFLINE_SIGNATURE"
+    },
+    {
+      "reason": "SingleOperatorDevelopmentReviewVerified",
+      "scenario": "returned-exact-signature",
+      "status": "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW"
+    },
+    {
+      "reason": "OperatorUtcConfirmationRequired",
+      "scenario": "utc-not-confirmed",
+      "status": "HOLD"
+    },
+    {
+      "reason": "OutputInsideCheckoutDenied",
+      "scenario": "output-inside-checkout",
+      "status": "HOLD"
+    },
+    {
+      "reason": "InputPathUnsafe",
+      "scenario": "symlinked-materials",
+      "status": "HOLD"
+    },
+    {
+      "reason": "OutputDirectoryUnsafe",
+      "scenario": "existing-output",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningMaterialsMustBeUnsigned",
+      "scenario": "pre-signed-input",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningSessionMismatch",
+      "scenario": "session-authority-tampering",
+      "status": "HOLD"
+    },
+    {
+      "reason": "OperatorSignatureInvalid",
+      "scenario": "invalid-signature",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningSessionMismatch",
+      "scenario": "checkout-drift-after-export",
+      "status": "HOLD"
+    }
+  ],
+  "status_counts": {
+    "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1,
+    "HOLD": 8,
+    "READY_FOR_OFFLINE_SIGNATURE": 1
+  }
+}

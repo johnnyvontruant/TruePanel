@@ -351,6 +351,8 @@ class AegisReliabilityEngine:
                 "public_key_roster": "NOT_PROVISIONED",
                 "operator_signature": "AWAITING",
                 "signing_location": "OFFLINE_OPERATOR_OWNED",
+                "signing_tool": "PUBLIC_EXPORT_AND_RETURN_VERIFY",
+                "private_key_handling": "NEVER_ACCEPTED_BY_TRUEPANEL",
                 "production_authority": False,
                 "deployment_authority": False,
                 "hardware_authority": False,

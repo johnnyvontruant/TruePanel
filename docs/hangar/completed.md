@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.23.1 · refreshed 2026-09-23 · 20 experiment(s)
+Registry version 2026.09.24.1 · refreshed 2026-09-24 · 21 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -163,3 +163,11 @@ One clean pinned fixture checkout reaches signing readiness and one exact sessio
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Export the freshly reconstructed session from a pinned candidate checkout, let JT compare UTC and sign it offline, then verify the returned signature in a read-only field checkride.
 - Revisit when: JT provisions the protected development roster; an RFC 3161 or Roughtime adapter is approved; a real candidate is frozen for offline review
+
+## TP-EXP-0026 · AEGIS public-only offline signing tool
+
+One public-only kit reaches signing readiness and one externally signed disposable fixture reaches development-review eligibility; eight adversarial cases hold with zero private-key inputs, signer invocations, unsafe-ready results, or live effects.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, export one real reviewed kit, and perform the first read-only returned-signature field checkride.
+- Revisit when: JT provisions the protected public roster; a real candidate materials bundle is independently reviewed; a platform lacks OpenSSH SSHSIG

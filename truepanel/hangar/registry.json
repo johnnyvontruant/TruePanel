@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.23.1",
-  "updated_at": "2026-09-23",
+  "registry_version": "2026.09.24.1",
+  "updated_at": "2026-09-24",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -394,6 +394,25 @@
       "revisit_conditions": ["JT provisions the protected development roster", "an RFC 3161 or Roughtime adapter is approved", "a real candidate is frozen for offline review"],
       "strongest_follow_up": "Export the freshly reconstructed session from a pinned candidate checkout, let JT compare UTC and sign it offline, then verify the returned signature in a read-only field checkride.",
       "freshness": {"reviewed_at": "2026-09-23", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0026", "title": "AEGIS public-only offline signing tool", "state": "COMPLETED",
+      "hypothesis": "TruePanel can export a content-bound development signing kit and verify its returned SSHSIG without accepting a private key, invoking a signer, or widening development authority.",
+      "value": "Turns the reviewed signing-session contract into an operator-usable ceremony while keeping JT's private key entirely outside TruePanel.",
+      "prior_art": ["OpenSSH SSHSIG and negative tests", "Minisign detached files", "Sigstore Cosign digest-bound verification", "in-toto material and product chains", "SLSA and TUF scoped trust"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-offline-signing-tool", "pr": null, "commits": []},
+      "protocol": ["load strict unsigned public materials", "reconstruct the clean content-bound session", "export exclusive public files outside the checkout", "sign with a disposable external HoloDeck key", "verify the returned signature", "reject drift tampering and unsafe paths"],
+      "fixtures": ["aegis-offline-signing-tool-v1", "tests/test_aegis_signing_tool.py", "tests/test_aegis_signing_tool_checkride.py"],
+      "success_criteria": ["one public kit is signing-ready", "one real fixture SSHSIG is development-eligible", "all adversarial paths hold", "TruePanel accepts no private key and invokes no signer", "zero stronger authority or live action"],
+      "abort_criteria": ["private-key path accepted", "signer invoked by TruePanel", "partial kit represented as complete", "signature accepted after checkout drift", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-offline-signing-tool-v1.json", "sha256": "7579ba8adbda737e83bec74ec81bc122277ffbb58ed0765917a890d57b8afe6d"}],
+      "outcome": {"conclusion": "One public-only kit reaches signing readiness and one externally signed disposable fixture reaches development-review eligibility; eight adversarial cases hold with zero private-key inputs, signer invocations, unsafe-ready results, or live effects."},
+      "invalidated_assumptions": ["one write call always persists the full export", "a failed direct export can safely leave partial files for reuse", "a valid detached signature remains valid after checkout drift", "the application should provide a convenience signer"],
+      "reproduction": ["pytest -q tests/test_aegis_signing_tool.py tests/test_aegis_signing_tool_checkride.py", "python -c \"from truepanel.holodeck.aegis_signing_tool import run_signing_tool_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT provisions the protected public roster", "a real candidate materials bundle is independently reviewed", "a platform lacks OpenSSH SSHSIG"],
+      "strongest_follow_up": "Provision JT's protected development public roster, export one real reviewed kit, and perform the first read-only returned-signature field checkride.",
+      "freshness": {"reviewed_at": "2026-09-24", "review_after": "2026-12-31"}
     }
   ]
 }
