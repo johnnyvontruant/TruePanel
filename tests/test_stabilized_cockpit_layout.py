@@ -65,7 +65,11 @@ def test_reorder_moves_existing_dom_nodes_without_mutating_safety():
     assert "grid.prepend(...cards.filter(" in source
     assert "const sentinel=document.getElementById(\"sentinelFlightDirector\")" in source
     assert "const warning=document.getElementById(\"healthAdvisory\")" in source
-    assert "commandStatus.appendChild(strip)" in source
+    assert 'resourcesCard.id="cockpitResourcesCard"' in source
+    assert 'resourcesCard.innerHTML="<h2>System Resources</h2>"' in source
+    assert "resourcesCard.appendChild(strip)" in source
+    assert "grid.insertBefore(resourcesCard,cooling||cargo||null)" in source
+    assert "commandStatus.appendChild(strip)" not in source
     assert 'const activity=document.getElementById("observatoryCurrentActivity")' in source
     assert "command,commandRow,activity," in source
     assert 'activity.style.gridColumn="1 / -1"' in source
