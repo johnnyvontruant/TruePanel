@@ -24,18 +24,6 @@ function fanRpm(payload){
     return number(first(monitored?.rpm,active?.rpm,fans?.fan1_rpm,fans?.fan2_rpm));
 }
 
-function incidentBay(incident){
-    const direct=number(first(incident?.physical_bay,incident?.bay,incident?.bay_number));
-    if(direct!==null&&direct>0) return direct;
-    const candidates=[incident?.evidence,incident?.source,incident?.metadata,...array(incident?.supporting_signals),...array(incident?.signals)];
-    for(const item of candidates){
-        if(!item||typeof item!=="object") continue;
-        const bay=number(first(item?.physical_bay,item?.bay,item?.bay_number,item?.metadata?.physical_bay,item?.metadata?.bay));
-        if(bay!==null&&bay>0) return bay;
-    }
-    return null;
-}
-
 function trend(values){
     const points=(Array.isArray(values)?values:[]).map(number).filter(value=>value!==null).slice(-8);
     if(points.length<2) return {word:"trend unavailable",symbol:"—",points:""};
