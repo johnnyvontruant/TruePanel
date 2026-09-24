@@ -356,7 +356,8 @@ function applyStabilizedDeckOrder(){
     const warning=document.getElementById("healthAdvisory");
     const sentinel=document.getElementById("sentinelFlightDirector");
     const situation=document.getElementById("glassCockpitSituation");
-    if(!grid||!lcd||!warning||!sentinel||!situation) return;
+    const activity=document.getElementById("observatoryCurrentActivity");
+    if(!grid||!lcd||!warning||!sentinel||!situation||!activity) return;
 
     const command=document.getElementById("cockpitOverview");
     const commandRow=document.querySelector(".cockpit-command-row");
@@ -370,7 +371,7 @@ function applyStabilizedDeckOrder(){
     const night=document.getElementById("nightEnabled")?.closest("article");
     const cargo=document.getElementById("cardCargoBay");
     const cards=[
-        lcd,warning,sentinel,situation,command,commandRow,
+        lcd,warning,sentinel,situation,command,commandRow,activity,
         commandRow?.contains(health)?null:health,
         commandRow?.contains(preflight)?null:preflight,
         commandStatus,storage,temperatures,network,cooling,night,cargo,
@@ -406,6 +407,8 @@ function applyStabilizedDeckOrder(){
             }
         }
     }
+    activity.style.gridColumn="1 / -1";
+    activity.style.width="100%";
     document.body.classList.add("cockpit-stabilized-order");
 }
 
