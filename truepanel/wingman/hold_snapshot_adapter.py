@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .current_identity_witness import CurrentDriveWitness
 from .hold_envelope import HoldEvidence, HoldKind
 
 _SMART_WARNING_CODE = "storage.smart_warning"
@@ -25,6 +26,7 @@ _CURRENT_IDENTITY_PROOFS = {
 def _verified_current_bay(
     card: dict[str, Any],
     lifeline: Any,
+    witness: CurrentDriveWitness | None = None,
 ) -> int | None:
     """Require a unique active Lifeline session AND independent hardware proof.
 
@@ -39,6 +41,8 @@ def _verified_current_bay(
         return None
     sessions = lifeline.get("sessions")
     if not isinstance(sessions, list):
+        return None
+    if witness is not None and type(witness) is not CurrentDriveWitness:
         return None
     pool = evidence.get("pool")
     vdev = evidence.get("vdev")
@@ -110,12 +114,29 @@ def _verified_current_bay(
             continue
         matches.append(session)
 
-    # Ambiguous multiple identities must never publish a physical bay.
-    return bay if len(matches) == 1 else None
+    # The independent current witness must corroborate the complete matched
+    # identity; a last-known-good ledger on its own cannot name a live bay.
+    if len(matches) != 1 or witness is None:
+        return None
+    identity = matches[0]["drive_identity"]
+    return bay if all((
+        witness.pool == pool,
+        witness.vdev == vdev,
+        witness.member_id == member,
+        witness.device == device,
+        witness.bay == bay,
+        witness.serial_last4 == suffix,
+        witness.stable_key == identity["stable_key"],
+        witness.mode == identity["mode"],
+        witness.source == identity["source"],
+        witness.confidence == identity["confidence"],
+    )) else None
 
 
 def holds_from_trusted_snapshot(
     snapshot: dict[str, Any],
+    *,
+    current_identity_witness: CurrentDriveWitness | None = None,
 ) -> tuple[HoldEvidence, ...]:
     """Map only confirmed structured action gates, never natural-language prose.
 
@@ -170,7 +191,11 @@ def holds_from_trusted_snapshot(
     if blocked_smart_cards:
         # Multiple blocked cards or any unresolved identity stay unlocalized.
         bay = (
-            _verified_current_bay(blocked_smart_cards[0], snapshot.get("lifeline"))
+            _verified_current_bay(
+                blocked_smart_cards[0],
+                snapshot.get("lifeline"),
+                current_identity_witness,
+            )
             if len(blocked_smart_cards) == 1 else None
         )
         holds.append(
