@@ -12,9 +12,11 @@ import math
 import time
 from collections.abc import Callable
 from copy import deepcopy
+from dataclasses import dataclass
 from threading import Lock
 from typing import Any
 
+from .current_identity_witness import CurrentDriveWitness
 from .hold_envelope import project_operator_view
 from .hold_snapshot_adapter import holds_from_trusted_snapshot
 from .service import WingmanServiceResult
@@ -41,6 +43,18 @@ def _unavailable(reason: str) -> dict[str, Any]:
         "evidence_origin": "UNVERIFIED",
         "advisory_only": True,
     }
+
+
+@dataclass(frozen=True)
+class InternalStatusCapture:
+    """In-process status plus independently observed drive identity, if any.
+
+    Only the trusted internal composer is allowed to construct this object.
+    It is not a serialized request or a user-provided provenance token.
+    """
+
+    snapshot: dict[str, Any]
+    identity_witness: CurrentDriveWitness | None = None
 
 
 class TrustedSnapshotGate:
@@ -74,6 +88,7 @@ class TrustedSnapshotGate:
         self._max_age = float(max_age_seconds)
         self._ticket: object | None = None
         self._snapshot: dict[str, Any] | None = None
+        self._identity_witness: CurrentDriveWitness | None = None
         self._captured_at: float | None = None
 
     def capture(self) -> object:
@@ -84,9 +99,18 @@ class TrustedSnapshotGate:
     def _capture_locked(self) -> object:
         self._ticket = None
         self._snapshot = None
+        self._identity_witness = None
         self._captured_at = None
         try:
-            snapshot = self._composer()
+            capture = self._composer()
+            if isinstance(capture, InternalStatusCapture):
+                snapshot = capture.snapshot
+                witness = capture.identity_witness
+                if witness is not None and type(witness) is not CurrentDriveWitness:
+                    raise ValueError("Invalid internal identity witness")
+            else:
+                snapshot = capture
+                witness = None
             if not isinstance(snapshot, dict):
                 raise ValueError("Internal composer did not return a snapshot")
             isolated = deepcopy(snapshot)
@@ -100,6 +124,7 @@ class TrustedSnapshotGate:
         ticket = object()
         self._ticket = ticket
         self._snapshot = isolated
+        self._identity_witness = witness
         self._captured_at = captured_at
         return ticket
 
@@ -119,11 +144,13 @@ class TrustedSnapshotGate:
         if ticket is not self._ticket or self._snapshot is None:
             return _unavailable("UNTRUSTED_OR_REPLAYED_SNAPSHOT")
         snapshot = self._snapshot
+        witness = self._identity_witness
         captured_at = self._captured_at
         # Even a failed redemption spends the ticket. Do not permit retries
         # after a status change, elapsed TTL, or mutated model response.
         self._ticket = None
         self._snapshot = None
+        self._identity_witness = None
         self._captured_at = None
         try:
             now = float(self._clock())
@@ -134,10 +161,12 @@ class TrustedSnapshotGate:
                 or now - captured_at > self._max_age
             ):
                 return _unavailable("STALE_SNAPSHOT")
-            holds = holds_from_trusted_snapshot(snapshot)
+            holds = holds_from_trusted_snapshot(
+                snapshot, current_identity_witness=witness
+            )
             return project_operator_view(result, trusted_holds=holds)
         except (TypeError, ValueError, KeyError, AttributeError):
             return _unavailable("INVALID_AUTHORITATIVE_EVIDENCE")
 
 
-__all__ = ["TrustedSnapshotGate"]
+__all__ = ["InternalStatusCapture", "TrustedSnapshotGate"]
