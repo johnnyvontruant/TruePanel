@@ -74,7 +74,7 @@ function installStyle(){
 @media(max-width:640px){.cockpit-layout-switcher{padding:0 1rem;flex-wrap:wrap}.cockpit-preview-note{width:100%;margin-left:0}.cockpit-bays{gap:.25rem}.cockpit-bay-state{display:none}.cockpit-pool-grid{grid-template-columns:1fr}.cockpit-matrix-row{gap:1px}.cockpit-matrix-glyph{gap:.5px}}
 `;
     style.textContent+=`
-.cockpit-stabilized-order #cardMissionControlStatus .cockpit-resources{
+.cockpit-stabilized-order #cockpitResourcesCard .cockpit-resources{
  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;
  margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--edge)
 }
@@ -380,9 +380,9 @@ function applyStabilizedDeckOrder(){
     grid.prepend(...cards.filter(node=>node&&node!==grid&&node!==cargo));
     if(cargo) grid.appendChild(cargo);
 
-    // Put the existing CPU/Memory live metric nodes inside Mission Control
-    // Status. Moving the nodes preserves all existing telemetry updates.
-    if(commandStatus&&!document.getElementById("cockpitResources")){
+    // Reuse the existing CPU/Memory live nodes in a separate resources card.
+    // Preserve the original telemetry targets, listeners and their updates.
+    if(!document.getElementById("cockpitResources")){
         const cpu=document.getElementById("cpu");
         const ram=document.getElementById("ram");
         const load=document.getElementById("load");
@@ -401,11 +401,22 @@ function applyStabilizedDeckOrder(){
                 cpuSlot.append(cpu,load);
                 ramSlot.appendChild(ram);
                 strip.append(cpuSlot,ramSlot);
-                commandStatus.appendChild(strip);
+                const resourcesCard=document.createElement("article");
+                resourcesCard.id="cockpitResourcesCard";
+                resourcesCard.className="card";
+                resourcesCard.setAttribute("aria-label","System resources");
+                resourcesCard.innerHTML="<h2>System Resources</h2>";
+                resourcesCard.appendChild(strip);
+                grid.insertBefore(resourcesCard,cooling||cargo||null);
                 cpuCard.remove();
                 ramCard.remove();
             }
         }
+    }
+    // An existing card is moved after Network rather than duplicated.
+    const resourcesCard=document.getElementById("cockpitResourcesCard");
+    if(resourcesCard&&resourcesCard.parentElement===grid){
+        grid.insertBefore(resourcesCard,cooling||cargo||null);
     }
     activity.style.gridColumn="1 / -1";
     activity.style.width="100%";
