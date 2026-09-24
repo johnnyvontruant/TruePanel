@@ -6,6 +6,7 @@ import copy
 
 import pytest
 
+from truepanel.wingman.current_identity_witness import CurrentDriveWitness
 from truepanel.wingman.hold_envelope import (
     HoldKind,
     project_operator_view,
@@ -179,8 +180,26 @@ def _verified_snapshot():
     return snapshot
 
 
-def _storage_hold(snapshot):
-    return next(hold for hold in holds_from_trusted_snapshot(snapshot)
+def _current_witness():
+    return CurrentDriveWitness(
+        observed_at=100.0,
+        pool="HDDs",
+        vdev="raidz1-0",
+        member_id="12345",
+        device="/dev/sdc",
+        bay=3,
+        serial_last4="A123",
+        stable_key="wwn:synthetic",
+        mode="wwn",
+        source="udev_wwn_cross_checked_inventory",
+        confidence="very_high",
+    )
+
+
+def _storage_hold(snapshot, witness=None):
+    return next(hold for hold in holds_from_trusted_snapshot(
+        snapshot, current_identity_witness=witness
+    )
                 if hold.kind in {
                     HoldKind.PHYSICAL_SERVICE,
                     HoldKind.PHYSICAL_SERVICE_UNLOCALIZED,
@@ -189,11 +208,13 @@ def _storage_hold(snapshot):
 
 def test_independently_verified_current_identity_localizes_hold():
     snapshot = _verified_snapshot()
-    hold = _storage_hold(snapshot)
+    hold = _storage_hold(snapshot, _current_witness())
     assert hold.kind is HoldKind.PHYSICAL_SERVICE
     assert hold.bay == 3
     view = project_operator_view(
-        _model(), trusted_holds=holds_from_trusted_snapshot(snapshot)
+        _model(), trusted_holds=holds_from_trusted_snapshot(
+            snapshot, current_identity_witness=_current_witness()
+        )
     )
     assert "Bay 3: physical service HOLD" in str(view)
     assert view["generated_explanation"] is None
@@ -247,7 +268,7 @@ def test_independently_verified_current_identity_localizes_hold():
 def test_unverified_conflicting_or_missing_proof_never_names_bay(mutate):
     snapshot = _verified_snapshot()
     mutate(snapshot)
-    hold = _storage_hold(snapshot)
+    hold = _storage_hold(snapshot, _current_witness())
     assert hold.kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
     assert hold.bay is None
     view = project_operator_view(
@@ -263,7 +284,9 @@ def test_ambiguous_duplicate_proof_never_names_bay():
     snapshot["lifeline"]["sessions"].append(
         copy.deepcopy(snapshot["lifeline"]["sessions"][0])
     )
-    assert _storage_hold(snapshot).kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
+    assert _storage_hold(
+        snapshot, _current_witness()
+    ).kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
 
 
 def test_multiple_smart_incidents_do_not_collapse_into_a_single_bay():
@@ -272,7 +295,9 @@ def test_multiple_smart_incidents_do_not_collapse_into_a_single_bay():
     second["runtime"]["evidence"]["bay"] = 6
     second["runtime"]["evidence"]["device"] = "/dev/sdz"
     snapshot["operator_guidance"].append(second)
-    assert _storage_hold(snapshot).kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
+    assert _storage_hold(
+        snapshot, _current_witness()
+    ).kind is HoldKind.PHYSICAL_SERVICE_UNLOCALIZED
 
 
 def test_no_hold_can_be_released_by_a_model_claim():
