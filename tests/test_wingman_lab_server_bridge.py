@@ -12,6 +12,7 @@ import pytest
 
 from truepanel.guidance.sessions import RecoverySessionStore
 from truepanel.web import pathfinder_server
+from truepanel.wingman.current_identity_witness import CurrentDriveWitness
 from truepanel.wingman.lab_server_bridge import LabServerHoldBridge
 from truepanel.wingman.service import WingmanServiceResult
 
@@ -100,6 +101,7 @@ class _LabHandler(pathfinder_server.MissionControlRequestHandler):
             internal_compose=self._compose_status_payload,
             wall_clock=lambda: self.server.lab_wall_clock[0],
             monotonic_clock=lambda: self.server.lab_monotonic_clock[0],
+            current_identity_observer=self.server.lab_identity_observer,
         )
         unsafe_model = WingmanServiceResult(
             status="EXPLAINED",
@@ -124,6 +126,7 @@ def _start_server(tmp_path):
         config_path=tmp_path / "truepanel.yaml",
     )
     server.RequestHandlerClass = _LabHandler
+    server.lab_identity_observer = None
     server.lab_wall_clock = [100.0]
     server.lab_monotonic_clock = [250.0]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -230,3 +233,119 @@ def test_fresh_no_hold_does_not_display_unchecked_model_output(lab):
     assert payload["authoritative_holds"] == []
     assert payload["generated_explanation"] is None
     assert payload["hold_release_authorized"] is False
+
+
+
+def _live_witness(*, observed_at=100.0, bay=3, member_id="12345"):
+    """Fake fresh inventory observation, separate from snapshot and ledger."""
+    return CurrentDriveWitness(
+        observed_at=observed_at,
+        pool="HDDs",
+        vdev="raidz1-0",
+        member_id=member_id,
+        device="/dev/sdc",
+        bay=bay,
+        serial_last4="A123",
+        stable_key="wwn:synthetic",
+        mode="wwn",
+        source="udev_wwn_cross_checked_inventory",
+        confidence="very_high",
+    )
+
+
+def _attach_persisted_lifeline(status):
+    """Last-known-good ledger is intentionally NOT enough on its own."""
+    evidence = status.payload["operator_guidance"][0]["runtime"]["evidence"]
+    status.payload["lifeline"] = {
+        "sessions": [{
+            "status": "active",
+            "trigger_code": "storage.smart_warning",
+            "original_fault": dict(evidence),
+            "drive_identity": {
+                "mode": "wwn",
+                "source": "udev_wwn_cross_checked_inventory",
+                "confidence": "very_high",
+                "stable_key": "wwn:synthetic",
+                "device": "/dev/sdc",
+                "bay": 3,
+                "serial_last4": "A123",
+            },
+            "last_session": {
+                "target": dict(evidence),
+                "gates": [{"code": "physical_identity", "satisfied": True}],
+            },
+        }],
+    }
+
+
+def test_fresh_current_identity_witness_localizes_lab_server_hold(lab):
+    server, status, _ = lab
+    _attach_persisted_lifeline(status)
+    server.lab_identity_observer = _live_witness
+    code, payload = _request(server)
+    assert code == 200
+    assert {h["headline"] for h in payload["authoritative_holds"]} == {
+        "AEGIS: HOLD (PlatformVersionMismatch)",
+        "Bay 3: physical service HOLD",
+    }
+    assert payload["generated_explanation"] is None
+    assert payload["hold_release_authorized"] is False
+
+
+@pytest.mark.parametrize(
+    "witness",
+    [
+        None,
+        lambda: _live_witness(observed_at=90.0),
+        lambda: _live_witness(observed_at=110.0),
+        lambda: _live_witness(bay=6),
+        lambda: _live_witness(member_id="another-member"),
+        lambda: {"observed_at": 100.0, "bay": 3},
+    ],
+)
+def test_missing_stale_future_conflicted_or_untyped_witness_stays_unlocalized(
+    lab, witness
+):
+    server, status, _ = lab
+    _attach_persisted_lifeline(status)
+    server.lab_identity_observer = witness
+    code, payload = _request(server)
+    assert code == 200
+    assert {h["headline"] for h in payload["authoritative_holds"]} == {
+        "AEGIS: HOLD (PlatformVersionMismatch)",
+        "Storage: physical service HOLD (bay not verified)",
+    }
+    assert "Bay 3" not in json.dumps(payload)
+    assert "Bay 6" not in json.dumps(payload)
+    assert payload["generated_explanation"] is None
+    assert payload["hold_release_authorized"] is False
+
+
+def test_new_status_wrapper_cannot_refresh_replayed_identity_witness(lab):
+    server, status, aegis = lab
+    _attach_persisted_lifeline(status)
+    server.lab_wall_clock[0] = 104.0
+    status.payload["timestamp"] = 104.0
+    aegis.source_timestamp = 104.0
+    aegis.sampled_at = 104.0
+    # The independent observation still belongs to the earlier sample.
+    server.lab_identity_observer = lambda: _live_witness(observed_at=100.0)
+    code, payload = _request(server)
+    assert code == 200
+    assert "Storage: physical service HOLD (bay not verified)" in json.dumps(payload)
+    assert "Bay 3" not in json.dumps(payload)
+    assert payload["generated_explanation"] is None
+
+
+def test_observer_failure_preserves_unlocalized_hold(lab):
+    server, status, _ = lab
+    _attach_persisted_lifeline(status)
+
+    def unavailable():
+        raise OSError("Synthetic live inventory unavailable")
+
+    server.lab_identity_observer = unavailable
+    code, payload = _request(server)
+    assert code == 200
+    assert "Storage: physical service HOLD (bay not verified)" in json.dumps(payload)
+    assert payload["generated_explanation"] is None
