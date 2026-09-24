@@ -91,7 +91,8 @@ def test_fresh_internal_capture_uses_verified_hold_and_suppresses_model():
     assert view["status"] == "HOLD"
     assert view["generated_explanation"] is None
     assert {h["headline"] for h in view["authoritative_holds"]} == {
-        "Bay 3: physical service HOLD", "AEGIS: HOLD (PlatformVersionMismatch)"
+        "Storage: physical service HOLD (bay not verified)",
+        "AEGIS: HOLD (PlatformVersionMismatch)"
     }
     assert view["hold_release_authorized"] is False
 
@@ -171,7 +172,8 @@ def test_snapshot_is_isolated_from_caller_mutation_after_capture():
     state["lifeline"]["sessions"][0]["drive_identity"]["bay"] = 6
     view = gate.project(_model(), ticket=ticket)
     assert {h["headline"] for h in view["authoritative_holds"]} == {
-        "Bay 3: physical service HOLD", "AEGIS: HOLD (PlatformVersionMismatch)"
+        "Storage: physical service HOLD (bay not verified)",
+        "AEGIS: HOLD (PlatformVersionMismatch)"
     }
 
 
