@@ -76,5 +76,9 @@ def test_reorder_moves_existing_dom_nodes_without_mutating_safety():
     assert 'activity.style.width="100%"' in source
     assert "cpuSlot.append(cpu,load)" in source
     assert "ramSlot.appendChild(ram)" in source
+    assert ".cockpit-stabilized-order #cockpitOverview," in source
+    assert ".cockpit-stabilized-order .cockpit-command-row," in source
+    assert ".cockpit-stabilized-order #preflightPanel{" in source
+    assert "grid-column:1/-1!important;width:100%;min-width:0;max-width:none;" in source
     assert "window.requestAnimationFrame(applyStabilizedDeckOrder)" in source
     assert "fan_runtime" not in source[source.index("function applyStabilizedDeckOrder(){"):source.index("function installVariantSwitcher(){")]
