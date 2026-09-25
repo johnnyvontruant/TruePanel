@@ -17,6 +17,7 @@ from truepanel.aegis.operator_handoff import OPERATOR_KEY_ID
 from truepanel.aegis.signing_session import SIGNING_SESSION_NAMESPACE
 from truepanel.aegis.signing_tool import (
     MATERIALS_SCHEMA,
+    audit_signing_kit,
     export_signing_kit,
     load_materials,
     main,
@@ -104,6 +105,7 @@ def test_export_contains_only_public_content_bound_material(tmp_path):
     assert result["status"] == "READY_FOR_OFFLINE_SIGNATURE"
     assert sorted(path.name for path in output.iterdir()) == [
         "README.txt",
+        "aegis-development-review.txt",
         "aegis-development-signing-session.json",
         "manifest.json",
     ]
@@ -113,6 +115,74 @@ def test_export_contains_only_public_content_bound_material(tmp_path):
     manifest = json.loads((output / "manifest.json").read_text())
     assert manifest["namespace"] == SIGNING_SESSION_NAMESPACE
     assert manifest["production_authority"] is False
+    assert manifest["review_sha256"] == result["review_sha256"]
+    audit = audit_signing_kit(output)
+    assert audit["status"] == "READY_FOR_OPERATOR_SIGNATURE"
+    assert audit["session_sha256"] == result["session_sha256"]
+
+
+@pytest.mark.parametrize(
+    ("target", "replacement", "reason"),
+    [
+        ("aegis-development-review.txt", b"looks safe\n", "SigningKitPresentationMismatch"),
+        ("manifest.json", b"{}", "SigningKitPresentationMismatch"),
+        ("README.txt", b"skip the audit\n", "SigningKitPresentationMismatch"),
+        (
+            "aegis-development-signing-session.json",
+            b'{"scope":"DEVELOPMENT_ONLY"}',
+            "SigningKitSessionInvalid",
+        ),
+    ],
+)
+def test_audit_rejects_transport_and_presentation_substitution(
+    tmp_path, target, replacement, reason
+):
+    paths = _fixture(tmp_path)
+    output = tmp_path / "export"
+    _export(paths, output)
+    (output / target).write_bytes(replacement)
+
+    with pytest.raises(ValueError, match=reason):
+        audit_signing_kit(output)
+
+
+def test_audit_rejects_extra_missing_symlink_and_signature_files(tmp_path):
+    paths = _fixture(tmp_path)
+    extra = tmp_path / "extra"
+    _export(paths, extra)
+    (extra / "unexpected.txt").write_text("surprise\n")
+    with pytest.raises(ValueError, match="SigningKitLayoutInvalid"):
+        audit_signing_kit(extra)
+
+    missing = tmp_path / "missing"
+    _export(paths, missing)
+    (missing / "README.txt").unlink()
+    with pytest.raises(ValueError, match="SigningKitLayoutInvalid"):
+        audit_signing_kit(missing)
+
+    linked = tmp_path / "linked"
+    _export(paths, linked)
+    (linked / "README.txt").unlink()
+    (linked / "README.txt").symlink_to(linked / "manifest.json")
+    with pytest.raises(ValueError, match="InputPathUnsafe"):
+        audit_signing_kit(linked)
+
+    signed = tmp_path / "signed"
+    _export(paths, signed)
+    (signed / "aegis-development-signing-session.json.sig").write_text("already signed")
+    with pytest.raises(ValueError, match="SigningKitLayoutInvalid"):
+        audit_signing_kit(signed)
+
+
+def test_audit_cli_is_public_read_only_and_signer_free(tmp_path, capsys):
+    paths = _fixture(tmp_path)
+    output = tmp_path / "export"
+    _export(paths, output)
+
+    assert main(["audit", "--kit", str(output)]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "READY_FOR_OPERATOR_SIGNATURE"
+    assert result["production_authority"] is False
 
 
 def test_returned_real_sshsig_verifies_development_only(tmp_path):
@@ -209,5 +279,7 @@ def test_mission_control_names_public_only_offline_ceremony():
         Path(__file__).resolve().parents[1]
         / "truepanel/web/static/reliability-view.js"
     ).read_text()
-    assert "export public kit · sign outside TruePanel · verify returned signature" in source
-    assert "private key never accepted" in source
+    assert "export public kit · audit review card before signing" in source
+    assert "sign outside TruePanel · verify returned signature" in source
+    assert "Private key never accepted" in source
+    assert "audit review card before signing" in source

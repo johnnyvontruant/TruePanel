@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.24.1 · refreshed 2026-09-24 · 21 experiment(s)
+Registry version 2026.09.25.1 · refreshed 2026-09-25 · 22 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -171,3 +171,11 @@ One public-only kit reaches signing readiness and one externally signed disposab
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision JT's protected development public roster, export one real reviewed kit, and perform the first read-only returned-signature field checkride.
 - Revisit when: JT provisions the protected public roster; a real candidate materials bundle is independently reviewed; a platform lacks OpenSSH SSHSIG
+
+## TP-EXP-0027 · AEGIS signing-kit custody audit
+
+One exact kit reaches operator-signature readiness and one externally signed disposable fixture reaches development review; ten custody and presentation attacks hold with zero unsafe-ready result.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's development public roster, audit one real exported kit on the signing computer, sign the canonical session offline, and run the returned-signature field checkride.
+- Revisit when: JT provisions the protected public roster; a real signing kit crosses an offline transport boundary; the signing-session schema changes; a platform lacks OpenSSH SSHSIG
