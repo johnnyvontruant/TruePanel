@@ -1,0 +1,91 @@
+{
+  "control_authority": false,
+  "fixture_private_keys_retained": 0,
+  "measurements": {
+    "adversarial_holds": 10,
+    "deployments": 0,
+    "development_eligible": 1,
+    "hardware_actions": 0,
+    "operator_signature_ready": 1,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "review_card_substitutions_accepted": 0,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_ready": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-signing-kit-custody-audit-v1",
+  "scenarios": [
+    {
+      "reason": "PresentationRecomputed",
+      "scenario": "exact-kit-audit",
+      "status": "READY_FOR_OPERATOR_SIGNATURE"
+    },
+    {
+      "reason": "SigningKitPresentationMismatch",
+      "scenario": "review-card-substitution",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningKitPresentationMismatch",
+      "scenario": "manifest-substitution",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningKitPresentationMismatch",
+      "scenario": "instructions-substitution",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningKitSessionNotCanonical",
+      "scenario": "noncanonical-session",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningKitSessionInvalid",
+      "scenario": "session-authority-escalation",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningKitLayoutInvalid",
+      "scenario": "extra-file",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningKitLayoutInvalid",
+      "scenario": "missing-file",
+      "status": "HOLD"
+    },
+    {
+      "reason": "InputPathUnsafe",
+      "scenario": "symlinked-review",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningKitPresentationMismatch",
+      "scenario": "coordinated-card-and-manifest-substitution",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningKitLayoutInvalid",
+      "scenario": "preexisting-signature-before-audit",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SingleOperatorDevelopmentReviewVerified",
+      "scenario": "returned-exact-signature",
+      "status": "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW"
+    }
+  ],
+  "status_counts": {
+    "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1,
+    "HOLD": 10,
+    "READY_FOR_OPERATOR_SIGNATURE": 1
+  }
+}

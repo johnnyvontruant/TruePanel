@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.24.1",
-  "updated_at": "2026-09-24",
+  "registry_version": "2026.09.25.1",
+  "updated_at": "2026-09-25",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -413,6 +413,25 @@
       "revisit_conditions": ["JT provisions the protected public roster", "a real candidate materials bundle is independently reviewed", "a platform lacks OpenSSH SSHSIG"],
       "strongest_follow_up": "Provision JT's protected development public roster, export one real reviewed kit, and perform the first read-only returned-signature field checkride.",
       "freshness": {"reviewed_at": "2026-09-24", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0027", "title": "AEGIS signing-kit custody audit", "state": "COMPLETED",
+      "hypothesis": "An offline operator can mechanically prove that a concise review card and transport manifest match the exact canonical development session before signing it.",
+      "value": "Closes the gap between cryptographically bound JSON and the human-readable fields JT actually inspects without moving the private key into TruePanel.",
+      "prior_art": ["DSSE verified-payload handoff", "TUF target hashes and lengths", "Sigstore bundles", "Minisign trusted comments"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-signing-kit-audit", "pr": null, "commits": []},
+      "protocol": ["export canonical signing session", "derive deterministic review card", "hash session card and instructions in a strict manifest", "audit exact file set and canonical encodings", "reject coordinated presentation substitution", "sign only the canonical session externally", "reconstruct and verify returned signature"],
+      "fixtures": ["aegis-signing-kit-custody-audit-v1", "tests/test_aegis_signing_tool.py", "tests/test_aegis_signing_kit_audit_checkride.py"],
+      "success_criteria": ["one audited kit is operator-signature-ready", "one externally signed fixture is development-eligible", "all substitutions hold", "zero accepted review-card substitution", "zero private-key input or signer invocation", "zero stronger authority or live action"],
+      "abort_criteria": ["review card trusted without recomputation", "manifest treated as its own trust root", "noncanonical session accepted", "signature present before pre-sign audit", "private key enters TruePanel", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-signing-kit-custody-audit-v1.json", "sha256": "bd2727353dad9456bf2b5819a4b8700f16342d64283a388087e3100e977d149b"}],
+      "outcome": {"conclusion": "One exact kit reaches operator-signature readiness and one externally signed disposable fixture reaches development review; ten custody and presentation attacks hold with zero unsafe-ready result."},
+      "invalidated_assumptions": ["a manifest digest proves the manifest itself is trustworthy", "a human-readable review file can be trusted because it was shipped beside signed JSON", "valid JSON is necessarily the exact canonical byte sequence to sign"],
+      "reproduction": ["pytest -q tests/test_aegis_signing_tool.py tests/test_aegis_signing_kit_audit_checkride.py", "python -c \"from truepanel.holodeck.aegis_signing_kit_audit import run_signing_kit_audit_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT provisions the protected public roster", "a real signing kit crosses an offline transport boundary", "the signing-session schema changes", "a platform lacks OpenSSH SSHSIG"],
+      "strongest_follow_up": "Provision JT's development public roster, audit one real exported kit on the signing computer, sign the canonical session offline, and run the returned-signature field checkride.",
+      "freshness": {"reviewed_at": "2026-09-25", "review_after": "2026-12-31"}
     }
   ]
 }
