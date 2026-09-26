@@ -18,6 +18,7 @@ from truepanel.aegis.signing_session import SIGNING_SESSION_NAMESPACE
 from truepanel.aegis.signing_tool import (
     MATERIALS_SCHEMA,
     audit_signing_kit,
+    dual_audit_signing_kit,
     export_signing_kit,
     load_materials,
     main,
@@ -102,7 +103,7 @@ def test_export_contains_only_public_content_bound_material(tmp_path):
 
     result = _export(paths, output)
 
-    assert result["status"] == "READY_FOR_OFFLINE_SIGNATURE"
+    assert result["status"] == "READY_FOR_DUAL_AUDIT"
     assert sorted(path.name for path in output.iterdir()) == [
         "README.txt",
         "aegis-development-review.txt",
@@ -117,7 +118,7 @@ def test_export_contains_only_public_content_bound_material(tmp_path):
     assert manifest["production_authority"] is False
     assert manifest["review_sha256"] == result["review_sha256"]
     audit = audit_signing_kit(output)
-    assert audit["status"] == "READY_FOR_OPERATOR_SIGNATURE"
+    assert audit["status"] == "INTERNAL_AUDIT_PASS"
     assert audit["session_sha256"] == result["session_sha256"]
 
 
@@ -181,7 +182,7 @@ def test_audit_cli_is_public_read_only_and_signer_free(tmp_path, capsys):
 
     assert main(["audit", "--kit", str(output)]) == 0
     result = json.loads(capsys.readouterr().out)
-    assert result["status"] == "READY_FOR_OPERATOR_SIGNATURE"
+    assert result["status"] == "INTERNAL_AUDIT_PASS"
     assert result["production_authority"] is False
 
 
@@ -279,7 +280,65 @@ def test_mission_control_names_public_only_offline_ceremony():
         Path(__file__).resolve().parents[1]
         / "truepanel/web/static/reliability-view.js"
     ).read_text()
-    assert "export public kit · audit review card before signing" in source
+    assert "export public kit · require two audit implementations to agree" in source
     assert "sign outside TruePanel · verify returned signature" in source
     assert "Private key never accepted" in source
-    assert "audit review card before signing" in source
+    assert "Independent audit witness" in source
+
+
+def test_dual_audit_requires_canonical_matching_independent_witness(tmp_path):
+    paths = _fixture(tmp_path)
+    output = tmp_path / "export"
+    _export(paths, output)
+    auditor = (
+        Path(__file__).resolve().parents[1]
+        / "truepanel/holodeck/aegis_independent_kit_auditor.py"
+    )
+    completed = subprocess.run(
+        ["python", "-I", str(auditor), str(output)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    witness = tmp_path / "independent-witness.json"
+    witness.write_text(completed.stdout.strip())
+
+    result = dual_audit_signing_kit(output, witness)
+
+    assert result["status"] == "READY_FOR_OPERATOR_SIGNATURE"
+    assert result["auditors_agree"] is True
+    changed = json.loads(witness.read_text())
+    changed["session_sha256"] = "0" * 64
+    witness.write_text(json.dumps(changed, sort_keys=True, separators=(",", ":")))
+    with pytest.raises(ValueError, match="IndependentAuditWitnessMismatch"):
+        dual_audit_signing_kit(output, witness)
+
+
+def test_independent_auditor_has_no_truepanel_imports_and_holds_tamper(tmp_path):
+    paths = _fixture(tmp_path)
+    output = tmp_path / "export"
+    _export(paths, output)
+    auditor = (
+        Path(__file__).resolve().parents[1]
+        / "truepanel/holodeck/aegis_independent_kit_auditor.py"
+    )
+    source = auditor.read_text()
+    assert "import truepanel" not in source
+    assert "from truepanel" not in source
+    good = subprocess.run(
+        ["python", "-I", str(auditor), str(output)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert good.returncode == 0
+    assert json.loads(good.stdout)["status"] == "INDEPENDENT_AUDIT_PASS"
+    (output / "aegis-development-review.txt").write_text("forged\n")
+    bad = subprocess.run(
+        ["python", "-I", str(auditor), str(output)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert bad.returncode == 2
+    assert json.loads(bad.stdout)["status"] == "HOLD"

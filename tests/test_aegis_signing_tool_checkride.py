@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_signing_tool_checkride_fails_closed():
     result = run_signing_tool_checkride()
     assert result["status_counts"] == {
-        "READY_FOR_OFFLINE_SIGNATURE": 1,
+        "READY_FOR_DUAL_AUDIT": 1,
         "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1,
         "HOLD": 8,
     }

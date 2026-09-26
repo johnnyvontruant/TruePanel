@@ -1,0 +1,45 @@
+{
+  "control_authority": false,
+  "fixture_private_keys_retained": 0,
+  "measurements": {
+    "adversarial_holds": 12,
+    "deployments": 0,
+    "development_eligible": 1,
+    "dual_audit_ready": 1,
+    "hardware_actions": 0,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "truepanel_imports_in_standalone": 0,
+    "unsafe_ready": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-independent-kit-audit-v1",
+  "scenarios": [
+    {"reason": "INDEPENDENT_AUDIT_PASS", "scenario": "two-implementation-agreement", "status": "READY_FOR_OPERATOR_SIGNATURE"},
+    {"reason": "IndependentAuditPresentationMismatch", "scenario": "standalone-review-tamper", "status": "HOLD"},
+    {"reason": "IndependentAuditManifestInvalid", "scenario": "standalone-manifest-tamper", "status": "HOLD"},
+    {"reason": "IndependentAuditPresentationMismatch", "scenario": "standalone-instructions-tamper", "status": "HOLD"},
+    {"reason": "IndependentAuditSessionInvalid", "scenario": "standalone-session-tamper", "status": "HOLD"},
+    {"reason": "IndependentAuditLayoutInvalid", "scenario": "standalone-extra-tamper", "status": "HOLD"},
+    {"reason": "IndependentAuditLayoutInvalid", "scenario": "standalone-missing-tamper", "status": "HOLD"},
+    {"reason": "IndependentAuditUnsafePath", "scenario": "standalone-symlink-tamper", "status": "HOLD"},
+    {"reason": "IndependentAuditPresentationMismatch", "scenario": "standalone-coordinated-tamper", "status": "HOLD"},
+    {"reason": "IndependentAuditWitnessMismatch", "scenario": "stale-witness", "status": "HOLD"},
+    {"reason": "IndependentAuditWitnessMismatch", "scenario": "extended-witness", "status": "HOLD"},
+    {"reason": "IndependentAuditWitnessMismatch", "scenario": "noncanonical-witness", "status": "HOLD"},
+    {"reason": "InputFileUnavailable", "scenario": "missing-witness", "status": "HOLD"},
+    {"reason": "SingleOperatorDevelopmentReviewVerified", "scenario": "returned-exact-signature", "status": "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW"}
+  ],
+  "status_counts": {
+    "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1,
+    "HOLD": 12,
+    "READY_FOR_OPERATOR_SIGNATURE": 1
+  }
+}
