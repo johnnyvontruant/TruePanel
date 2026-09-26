@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.25.1 · refreshed 2026-09-25 · 22 experiment(s)
+Registry version 2026.09.26.1 · refreshed 2026-09-26 · 23 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -174,8 +174,16 @@ One public-only kit reaches signing readiness and one externally signed disposab
 
 ## TP-EXP-0027 · AEGIS signing-kit custody audit
 
-One exact kit reaches operator-signature readiness and one externally signed disposable fixture reaches development review; ten custody and presentation attacks hold with zero unsafe-ready result.
+One exact kit passes its creator's internal audit and one externally signed disposable fixture reaches development review; ten custody and presentation attacks hold with zero unsafe-ready result. A later experiment requires a diverse witness before operator-signature readiness.
 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision JT's development public roster, audit one real exported kit on the signing computer, sign the canonical session offline, and run the returned-signature field checkride.
 - Revisit when: JT provisions the protected public roster; a real signing kit crosses an offline transport boundary; the signing-session schema changes; a platform lacks OpenSSH SSHSIG
+
+## TP-EXP-0028 · AEGIS independent signing-kit audit
+
+One kit reaches operator-signature readiness only after two implementations agree, one external fixture signature reaches development review, and twelve kit or witness attacks hold with zero unsafe-ready result.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Independently pin the standalone verifier, provision JT's development public roster, dual-audit one real candidate kit, and return one offline signature for a read-only checkride.
+- Revisit when: JT provisions the protected public roster; the standalone verifier gains an independently distributed release; a real signing kit crosses an offline boundary; either signing schema changes

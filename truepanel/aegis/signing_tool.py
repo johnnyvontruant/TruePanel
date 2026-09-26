@@ -31,6 +31,7 @@ from .signing_session import (
 
 MATERIALS_SCHEMA = "truepanel.aegis-development-signing-materials/v1"
 MANIFEST_SCHEMA = "truepanel.aegis-development-signing-kit-manifest/v2"
+INDEPENDENT_WITNESS_SCHEMA = "truepanel.aegis-independent-kit-audit-witness/v1"
 MAX_JSON_BYTES = 1024 * 1024
 MAX_SIGNATURE_BYTES = 64 * 1024
 
@@ -74,6 +75,10 @@ _KIT_FILES = {
     "aegis-development-review.txt",
     "aegis-development-signing-session.json",
     "manifest.json",
+}
+_WITNESS_FIELDS = {
+    "schema", "status", "session_sha256", "review_sha256", "manifest_sha256",
+    "scope", *_AUTHORITY_FIELDS,
 }
 
 
@@ -247,7 +252,7 @@ def render_operator_review(session: Mapping[str, Any]) -> bytes:
         "  Automatic promotion: NO",
         "",
         "This card is a derived view, not the signed object.",
-        "Run the kit audit and sign only aegis-development-signing-session.json.",
+        "Run both independent kit audits and sign only aegis-development-signing-session.json.",
     ]
     return ("\n".join(lines) + "\n").encode()
 
@@ -255,12 +260,13 @@ def render_operator_review(session: Mapping[str, Any]) -> bytes:
 def _instructions() -> bytes:
     return (
         "AEGIS DEVELOPMENT-ONLY OFFLINE SIGNING KIT\n\n"
-        "1. Run the TruePanel kit audit before trusting the review card.\n"
-        "2. Compare the displayed commit, tree, UTC time, fingerprint, scope, and NO-authority fields.\n"
-        "3. On the operator-owned signing computer, run:\n\n"
+        "1. Run the TruePanel audit and the standalone independent audit before trusting the review card.\n"
+        "2. Require their session and review digests to agree.\n"
+        "3. Compare the displayed commit, tree, UTC time, fingerprint, scope, and NO-authority fields.\n"
+        "4. On the operator-owned signing computer, run:\n\n"
         f"   ssh-keygen -Y sign -f <JT_PRIVATE_KEY> -n {SIGNING_SESSION_NAMESPACE} "
         "aegis-development-signing-session.json\n\n"
-        "4. Return only aegis-development-signing-session.json.sig.\n"
+        "5. Return only aegis-development-signing-session.json.sig.\n"
         "Never copy the private key into this directory, TruePanel, or BattleStation.\n"
         "This signature cannot authorize production, deployment, storage, network, or hardware action.\n"
     ).encode()
@@ -329,10 +335,52 @@ def audit_signing_kit(kit_directory: str | Path) -> dict[str, Any]:
     ):
         raise ValueError("SigningKitPresentationMismatch")
     return {
-        "status": "READY_FOR_OPERATOR_SIGNATURE",
+        "status": "INTERNAL_AUDIT_PASS",
         "session_sha256": expected_manifest["session_sha256"],
         "review_sha256": expected_manifest["review_sha256"],
+        "manifest_sha256": _sha256(canonical_manifest),
         "namespace": SIGNING_SESSION_NAMESPACE,
+        "scope": "DEVELOPMENT_ONLY",
+        **_AUTHORITY_FIELDS,
+    }
+
+
+def dual_audit_signing_kit(
+    kit_directory: str | Path, independent_witness_path: str | Path
+) -> dict[str, Any]:
+    """Require digest-identical verdicts from TruePanel and the standalone auditor."""
+
+    internal = audit_signing_kit(kit_directory)
+    try:
+        witness_bytes = _read_regular(
+            Path(independent_witness_path), maximum=MAX_JSON_BYTES
+        )
+        witness = json.loads(witness_bytes)
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("IndependentAuditWitnessInvalid") from error
+    canonical = json.dumps(
+        witness, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()
+    if (
+        not isinstance(witness, dict)
+        or set(witness) != _WITNESS_FIELDS
+        or witness_bytes != canonical
+        or witness.get("schema") != INDEPENDENT_WITNESS_SCHEMA
+        or witness.get("status") != "INDEPENDENT_AUDIT_PASS"
+        or witness.get("scope") != "DEVELOPMENT_ONLY"
+        or any(witness.get(field) is not value for field, value in _AUTHORITY_FIELDS.items())
+        or any(
+            witness.get(field) != internal.get(field)
+            for field in ("session_sha256", "review_sha256", "manifest_sha256")
+        )
+    ):
+        raise ValueError("IndependentAuditWitnessMismatch")
+    return {
+        "status": "READY_FOR_OPERATOR_SIGNATURE",
+        "session_sha256": internal["session_sha256"],
+        "review_sha256": internal["review_sha256"],
+        "manifest_sha256": internal["manifest_sha256"],
+        "auditors_agree": True,
         "scope": "DEVELOPMENT_ONLY",
         **_AUTHORITY_FIELDS,
     }
@@ -440,7 +488,7 @@ def export_signing_kit(
                 proposed.rmdir()
         raise ValueError("SigningKitExportFailed") from None
     return {
-        "status": "READY_FOR_OFFLINE_SIGNATURE",
+        "status": "READY_FOR_DUAL_AUDIT",
         "output_directory": str(proposed),
         "session_sha256": digest,
         "review_sha256": _sha256(review),
@@ -503,6 +551,11 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--confirm-utc", action="store_true")
     audit = commands.add_parser("audit", help="Audit a public kit before signing")
     audit.add_argument("--kit", required=True, type=Path)
+    dual_audit = commands.add_parser(
+        "dual-audit", help="Require TruePanel and an independent witness to agree"
+    )
+    dual_audit.add_argument("--kit", required=True, type=Path)
+    dual_audit.add_argument("--independent-witness", required=True, type=Path)
     verify = commands.add_parser("verify", help="Verify a returned detached signature")
     verify.add_argument("--materials", required=True, type=Path)
     verify.add_argument("--session", required=True, type=Path)
@@ -527,6 +580,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         elif arguments.command == "audit":
             result = audit_signing_kit(arguments.kit)
+        elif arguments.command == "dual-audit":
+            result = dual_audit_signing_kit(
+                arguments.kit, arguments.independent_witness
+            )
         else:
             result = verify_returned_signature(
                 materials_path=arguments.materials,
@@ -540,7 +597,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     print(json.dumps(result, sort_keys=True))
     return 0 if result.get("status") in {
-        "READY_FOR_OFFLINE_SIGNATURE", "READY_FOR_OPERATOR_SIGNATURE",
+        "READY_FOR_DUAL_AUDIT", "INTERNAL_AUDIT_PASS", "READY_FOR_OPERATOR_SIGNATURE",
         "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW",
     } else 2
 

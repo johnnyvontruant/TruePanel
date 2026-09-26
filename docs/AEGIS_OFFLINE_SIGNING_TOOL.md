@@ -1,5 +1,9 @@
 # AEGIS public-only offline signing tool and prior-art field report
 
+> Superseded on 2026-09-26: export now reaches `READY_FOR_DUAL_AUDIT`.
+> Operator-signature readiness additionally requires the matching standalone
+> witness documented in `AEGIS_INDEPENDENT_KIT_AUDIT.md`.
+
 ## Result
 
 TruePanel can now export the exact content-bound development signing session as

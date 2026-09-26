@@ -1,5 +1,9 @@
 # AEGIS signing-kit custody audit and prior-art field report
 
+> Superseded on 2026-09-26: this creator-side audit now reports
+> `INTERNAL_AUDIT_PASS`. Operator-signature readiness requires the matching
+> standalone witness documented in `AEGIS_INDEPENDENT_KIT_AUDIT.md`.
+
 ## Result
 
 The public-only development signing kit now includes a deterministic review

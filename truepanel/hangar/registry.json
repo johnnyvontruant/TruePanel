@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.25.1",
-  "updated_at": "2026-09-25",
+  "registry_version": "2026.09.26.1",
+  "updated_at": "2026-09-26",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -406,7 +406,7 @@
       "fixtures": ["aegis-offline-signing-tool-v1", "tests/test_aegis_signing_tool.py", "tests/test_aegis_signing_tool_checkride.py"],
       "success_criteria": ["one public kit is signing-ready", "one real fixture SSHSIG is development-eligible", "all adversarial paths hold", "TruePanel accepts no private key and invokes no signer", "zero stronger authority or live action"],
       "abort_criteria": ["private-key path accepted", "signer invoked by TruePanel", "partial kit represented as complete", "signature accepted after checkout drift", "production deployment or hardware authority added"],
-      "evidence": [{"path": "docs/evidence/aegis-offline-signing-tool-v1.json", "sha256": "7579ba8adbda737e83bec74ec81bc122277ffbb58ed0765917a890d57b8afe6d"}],
+      "evidence": [{"path": "docs/evidence/aegis-offline-signing-tool-v1.json", "sha256": "52a3d84993d03aab8bcc144d211b16a3ab522515b506761076b298ee41b1d3d4"}],
       "outcome": {"conclusion": "One public-only kit reaches signing readiness and one externally signed disposable fixture reaches development-review eligibility; eight adversarial cases hold with zero private-key inputs, signer invocations, unsafe-ready results, or live effects."},
       "invalidated_assumptions": ["one write call always persists the full export", "a failed direct export can safely leave partial files for reuse", "a valid detached signature remains valid after checkout drift", "the application should provide a convenience signer"],
       "reproduction": ["pytest -q tests/test_aegis_signing_tool.py tests/test_aegis_signing_tool_checkride.py", "python -c \"from truepanel.holodeck.aegis_signing_tool import run_signing_tool_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
@@ -423,15 +423,34 @@
       "development": {"branch": "feature/aegis-signing-kit-audit", "pr": null, "commits": []},
       "protocol": ["export canonical signing session", "derive deterministic review card", "hash session card and instructions in a strict manifest", "audit exact file set and canonical encodings", "reject coordinated presentation substitution", "sign only the canonical session externally", "reconstruct and verify returned signature"],
       "fixtures": ["aegis-signing-kit-custody-audit-v1", "tests/test_aegis_signing_tool.py", "tests/test_aegis_signing_kit_audit_checkride.py"],
-      "success_criteria": ["one audited kit is operator-signature-ready", "one externally signed fixture is development-eligible", "all substitutions hold", "zero accepted review-card substitution", "zero private-key input or signer invocation", "zero stronger authority or live action"],
+      "success_criteria": ["one audited kit passes the internal audit", "one externally signed fixture is development-eligible", "all substitutions hold", "zero accepted review-card substitution", "zero private-key input or signer invocation", "zero stronger authority or live action"],
       "abort_criteria": ["review card trusted without recomputation", "manifest treated as its own trust root", "noncanonical session accepted", "signature present before pre-sign audit", "private key enters TruePanel", "production deployment or hardware authority added"],
-      "evidence": [{"path": "docs/evidence/aegis-signing-kit-custody-audit-v1.json", "sha256": "bd2727353dad9456bf2b5819a4b8700f16342d64283a388087e3100e977d149b"}],
-      "outcome": {"conclusion": "One exact kit reaches operator-signature readiness and one externally signed disposable fixture reaches development review; ten custody and presentation attacks hold with zero unsafe-ready result."},
+      "evidence": [{"path": "docs/evidence/aegis-signing-kit-custody-audit-v1.json", "sha256": "f3f794cd2b4fae9699c4a13491c7a25618618ebc3580dc6245b3475e3c326d4d"}],
+      "outcome": {"conclusion": "One exact kit passes its creator's internal audit and one externally signed disposable fixture reaches development review; ten custody and presentation attacks hold with zero unsafe-ready result. A later experiment requires a diverse witness before operator-signature readiness."},
       "invalidated_assumptions": ["a manifest digest proves the manifest itself is trustworthy", "a human-readable review file can be trusted because it was shipped beside signed JSON", "valid JSON is necessarily the exact canonical byte sequence to sign"],
       "reproduction": ["pytest -q tests/test_aegis_signing_tool.py tests/test_aegis_signing_kit_audit_checkride.py", "python -c \"from truepanel.holodeck.aegis_signing_kit_audit import run_signing_kit_audit_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
       "revisit_conditions": ["JT provisions the protected public roster", "a real signing kit crosses an offline transport boundary", "the signing-session schema changes", "a platform lacks OpenSSH SSHSIG"],
       "strongest_follow_up": "Provision JT's development public roster, audit one real exported kit on the signing computer, sign the canonical session offline, and run the returned-signature field checkride.",
-      "freshness": {"reviewed_at": "2026-09-25", "review_after": "2026-12-31"}
+      "freshness": {"reviewed_at": "2026-09-26", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0028", "title": "AEGIS independent signing-kit audit", "state": "COMPLETED",
+      "hypothesis": "A separately pinned standard-library verifier can independently reconstruct the signing kit and prevent its creator implementation from unilaterally declaring a packet safe to sign.",
+      "value": "Adds implementation diversity to the lone-human plus Vega review model without inventing a second signer or widening development authority.",
+      "prior_art": ["Diverse Double-Compiling", "Reproducible Builds independent verification", "TUF out-of-band trusted root", "in-toto artifact-chain verification"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-independent-kit-audit", "pr": null, "commits": []},
+      "protocol": ["export a public-only kit without claiming signature readiness", "run the TruePanel internal audit", "run a standalone standard-library auditor under Python isolated mode", "emit a canonical witness outside the kit", "require matching session review and manifest digests", "sign externally only after both implementations agree", "reconstruct and verify the returned signature"],
+      "fixtures": ["aegis-independent-kit-audit-v1", "tests/test_aegis_independent_kit_audit.py", "tests/test_aegis_signing_tool.py"],
+      "success_criteria": ["one dual-audited kit is operator-signature-ready", "one externally signed fixture is development-eligible", "all kit and witness substitutions hold", "standalone verifier imports no TruePanel modules", "zero private-key input or signer invocation", "zero stronger authority or live action"],
+      "abort_criteria": ["creator audit alone claims signature readiness", "witness is shipped inside the kit it verifies", "witness disagreement is ignored", "arbitrary verifier executable is invoked by TruePanel", "private key enters TruePanel", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-independent-kit-audit-v1.json", "sha256": "f609573f555d878484a0143b0f529fe7e6c4ec0eab74874bf013e3ae327a2f45"}],
+      "outcome": {"conclusion": "One kit reaches operator-signature readiness only after two implementations agree, one external fixture signature reaches development review, and twelve kit or witness attacks hold with zero unsafe-ready result."},
+      "invalidated_assumptions": ["a creator implementation can independently validate its own presentation", "shipping a verifier inside its subject kit creates an independent trust root", "implementation diversity is equivalent to a second reviewer or signature"],
+      "reproduction": ["pytest -q tests/test_aegis_signing_tool.py tests/test_aegis_independent_kit_audit.py", "python -c \"from truepanel.holodeck.aegis_independent_kit_audit import run_independent_kit_audit_checkride as run; print(run()['measurements'])\"", "python -I truepanel/holodeck/aegis_independent_kit_auditor.py <absolute-kit-path>", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT provisions the protected public roster", "the standalone verifier gains an independently distributed release", "a real signing kit crosses an offline boundary", "either signing schema changes"],
+      "strongest_follow_up": "Independently pin the standalone verifier, provision JT's development public roster, dual-audit one real candidate kit, and return one offline signature for a read-only checkride.",
+      "freshness": {"reviewed_at": "2026-09-26", "review_after": "2026-12-31"}
     }
   ]
 }

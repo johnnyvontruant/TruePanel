@@ -24,7 +24,7 @@
     {
       "reason": "PublicMaterialsOnly",
       "scenario": "public-kit-export",
-      "status": "READY_FOR_OFFLINE_SIGNATURE"
+      "status": "READY_FOR_DUAL_AUDIT"
     },
     {
       "reason": "SingleOperatorDevelopmentReviewVerified",
@@ -75,6 +75,6 @@
   "status_counts": {
     "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1,
     "HOLD": 8,
-    "READY_FOR_OFFLINE_SIGNATURE": 1
+    "READY_FOR_DUAL_AUDIT": 1
   }
 }
