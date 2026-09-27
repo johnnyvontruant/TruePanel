@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.26.1 · refreshed 2026-09-26 · 23 experiment(s)
+Registry version 2026.09.27.1 · refreshed 2026-09-27 · 24 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -187,3 +187,11 @@ One kit reaches operator-signature readiness only after two implementations agre
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Independently pin the standalone verifier, provision JT's development public roster, dual-audit one real candidate kit, and return one offline signature for a read-only checkride.
 - Revisit when: JT provisions the protected public roster; the standalone verifier gains an independently distributed release; a real signing kit crosses an offline boundary; either signing schema changes
+
+## TP-EXP-0029 · AEGIS independent verifier bootstrap
+
+One immutable predecessor release is content-pinned and fourteen adversarial changes hold; the result explicitly leaves independent delivery unverified and grants no signing or production authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Publish the fingerprint through a JT-controlled independent channel, provision the development public roster, and dual-audit one real kit before any offline signature.
+- Revisit when: JT establishes an independent distribution channel for the receipt or fingerprint; the standalone verifier changes; the repository migrates to SHA-256 object IDs; a real signing kit crosses an offline boundary

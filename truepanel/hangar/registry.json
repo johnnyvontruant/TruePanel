@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.26.1",
-  "updated_at": "2026-09-26",
+  "registry_version": "2026.09.27.1",
+  "updated_at": "2026-09-27",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -451,6 +451,25 @@
       "revisit_conditions": ["JT provisions the protected public roster", "the standalone verifier gains an independently distributed release", "a real signing kit crosses an offline boundary", "either signing schema changes"],
       "strongest_follow_up": "Independently pin the standalone verifier, provision JT's development public roster, dual-audit one real candidate kit, and return one offline signature for a read-only checkride.",
       "freshness": {"reviewed_at": "2026-09-26", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0029", "title": "AEGIS independent verifier bootstrap", "state": "COMPLETED",
+      "hypothesis": "A strict public release receipt can bind the standalone auditor to reviewed source bytes without executing it or pretending that a same-channel receipt establishes independent trust.",
+      "value": "Lets JT mechanically identify the exact diverse verifier before inspecting a signing kit while preserving the remaining out-of-band delivery gate.",
+      "prior_art": ["TUF out-of-band trusted root", "Git blob object identity", "Sigstore offline verification bundles", "Minisign pinned public verification keys"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-verifier-bootstrap", "pr": null, "commits": []},
+      "protocol": ["publish canonical public release receipt", "pin immutable predecessor commit", "verify SHA-256 byte identity and Git blob identity", "statically reject TruePanel network and private-key inputs", "do not execute the auditor during pinning", "report independent channel as unverified", "retain all development-only authority boundaries"],
+      "fixtures": ["aegis-verifier-bootstrap-v1", "tests/test_aegis_verifier_bootstrap.py", "truepanel/aegis/independent_verifier_release.json"],
+      "success_criteria": ["one exact public verifier release is content-pinned", "all receipt source path and policy attacks hold", "independent channel remains an explicit unsatisfied gate", "zero verifier execution during pin check", "zero private-key input signer invocation stronger authority or live action"],
+      "abort_criteria": ["same-channel checksum described as independent trust", "verifier executed while establishing its identity", "source accepted after digest or blob drift", "network or TruePanel imports accepted", "private-key input added", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-verifier-bootstrap-v1.json", "sha256": "fadc5c6d487f3103a6662ad246be02197ea6282fe5b5ef94ca3f8c1b0ba01a58"}],
+      "outcome": {"conclusion": "One immutable predecessor release is content-pinned and fourteen adversarial changes hold; the result explicitly leaves independent delivery unverified and grants no signing or production authority."},
+      "invalidated_assumptions": ["a checksum shipped beside its subject creates an independent trust root", "a Git commit name alone provides a second digest algorithm", "bootstrap verification should execute the untrusted verifier"],
+      "reproduction": ["pytest -q tests/test_aegis_verifier_bootstrap.py tests/test_aegis_signing_tool.py", "python -m truepanel.aegis.verifier_bootstrap --receipt <absolute-receipt> --source <absolute-source>", "python -c \"from truepanel.holodeck.aegis_verifier_bootstrap import run_verifier_bootstrap_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT establishes an independent distribution channel for the receipt or fingerprint", "the standalone verifier changes", "the repository migrates to SHA-256 object IDs", "a real signing kit crosses an offline boundary"],
+      "strongest_follow_up": "Publish the fingerprint through a JT-controlled independent channel, provision the development public roster, and dual-audit one real kit before any offline signature.",
+      "freshness": {"reviewed_at": "2026-09-27", "review_after": "2026-12-31"}
     }
   ]
 }
