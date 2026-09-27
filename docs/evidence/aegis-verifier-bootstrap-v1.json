@@ -1,0 +1,104 @@
+{
+  "control_authority": false,
+  "measurements": {
+    "adversarial_holds": 14,
+    "content_pins_verified": 1,
+    "deployments": 0,
+    "hardware_actions": 0,
+    "independent_channels_manufactured": 0,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_ready": 0,
+    "verifier_executions_during_pin_check": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-verifier-bootstrap-v1",
+  "scenarios": [
+    {
+      "reason": "OPERATOR_OBTAINS_PIN_THROUGH_INDEPENDENT_CHANNEL",
+      "scenario": "exact-public-release",
+      "status": "VERIFIER_CONTENT_PIN_VERIFIED"
+    },
+    {
+      "reason": "VerifierBootstrapSourceMismatch",
+      "scenario": "source-tamper",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapSourceMismatch",
+      "scenario": "receipt-source-sha-tamper",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapSourceMismatch",
+      "scenario": "receipt-git-blob-tamper",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapSourceMismatch",
+      "scenario": "receipt-source-size-tamper",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapPolicyMismatch",
+      "scenario": "receipt-commit-tamper",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapPolicyMismatch",
+      "scenario": "receipt-source-url-tamper",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapPolicyMismatch",
+      "scenario": "receipt-authority-tamper",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapInvalidReceipt",
+      "scenario": "receipt-extension",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapReceiptNotCanonical",
+      "scenario": "noncanonical-receipt",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapUnsafePath",
+      "scenario": "symlinked-receipt",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapUnsafePath",
+      "scenario": "symlinked-source",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapUnsafeImport",
+      "scenario": "policy-network-import",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapUnsafeImport",
+      "scenario": "policy-truepanel-import",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapPrivateKeyInput",
+      "scenario": "policy-private-key-input",
+      "status": "HOLD"
+    }
+  ],
+  "status_counts": {
+    "HOLD": 14,
+    "VERIFIER_CONTENT_PIN_VERIFIED": 1
+  }
+}
