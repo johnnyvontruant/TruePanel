@@ -284,6 +284,9 @@ def test_mission_control_names_public_only_offline_ceremony():
     assert "sign outside TruePanel · verify returned signature" in source
     assert "Private key never accepted" in source
     assert "Independent audit witness" in source
+    assert "SHA-256 + Git blob identity pinned" in source
+    assert "independent delivery channel still required" in source
+    assert "pin check never executes verifier" in source
 
 
 def test_dual_audit_requires_canonical_matching_independent_witness(tmp_path):
