@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.27.1 · refreshed 2026-09-27 · 24 experiment(s)
+Registry version 2026.09.28.1 · refreshed 2026-09-28 · 25 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -195,3 +195,11 @@ One immutable predecessor release is content-pinned and fourteen adversarial cha
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Publish the fingerprint through a JT-controlled independent channel, provision the development public roster, and dual-audit one real kit before any offline signature.
 - Revisit when: JT establishes an independent distribution channel for the receipt or fingerprint; the standalone verifier changes; the repository migrates to SHA-256 object IDs; a real signing kit crosses an offline boundary
+
+## TP-EXP-0030 · AEGIS public-only operator roster enrollment
+
+One exact public roster is provisioned, the existing handoff reaches offline-signature readiness, and fourteen adversarial inputs hold with zero private-key acceptance, signer invocation, unsafe-ready result, or stronger authority.
+
+- Safety: `DEVELOPMENT_PUBLIC_MATERIAL_ONLY`
+- Strongest follow-up: JT independently confirms the fingerprint, provisions this public-only roster, dual-audits one real kit, signs its canonical session offline, and returns only the detached development signature for a read-only checkride.
+- Revisit when: JT supplies the protected development public key and confirms its fingerprint; the allowed-signers format or SSHSIG namespace changes; the operator identity rotates; any consumer seeks stronger authority

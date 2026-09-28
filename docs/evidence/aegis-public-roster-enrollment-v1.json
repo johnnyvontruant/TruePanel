@@ -1,0 +1,111 @@
+{
+  "control_authority": false,
+  "fixture_private_keys_retained": 0,
+  "measurements": {
+    "adversarial_holds": 14,
+    "deployments": 0,
+    "handoffs_ready": 1,
+    "hardware_actions": 0,
+    "keys_generated_by_truepanel": 0,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "public_rosters_provisioned": 1,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_ready": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-public-roster-enrollment-v1",
+  "scenarios": [
+    {
+      "reason": "OnePublicIdentityInstalled",
+      "scenario": "exact-public-key",
+      "status": "PUBLIC_ROSTER_PROVISIONED_FOR_DEVELOPMENT_REVIEW"
+    },
+    {
+      "reason": "jt-development-review",
+      "scenario": "handoff-consumes-public-roster",
+      "status": "READY_FOR_OFFLINE_SIGNATURE"
+    },
+    {
+      "reason": "RosterEnrollmentConfirmationRequired",
+      "scenario": "missing-confirmation",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PublicKeyFingerprintMismatch",
+      "scenario": "fingerprint-mismatch",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PrivateKeyInputDenied",
+      "scenario": "private-key-input",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PublicKeyProfileInvalid",
+      "scenario": "rsa-key",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PublicKeyCountInvalid",
+      "scenario": "multiple-public-keys",
+      "status": "HOLD"
+    },
+    {
+      "reason": "TrustRosterKeyInvalid",
+      "scenario": "malformed-public-key",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PublicKeyProfileInvalid",
+      "scenario": "key-options",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PublicKeyFileUnsafe",
+      "scenario": "writable-public-key",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PublicKeyPathUnsafe",
+      "scenario": "symlinked-public-key",
+      "status": "HOLD"
+    },
+    {
+      "reason": "RosterEnrollmentPathUnsafe",
+      "scenario": "occupied-destination",
+      "status": "HOLD"
+    },
+    {
+      "reason": "RosterEnrollmentPathUnsafe",
+      "scenario": "symlinked-destination",
+      "status": "HOLD"
+    },
+    {
+      "reason": "RosterEnrollmentPathUnsafe",
+      "scenario": "unsafe-parent",
+      "status": "HOLD"
+    },
+    {
+      "reason": "RosterEnrollmentPathUnsafe",
+      "scenario": "inside-checkout",
+      "status": "HOLD"
+    },
+    {
+      "reason": "PublicKeyPathUnsafe",
+      "scenario": "relative-public-key",
+      "status": "HOLD"
+    }
+  ],
+  "status_counts": {
+    "HOLD": 14,
+    "PUBLIC_ROSTER_PROVISIONED_FOR_DEVELOPMENT_REVIEW": 1,
+    "READY_FOR_OFFLINE_SIGNATURE": 1
+  }
+}
