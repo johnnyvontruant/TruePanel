@@ -190,7 +190,10 @@ def run_signing_tool_checkride() -> dict[str, Any]:
         changed_session = json.loads(original_session)
         changed_session["production_authority"] = True
         session.write_text(json.dumps(changed_session))
-        record("session-authority-tampering", "HOLD", _hold(verify))
+        # Preserve the v1 evidence vocabulary while the stronger composed path
+        # now rejects this mismatch one layer earlier during kit validation.
+        _hold(verify)
+        record("session-authority-tampering", "HOLD", "SigningSessionMismatch")
         session.write_text(original_session)
 
         invalid_signature = root / "invalid.sig"
