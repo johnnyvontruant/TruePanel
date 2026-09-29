@@ -1,4 +1,4 @@
-"""Differential HoloDeck checkride for the standalone signing-kit auditor."""
+"""End-to-end checkride for audit-bound AEGIS signature return."""
 
 from __future__ import annotations
 
@@ -34,41 +34,40 @@ def _run(*arguments: str, cwd: Path) -> str:
     ).stdout
 
 
-def _independent(kit: Path, witness: Path) -> dict[str, Any]:
+def _hold(operation: Any, *arguments: Any, **keywords: Any) -> str:
+    try:
+        result = operation(*arguments, **keywords)
+    except ValueError as error:
+        return str(error)
+    return result.get("reason", "UnsafeReady") if result.get("status") == "HOLD" else "UnsafeReady"
+
+
+def _independent_witness(kit: Path, output: Path) -> None:
     completed = subprocess.run(
         ["python", "-I", str(Path(standalone.__file__).resolve()), str(kit)],
-        check=False,
+        check=True,
         capture_output=True,
         text=True,
     )
-    result = json.loads(completed.stdout)
-    if completed.returncode == 0:
-        witness.write_text(completed.stdout.strip())
-    return result
+    output.write_text(completed.stdout.strip())
 
 
-def _hold(operation: Any, *arguments: Any) -> str:
-    try:
-        operation(*arguments)
-    except ValueError as error:
-        return str(error)
-    return "UnsafeReady"
+def run_dual_audit_return_checkride() -> dict[str, Any]:
+    """Prove that signature eligibility cannot bypass the exact dual audit."""
 
-
-def run_independent_kit_audit_checkride() -> dict[str, Any]:
     scenarios: list[dict[str, str]] = []
 
     def record(name: str, status: str, reason: str) -> None:
         scenarios.append({"scenario": name, "status": status, "reason": reason})
 
-    with tempfile.TemporaryDirectory(prefix="truepanel-aegis-diverse-audit-") as value:
+    with tempfile.TemporaryDirectory(prefix="truepanel-aegis-audit-return-") as value:
         root = Path(value)
         checkout = root / "checkout"
         checkout.mkdir()
         _run("git", "init", "-q", cwd=checkout)
         _run("git", "config", "user.name", "HoloDeck", cwd=checkout)
         _run("git", "config", "user.email", "holodeck@invalid", cwd=checkout)
-        (checkout / "subject.txt").write_text("independent audit fixture\n")
+        (checkout / "subject.txt").write_text("dual audit return fixture\n")
         _run("git", "add", "subject.txt", cwd=checkout)
         _run("git", "commit", "-q", "-m", "fixture", cwd=checkout)
         commit = _run("git", "rev-parse", "HEAD", cwd=checkout).strip()
@@ -102,8 +101,10 @@ def run_independent_kit_audit_checkride() -> dict[str, Any]:
         unsigned["packet_sha256"] = semantic_sha256(values["packet"])
         unsigned["signature"] = ""
         materials = {
-            "schema": MATERIALS_SCHEMA, "packet": values["packet"],
-            "unsigned_receipt": unsigned, "policy": values["policy"],
+            "schema": MATERIALS_SCHEMA,
+            "packet": values["packet"],
+            "unsigned_receipt": unsigned,
+            "policy": values["policy"],
             "candidate": values["candidate"],
             "holodeck_evidence": values["evidence"],
             "coverage_matrix": values["coverage"],
@@ -111,73 +112,27 @@ def run_independent_kit_audit_checkride() -> dict[str, Any]:
         }
         materials_path = root / "materials.json"
         materials_path.write_text(json.dumps(materials))
-        baseline = root / "baseline"
-        export_signing_kit(
+
+        kit = root / "signing-kit"
+        exported = export_signing_kit(
             materials_path=materials_path,
             checkout_root=checkout,
             allowed_signers_path=roster,
-            output_directory=baseline,
+            output_directory=kit,
             observed_at="2026-09-19T12:00:00Z",
             unix_seconds=NOW,
             operator_confirmed_utc=True,
         )
+        record("public-kit-export", exported["status"], "PublicMaterialsOnly")
         witness = root / "independent-witness.json"
-        independent = _independent(baseline, witness)
-        ready = dual_audit_signing_kit(baseline, witness)
-        record("two-implementation-agreement", ready["status"], independent["status"])
+        _independent_witness(kit, witness)
+        dual = dual_audit_signing_kit(kit, witness)
+        record("exact-dual-audit", dual["status"], "DigestIdenticalAuditors")
 
-        attack_names = (
-            "review", "manifest", "instructions", "session", "extra", "missing",
-            "symlink", "coordinated",
-        )
-        attacks: dict[str, Path] = {}
-        for name in attack_names:
-            target = root / f"attack-{name}"
-            shutil.copytree(baseline, target)
-            attacks[name] = target
-        (attacks["review"] / "aegis-development-review.txt").write_text("forged\n")
-        (attacks["manifest"] / "manifest.json").write_text("{}")
-        (attacks["instructions"] / "README.txt").write_text("skip\n")
-        session_name = "aegis-development-signing-session.json"
-        changed = json.loads((attacks["session"] / session_name).read_text())
-        changed["production_authority"] = True
-        (attacks["session"] / session_name).write_text(
-            json.dumps(changed, sort_keys=True, separators=(",", ":"))
-        )
-        (attacks["extra"] / "unexpected.txt").write_text("extra\n")
-        (attacks["missing"] / "README.txt").unlink()
-        linked = attacks["symlink"] / "aegis-development-review.txt"
-        linked.unlink()
-        linked.symlink_to(attacks["symlink"] / "README.txt")
-        (attacks["coordinated"] / "aegis-development-review.txt").write_text("forged\n")
-        forged = json.loads((attacks["coordinated"] / "manifest.json").read_text())
-        forged["review_sha256"] = "0" * 64
-        (attacks["coordinated"] / "manifest.json").write_text(
-            json.dumps(forged, sort_keys=True, separators=(",", ":"))
-        )
-        for name, target in attacks.items():
-            result = _independent(target, root / f"{name}-witness.json")
-            record(f"standalone-{name}-tamper", "HOLD", result.get("reason", "Hold"))
-
-        stale = json.loads(witness.read_text())
-        stale["session_sha256"] = "0" * 64
-        stale_path = root / "stale-witness.json"
-        stale_path.write_text(json.dumps(stale, sort_keys=True, separators=(",", ":")))
-        record("stale-witness", "HOLD", _hold(dual_audit_signing_kit, baseline, stale_path))
-        extended = json.loads(witness.read_text())
-        extended["unexpected"] = True
-        extended_path = root / "extended-witness.json"
-        extended_path.write_text(json.dumps(extended, sort_keys=True, separators=(",", ":")))
-        record("extended-witness", "HOLD", _hold(dual_audit_signing_kit, baseline, extended_path))
-        noncanonical = root / "noncanonical-witness.json"
-        noncanonical.write_text(json.dumps(json.loads(witness.read_text()), indent=2))
-        record("noncanonical-witness", "HOLD", _hold(dual_audit_signing_kit, baseline, noncanonical))
-        missing_witness = root / "missing-witness.json"
-        record("missing-witness", "HOLD", _hold(dual_audit_signing_kit, baseline, missing_witness))
-
-        session_path = baseline / session_name
         signing_copy = root / "returned-session.json"
-        signing_copy.write_bytes(session_path.read_bytes())
+        signing_copy.write_bytes(
+            (kit / "aegis-development-signing-session.json").read_bytes()
+        )
         subprocess.run(
             [
                 "/usr/bin/ssh-keygen", "-Y", "sign", "-f", str(key),
@@ -186,29 +141,84 @@ def run_independent_kit_audit_checkride() -> dict[str, Any]:
             check=True,
             capture_output=True,
         )
-        verified = verify_returned_signature(
-            materials_path=materials_path,
-            kit_directory=baseline,
-            independent_witness_path=witness,
-            signature_path=signing_copy.with_suffix(".json.sig"),
-            checkout_root=checkout,
-            allowed_signers_path=roster,
+        signature = signing_copy.with_suffix(".json.sig")
+
+        def verify(**changes: Any) -> dict[str, Any]:
+            arguments = {
+                "materials_path": materials_path,
+                "kit_directory": kit,
+                "independent_witness_path": witness,
+                "signature_path": signature,
+                "checkout_root": checkout,
+                "allowed_signers_path": roster,
+            }
+            arguments.update(changes)
+            return verify_returned_signature(**arguments)
+
+        eligible = verify()
+        record("audit-bound-return", eligible["status"], eligible["reason"])
+        record(
+            "valid-signature-without-witness",
+            "HOLD",
+            _hold(verify, independent_witness_path=root / "missing-witness.json"),
         )
-        record("returned-exact-signature", verified["status"], verified["reason"])
+
+        stale = root / "stale-witness.json"
+        stale_value = json.loads(witness.read_text())
+        stale_value["session_sha256"] = "0" * 64
+        stale.write_text(json.dumps(stale_value, sort_keys=True, separators=(",", ":")))
+        record("stale-witness", "HOLD", _hold(verify, independent_witness_path=stale))
+
+        extended = root / "extended-witness.json"
+        extended_value = json.loads(witness.read_text())
+        extended_value["unexpected"] = True
+        extended.write_text(json.dumps(extended_value, sort_keys=True, separators=(",", ":")))
+        record("extended-witness", "HOLD", _hold(verify, independent_witness_path=extended))
+
+        changed_kit = root / "changed-kit"
+        shutil.copytree(kit, changed_kit)
+        (changed_kit / "aegis-development-review.txt").write_text("forged\n")
+        record("kit-drift-after-audit", "HOLD", _hold(verify, kit_directory=changed_kit))
+
+        invalid_signature = root / "invalid.sig"
+        invalid_signature.write_text("not-an-sshsig")
+        invalid = verify(signature_path=invalid_signature)
+        record("invalid-returned-signature", invalid["status"], invalid["reason"])
+
+        wrong_roster = root / "wrong-roster"
+        wrong_roster.write_text(
+            "another-development-review " + " ".join(public[:2]) + "\n"
+        )
+        os.chmod(wrong_roster, 0o600)
+        wrong = verify(allowed_signers_path=wrong_roster)
+        record("wrong-public-roster", wrong["status"], wrong["reason"])
+
+        changed_materials = deepcopy(materials)
+        changed_materials["candidate"]["source_commit"] = "0" * 40
+        substitute = root / "substituted-materials.json"
+        substitute.write_text(json.dumps(changed_materials))
+        substituted = verify(materials_path=substitute)
+        record("materials-substitution", substituted["status"], substituted["reason"])
+
+        (checkout / "drift.txt").write_text("post-audit checkout drift\n")
+        drifted = verify()
+        record("checkout-drift-after-audit", drifted["status"], drifted["reason"])
 
     counts: dict[str, int] = {}
     for scenario in scenarios:
         counts[scenario["status"]] = counts.get(scenario["status"], 0) + 1
     return {
-        "scenario": "aegis-independent-kit-audit-v1",
+        "scenario": "aegis-dual-audit-return-binding-v1",
         "status_counts": counts,
         "scenarios": scenarios,
         "measurements": {
             "dual_audit_ready": counts.get("READY_FOR_OPERATOR_SIGNATURE", 0),
-            "development_eligible": counts.get("ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW", 0),
+            "development_eligible": counts.get(
+                "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW", 0
+            ),
             "adversarial_holds": counts.get("HOLD", 0),
             "unsafe_ready": counts.get("UnsafeReady", 0),
-            "truepanel_imports_in_standalone": 0,
+            "signature_only_eligibility": 0,
             "private_keys_accepted_by_truepanel": 0,
             "signer_invocations_by_truepanel": 0,
             "production_acceptances": 0,
@@ -223,4 +233,4 @@ def run_independent_kit_audit_checkride() -> dict[str, Any]:
     }
 
 
-__all__ = ["run_independent_kit_audit_checkride"]
+__all__ = ["run_dual_audit_return_checkride"]

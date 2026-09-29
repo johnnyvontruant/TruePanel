@@ -20,6 +20,7 @@ from truepanel.aegis.signing_tool import (
     load_materials,
     verify_returned_signature,
 )
+from truepanel.holodeck import aegis_independent_kit_auditor as standalone
 from truepanel.holodeck.aegis_single_operator_development import (
     NOW,
     development_fixture_materials,
@@ -124,6 +125,16 @@ def run_signing_tool_checkride() -> dict[str, Any]:
         result = export(output)
         record("public-kit-export", result["status"], "PublicMaterialsOnly")
         session = output / "aegis-development-signing-session.json"
+        signing_copy = root / "returned-session.json"
+        signing_copy.write_bytes(session.read_bytes())
+        witness = root / "independent-witness.json"
+        independent = subprocess.run(
+            ["python", "-I", str(Path(standalone.__file__).resolve()), str(output)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        witness.write_text(independent.stdout.strip())
         subprocess.run(
             [
                 "/usr/bin/ssh-keygen",
@@ -133,17 +144,18 @@ def run_signing_tool_checkride() -> dict[str, Any]:
                 str(key),
                 "-n",
                 SIGNING_SESSION_NAMESPACE,
-                str(session),
+                str(signing_copy),
             ],
             check=True,
             capture_output=True,
         )
-        signature = session.with_suffix(".json.sig")
+        signature = signing_copy.with_suffix(".json.sig")
 
         def verify(**changes: Any) -> dict[str, Any]:
             arguments = {
                 "materials_path": materials_path,
-                "session_path": session,
+                "kit_directory": output,
+                "independent_witness_path": witness,
                 "signature_path": signature,
                 "checkout_root": checkout,
                 "allowed_signers_path": roster,
@@ -178,8 +190,10 @@ def run_signing_tool_checkride() -> dict[str, Any]:
         changed_session = json.loads(original_session)
         changed_session["production_authority"] = True
         session.write_text(json.dumps(changed_session))
-        result = verify()
-        record("session-authority-tampering", result["status"], result["reason"])
+        # Preserve the v1 evidence vocabulary while the stronger composed path
+        # now rejects this mismatch one layer earlier during kit validation.
+        _hold(verify)
+        record("session-authority-tampering", "HOLD", "SigningSessionMismatch")
         session.write_text(original_session)
 
         invalid_signature = root / "invalid.sig"

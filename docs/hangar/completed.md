@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.28.1 · refreshed 2026-09-28 · 25 experiment(s)
+Registry version 2026.09.29.1 · refreshed 2026-09-29 · 26 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -203,3 +203,11 @@ One exact public roster is provisioned, the existing handoff reaches offline-sig
 - Safety: `DEVELOPMENT_PUBLIC_MATERIAL_ONLY`
 - Strongest follow-up: JT independently confirms the fingerprint, provisions this public-only roster, dual-audits one real kit, signs its canonical session offline, and returns only the detached development signature for a read-only checkride.
 - Revisit when: JT supplies the protected development public key and confirms its fingerprint; the allowed-signers format or SSHSIG namespace changes; the operator identity rotates; any consumer seeks stronger authority
+
+## TP-EXP-0031 · AEGIS audit-bound returned signature
+
+The returned-signature consumer now revalidates two digest-identical audits before one exact signature reaches development-only eligibility; eight bypass and drift scenarios hold.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Run one real read-only ceremony using JT's protected development public roster and independently delivered auditor, then preserve the audit-bound returned result without granting production authority.
+- Revisit when: JT performs the first real offline signature ceremony; the standalone verifier witness schema changes; the SSHSIG namespace or allowed-signers format changes; any consumer seeks stronger authority
