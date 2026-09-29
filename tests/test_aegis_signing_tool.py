@@ -97,6 +97,21 @@ def _export(paths: dict[str, Path], output: Path) -> dict:
     )
 
 
+def _witness(kit: Path, output: Path) -> Path:
+    auditor = (
+        Path(__file__).resolve().parents[1]
+        / "truepanel/holodeck/aegis_independent_kit_auditor.py"
+    )
+    completed = subprocess.run(
+        ["python", "-I", str(auditor), str(kit)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    output.write_text(completed.stdout.strip())
+    return output
+
+
 def test_export_contains_only_public_content_bound_material(tmp_path):
     paths = _fixture(tmp_path)
     output = tmp_path / "export"
@@ -191,16 +206,20 @@ def test_returned_real_sshsig_verifies_development_only(tmp_path):
     output = tmp_path / "export"
     _export(paths, output)
     session = output / "aegis-development-signing-session.json"
+    signing_copy = tmp_path / "returned-session.json"
+    signing_copy.write_bytes(session.read_bytes())
+    witness = _witness(output, tmp_path / "independent-witness.json")
     subprocess.run(
-        ["/usr/bin/ssh-keygen", "-Y", "sign", "-f", str(paths["key"]), "-n", SIGNING_SESSION_NAMESPACE, str(session)],
+        ["/usr/bin/ssh-keygen", "-Y", "sign", "-f", str(paths["key"]), "-n", SIGNING_SESSION_NAMESPACE, str(signing_copy)],
         check=True,
         capture_output=True,
     )
 
     result = verify_returned_signature(
         materials_path=paths["materials"],
-        session_path=session,
-        signature_path=session.with_suffix(".json.sig"),
+        kit_directory=output,
+        independent_witness_path=witness,
+        signature_path=signing_copy.with_suffix(".json.sig"),
         checkout_root=paths["checkout"],
         allowed_signers_path=paths["roster"],
     )
@@ -210,6 +229,32 @@ def test_returned_real_sshsig_verifies_development_only(tmp_path):
     assert result["deployment_authority"] is False
     assert result["hardware_authority"] is False
     assert result["runtime_writes"] == 0
+    assert result["dual_audit_bound"] is True
+    assert result["auditors_agree"] is True
+
+
+def test_returned_signature_requires_current_independent_witness(tmp_path):
+    paths = _fixture(tmp_path)
+    output = tmp_path / "export"
+    _export(paths, output)
+    session = output / "aegis-development-signing-session.json"
+    signing_copy = tmp_path / "returned-session.json"
+    signing_copy.write_bytes(session.read_bytes())
+    subprocess.run(
+        ["/usr/bin/ssh-keygen", "-Y", "sign", "-f", str(paths["key"]), "-n", SIGNING_SESSION_NAMESPACE, str(signing_copy)],
+        check=True,
+        capture_output=True,
+    )
+
+    with pytest.raises(ValueError, match="InputFileUnavailable"):
+        verify_returned_signature(
+            materials_path=paths["materials"],
+            kit_directory=output,
+            independent_witness_path=tmp_path / "missing-witness.json",
+            signature_path=signing_copy.with_suffix(".json.sig"),
+            checkout_root=paths["checkout"],
+            allowed_signers_path=paths["roster"],
+        )
 
 
 def test_export_rejects_missing_confirmation_and_checkout_output(tmp_path):
@@ -256,21 +301,22 @@ def test_tampered_export_holds_and_cli_never_signs(tmp_path, capsys):
     output = tmp_path / "export"
     _export(paths, output)
     session = output / "aegis-development-signing-session.json"
+    witness = _witness(output, tmp_path / "independent-witness.json")
     changed = json.loads(session.read_text())
     changed["production_authority"] = True
     session.write_text(json.dumps(changed))
     signature = tmp_path / "returned.sig"
     signature.write_text("not-a-signature")
 
-    result = verify_returned_signature(
-        materials_path=paths["materials"],
-        session_path=session,
-        signature_path=signature,
-        checkout_root=paths["checkout"],
-        allowed_signers_path=paths["roster"],
-    )
-    assert result["status"] == "HOLD"
-    assert result["reason"] == "SigningSessionMismatch"
+    with pytest.raises(ValueError, match="SigningKitSessionInvalid"):
+        verify_returned_signature(
+            materials_path=paths["materials"],
+            kit_directory=output,
+            independent_witness_path=witness,
+            signature_path=signature,
+            checkout_root=paths["checkout"],
+            allowed_signers_path=paths["roster"],
+        )
     assert main(["export", "--materials", str(paths["materials"]), "--checkout", str(paths["checkout"]), "--allowed-signers", str(paths["roster"]), "--output", str(tmp_path / "second"), "--observed-at", "2026-09-19T12:00:00Z", "--unix-seconds", str(NOW)]) == 2
     assert "OperatorUtcConfirmationRequired" in capsys.readouterr().out
 
@@ -282,6 +328,7 @@ def test_mission_control_names_public_only_offline_ceremony():
     ).read_text()
     assert "export public kit · require two audit implementations to agree" in source
     assert "sign outside TruePanel · verify returned signature" in source
+    assert "exact dual-audit witness revalidated before development eligibility" in source
     assert "Private key never accepted" in source
     assert "Independent audit witness" in source
     assert "SHA-256 + Git blob identity pinned" in source

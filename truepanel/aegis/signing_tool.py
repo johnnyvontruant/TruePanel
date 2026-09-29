@@ -504,25 +504,36 @@ def export_signing_kit(
 def verify_returned_signature(
     *,
     materials_path: str | Path,
-    session_path: str | Path,
+    kit_directory: str | Path,
+    independent_witness_path: str | Path,
     signature_path: str | Path,
     checkout_root: str | Path,
     allowed_signers_path: str | Path,
 ) -> dict[str, Any]:
-    """Verify public returned material without consuming or promoting it."""
+    """Verify an audit-bound returned signature without consuming or promoting it.
 
+    A cryptographically valid signature is insufficient on its own.  The exact
+    public kit must still pass TruePanel's audit and a canonical witness from the
+    standalone auditor must agree with it at the moment eligibility is computed.
+    """
+
+    audit = dual_audit_signing_kit(kit_directory, independent_witness_path)
     materials = load_materials(materials_path)
+    session_path = Path(kit_directory) / "aegis-development-signing-session.json"
     try:
-        session = json.loads(_read_regular(Path(session_path), maximum=MAX_JSON_BYTES))
+        session_bytes = _read_regular(session_path, maximum=MAX_JSON_BYTES)
+        session = json.loads(session_bytes)
         signature = _read_regular(Path(signature_path), maximum=MAX_SIGNATURE_BYTES).decode("ascii")
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
         raise ValueError("ReturnedSigningMaterialInvalid") from error
+    if _sha256(session_bytes) != audit["session_sha256"]:
+        raise ValueError("ReturnedSessionAuditMismatch")
     if not isinstance(session, dict):
         raise ValueError("ReturnedSigningMaterialInvalid")
     clock = session.get("clock_witness")
     if not isinstance(clock, Mapping):
         raise ValueError("ReturnedSigningMaterialInvalid")
-    return verify_signing_session(
+    result = verify_signing_session(
         session=session,
         signature=signature,
         checkout_root=checkout_root,
@@ -536,6 +547,15 @@ def verify_returned_signature(
         reviewer_report=materials["reviewer_report"],
         allowed_signers_path=allowed_signers_path,
     )
+    if result.get("status") == "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW":
+        return {
+            **result,
+            "dual_audit_bound": True,
+            "auditors_agree": True,
+            "audit_session_sha256": audit["session_sha256"],
+            "audit_manifest_sha256": audit["manifest_sha256"],
+        }
+    return result
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -558,7 +578,8 @@ def build_parser() -> argparse.ArgumentParser:
     dual_audit.add_argument("--independent-witness", required=True, type=Path)
     verify = commands.add_parser("verify", help="Verify a returned detached signature")
     verify.add_argument("--materials", required=True, type=Path)
-    verify.add_argument("--session", required=True, type=Path)
+    verify.add_argument("--kit", required=True, type=Path)
+    verify.add_argument("--independent-witness", required=True, type=Path)
     verify.add_argument("--signature", required=True, type=Path)
     verify.add_argument("--checkout", required=True, type=Path)
     verify.add_argument("--allowed-signers", required=True, type=Path)
@@ -587,7 +608,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             result = verify_returned_signature(
                 materials_path=arguments.materials,
-                session_path=arguments.session,
+                kit_directory=arguments.kit,
+                independent_witness_path=arguments.independent_witness,
                 signature_path=arguments.signature,
                 checkout_root=arguments.checkout,
                 allowed_signers_path=arguments.allowed_signers,

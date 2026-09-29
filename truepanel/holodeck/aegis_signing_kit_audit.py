@@ -21,6 +21,7 @@ from truepanel.aegis.signing_tool import (
     export_signing_kit,
     verify_returned_signature,
 )
+from truepanel.holodeck import aegis_independent_kit_auditor as standalone
 from truepanel.holodeck.aegis_single_operator_development import (
     NOW,
     development_fixture_materials,
@@ -154,19 +155,35 @@ def run_signing_kit_audit_checkride() -> dict[str, Any]:
         record("coordinated-card-and-manifest-substitution", "HOLD", _hold(audit_signing_kit, coordinated))
 
         session_path = baseline / session_name
+        signing_copy = root / "returned-session.json"
+        signing_copy.write_bytes(session_path.read_bytes())
+        witness = root / "independent-witness.json"
+        independent = subprocess.run(
+            ["python", "-I", str(Path(standalone.__file__).resolve()), str(baseline)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        witness.write_text(independent.stdout.strip())
         subprocess.run(
             [
                 "/usr/bin/ssh-keygen", "-Y", "sign", "-f", str(key),
-                "-n", SIGNING_SESSION_NAMESPACE, str(session_path),
+                "-n", SIGNING_SESSION_NAMESPACE, str(signing_copy),
             ],
             check=True,
             capture_output=True,
         )
-        record("preexisting-signature-before-audit", "HOLD", _hold(audit_signing_kit, baseline))
+        signed_kit = root / "pre-signed-kit"
+        shutil.copytree(baseline, signed_kit)
+        (signed_kit / "aegis-development-signing-session.json.sig").write_bytes(
+            signing_copy.with_suffix(".json.sig").read_bytes()
+        )
+        record("preexisting-signature-before-audit", "HOLD", _hold(audit_signing_kit, signed_kit))
         verified = verify_returned_signature(
             materials_path=materials_path,
-            session_path=session_path,
-            signature_path=session_path.with_suffix(".json.sig"),
+            kit_directory=baseline,
+            independent_witness_path=witness,
+            signature_path=signing_copy.with_suffix(".json.sig"),
             checkout_root=checkout,
             allowed_signers_path=roster,
         )

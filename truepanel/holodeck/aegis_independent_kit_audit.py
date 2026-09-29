@@ -176,18 +176,21 @@ def run_independent_kit_audit_checkride() -> dict[str, Any]:
         record("missing-witness", "HOLD", _hold(dual_audit_signing_kit, baseline, missing_witness))
 
         session_path = baseline / session_name
+        signing_copy = root / "returned-session.json"
+        signing_copy.write_bytes(session_path.read_bytes())
         subprocess.run(
             [
                 "/usr/bin/ssh-keygen", "-Y", "sign", "-f", str(key),
-                "-n", SIGNING_SESSION_NAMESPACE, str(session_path),
+                "-n", SIGNING_SESSION_NAMESPACE, str(signing_copy),
             ],
             check=True,
             capture_output=True,
         )
         verified = verify_returned_signature(
             materials_path=materials_path,
-            session_path=session_path,
-            signature_path=session_path.with_suffix(".json.sig"),
+            kit_directory=baseline,
+            independent_witness_path=witness,
+            signature_path=signing_copy.with_suffix(".json.sig"),
             checkout_root=checkout,
             allowed_signers_path=roster,
         )
