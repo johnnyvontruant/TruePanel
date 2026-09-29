@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.28.1",
-  "updated_at": "2026-09-28",
+  "registry_version": "2026.09.29.1",
+  "updated_at": "2026-09-29",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -489,6 +489,25 @@
       "revisit_conditions": ["JT supplies the protected development public key and confirms its fingerprint", "the allowed-signers format or SSHSIG namespace changes", "the operator identity rotates", "any consumer seeks stronger authority"],
       "strongest_follow_up": "JT independently confirms the fingerprint, provisions this public-only roster, dual-audits one real kit, signs its canonical session offline, and returns only the detached development signature for a read-only checkride.",
       "freshness": {"reviewed_at": "2026-09-28", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0031", "title": "AEGIS audit-bound returned signature", "state": "COMPLETED",
+      "hypothesis": "Development eligibility is trustworthy only when the returned-signature consumer revalidates the exact public kit and matching independent audit witness before accepting the SSHSIG.",
+      "value": "Closes a composition gap that allowed a valid development signature to bypass the otherwise required dual-audit ceremony.",
+      "prior_art": ["in-toto ordered layout and link chain", "SLSA verification summary attestations", "TUF client-side trust transitions", "Reproducible Builds independent verification", "OpenSSH SSHSIG"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-dual-audit-return-binding", "pr": null, "commits": []},
+      "protocol": ["export exact public-only signing kit", "obtain canonical standalone audit witness", "repeat TruePanel audit at returned-signature verification", "require digest-identical session review card and manifest", "derive session only from audited kit", "verify detached SSHSIG and reconstructed checkout materials", "retain development-only authority boundaries"],
+      "fixtures": ["aegis-dual-audit-return-binding-v1", "tests/test_aegis_dual_audit_return.py"],
+      "success_criteria": ["one exact audit-bound returned signature reaches development candidate review", "a valid signature without the witness holds", "all witness kit signature roster material and checkout attacks hold", "zero stronger authority or live action"],
+      "abort_criteria": ["signature validity substitutes for audit agreement", "arbitrary session path accepted", "stale or missing witness accepted", "private key accepted or signer invoked by TruePanel", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-dual-audit-return-binding-v1.json", "sha256": "c6b489c841eb7009f9da8ce566567db8edca06c2d91f2db5e60b57f7e3f0f804"}],
+      "outcome": {"conclusion": "The returned-signature consumer now revalidates two digest-identical audits before one exact signature reaches development-only eligibility; eight bypass and drift scenarios hold."},
+      "invalidated_assumptions": ["performing a dual audit before signing makes the later signature verifier enforce it", "a signature over the session also authenticates the audit step", "the final verifier may safely accept an arbitrary session path"],
+      "reproduction": ["pytest -q tests/test_aegis_dual_audit_return.py tests/test_aegis_signing_tool.py tests/test_aegis_independent_kit_audit.py", "python -c \"from truepanel.holodeck.aegis_dual_audit_return import run_dual_audit_return_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.signing_tool verify --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT performs the first real offline signature ceremony", "the standalone verifier witness schema changes", "the SSHSIG namespace or allowed-signers format changes", "any consumer seeks stronger authority"],
+      "strongest_follow_up": "Run one real read-only ceremony using JT's protected development public roster and independently delivered auditor, then preserve the audit-bound returned result without granting production authority.",
+      "freshness": {"reviewed_at": "2026-09-29", "review_after": "2026-12-31"}
     }
   ]
 }
