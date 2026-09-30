@@ -23,6 +23,9 @@ import json
 from http import HTTPStatus
 from urllib.parse import urlparse
 
+from truepanel.compatibility.identity_verification import (
+    ChassisIdentityStore,
+)
 from truepanel.hardware.drive_localization import localize_drive_readings
 from truepanel.lifeline import BayIdentificationService
 
@@ -67,6 +70,9 @@ _LIFELINE_ACK_CONFIRMATION = "ACKNOWLEDGE_BACKUP_STATE"
 _LIFELINE_IDENTIFY_PATH = "/api/v1/lifeline/identify"
 _LIFELINE_IDENTIFY_INTENT = "lifeline-identify-bay"
 _LIFELINE_IDENTIFY_CONFIRMATION = "IDENTIFY_FAILED_BAY"
+_PREFLIGHT_IDENTITY_PATH = "/api/v1/preflight/identity-confirmation"
+_PREFLIGHT_IDENTITY_INTENT = "preflight-chassis-identity"
+_PREFLIGHT_IDENTITY_CONFIRMATION = "CONFIRM_QNAP_CHASSIS_IDENTITY"
 
 
 class MissionControlRequestHandler(_base.MissionControlRequestHandler):
@@ -96,6 +102,9 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        if parsed.path == _PREFLIGHT_IDENTITY_PATH:
+            self._preflight_identity_confirmation(parsed)
+            return
         if parsed.path == _LIFELINE_ACK_PATH:
             self._lifeline_acknowledge(parsed)
             return
@@ -405,13 +414,250 @@ class MissionControlRequestHandler(_base.MissionControlRequestHandler):
             }
         )
 
+    def _preflight_context(self):
+        server = getattr(self, "server", None)
+        store = getattr(
+            server,
+            "chassis_identity_store",
+            None,
+        )
+
+        if store is None:
+            return (
+                collect_compatibility(),
+                None,
+            )
+
+        verification = store.current()
+
+        report = collect_compatibility(
+            identity_verification=verification,
+        )
+        return report, store.review()
+
     def _preflight(self, parsed):
-        _base.collect_compatibility = collect_compatibility
-        return super()._preflight(parsed)
+        del parsed
+
+        try:
+            report, identity_review = (
+                self._preflight_context()
+            )
+        except Exception:
+            _base.LOGGER.exception(
+                "Mission Control preflight survey failed"
+            )
+            self._json(
+                {
+                    "error": "preflight_unavailable",
+                    "message": (
+                        "Passive compatibility survey could not complete."
+                    ),
+                },
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+
+        self._json(
+            _base.build_preflight_payload(
+                report,
+                identity_review=identity_review,
+            )
+        )
 
     def _preflight_support_bundle(self, parsed):
-        _base.collect_compatibility = collect_compatibility
-        return super()._preflight_support_bundle(parsed)
+        del parsed
+
+        try:
+            report, _identity_review = (
+                self._preflight_context()
+            )
+            payload = _base.build_support_bundle(
+                report
+            )
+            filename = (
+                _base.default_support_path().name
+            )
+        except Exception:
+            _base.LOGGER.exception(
+                "Mission Control support bundle generation failed"
+            )
+            self._json(
+                {
+                    "error": "support_bundle_unavailable",
+                    "message": (
+                        "Privacy-safe support bundle could not be generated."
+                    ),
+                },
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+
+        self._json(
+            payload,
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="{filename}"'
+                ),
+            },
+        )
+
+    def _read_preflight_json(self, *, maximum=2048):
+        try:
+            content_length = int(
+                self.headers.get(
+                    "Content-Length",
+                    "0",
+                )
+            )
+        except (TypeError, ValueError):
+            content_length = 0
+
+        if (
+            content_length < 1
+            or content_length > int(maximum)
+        ):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Preflight confirmation body must be "
+                        f"between 1 and {int(maximum)} bytes."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return None
+
+        try:
+            payload = json.loads(
+                self.rfile.read(
+                    content_length
+                ).decode("utf-8")
+            )
+        except (
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ):
+            self._json(
+                {
+                    "error": "invalid_json",
+                    "message": (
+                        "Preflight confirmation must contain valid JSON."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return None
+
+        if not isinstance(payload, dict):
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Preflight confirmation must be a JSON object."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return None
+
+        return payload
+
+    def _preflight_identity_confirmation(
+        self,
+        parsed,
+    ):
+        del parsed
+        payload = self._read_preflight_json()
+
+        if payload is None:
+            return
+
+        if (
+            payload.get("intent")
+            != _PREFLIGHT_IDENTITY_INTENT
+            or payload.get("confirmation")
+            != _PREFLIGHT_IDENTITY_CONFIRMATION
+        ):
+            self._json(
+                {
+                    "error": "preflight_identity_confirmation_rejected",
+                    "message": (
+                        "Chassis identity verification requires "
+                        "explicit operator confirmation."
+                    ),
+                },
+                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+            )
+            return
+
+        model = str(
+            payload.get("model") or ""
+        ).strip()
+
+        server = getattr(self, "server", None)
+        store = getattr(
+            server,
+            "chassis_identity_store",
+            None,
+        )
+
+        if store is None:
+            self._json(
+                {
+                    "error": "preflight_identity_unavailable",
+                    "message": (
+                        "Chassis identity verification is unavailable."
+                    ),
+                },
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+
+        try:
+            verification = store.confirm(
+                model=model,
+            )
+            report = collect_compatibility(
+                identity_verification=verification,
+            )
+            identity_review = store.review()
+        except ValueError as error:
+            self._json(
+                {
+                    "error": "preflight_identity_mismatch",
+                    "message": str(error),
+                },
+                status=HTTPStatus.CONFLICT,
+            )
+            return
+        except OSError:
+            _base.LOGGER.exception(
+                "Could not persist chassis identity verification"
+            )
+            self._json(
+                {
+                    "error": "preflight_identity_persistence_failed",
+                    "message": (
+                        "Chassis identity verification could not be saved."
+                    ),
+                },
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+
+        self._json(
+            {
+                "ok": True,
+                "storage_mutation": False,
+                "hardware_control_granted": False,
+                "model": verification.get("model"),
+                "preflight": _base.build_preflight_payload(
+                    report,
+                    identity_review=identity_review,
+                ),
+            }
+        )
 
 
 class MissionControlServer(_base.MissionControlServer):
@@ -428,6 +674,7 @@ class MissionControlServer(_base.MissionControlServer):
         lcd_command_client=None,
         lifeline_identify_service=None,
         bay_mirror_provider=None,
+        chassis_identity_store=None,
     ):
         self.snapshot_service = (
             snapshot_service
@@ -455,6 +702,10 @@ class MissionControlServer(_base.MissionControlServer):
             bay_mirror_provider
             or BayMirrorProvider()
         )
+        self.chassis_identity_store = (
+            chassis_identity_store
+            or ChassisIdentityStore()
+        )
         _base.ThreadingHTTPServer.__init__(
             self,
             address,
@@ -473,6 +724,7 @@ def serve(
     lcd_command_client=None,
     lifeline_identify_service=None,
     bay_mirror_provider=None,
+    chassis_identity_store=None,
 ):
     server = MissionControlServer(
         (host, int(port)),
@@ -483,6 +735,7 @@ def serve(
         lcd_command_client=lcd_command_client,
         lifeline_identify_service=lifeline_identify_service,
         bay_mirror_provider=bay_mirror_provider,
+        chassis_identity_store=chassis_identity_store,
     )
     _base.LOGGER.info(
         "Mission Control listening on http://%s:%s",

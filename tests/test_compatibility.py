@@ -396,3 +396,40 @@ def test_storage_safety_is_explicit(
 
     assert safety.status == "PASS"
     assert "no pool operations" in safety.detail
+
+
+
+def test_operator_verified_known_qnap_profile_passes_identity(
+    tmp_path,
+):
+    from truepanel.compatibility.identity_verification import (
+        chassis_fingerprint,
+        read_dmi_identity,
+    )
+
+    root = make_root(tmp_path)
+    hwmon = make_hwmon(tmp_path)
+    values = read_dmi_identity(root)
+
+    verification = {
+        "schema_version": 1,
+        "state": "verified",
+        "model": "TVS-671",
+        "fingerprint": chassis_fingerprint(values),
+    }
+
+    report = collect_compatibility(
+        root=root,
+        fintek_finder=lambda: hwmon,
+        enclosure=FakeEnclosure(),
+        identity_verification=verification,
+    )
+
+    identity = next(
+        item
+        for item in report.checks
+        if item.name == "QNAP Identity"
+    )
+
+    assert identity.status == "PASS"
+    assert "operator verified QNAP TVS-671" in identity.detail
