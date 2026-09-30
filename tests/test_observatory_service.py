@@ -55,6 +55,11 @@ def test_production_launcher_injects_observatory_snapshot(monkeypatch):
     service.main()
 
     assert loaded_paths == [settings.config_path]
+    vpn_status_provider = created.pop("vpn_status_provider")
+    assert isinstance(
+        vpn_status_provider,
+        service.VpnStatusProvider,
+    )
     assert created == {
         "config": loaded_config,
         "activity_providers": (plex_provider,),
