@@ -48,8 +48,6 @@ from truepanel.lifeline import (
     ReplacementCandidateProvider,
     service_profile_for_config,
 )
-from truepanel.vpn_status import VpnStatusProvider
-
 from . import snapshot_base as _base
 
 get_fan_status = _base.get_fan_status
@@ -272,11 +270,7 @@ class SnapshotService(_base.SnapshotService):
             if cargo_provider is not None
             else provider_from_config(self.config)
         )
-        self.vpn_status_provider = (
-            vpn_status_provider
-            if vpn_status_provider is not None
-            else VpnStatusProvider()
-        )
+        self.vpn_status_provider = vpn_status_provider
 
     @staticmethod
     def _cargo_unavailable_payload() -> dict[str, Any]:
@@ -343,15 +337,7 @@ class SnapshotService(_base.SnapshotService):
         result = dict(payload)
         result["cargo_bay"] = self._cargo_bay_payload()
 
-        try:
-            vpn = self.vpn_status_provider.snapshot()
-        except (
-            OSError,
-            RuntimeError,
-            TypeError,
-            ValueError,
-            AttributeError,
-        ):
+        if self.vpn_status_provider is None:
             vpn = {
                 "read_only": True,
                 "label": "ExpressVPN",
@@ -360,6 +346,24 @@ class SnapshotService(_base.SnapshotService):
                 "connected": False,
                 "reason": "VPN telemetry unavailable.",
             }
+        else:
+            try:
+                vpn = self.vpn_status_provider.snapshot()
+            except (
+                OSError,
+                RuntimeError,
+                TypeError,
+                ValueError,
+                AttributeError,
+            ):
+                vpn = {
+                    "read_only": True,
+                    "label": "ExpressVPN",
+                    "state": "UNAVAILABLE",
+                    "tone": "neutral",
+                    "connected": False,
+                    "reason": "VPN telemetry unavailable.",
+                }
 
         result["vpn"] = vpn
         return result
