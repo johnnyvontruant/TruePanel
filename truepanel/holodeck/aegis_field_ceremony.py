@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from copy import deepcopy
 from pathlib import Path
@@ -36,7 +37,7 @@ def _run(*arguments: str, cwd: Path) -> str:
 
 def _independent_witness(kit: Path, output: Path) -> None:
     completed = subprocess.run(
-        ["python", "-I", str(Path(standalone.__file__).resolve()), str(kit)],
+        [sys.executable, "-I", str(Path(standalone.__file__).resolve()), str(kit)],
         check=True,
         capture_output=True,
         text=True,
