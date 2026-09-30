@@ -867,3 +867,21 @@ def test_advanced_thermal_controls_use_collapsed_drawer():
         "advancedDrawer.open=true;"
         in source
     )
+
+
+
+def test_dashboard_has_read_only_vpn_annunciator():
+    source = dashboard_source()
+
+    assert "function renderVpnStatus" in source
+    assert "renderVpnStatus(data.vpn)" in source
+    assert "vpn-status-light" in source
+    assert 'CONNECTED:"CONNECTED"' in source
+    assert 'DEGRADED:"DEGRADED"' in source
+    assert 'DISCONNECTED:"DISCONNECTED"' in source
+    assert 'UNAVAILABLE:"UNKNOWN"' in source
+    assert '<span class="label">VPN</span>' in source
+
+    # Status display only. Mission Control must not gain
+    # VPN mutation controls as part of this feature.
+    assert "/api/v1/vpn/" not in source
