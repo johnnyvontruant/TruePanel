@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.29.1 · refreshed 2026-09-29 · 26 experiment(s)
+Registry version 2026.09.30.1 · refreshed 2026-09-30 · 27 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -211,3 +211,11 @@ The returned-signature consumer now revalidates two digest-identical audits befo
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Run one real read-only ceremony using JT's protected development public roster and independently delivered auditor, then preserve the audit-bound returned result without granting production authority.
 - Revisit when: JT performs the first real offline signature ceremony; the standalone verifier witness schema changes; the SSHSIG namespace or allowed-signers format changes; any consumer seeks stronger authority
+
+## TP-EXP-0032 · AEGIS read-only field ceremony
+
+Five exact operator action gates, one complete development-eligible fixture, and seven adversarial holds are distinguished with zero unsafe-ready result, signer invocation, private-key input, stronger authority, or live action.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: JT confirms the verifier fingerprint through an independent channel and provisions only the protected development public roster; the read-only coordinator then names and verifies each remaining gate.
+- Revisit when: JT independently confirms the verifier fingerprint; JT provisions the protected development public roster; a real signing kit crosses the offline boundary; any ceremony schema or authority consumer changes

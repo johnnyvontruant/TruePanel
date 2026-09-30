@@ -1,0 +1,99 @@
+{
+  "control_authority": false,
+  "fixture_private_keys_retained": 0,
+  "measurements": {
+    "adversarial_holds": 7,
+    "deployments": 0,
+    "development_eligible": 1,
+    "hardware_actions": 0,
+    "operator_action_gates": 5,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_ready": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-field-ceremony-v1",
+  "scenarios": [
+    {
+      "reason": "JT_CONFIRMS_VERIFIER_SHA256_THROUGH_INDEPENDENT_CHANNEL",
+      "scenario": "independent-channel-not-confirmed",
+      "status": "ACTION_REQUIRED_INDEPENDENT_VERIFIER_CONFIRMATION"
+    },
+    {
+      "reason": "IndependentVerifierFingerprintMismatch",
+      "scenario": "wrong-independent-fingerprint",
+      "status": "HOLD"
+    },
+    {
+      "reason": "JT_PROVISIONS_DEVELOPMENT_PUBLIC_ROSTER",
+      "scenario": "public-roster-not-provisioned",
+      "status": "ACTION_REQUIRED_PUBLIC_ROSTER"
+    },
+    {
+      "reason": "PublicRosterInvalid:TrustRosterPolicyMismatch",
+      "scenario": "wrong-public-roster",
+      "status": "HOLD"
+    },
+    {
+      "reason": "EXPORT_PUBLIC_SIGNING_KIT_FROM_PINNED_CHECKOUT",
+      "scenario": "signing-kit-not-exported",
+      "status": "ACTION_REQUIRED_SIGNING_KIT_EXPORT"
+    },
+    {
+      "reason": "RUN_PINNED_STANDALONE_AUDITOR",
+      "scenario": "independent-kit-audit-not-run",
+      "status": "ACTION_REQUIRED_INDEPENDENT_KIT_AUDIT"
+    },
+    {
+      "reason": "IndependentKitAuditInvalid:IndependentAuditWitnessMismatch",
+      "scenario": "stale-independent-witness",
+      "status": "HOLD"
+    },
+    {
+      "reason": "JT_REVIEWS_AND_SIGNS_CANONICAL_SESSION_OFFLINE",
+      "scenario": "operator-signature-not-returned",
+      "status": "ACTION_REQUIRED_OFFLINE_SIGNATURE"
+    },
+    {
+      "reason": "OperatorSignatureInvalid",
+      "scenario": "invalid-returned-signature",
+      "status": "HOLD"
+    },
+    {
+      "reason": "INDEPENDENTLY_REVIEW_DEVELOPMENT_CANDIDATE",
+      "scenario": "exact-field-ceremony",
+      "status": "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW"
+    },
+    {
+      "reason": "SigningKitInvalid:SigningKitPresentationMismatch",
+      "scenario": "kit-drift-after-audit",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningSessionMismatch",
+      "scenario": "materials-substitution",
+      "status": "HOLD"
+    },
+    {
+      "reason": "SigningSessionMismatch",
+      "scenario": "checkout-drift",
+      "status": "HOLD"
+    }
+  ],
+  "status_counts": {
+    "ACTION_REQUIRED_INDEPENDENT_KIT_AUDIT": 1,
+    "ACTION_REQUIRED_INDEPENDENT_VERIFIER_CONFIRMATION": 1,
+    "ACTION_REQUIRED_OFFLINE_SIGNATURE": 1,
+    "ACTION_REQUIRED_PUBLIC_ROSTER": 1,
+    "ACTION_REQUIRED_SIGNING_KIT_EXPORT": 1,
+    "ELIGIBLE_FOR_DEVELOPMENT_CANDIDATE_REVIEW": 1,
+    "HOLD": 7
+  }
+}
