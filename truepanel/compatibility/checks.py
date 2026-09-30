@@ -18,6 +18,11 @@ from truepanel.hardware.discovery import find_fintek_hwmon
 from truepanel.hardware.enclosure import EnclosureController
 from truepanel.hardware.manager import HardwareManager
 
+from .identity_verification import (
+    identity_detail,
+    read_dmi_identity,
+    verification_matches,
+)
 from .models import CompatibilityCheck, CompatibilityReport
 
 
@@ -106,35 +111,34 @@ def _platform_checks(
 
 def _identity_check(
     root: Path,
+    *,
+    identity_verification: dict | None = None,
 ) -> CompatibilityCheck:
-    dmi = root / "sys/class/dmi/id"
-
-    values = {
-        "vendor": _read_text(dmi / "sys_vendor"),
-        "product": _read_text(dmi / "product_name"),
-        "version": _read_text(dmi / "product_version"),
-        "board_vendor": _read_text(dmi / "board_vendor"),
-        "board": _read_text(dmi / "board_name"),
-    }
-
+    values = read_dmi_identity(root)
     combined = " ".join(values.values()).lower()
-
-    detail_parts = [
-        value
-        for value in (
-            values["vendor"],
-            values["product"],
-        )
-        if value
-    ]
-
-    detail = " / ".join(detail_parts) or "DMI identity unavailable"
+    detail = identity_detail(values)
 
     if "qnap" in combined:
         return check(
             PASS,
             "QNAP Identity",
             detail,
+        )
+
+    if verification_matches(
+        values,
+        identity_verification,
+    ):
+        model = str(
+            identity_verification.get("model") or ""
+        ).strip()
+        return check(
+            PASS,
+            "QNAP Identity",
+            (
+                f"{detail}; operator verified QNAP "
+                f"{model}"
+            ),
         )
 
     return check(
@@ -528,6 +532,7 @@ def collect_compatibility(
     fintek_finder: Callable[[], object] = find_fintek_hwmon,
     enclosure: EnclosureController | None = None,
     storage_reporter: Callable[[], dict] = _default_storage_report,
+    identity_verification: dict | None = None,
 ) -> CompatibilityReport:
     """
     Inspect passive TruePanel compatibility signals.
@@ -542,7 +547,10 @@ def collect_compatibility(
     )
 
     checks.append(
-        _identity_check(root_path)
+        _identity_check(
+            root_path,
+            identity_verification=identity_verification,
+        )
     )
 
     fintek_result, fintek_ready = _fintek_check(

@@ -78,7 +78,11 @@ def _summary(flight_status: str) -> str:
     return "One or more compatibility signals need operator review."
 
 
-def _review_contract(check: CompatibilityCheck) -> dict[str, object]:
+def _review_contract(
+    check: CompatibilityCheck,
+    *,
+    identity_review: dict[str, object] | None = None,
+) -> dict[str, object]:
     """Explain how a non-PASS compatibility check can become machine PASS.
 
     Preflight remains evidence-driven. Operator review can explain or resolve
@@ -88,9 +92,14 @@ def _review_contract(check: CompatibilityCheck) -> dict[str, object]:
 
     status = str(check.status).strip().upper()
     detail = str(check.detail or "").strip()
+    identity_review = (
+        identity_review
+        if isinstance(identity_review, dict)
+        else {}
+    )
 
     if status == "PASS":
-        return {
+        payload = {
             "state": "resolved",
             "review_required": False,
             "rerun_available": True,
@@ -99,6 +108,22 @@ def _review_contract(check: CompatibilityCheck) -> dict[str, object]:
             "reason": "Compatibility evidence currently passes.",
             "next_action": "No operator action required.",
         }
+        if (
+            check.name == "QNAP Identity"
+            and identity_review.get("verified") is True
+        ):
+            payload.update(
+                {
+                    "verification_source": "operator",
+                    "verified_model": identity_review.get(
+                        "verified_model"
+                    ),
+                    "verification_binding": identity_review.get(
+                        "binding"
+                    ),
+                }
+            )
+        return payload
 
     if status == "FAIL":
         return {
@@ -114,7 +139,7 @@ def _review_contract(check: CompatibilityCheck) -> dict[str, object]:
             ),
         }
 
-    return {
+    payload = {
         "state": "reviewing",
         "review_required": True,
         "rerun_available": True,
@@ -128,8 +153,39 @@ def _review_contract(check: CompatibilityCheck) -> dict[str, object]:
         ),
     }
 
+    if (
+        check.name == "QNAP Identity"
+        and identity_review.get("confirmable") is True
+    ):
+        payload.update(
+            {
+                "operator_verification_allowed": True,
+                "candidate_model": identity_review.get(
+                    "candidate_model"
+                ),
+                "detected_identity": identity_review.get(
+                    "detected_identity"
+                ),
+                "verification_binding": identity_review.get(
+                    "binding"
+                ),
+                "next_action": (
+                    "Confirm the physical QNAP chassis if the detected OEM "
+                    "identity belongs to the displayed model. The attestation "
+                    "is bound to the current hardware fingerprint and does not "
+                    "grant hardware-control authority."
+                ),
+            }
+        )
 
-def build_preflight_payload(report: CompatibilityReport) -> dict:
+    return payload
+
+
+def build_preflight_payload(
+    report: CompatibilityReport,
+    *,
+    identity_review: dict[str, object] | None = None,
+) -> dict:
     """Project a passive compatibility report into Mission Control UI data."""
 
     grouped: dict[str, list[dict[str, object]]] = {
@@ -149,7 +205,14 @@ def build_preflight_payload(report: CompatibilityReport) -> dict:
         if status in counts:
             counts[status] += 1
 
-        payload["review"] = _review_contract(check)
+        payload["review"] = _review_contract(
+            check,
+            identity_review=(
+                identity_review
+                if check.name == "QNAP Identity"
+                else None
+            ),
+        )
         grouped[_section_id(check)].append(payload)
 
     sections = []
@@ -190,6 +253,11 @@ def build_preflight_payload(report: CompatibilityReport) -> dict:
         "summary": _summary(flight_status),
         "counts": counts,
         "sections": sections,
+        "identity_review": (
+            dict(identity_review)
+            if isinstance(identity_review, dict)
+            else None
+        ),
         "recovery": {
             "state": "resolved" if flight_status == "READY" else "reviewing",
             "verification": "rerun_passive_compatibility_survey",

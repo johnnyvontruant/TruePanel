@@ -189,3 +189,39 @@ def test_dashboard_preflight_is_on_demand_not_in_refresh_loop():
     assert "setInterval(loadPreflight" not in source
     assert "setInterval(refresh,5000);" in source
     assert "replaceChildren()" in source
+
+
+
+def test_preflight_identity_confirmation_route_is_registered():
+    from truepanel.web.server import MissionControlRequestHandler
+
+    handler = object.__new__(MissionControlRequestHandler)
+    called = []
+    handler.path = "/api/v1/preflight/identity-confirmation"
+    handler._preflight_identity_confirmation = (
+        lambda parsed: called.append(parsed.path)
+    )
+
+    handler.do_POST()
+
+    assert called == [
+        "/api/v1/preflight/identity-confirmation"
+    ]
+
+
+def test_dashboard_exposes_operator_chassis_confirmation():
+    from pathlib import Path
+
+    source = (
+        Path(__file__).parents[1]
+        / "truepanel"
+        / "web"
+        / "static"
+        / "index.html"
+    ).read_text(encoding="utf-8")
+
+    assert "confirmPreflightIdentity" in source
+    assert "/api/v1/preflight/identity-confirmation" in source
+    assert "CONFIRM_QNAP_CHASSIS_IDENTITY" in source
+    assert "PASS · OPERATOR VERIFIED" in source
+    assert "data-preflight-identity-model" in source

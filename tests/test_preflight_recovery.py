@@ -85,3 +85,63 @@ def test_failed_check_stays_blocked_until_evidence_changes():
     assert check["review"]["state"] == "blocked"
     assert check["review"]["rerun_available"] is True
     assert check["review"]["manual_pass_allowed"] is False
+
+
+
+def test_known_ambiguous_qnap_identity_offers_operator_verification():
+    payload = build_preflight_payload(
+        _report(
+            CompatibilityCheck(
+                status="REVIEW",
+                name="QNAP Identity",
+                detail=(
+                    "INSYDE / QW56; OEM DMI may not expose "
+                    "the chassis manufacturer"
+                ),
+            ),
+        ),
+        identity_review={
+            "detected_identity": "INSYDE / QW56",
+            "confirmable": True,
+            "candidate_model": "TVS-671",
+            "verified": False,
+            "binding": "current_hardware_fingerprint",
+        },
+    )
+
+    check = _section(payload, "host")["checks"][0]
+    review = check["review"]
+
+    assert review["operator_verification_allowed"] is True
+    assert review["candidate_model"] == "TVS-671"
+    assert review["manual_pass_allowed"] is False
+    assert (
+        review["verification_binding"]
+        == "current_hardware_fingerprint"
+    )
+
+
+def test_operator_verified_qnap_identity_reports_provenance():
+    payload = build_preflight_payload(
+        _report(
+            CompatibilityCheck(
+                status="PASS",
+                name="QNAP Identity",
+                detail=(
+                    "INSYDE / QW56; operator verified QNAP TVS-671"
+                ),
+            ),
+            classification="SUPPORTED",
+        ),
+        identity_review={
+            "detected_identity": "INSYDE / QW56",
+            "confirmable": False,
+            "verified": True,
+            "verified_model": "TVS-671",
+            "binding": "current_hardware_fingerprint",
+        },
+    )
+
+    check = _section(payload, "host")["checks"][0]
+    assert check["review"]["verification_source"] == "operator"
+    assert check["review"]["verified_model"] == "TVS-671"
