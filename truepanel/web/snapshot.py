@@ -48,6 +48,7 @@ from truepanel.lifeline import (
     ReplacementCandidateProvider,
     service_profile_for_config,
 )
+from truepanel.vpn_status import VpnStatusProvider
 
 from . import snapshot_base as _base
 
@@ -227,6 +228,7 @@ class SnapshotService(_base.SnapshotService):
         lifeline_store=None,
         lifeline_path=None,
         cargo_provider=None,
+        vpn_status_provider=None,
         **kwargs,
     ) -> None:
         if kwargs.get("fan_status_provider") is None:
@@ -269,6 +271,11 @@ class SnapshotService(_base.SnapshotService):
             cargo_provider
             if cargo_provider is not None
             else provider_from_config(self.config)
+        )
+        self.vpn_status_provider = (
+            vpn_status_provider
+            if vpn_status_provider is not None
+            else VpnStatusProvider()
         )
 
     @staticmethod
@@ -335,6 +342,26 @@ class SnapshotService(_base.SnapshotService):
     ) -> dict[str, Any]:
         result = dict(payload)
         result["cargo_bay"] = self._cargo_bay_payload()
+
+        try:
+            vpn = self.vpn_status_provider.snapshot()
+        except (
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+            AttributeError,
+        ):
+            vpn = {
+                "read_only": True,
+                "label": "ExpressVPN",
+                "state": "UNAVAILABLE",
+                "tone": "neutral",
+                "connected": False,
+                "reason": "VPN telemetry unavailable.",
+            }
+
+        result["vpn"] = vpn
         return result
 
     def _record_healthy_fingerprints(self) -> None:
