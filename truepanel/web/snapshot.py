@@ -337,7 +337,8 @@ class SnapshotService(_base.SnapshotService):
         result = dict(payload)
         result["cargo_bay"] = self._cargo_bay_payload()
 
-        if self.vpn_status_provider is None:
+        vpn_status_provider = getattr(self, "vpn_status_provider", None)
+        if vpn_status_provider is None:
             vpn = {
                 "read_only": True,
                 "label": "ExpressVPN",
@@ -348,7 +349,7 @@ class SnapshotService(_base.SnapshotService):
             }
         else:
             try:
-                vpn = self.vpn_status_provider.snapshot()
+                vpn = vpn_status_provider.snapshot()
             except (
                 OSError,
                 RuntimeError,
