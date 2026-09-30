@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.29.1 · refreshed 2026-09-29 · 1 experiment(s)
+Registry version 2026.09.30.1 · refreshed 2026-09-30 · 1 experiment(s)
 
 ## TP-EXP-0015 · CHECKRIDE live storage recovery
 

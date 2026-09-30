@@ -12,13 +12,19 @@ from pathlib import Path
 
 
 def run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    completed = subprocess.run(
         command,
         cwd=cwd,
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
     )
+    if completed.returncode:
+        raise RuntimeError(
+            f"installed-wheel command failed ({completed.returncode}): "
+            f"{completed.stderr or completed.stdout}"
+        )
+    return completed
 
 
 def main() -> int:
@@ -78,7 +84,7 @@ def main() -> int:
                     "from truepanel.hangar import load_registry, validate_registry; "
                     "registry = load_registry(); "
                     "assert validate_registry(registry) == (); "
-                    "assert len(registry['experiments']) == 31; "
+                    "assert len(registry['experiments']) == 32; "
                     "checkride = next(item for item in registry['experiments'] "
                     "if item['id'] == 'TP-EXP-0015'); "
                     "assert checkride['state'] == 'IN_PROGRESS'; "
@@ -173,6 +179,15 @@ def main() -> int:
                     "audit_return_proof = run_dual_audit_return_checkride(); "
                     "assert audit_return_proof['status_counts']['HOLD'] == 8; "
                     "assert audit_return_proof['measurements']['signature_only_eligibility'] == 0; "
+                    "field_ceremony = next(item for item in registry['experiments'] "
+                    "if item['id'] == 'TP-EXP-0032'); "
+                    "assert field_ceremony['state'] == 'COMPLETED'; "
+                    "from truepanel.holodeck.aegis_field_ceremony import "
+                    "run_field_ceremony_checkride; "
+                    "field_proof = run_field_ceremony_checkride(); "
+                    "assert field_proof['status_counts']['HOLD'] == 7; "
+                    "assert field_proof['measurements']['operator_action_gates'] == 5; "
+                    "assert field_proof['measurements']['unsafe_ready'] == 0; "
                     "from truepanel.holodeck.aegis_operator_handoff import "
                     "run_operator_handoff_preflight_checkride; "
                     "preflight_proof = run_operator_handoff_preflight_checkride(); "

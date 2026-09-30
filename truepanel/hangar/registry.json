@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.29.1",
-  "updated_at": "2026-09-29",
+  "registry_version": "2026.09.30.1",
+  "updated_at": "2026-09-30",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -508,6 +508,25 @@
       "revisit_conditions": ["JT performs the first real offline signature ceremony", "the standalone verifier witness schema changes", "the SSHSIG namespace or allowed-signers format changes", "any consumer seeks stronger authority"],
       "strongest_follow_up": "Run one real read-only ceremony using JT's protected development public roster and independently delivered auditor, then preserve the audit-bound returned result without granting production authority.",
       "freshness": {"reviewed_at": "2026-09-29", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0032", "title": "AEGIS read-only field ceremony", "state": "COMPLETED",
+      "hypothesis": "A single read-only coordinator can distinguish missing JT-owned ceremony inputs from invalid supplied evidence while preserving every development-only authority boundary.",
+      "value": "Turns a chain of individually safe tools into one honest operator workflow without manufacturing trust artifacts or widening authority.",
+      "prior_art": ["in-toto ordered layouts", "SLSA verification summary attestations", "TUF client-side transitions", "Reproducible Builds independent verification", "OpenSSH SSHSIG"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-field-ceremony", "pr": null, "commits": []},
+      "protocol": ["content-pin the standalone verifier", "require operator-attested independent fingerprint confirmation", "validate the protected public-only roster", "audit the exact signing kit internally", "require a matching standalone audit witness", "require the detached offline SSHSIG", "reconstruct all materials and checkout state", "return only development-candidate review eligibility"],
+      "fixtures": ["aegis-field-ceremony-v1", "tests/test_aegis_field_ceremony.py"],
+      "success_criteria": ["five missing-artifact states name exact operator actions", "one complete fixture reaches development-candidate review", "all supplied-invalid paths hold", "zero private-key input signer invocation stronger authority or live action"],
+      "abort_criteria": ["coordinator creates an operator-owned artifact", "missing and invalid evidence share a successful state", "an earlier stage can be skipped", "independent delivery is represented as mechanically proven", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-field-ceremony-v1.json", "sha256": "f4e688726fe657e5c0c7b61fbb9c2af02e94e30cf09e1ff84e4574e044fc968f"}],
+      "outcome": {"conclusion": "Five exact operator action gates, one complete development-eligible fixture, and seven adversarial holds are distinguished with zero unsafe-ready result, signer invocation, private-key input, stronger authority, or live action."},
+      "invalidated_assumptions": ["individually safe commands automatically form a safe operator workflow", "missing operator material and invalid supplied evidence should share one generic hold state", "a same-channel digest proves independent delivery"],
+      "reproduction": ["pytest -q tests/test_aegis_field_ceremony.py", "python -c \"from truepanel.holodeck.aegis_field_ceremony import run_field_ceremony_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.field_ceremony --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT independently confirms the verifier fingerprint", "JT provisions the protected development public roster", "a real signing kit crosses the offline boundary", "any ceremony schema or authority consumer changes"],
+      "strongest_follow_up": "JT confirms the verifier fingerprint through an independent channel and provisions only the protected development public roster; the read-only coordinator then names and verifies each remaining gate.",
+      "freshness": {"reviewed_at": "2026-09-30", "review_after": "2026-12-31"}
     }
   ]
 }
