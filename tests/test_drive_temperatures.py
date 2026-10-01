@@ -39,7 +39,7 @@ def test_unrecognized_temperature_is_missing():
     )
 
 
-def test_provider_preserves_legacy_population():
+def test_provider_reports_all_discovered_devices_with_temperatures():
     responses = {
         (
             "lsblk -ndo NAME,TYPE | "
@@ -62,6 +62,14 @@ def test_provider_preserves_legacy_population():
             "0x0022 062 050 000 "
             "Old_age Always - 38"
         ),
+        (
+            "smartctl -a /dev/sdf "
+            "2>/dev/null"
+        ): (
+            "194 Temperature_Celsius "
+            "0x0022 060 050 000 "
+            "Old_age Always - 42"
+        ),
     }
 
     provider = DriveTemperatureProvider(
@@ -75,11 +83,43 @@ def test_provider_preserves_legacy_population():
 
     assert provider.records() == [
         {
+            "drive": "sdf",
+            "temp": 42,
+        },
+        {
             "drive": "sdb",
             "temp": 38,
-        }
+        },
     ]
 
     assert provider.temperatures() == (
+        42.0,
         38.0,
     )
+
+
+def test_provider_allows_explicit_device_exclusion():
+    responses = {
+        (
+            "lsblk -ndo NAME,TYPE | "
+            "awk '$2==\"disk\""
+            "{print \"/dev/\"$1}'"
+        ): "/dev/sda\n/dev/sdf\n",
+        "smartctl -a /dev/sda 2>/dev/null": (
+            "194 Temperature_Celsius "
+            "0x0022 062 050 000 "
+            "Old_age Always - 38"
+        ),
+    }
+
+    provider = DriveTemperatureProvider(
+        runner=lambda command: responses.get(command, ""),
+        excluded_devices=("sdf",),
+    )
+
+    assert provider.records() == [
+        {
+            "drive": "sda",
+            "temp": 38,
+        }
+    ]

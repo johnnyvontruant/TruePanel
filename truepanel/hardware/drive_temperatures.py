@@ -77,17 +77,13 @@ def parse_legacy_smart_temperature(
 class DriveTemperatureProvider:
     """
     Collect temperatures using TruePanel's established SMART parser.
-
-    The sdf exclusion is intentionally retained during Host Agent migration.
     """
 
     def __init__(
         self,
         *,
         runner: CommandRunner = _shell,
-        excluded_devices: tuple[str, ...] = (
-            "sdf",
-        ),
+        excluded_devices: tuple[str, ...] = (),
     ) -> None:
         self._runner = runner
         self._excluded_devices = {
