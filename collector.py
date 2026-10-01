@@ -519,9 +519,6 @@ class TruePanelCollector:
         results = []
 
         for disk in disks:
-            if disk.endswith("/sdf"):
-                continue
-
             health_out = self.shell(f"smartctl -H {disk} 2>/dev/null")
             attrs_out = self.shell(f"smartctl -A {disk} 2>/dev/null")
 
