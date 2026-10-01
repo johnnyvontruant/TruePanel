@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.30.1 · refreshed 2026-09-30 · 27 experiment(s)
+Registry version 2026.10.01.1 · refreshed 2026-10-01 · 28 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -219,3 +219,11 @@ Five exact operator action gates, one complete development-eligible fixture, and
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: JT confirms the verifier fingerprint through an independent channel and provisions only the protected development public roster; the read-only coordinator then names and verifies each remaining gate.
 - Revisit when: JT independently confirms the verifier fingerprint; JT provisions the protected development public roster; a real signing kit crosses the offline boundary; any ceremony schema or authority consumer changes
+
+## TP-EXP-0033 · AEGIS content-bound operator action packet
+
+One exact public action packet verifies, seven evidence presentation and authority substitutions hold, and two non-action states are denied with zero action satisfaction or stronger authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: JT obtains and compares the verifier fingerprint through an independent channel, then provisions only the protected development public roster; the field coordinator names the next gate.
+- Revisit when: JT independently confirms the verifier fingerprint; field-ceremony or verifier-release schema changes; operator instructions change; any consumer seeks to treat the packet as authorization

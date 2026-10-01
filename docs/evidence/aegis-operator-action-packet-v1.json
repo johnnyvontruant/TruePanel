@@ -1,0 +1,33 @@
+{
+  "control_authority": false,
+  "measurements": {
+    "action_satisfactions": 0,
+    "adversarial_holds": 7,
+    "card_names_independent_boundary": 1,
+    "deployments": 0,
+    "hardware_actions": 0,
+    "independent_channels_manufactured": 0,
+    "non_action_denials": 2,
+    "packets_verified": 1,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {"gaps": 0, "total": 8, "trusted": 8},
+  "scenario": "aegis-operator-action-packet-v1",
+  "scenarios": [
+    {"reason": "ACTION_REQUIRED_INDEPENDENT_VERIFIER_CONFIRMATION", "scenario": "exact-public-action-packet", "status": "OPERATOR_ACTION_PACKET_VERIFIED"},
+    {"reason": "OperatorActionPacketMismatch", "scenario": "action-substitution", "status": "HOLD"},
+    {"reason": "OperatorActionPacketMismatch", "scenario": "verifier-substitution", "status": "HOLD"},
+    {"reason": "OperatorActionPacketMismatch", "scenario": "authority-escalation", "status": "HOLD"},
+    {"reason": "OperatorActionPacketMismatch", "scenario": "private-key-request", "status": "HOLD"},
+    {"reason": "OperatorActionPacketMismatch", "scenario": "independence-spoof", "status": "HOLD"},
+    {"reason": "OperatorActionPacketMismatch", "scenario": "packet-extension", "status": "HOLD"},
+    {"reason": "OperatorActionPacketVerifierMismatch", "scenario": "ceremony-substitution", "status": "HOLD"},
+    {"reason": "OperatorActionPacketCeremonyInvalid", "scenario": "eligible-result-is-not-an-action", "status": "DENIED"},
+    {"reason": "OperatorActionPacketCeremonyInvalid", "scenario": "held-result-is-not-an-action", "status": "DENIED"}
+  ],
+  "status_counts": {"DENIED": 2, "HOLD": 7, "OPERATOR_ACTION_PACKET_VERIFIED": 1}
+}

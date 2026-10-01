@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.30.1",
-  "updated_at": "2026-09-30",
+  "registry_version": "2026.10.01.1",
+  "updated_at": "2026-10-01",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -527,6 +527,25 @@
       "revisit_conditions": ["JT independently confirms the verifier fingerprint", "JT provisions the protected development public roster", "a real signing kit crosses the offline boundary", "any ceremony schema or authority consumer changes"],
       "strongest_follow_up": "JT confirms the verifier fingerprint through an independent channel and provisions only the protected development public roster; the read-only coordinator then names and verifies each remaining gate.",
       "freshness": {"reviewed_at": "2026-09-30", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0033", "title": "AEGIS content-bound operator action packet", "state": "COMPLETED",
+      "hypothesis": "A public packet can bind the exact field-ceremony gate, reviewed verifier, completed evidence, and operator-visible steps without satisfying that gate or manufacturing independent trust.",
+      "value": "Makes JT's next development-only action precise and auditable while preserving the line between explanation and authorization.",
+      "prior_art": ["Sigstore root-signing events", "in-toto ordered recording", "TUF role transitions", "RSTUF offline ceremony guidance", "OpenSSH SSHSIG"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-operator-action-packet", "pr": null, "commits": []},
+      "protocol": ["reconstruct the exact field-ceremony result", "bind completed stages and verifier release", "select one known JT-owned public input", "derive ordered operator steps", "render a public card from canonical data", "verify by exact reconstruction", "leave the described action unsatisfied"],
+      "fixtures": ["aegis-operator-action-packet-v1", "tests/test_aegis_operator_action_packet.py"],
+      "success_criteria": ["one exact packet verifies", "all presentation evidence and authority substitutions hold", "eligible and held ceremony results are denied", "zero action satisfaction independent-channel fabrication private-key input stronger authority or live action"],
+      "abort_criteria": ["packet satisfies its own action", "same-channel material is represented as independent", "private-key path or signer accepted", "operator steps are not content-bound", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-operator-action-packet-v1.json", "sha256": "5115dc83c594e038a7c171a8dc67c076b36b97e7370ffbd4d30f775229de6475"}],
+      "outcome": {"conclusion": "One exact public action packet verifies, seven evidence presentation and authority substitutions hold, and two non-action states are denied with zero action satisfaction or stronger authority."},
+      "invalidated_assumptions": ["a machine-readable next_action fully binds the human handoff", "a same-channel explanatory packet may serve as independent trust evidence", "operator-visible steps need not be reconstructed from canonical state"],
+      "reproduction": ["pytest -q tests/test_aegis_operator_action_packet.py", "python -c \"from truepanel.holodeck.aegis_operator_action_packet import run_operator_action_packet_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.operator_action_packet --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT independently confirms the verifier fingerprint", "field-ceremony or verifier-release schema changes", "operator instructions change", "any consumer seeks to treat the packet as authorization"],
+      "strongest_follow_up": "JT obtains and compares the verifier fingerprint through an independent channel, then provisions only the protected development public roster; the field coordinator names the next gate.",
+      "freshness": {"reviewed_at": "2026-10-01", "review_after": "2027-01-31"}
     }
   ]
 }
