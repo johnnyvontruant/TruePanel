@@ -80,6 +80,11 @@ def test_drive_bay_mirror_renders_six_chassis_positions_and_unknown_fails_closed
     assert '.cockpit-bay-led.fault' in script
     assert '.cockpit-bay-led.missing' in script
     assert '.cockpit-bay-led.identify' in script
+    assert 'id="cockpitBayUnresolved"' in script
+    assert "mirror.unresolved_members" in script
+    assert "mirror.unresolved_member_count" in script
+    assert "BAY IDENTITY UNKNOWN" in script
+    assert ".cockpit-bay-unresolved" in script
 
 
 def test_drive_bay_ui_never_renders_private_disk_identity_fields():
