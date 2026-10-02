@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +21,12 @@ from .signing_tool import (
 )
 from .ssh_verifier import OpenSshSignatureVerifier
 from .verifier_bootstrap import verify_verifier_release
+from .verifier_confirmation import (
+    load_verifier_confirmation_document,
+    verify_verifier_confirmation_receipt,
+)
 
 FIELD_CEREMONY_SCHEMA = "truepanel.aegis-development-field-ceremony/v1"
-INDEPENDENT_CHANNEL_CONFIRMATION = "JT_CONFIRMED_AEGIS_VERIFIER_FINGERPRINT"
 _AUTHORITY = {
     "production_authority": False,
     "deployment_authority": False,
@@ -64,8 +67,8 @@ def assess_field_ceremony(
     *,
     verifier_receipt_path: str | Path,
     verifier_source_path: str | Path,
-    expected_verifier_sha256: str | None = None,
-    independent_channel_confirmation: str | None = None,
+    verifier_confirmation_receipt: Mapping[str, Any] | None = None,
+    confirmation_observed_at: str | None = None,
     allowed_signers_path: str | Path | None = None,
     kit_directory: str | Path | None = None,
     independent_witness_path: str | Path | None = None,
@@ -91,22 +94,32 @@ def assess_field_ceremony(
         }
     )
 
-    if independent_channel_confirmation is None and expected_verifier_sha256 is None:
+    if verifier_confirmation_receipt is None and confirmation_observed_at is None:
         return _result(
             "ACTION_REQUIRED_INDEPENDENT_VERIFIER_CONFIRMATION",
             stages=stages,
             next_action="JT_CONFIRMS_VERIFIER_SHA256_THROUGH_INDEPENDENT_CHANNEL",
         )
-    if (
-        independent_channel_confirmation != INDEPENDENT_CHANNEL_CONFIRMATION
-        or expected_verifier_sha256 != bootstrap["source_sha256"]
-    ):
+    if verifier_confirmation_receipt is None or confirmation_observed_at is None:
+        return _hold(stages, "IndependentVerifierConfirmationIncomplete")
+    if verifier_confirmation_receipt.get("source_sha256") != bootstrap["source_sha256"]:
         return _hold(stages, "IndependentVerifierFingerprintMismatch")
+    try:
+        confirmation = verify_verifier_confirmation_receipt(
+            receipt=verifier_confirmation_receipt,
+            release=bootstrap,
+            observed_at=confirmation_observed_at,
+        )
+    except ValueError as error:
+        return _hold(stages, str(error))
     stages.append(
         {
             "stage": "independent_channel",
-            "status": "OPERATOR_ATTESTED_INDEPENDENT_CHANNEL",
-            "source_sha256": expected_verifier_sha256,
+            "status": confirmation["status"],
+            "source_sha256": confirmation["source_sha256"],
+            "evidence_class": confirmation["evidence_class"],
+            "confirmed_at": confirmation["confirmed_at"],
+            "expires_at": confirmation["expires_at"],
         }
     )
 
@@ -210,8 +223,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--verifier-receipt", required=True, type=Path)
     parser.add_argument("--verifier-source", required=True, type=Path)
-    parser.add_argument("--expected-verifier-sha256")
-    parser.add_argument("--confirm-independent-channel")
+    parser.add_argument("--verifier-confirmation-receipt", type=Path)
+    parser.add_argument("--confirmation-observed-at")
     parser.add_argument("--allowed-signers", type=Path)
     parser.add_argument("--kit", type=Path)
     parser.add_argument("--independent-witness", type=Path)
@@ -223,11 +236,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(arguments: Sequence[str] | None = None) -> int:
     values = build_parser().parse_args(arguments)
+    confirmation = None
+    if values.verifier_confirmation_receipt is not None:
+        try:
+            confirmation = load_verifier_confirmation_document(
+                values.verifier_confirmation_receipt
+            )
+        except ValueError as error:
+            print(json.dumps({"status": "HOLD", "reason": str(error)}, sort_keys=True))
+            return 2
     result = assess_field_ceremony(
         verifier_receipt_path=values.verifier_receipt,
         verifier_source_path=values.verifier_source,
-        expected_verifier_sha256=values.expected_verifier_sha256,
-        independent_channel_confirmation=values.confirm_independent_channel,
+        verifier_confirmation_receipt=confirmation,
+        confirmation_observed_at=values.confirmation_observed_at,
         allowed_signers_path=values.allowed_signers,
         kit_directory=values.kit,
         independent_witness_path=values.independent_witness,
@@ -245,6 +267,5 @@ if __name__ == "__main__":
 
 __all__ = [
     "FIELD_CEREMONY_SCHEMA",
-    "INDEPENDENT_CHANNEL_CONFIRMATION",
     "assess_field_ceremony",
 ]
