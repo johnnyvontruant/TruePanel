@@ -218,3 +218,46 @@ def test_device_bay_map_is_not_privacy_scrubbed_unlike_snapshot():
 
     assert provider.device_bay_map() == {"sda": 1}
     assert "device" not in provider.snapshot()["bays"][0]
+
+
+def test_bay_mirror_reports_unresolved_fault_without_guessing_empty_bay():
+    status = """
+  pool: HDDs
+ state: DEGRADED
+config:
+
+        NAME                      STATE     READ WRITE CKSUM
+        HDDs                      DEGRADED     0     0     0
+          raidz1-0                DEGRADED     0     0     0
+            /dev/sda1             ONLINE       0     0     0
+            15571478626791065431  UNAVAIL      0     0     0  was /dev/disk/by-partuuid/example
+            /dev/sdc1             ONLINE       0     0     0
+
+errors: No known data errors
+"""
+
+    provider = BayMirrorProvider(
+        inventory=Inventory(
+            [
+                bay(1, "sda"),
+                bay(2, "", installed=False),
+                bay(3, "sdc"),
+            ]
+        ),
+        status_runner=lambda: status,
+    )
+
+    payload = provider.snapshot()
+
+    assert payload["bays"][1]["state"] == "empty"
+    assert payload["unresolved_member_count"] == 1
+    assert payload["unresolved_members"] == [
+        {
+            "pool": "HDDs",
+            "zfs_state": "UNAVAIL",
+        }
+    ]
+
+    encoded = str(payload)
+    assert "15571478626791065431" not in encoded
+    assert "partuuid" not in encoded.lower()
