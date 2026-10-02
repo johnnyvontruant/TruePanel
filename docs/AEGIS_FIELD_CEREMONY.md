@@ -23,9 +23,10 @@ false.
 | Diverse audit | Standalone audit witness | Two digest-identical audits | `ACTION_REQUIRED_INDEPENDENT_KIT_AUDIT` | `HOLD` |
 | Authorization | Detached offline SSHSIG | Audit-bound returned-signature verification | `ACTION_REQUIRED_OFFLINE_SIGNATURE` | `HOLD` |
 
-The independent-channel stage is explicitly recorded as an operator
-attestation. A same-repository receipt is not misrepresented as an independent
-trust root.
+The independent-channel stage requires a content-bound, 30-minute operator
+attestation receipt. A same-repository value is rejected as a comparison
+method, and the receipt is explicitly not misrepresented as cryptographic
+proof of JT or the independent channel.
 
 ## HoloDeck evidence
 

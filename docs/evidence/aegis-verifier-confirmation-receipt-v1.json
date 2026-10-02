@@ -1,0 +1,36 @@
+{
+  "control_authority": false,
+  "measurements": {
+    "adversarial_holds": 10,
+    "cryptographic_independence_claims": 0,
+    "deployments": 0,
+    "hardware_actions": 0,
+    "legacy_magic_string_paths": 0,
+    "operator_attestations_verified": 1,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_builds_denied": 3
+  },
+  "production_mutation": false,
+  "recovery_coverage": {"gaps": 0, "total": 8, "trusted": 8},
+  "scenario": "aegis-verifier-confirmation-receipt-v1",
+  "scenarios": [
+    {"reason": "OPERATOR_ATTESTATION_NOT_CRYPTOGRAPHIC_PROOF", "scenario": "exact-operator-attestation", "status": "OPERATOR_ATTESTED_INDEPENDENT_CHANNEL"},
+    {"reason": "IndependentVerifierFingerprintMismatch", "scenario": "mismatched-independent-digest", "status": "DENIED"},
+    {"reason": "VerifierConfirmationChannelInvalid", "scenario": "same-repository-channel", "status": "DENIED"},
+    {"reason": "VerifierConfirmationChallengeInvalid", "scenario": "extended-challenge", "status": "DENIED"},
+    {"reason": "VerifierConfirmationReceiptInvalid", "scenario": "challenge-substitution", "status": "HOLD"},
+    {"reason": "VerifierConfirmationReceiptInvalid", "scenario": "channel-substitution", "status": "HOLD"},
+    {"reason": "VerifierConfirmationReceiptInvalid", "scenario": "claim-removed", "status": "HOLD"},
+    {"reason": "VerifierConfirmationReceiptInvalid", "scenario": "cryptographic-proof-spoof", "status": "HOLD"},
+    {"reason": "VerifierConfirmationReceiptInvalid", "scenario": "authority-escalation", "status": "HOLD"},
+    {"reason": "VerifierConfirmationReceiptInvalid", "scenario": "private-key-accepted", "status": "HOLD"},
+    {"reason": "VerifierConfirmationReceiptInvalid", "scenario": "signer-invoked", "status": "HOLD"},
+    {"reason": "VerifierConfirmationReceiptInvalid", "scenario": "receipt-extension", "status": "HOLD"},
+    {"reason": "VerifierConfirmationTimeInvalid", "scenario": "future-confirmation", "status": "HOLD"},
+    {"reason": "VerifierConfirmationExpired", "scenario": "expired-confirmation", "status": "HOLD"}
+  ],
+  "status_counts": {"DENIED": 3, "HOLD": 10, "OPERATOR_ATTESTED_INDEPENDENT_CHANNEL": 1}
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.01.1",
-  "updated_at": "2026-10-01",
+  "registry_version": "2026.10.02.1",
+  "updated_at": "2026-10-02",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -546,6 +546,25 @@
       "revisit_conditions": ["JT independently confirms the verifier fingerprint", "field-ceremony or verifier-release schema changes", "operator instructions change", "any consumer seeks to treat the packet as authorization"],
       "strongest_follow_up": "JT obtains and compares the verifier fingerprint through an independent channel, then provisions only the protected development public roster; the field coordinator names the next gate.",
       "freshness": {"reviewed_at": "2026-10-01", "review_after": "2027-01-31"}
+    },
+    {
+      "id": "TP-EXP-0034", "title": "AEGIS verifier confirmation receipt", "state": "COMPLETED",
+      "hypothesis": "The first field-ceremony gate can replace a fixed confirmation phrase with a short-lived content-bound operator attestation without pretending to cryptographically prove JT or the independent channel.",
+      "value": "Makes the lone-human trust bootstrap exact, fresh, auditable, and honest before public-roster enrollment.",
+      "prior_art": ["Signal safety-number comparison", "TUF out-of-band root bootstrap", "OpenSSH fingerprint rendering", "Sigstore signing events"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-verifier-confirmation-receipt", "pr": null, "commits": []},
+      "protocol": ["verify the pinned verifier release", "render the complete digest in eight blocks", "accept only a named operator-controlled comparison method", "require exact full-digest equality", "bind release challenge statement and method", "expire the attestation after 30 minutes", "reconstruct before advancing the field ceremony"],
+      "fixtures": ["aegis-verifier-confirmation-receipt-v1", "tests/test_aegis_verifier_confirmation.py", "tests/test_aegis_field_ceremony.py"],
+      "success_criteria": ["one exact operator attestation verifies", "unsafe constructions are denied", "tamper replay future and expiry paths hold", "legacy fixed-string path is removed", "zero cryptographic-independence claim private-key input signer invocation stronger authority or live action"],
+      "abort_criteria": ["same-repository delivery accepted as independent", "partial digest accepted", "receipt authenticates JT cryptographically", "future or expired receipt accepted", "private-key path or signer accepted", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-verifier-confirmation-receipt-v1.json", "sha256": "be5658e859719bb21f01e3e1e79d2b1a5791fca308df94062b3cd5249257d862"}],
+      "outcome": {"conclusion": "One exact short-lived operator attestation verifies, three unsafe constructions are denied, and ten substitution freshness and authority attacks hold with no false cryptographic proof or stronger authority."},
+      "invalidated_assumptions": ["a fixed phrase plus digest is sufficient ceremony evidence", "operator comparison method and freshness need not be content-bound", "a well-formed operator attestation can prove its own channel independence"],
+      "reproduction": ["pytest -q tests/test_aegis_verifier_confirmation.py tests/test_aegis_field_ceremony.py", "python -c \"from truepanel.holodeck.aegis_verifier_confirmation import run_verifier_confirmation_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.verifier_confirmation --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT performs the first real comparison", "verifier release or action packet changes", "a cryptographic operator identity becomes available", "any consumer seeks stronger authority"],
+      "strongest_follow_up": "JT obtains the complete verifier SHA-256 through an operator-controlled channel, compares every block, creates the expiring receipt, and then provisions only the protected development public roster.",
+      "freshness": {"reviewed_at": "2026-10-02", "review_after": "2027-02-28"}
     }
   ]
 }

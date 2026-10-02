@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.01.1 · refreshed 2026-10-01 · 28 experiment(s)
+Registry version 2026.10.02.1 · refreshed 2026-10-02 · 29 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -227,3 +227,11 @@ One exact public action packet verifies, seven evidence presentation and authori
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: JT obtains and compares the verifier fingerprint through an independent channel, then provisions only the protected development public roster; the field coordinator names the next gate.
 - Revisit when: JT independently confirms the verifier fingerprint; field-ceremony or verifier-release schema changes; operator instructions change; any consumer seeks to treat the packet as authorization
+
+## TP-EXP-0034 · AEGIS verifier confirmation receipt
+
+One exact short-lived operator attestation verifies, three unsafe constructions are denied, and ten substitution freshness and authority attacks hold with no false cryptographic proof or stronger authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: JT obtains the complete verifier SHA-256 through an operator-controlled channel, compares every block, creates the expiring receipt, and then provisions only the protected development public roster.
+- Revisit when: JT performs the first real comparison; verifier release or action packet changes; a cryptographic operator identity becomes available; any consumer seeks stronger authority
