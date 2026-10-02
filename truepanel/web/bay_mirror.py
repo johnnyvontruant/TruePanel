@@ -135,13 +135,26 @@ class BayMirrorProvider:
             status_text = ""
 
         membership: dict[str, dict[str, Any]] = {}
+        unresolved_members: list[dict[str, str]] = []
+
         if status_text:
             for record in parse_zpool_status(status_text):
                 if not isinstance(record, dict):
                     continue
+
                 device = normalize_device(record.get("zfs_name"))
+                zfs_state = _text(record.get("zfs_state")).upper()
+
                 if not device:
+                    if zfs_state in _FAULT_STATES:
+                        unresolved_members.append(
+                            {
+                                "pool": _text(record.get("pool")) or "unknown",
+                                "zfs_state": zfs_state,
+                            }
+                        )
                     continue
+
                 membership[device] = record
 
         bays: list[dict[str, Any]] = []
@@ -206,6 +219,8 @@ class BayMirrorProvider:
             "available": bool(bays),
             "count": len(bays),
             "bays": bays,
+            "unresolved_member_count": len(unresolved_members),
+            "unresolved_members": unresolved_members,
         }
 
 
