@@ -16,12 +16,15 @@ from truepanel.aegis import verifier_bootstrap
 from truepanel.aegis.acceptance import semantic_sha256
 from truepanel.aegis.development_review import build_development_packet
 from truepanel.aegis.field_ceremony import (
-    INDEPENDENT_CHANNEL_CONFIRMATION,
     assess_field_ceremony,
 )
 from truepanel.aegis.operator_handoff import OPERATOR_KEY_ID
 from truepanel.aegis.signing_session import SIGNING_SESSION_NAMESPACE
 from truepanel.aegis.signing_tool import MATERIALS_SCHEMA, export_signing_kit
+from truepanel.aegis.verifier_confirmation import (
+    build_verifier_confirmation_challenge,
+    create_verifier_confirmation_receipt,
+)
 from truepanel.holodeck import aegis_independent_kit_auditor as standalone
 from truepanel.holodeck.aegis_single_operator_development import (
     NOW,
@@ -122,11 +125,18 @@ def run_field_ceremony_checkride() -> dict[str, Any]:
         release = verifier_bootstrap.verify_verifier_release(
             receipt_path=receipt, source_path=source
         )
+        challenge = build_verifier_confirmation_challenge(release)
+        confirmation = create_verifier_confirmation_receipt(
+            challenge=challenge,
+            independently_observed_sha256=release["source_sha256"],
+            channel="SEPARATE_OPERATOR_DEVICE",
+            confirmed_at="2026-09-19T11:50:00Z",
+        )
         baseline = {
             "verifier_receipt_path": receipt,
             "verifier_source_path": source,
-            "expected_verifier_sha256": release["source_sha256"],
-            "independent_channel_confirmation": INDEPENDENT_CHANNEL_CONFIRMATION,
+            "verifier_confirmation_receipt": confirmation,
+            "confirmation_observed_at": "2026-09-19T12:00:00Z",
             "allowed_signers_path": roster,
             "materials_path": materials_path,
             "checkout_root": checkout,
@@ -143,8 +153,11 @@ def run_field_ceremony_checkride() -> dict[str, Any]:
             assess_field_ceremony(
                 verifier_receipt_path=receipt,
                 verifier_source_path=source,
-                expected_verifier_sha256="0" * 64,
-                independent_channel_confirmation=INDEPENDENT_CHANNEL_CONFIRMATION,
+                verifier_confirmation_receipt={
+                    **confirmation,
+                    "source_sha256": "0" * 64,
+                },
+                confirmation_observed_at="2026-09-19T12:00:00Z",
             ),
         )
         without_roster = dict(baseline)
