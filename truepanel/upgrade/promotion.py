@@ -545,6 +545,30 @@ def promote_with_rollback(
         )
         return 2
 
+    rollback_wrapper_ok, rollback_wrapper_detail = (
+        ensure_cli_wrapper(
+            plan.deploy_root
+        )
+    )
+
+    if not rollback_wrapper_ok:
+        update_manifest_state(
+            plan,
+            state="rollback_failed",
+            promotion_performed=True,
+            services_modified=True,
+            verification_result=(
+                verification_result
+            ),
+            rollback_performed=True,
+        )
+
+        print(
+            "FAIL  Rollback CLI wrapper bootstrap: "
+            f"{rollback_wrapper_detail}"
+        )
+        return 2
+
     rollback_restart = restarter(
         plan.deploy_root
     )
@@ -733,6 +757,9 @@ def verify_truepanel(
                 )
                 or line.startswith(
                     "FAIL  LCD transport"
+                )
+                or line.startswith(
+                    "FAIL  POSTINIT restoration"
                 )
             )
             for line in failure_lines

@@ -327,9 +327,15 @@ def test_failed_verification_rolls_back(
     ).read_text() == (
         "theme_pack: tactical\n"
     )
-    assert not (
+    wrapper = (
         deployed / "bin" / "truepanel"
-    ).exists()
+    )
+    assert wrapper.is_file()
+    assert wrapper.stat().st_mode & 0o111
+
+    # The retained backup remains an exact copy of the legacy
+    # deployment. Compatibility bootstrap applies only to the
+    # restored live tree.
     assert not (
         backup / "bin" / "truepanel"
     ).exists()
@@ -698,6 +704,48 @@ def test_verify_truepanel_retries_transient_readiness(
         attempts=3,
         retry_delay=0.25,
     ) == 0
+    assert len(calls) == 2
+    assert sleeps == [0.25]
+
+
+def test_verify_truepanel_retries_transient_postinit_timeout(
+    tmp_path,
+):
+    root = tmp_path / "TruePanel"
+    _verify_runtime(root)
+    sleeps = []
+    calls = []
+
+    responses = [
+        subprocess.CompletedProcess(
+            ["verify"],
+            1,
+            (
+                "FAIL  POSTINIT restoration           "
+                "Command timed out after 10.0 seconds\n"
+            ),
+            "",
+        ),
+        subprocess.CompletedProcess(
+            ["verify"],
+            0,
+            "Verification Result\nPASS\n",
+            "",
+        ),
+    ]
+
+    def runner(command, **_kwargs):
+        calls.append(list(command))
+        return responses.pop(0)
+
+    assert verify_truepanel(
+        root,
+        runner=runner,
+        sleeper=sleeps.append,
+        attempts=3,
+        retry_delay=0.25,
+    ) == 0
+
     assert len(calls) == 2
     assert sleeps == [0.25]
 
