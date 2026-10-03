@@ -6,6 +6,45 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+## [1.3.1-rc1] - 2026-10-03
+
+TruePanel 1.3.1-rc1 is a focused maintenance candidate for the 1.3 line.
+It improves storage telemetry completeness, bay-state truthfulness, LED
+behavior, operator verification, and Mission Control status visibility
+without expanding hardware or storage authority.
+
+### Fixed
+
+- Restored drive-temperature telemetry for all active drives, including Bay 6.
+- Restored SMART telemetry for all active drives, including Bay 6.
+- Added an unresolved-pool-member warning to Bay Mirror without guessing
+  physical bay identity.
+- Corrected transient storage-bay LED latching.
+- Reconciled thermal bay LED behavior while preserving genuine critical
+  physical indications.
+
+### Added
+
+- Added operator chassis verification to Preflight.
+- Added a read-only VPN status annunciator to Mission Control.
+
+### Safety
+
+- Storage identity remains fail-closed.
+- Logical ZFS evidence cannot invent a physical bay assignment.
+- Bay Mirror exposes only privacy-safe unresolved-member state.
+- No new destructive storage or hardware-control authority is introduced.
+
+### Validated
+
+- Drive-temperature population was live-verified on BattleStation.
+- SMART population was live-verified on BattleStation.
+- Bay Mirror live validation confirmed an unresolved `HDDs` / `UNAVAIL`
+  member while preserving independent physical-bay state.
+- GitHub CI passed for each merged maintenance fix before deployment.
+
+## [1.3.0] - 2026-08-30
+
 The post-1.2 development line extends TruePanel from health visibility into
 guided, evidence-backed recovery and predictive reliability.
 
