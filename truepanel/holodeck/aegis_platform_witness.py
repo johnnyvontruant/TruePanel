@@ -7,7 +7,8 @@ import json
 from copy import deepcopy
 from typing import Any
 
-from truepanel.aegis.assurance import evaluate_airworthiness
+from truepanel import __version__
+from truepanel.aegis.assurance import evaluate_airworthiness, load_assurance_envelope
 from truepanel.aegis.coverage import coverage_matrix
 from truepanel.aegis.passive_runtime import BoundedTrueNASQueryCache
 from truepanel.aegis.platform_witness import (
@@ -51,11 +52,15 @@ def _digest(value: Any) -> str:
 
 
 def _evaluate(witness: dict[str, Any]) -> dict[str, Any]:
+    envelope = deepcopy(load_assurance_envelope())
+    envelope["truepanel_version"] = __version__
+
     return evaluate_airworthiness(
         payload=bind_platform_witness({"system": {}}, witness),
         coverage_matrix=coverage_matrix(rehearse_recovery_paths()),
         correlation_policy=DEFAULT_CORRELATION_POLICY.describe(),
         now=1788609600.0,
+        envelope=envelope,
     )
 
 
