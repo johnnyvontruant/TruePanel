@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -23,10 +24,8 @@ def cartridge(tmp_path):
         uuid="ABCD-1234",
         role="movies",
         source_prefix=tmp_path / "nas",
-        usb_relative_path=(
-            __import__("pathlib").Path(
-                "Movies E-I"
-            )
+        usb_relative_path=Path(
+            "Movies E-I"
         ),
         allow_ingest=True,
         allow_backup=True,
