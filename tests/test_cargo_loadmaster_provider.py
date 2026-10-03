@@ -85,6 +85,29 @@ def test_provider_marks_loadmaster_disabled_without_registry():
     assert result["loadmaster"]["state"] == "DISABLED"
 
 
+def test_enabled_provider_without_registry_path_fail_closes():
+    media_path = (
+        "/mnt/HDDs/Movies/Movies E-I/"
+        "Heat (1995)/Heat (1995).mkv"
+    )
+
+    provider = CachedCargoProvider(
+        Resolver(payload(media_path)),
+        cache_seconds=0,
+        loadmaster_enabled=True,
+        cartridge_registry_path=None,
+    )
+
+    result = provider.snapshot()
+    loadmaster = result["loadmaster"]
+
+    assert loadmaster["state"] == "INVALID"
+    assert (
+        "cartridge_registry_path"
+        in loadmaster["invalid_reason"]
+    )
+
+
 def test_provider_attaches_pending_cartridge_summary(
     tmp_path,
 ):
