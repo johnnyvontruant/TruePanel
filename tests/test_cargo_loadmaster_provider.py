@@ -159,6 +159,7 @@ def test_provider_fail_closes_invalid_registry(
     provider = CachedCargoProvider(
         Resolver(payload(media_path)),
         cache_seconds=0,
+        loadmaster_enabled=True,
         cartridge_registry_path=registry,
     )
 
