@@ -1,0 +1,45 @@
+{
+  "control_authority": false,
+  "measurements": {
+    "adversarial_holds": 10,
+    "cryptographic_independence_claims": 0,
+    "deployments": 0,
+    "hardware_actions": 0,
+    "operator_attestations_verified": 1,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "public_kits_ready": 1,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_confirmations_denied": 2
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-verifier-confirmation-kit-v1",
+  "scenarios": [
+    {"reason": "all public views agree", "scenario": "exact-public-kit", "status": "READY_FOR_OPERATOR_COMPARISON"},
+    {"reason": "OPERATOR_ATTESTATION_NOT_CRYPTOGRAPHIC_PROOF", "scenario": "audited-kit-confirmation", "status": "OPERATOR_ATTESTED_INDEPENDENT_CHANNEL"},
+    {"reason": "VerifierConfirmationKitMismatch", "scenario": "challenge-substitution", "status": "HOLD"},
+    {"reason": "VerifierConfirmationKitMismatch", "scenario": "comparison-card-substitution", "status": "HOLD"},
+    {"reason": "VerifierConfirmationKitMismatch", "scenario": "coordinated-card-manifest-substitution", "status": "HOLD"},
+    {"reason": "VerifierConfirmationKitMismatch", "scenario": "display-block-substitution", "status": "HOLD"},
+    {"reason": "VerifierConfirmationKitMismatch", "scenario": "challenge-authority-escalation", "status": "HOLD"},
+    {"reason": "VerifierConfirmationKitFileSetInvalid", "scenario": "extra-file", "status": "HOLD"},
+    {"reason": "VerifierConfirmationKitFileSetInvalid", "scenario": "missing-file", "status": "HOLD"},
+    {"reason": "VerifierConfirmationKitUnsafePath", "scenario": "symlinked-card", "status": "HOLD"},
+    {"reason": "VerifierConfirmationKitUnsafePath", "scenario": "relative-kit", "status": "HOLD"},
+    {"reason": "IndependentVerifierFingerprintMismatch", "scenario": "partial-or-wrong-digest", "status": "DENIED"},
+    {"reason": "VerifierConfirmationChannelInvalid", "scenario": "same-repository-channel", "status": "DENIED"},
+    {"reason": "VerifierConfirmationKitOutputUnsafe", "scenario": "occupied-output", "status": "HOLD"}
+  ],
+  "status_counts": {
+    "DENIED": 2,
+    "HOLD": 10,
+    "OPERATOR_ATTESTED_INDEPENDENT_CHANNEL": 1,
+    "READY_FOR_OPERATOR_COMPARISON": 1
+  }
+}

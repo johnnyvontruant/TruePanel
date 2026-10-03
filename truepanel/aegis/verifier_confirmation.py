@@ -233,6 +233,8 @@ def create_verifier_confirmation_receipt(
     """Record an exact human comparison without claiming cryptographic proof."""
 
     value = dict(challenge)
+    source_sha256 = value.get("source_sha256")
+    source_commit = value.get("source_commit")
     if (
         set(value) != _CHALLENGE_FIELDS
         or value.get("schema") != CHALLENGE_SCHEMA
@@ -242,6 +244,14 @@ def create_verifier_confirmation_receipt(
         or value.get("operator_statement") != OPERATOR_STATEMENT
         or value.get("evidence_class") != EVIDENCE_CLASS
         or value.get("allowed_channels") != list(_CHANNELS)
+        or not isinstance(source_sha256, str)
+        or len(source_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in source_sha256)
+        or value.get("fingerprint_blocks")
+        != [source_sha256[index : index + 8] for index in range(0, 64, 8)]
+        or not isinstance(source_commit, str)
+        or len(source_commit) != 40
+        or any(character not in "0123456789abcdef" for character in source_commit)
         or value.get("scope") != "DEVELOPMENT_ONLY"
         or any(value.get(field) is not expected for field, expected in _AUTHORITY.items())
     ):
