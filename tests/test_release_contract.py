@@ -17,13 +17,12 @@ def dependency_name(requirement):
     return re.split(r"[<>=!~\[]", requirement, maxsplit=1)[0].strip().lower()
 
 
-def test_stable_product_version():
-    assert truepanel.__version__ == "1.3.0"
+def test_release_candidate_product_version():
+    assert truepanel.__version__ == "1.3.1rc1"
     assert re.fullmatch(
-        r"\d+\.\d+\.\d+",
+        r"\d+\.\d+\.\d+rc\d+",
         truepanel.__version__,
     )
-    assert "rc" not in truepanel.__version__.lower()
     assert truepanel.__version__ == MISSION_CONTROL_VERSION
 
 
