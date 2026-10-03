@@ -43,6 +43,7 @@ without expanding hardware or storage authority.
   member while preserving independent physical-bay state.
 - GitHub CI passed for each merged maintenance fix before deployment.
 
+
 ## [1.3.0] - 2026-08-30
 
 The post-1.2 development line extends TruePanel from health visibility into
