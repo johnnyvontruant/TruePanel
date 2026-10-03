@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import shutil
+
+import truepanel
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,14 +43,32 @@ def _witnessed_payload(value="TrueNAS-SCALE-25.10.5"):
 
 
 def _evaluate(**overrides):
+    envelope = deepcopy(load_assurance_envelope())
+    envelope["truepanel_version"] = truepanel.__version__
+
     arguments = {
         "payload": _witnessed_payload(),
         "coverage_matrix": coverage_matrix(rehearse_recovery_paths()),
         "correlation_policy": DEFAULT_CORRELATION_POLICY.describe(),
         "now": NOW,
+        "envelope": envelope,
     }
     arguments.update(overrides)
     return evaluate_airworthiness(**arguments)
+
+
+def test_packaged_predecessor_holds_on_release_version_drift():
+    result = evaluate_airworthiness(
+        payload=_witnessed_payload(),
+        coverage_matrix=coverage_matrix(rehearse_recovery_paths()),
+        correlation_policy=DEFAULT_CORRELATION_POLICY.describe(),
+        now=NOW,
+    )
+
+    assert truepanel.__version__ == "1.3.1rc1"
+    assert load_assurance_envelope()["truepanel_version"] == "1.3.0"
+    assert result["status"] == "HOLD"
+    assert result["reason"] == "VersionDrift"
 
 
 def test_accepted_contract_is_current_and_has_no_authority():
