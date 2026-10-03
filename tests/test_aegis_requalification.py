@@ -4,6 +4,8 @@ from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 
+import truepanel
+
 from truepanel.aegis.assurance import load_assurance_envelope
 from truepanel.aegis.coverage import coverage_matrix
 from truepanel.aegis.passive_runtime import BoundedTrueNASQueryCache
@@ -51,6 +53,7 @@ def candidate(version: str = "25.10.6"):
             "issued_at": "2026-09-06T04:08:19Z",
             "expires_at": "2026-12-05T04:08:19Z",
             "platform_version": version,
+            "truepanel_version": truepanel.__version__,
             "review_required": True,
             "automatic_acceptance": False,
             "renewal_contract_sha256": renewal_contract_sha256(ROOT),
