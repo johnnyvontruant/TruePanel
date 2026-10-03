@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.02.1",
-  "updated_at": "2026-10-02",
+  "registry_version": "2026.10.03.1",
+  "updated_at": "2026-10-03",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -565,6 +565,25 @@
       "revisit_conditions": ["JT performs the first real comparison", "verifier release or action packet changes", "a cryptographic operator identity becomes available", "any consumer seeks stronger authority"],
       "strongest_follow_up": "JT obtains the complete verifier SHA-256 through an operator-controlled channel, compares every block, creates the expiring receipt, and then provisions only the protected development public roster.",
       "freshness": {"reviewed_at": "2026-10-02", "review_after": "2027-02-28"}
+    },
+    {
+      "id": "TP-EXP-0035", "title": "AEGIS public verifier confirmation kit", "state": "COMPLETED",
+      "hypothesis": "A portable three-file public kit can make the verifier comparison independently auditable without becoming its own trust source or widening development-only authority.",
+      "value": "Gives JT an exact, custody-safe artifact for the first real out-of-band comparison instead of asking him to reconstruct a CLI ceremony from repository-local files.",
+      "prior_art": ["Signal safety-number presentation", "TUF out-of-band root bootstrap", "Sigstore root-signing events", "OpenSSH fingerprint rendering"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-verifier-confirmation-kit", "pr": null, "commits": []},
+      "protocol": ["verify the pinned standalone verifier", "derive the canonical comparison challenge", "render every SHA-256 block and authority boundary", "write a new owner-protected three-file public kit", "reconstruct challenge card and manifest during audit", "repeat audit immediately before creating the expiring attestation"],
+      "fixtures": ["aegis-verifier-confirmation-kit-v1", "tests/test_aegis_verifier_confirmation_kit.py"],
+      "success_criteria": ["one exact kit is comparison-ready", "one audited-kit attestation verifies", "all custody presentation display and authority attacks hold", "unsafe confirmations are denied", "zero private-key input signer invocation false independence claim stronger authority or live action"],
+      "abort_criteria": ["manifest treated as its own trust root", "card and canonical challenge may disagree", "same-repository delivery accepted as independent", "occupied output overwritten", "private key or signer accepted", "production deployment or hardware authority added"],
+      "evidence": [{"path": "docs/evidence/aegis-verifier-confirmation-kit-v1.json", "sha256": "8ccd1290dac711c62247fdbc4253a4a569c471957d3cd14811f99ada643dafa5"}],
+      "outcome": {"conclusion": "One exact public kit and one audited-kit attestation succeed; ten custody presentation display and authority attacks hold and two unsafe confirmations are denied with no private material, signer call, false independence claim, or stronger authority."},
+      "invalidated_assumptions": ["a correct machine-readable challenge is sufficient human handoff", "the receipt constructor need not independently reconstruct displayed digest blocks", "a manifest may safely authenticate coordinated card changes", "the repository-produced kit can prove its own channel independence"],
+      "reproduction": ["pytest -q tests/test_aegis_verifier_confirmation_kit.py tests/test_aegis_verifier_confirmation.py", "python -c \"from truepanel.holodeck.aegis_verifier_confirmation_kit import run_verifier_confirmation_kit_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.verifier_confirmation_kit --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT performs the first real comparison", "the verifier release or challenge schema changes", "comparison moves to a different operator device", "any consumer seeks stronger authority"],
+      "strongest_follow_up": "Export and audit one real public kit, obtain the full verifier SHA-256 through an operator-controlled channel, compare all eight blocks, and create the short-lived development attestation.",
+      "freshness": {"reviewed_at": "2026-10-03", "review_after": "2027-03-31"}
     }
   ]
 }

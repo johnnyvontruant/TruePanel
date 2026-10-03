@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.02.1 · refreshed 2026-10-02 · 29 experiment(s)
+Registry version 2026.10.03.1 · refreshed 2026-10-03 · 30 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -235,3 +235,11 @@ One exact short-lived operator attestation verifies, three unsafe constructions 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: JT obtains the complete verifier SHA-256 through an operator-controlled channel, compares every block, creates the expiring receipt, and then provisions only the protected development public roster.
 - Revisit when: JT performs the first real comparison; verifier release or action packet changes; a cryptographic operator identity becomes available; any consumer seeks stronger authority
+
+## TP-EXP-0035 · AEGIS public verifier confirmation kit
+
+One exact public kit and one audited-kit attestation succeed; ten custody presentation display and authority attacks hold and two unsafe confirmations are denied with no private material, signer call, false independence claim, or stronger authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Export and audit one real public kit, obtain the full verifier SHA-256 through an operator-controlled channel, compare all eight blocks, and create the short-lived development attestation.
+- Revisit when: JT performs the first real comparison; the verifier release or challenge schema changes; comparison moves to a different operator device; any consumer seeks stronger authority
