@@ -33,12 +33,14 @@ class CachedCargoProvider:
         cache_seconds: float = 60.0,
         clock: Callable[[], float] = time.monotonic,
         backup_manifest_path: Path | None = None,
+        loadmaster_enabled: bool = False,
         cartridge_registry_path: Path | None = None,
     ) -> None:
         self.resolver = resolver
         self.cache_seconds = max(0.0, float(cache_seconds))
         self.clock = clock
         self.backup_manifest_path = backup_manifest_path
+        self.loadmaster_enabled = bool(loadmaster_enabled)
         self.cartridge_registry_path = cartridge_registry_path
         self._cached_at: float | None = None
         self._cached_payload: dict[str, Any] | None = None
@@ -103,8 +105,12 @@ class CachedCargoProvider:
 
         registry_path = self.cartridge_registry_path
 
-        if registry_path is None:
+        if not self.loadmaster_enabled:
             loadmaster = disabled_loadmaster_summary()
+        elif registry_path is None:
+            loadmaster = unavailable_loadmaster_summary(
+                "Loadmaster cartridge_registry_path is not configured"
+            )
         else:
             try:
                 cartridges = load_cartridge_registry(
@@ -222,6 +228,9 @@ def provider_from_config(
             Path(manifest_path_text)
             if manifest_path_text
             else None
+        ),
+        loadmaster_enabled=(
+            loadmaster.get("enabled") is True
         ),
         cartridge_registry_path=(
             Path(cartridge_registry_path_text)
