@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from truepanel import __version__
 from truepanel.aegis.assurance import evaluate_airworthiness, load_assurance_envelope
 from truepanel.aegis.coverage import coverage_matrix
 from truepanel.aegis.policy import DEFAULT_CORRELATION_POLICY
@@ -32,6 +33,11 @@ def run_airworthiness_rehearsal() -> dict[str, Any]:
 
     archived = Path(__file__).parents[1] / "aegis" / "assurance_envelope_v1.json"
     envelope = load_assurance_envelope(archived)
+
+    # This is a semantic HoloDeck rehearsal of the envelope contract,
+    # not a claim that the archived 1.3.0 envelope covers this package.
+    envelope["truepanel_version"] = __version__
+
     current_subjects = {
         item["name"]: item["sha256"]
         for item in load_assurance_envelope()["subjects"]
