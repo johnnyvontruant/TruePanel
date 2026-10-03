@@ -102,6 +102,7 @@ def test_provider_attaches_pending_cartridge_summary(
     provider = CachedCargoProvider(
         Resolver(payload(media_path)),
         cache_seconds=0,
+        loadmaster_enabled=True,
         cartridge_registry_path=registry,
     )
 
