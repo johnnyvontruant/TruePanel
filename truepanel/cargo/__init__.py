@@ -1,6 +1,14 @@
 """Read-only application cargo discovery for Mission Control."""
 
 from .provider import CachedCargoProvider, provider_from_config
+from .loadmaster import (
+    FileFingerprint,
+    LoadmasterPlanError,
+    build_sync_plan,
+    inventory_payload,
+    load_inventory,
+    scan_tree,
+)
 from .cartridges import (
     CartridgeDefinition,
     assign_cartridge,
@@ -27,6 +35,12 @@ __all__ = [
     "load_cartridge_registry",
     "summarize_cartridge_cargo",
     "unavailable_loadmaster_summary",
+    "FileFingerprint",
+    "LoadmasterPlanError",
+    "build_sync_plan",
+    "inventory_payload",
+    "load_inventory",
+    "scan_tree",
 ]
 
 from .backup_producer import (
