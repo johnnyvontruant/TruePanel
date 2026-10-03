@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from truepanel import __version__
 from truepanel.aegis.assurance import evaluate_airworthiness, load_assurance_envelope
 from truepanel.aegis.coverage import coverage_matrix
 from truepanel.aegis.passive_runtime import BoundedTrueNASQueryCache
@@ -57,6 +58,7 @@ def build_candidate_fixture(
             "issued_at": "2026-09-06T04:08:19Z",
             "expires_at": "2026-12-05T04:08:19Z",
             "platform_version": version,
+            "truepanel_version": __version__,
             "review_required": True,
             "automatic_acceptance": False,
             "renewal_contract_sha256": renewal_contract_sha256(root),
@@ -85,12 +87,15 @@ def run_requalification_rehearsal(
     matrix = coverage_matrix(rehearse_recovery_paths())
     policy = DEFAULT_CORRELATION_POLICY.describe()
 
+    platform_drift_fixture = deepcopy(accepted)
+    platform_drift_fixture["truepanel_version"] = __version__
+
     drifted = evaluate_airworthiness(
         payload=platform_payload("25.10.6"),
         coverage_matrix=matrix,
         correlation_policy=policy,
         now=NOW,
-        envelope=accepted,
+        envelope=platform_drift_fixture,
         package_root=root,
     )
     scenarios: list[dict[str, Any]] = []
