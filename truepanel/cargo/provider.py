@@ -10,6 +10,12 @@ from typing import Any
 
 from .backup_manifest import validate_backup_manifest
 from .backup_state import correlate_backup_manifest
+from .cartridges import (
+    disabled_loadmaster_summary,
+    load_cartridge_registry,
+    summarize_cartridge_cargo,
+    unavailable_loadmaster_summary,
+)
 from .resolver import (
     CargoResolver,
     ServarrClient,
@@ -27,11 +33,15 @@ class CachedCargoProvider:
         cache_seconds: float = 60.0,
         clock: Callable[[], float] = time.monotonic,
         backup_manifest_path: Path | None = None,
+        loadmaster_enabled: bool = False,
+        cartridge_registry_path: Path | None = None,
     ) -> None:
         self.resolver = resolver
         self.cache_seconds = max(0.0, float(cache_seconds))
         self.clock = clock
         self.backup_manifest_path = backup_manifest_path
+        self.loadmaster_enabled = bool(loadmaster_enabled)
+        self.cartridge_registry_path = cartridge_registry_path
         self._cached_at: float | None = None
         self._cached_payload: dict[str, Any] | None = None
 
@@ -93,8 +103,33 @@ class CachedCargoProvider:
                     tracking=True,
                 )
 
+        registry_path = self.cartridge_registry_path
+
+        if not self.loadmaster_enabled:
+            loadmaster = disabled_loadmaster_summary()
+        elif registry_path is None:
+            loadmaster = unavailable_loadmaster_summary(
+                "Loadmaster cartridge_registry_path is not configured"
+            )
+        else:
+            try:
+                cartridges = load_cartridge_registry(
+                    registry_path
+                )
+            except ValueError as error:
+                loadmaster = unavailable_loadmaster_summary(
+                    str(error)
+                )
+            else:
+                loadmaster = summarize_cartridge_cargo(
+                    cargo_items=cargo_items,
+                    backup=backup,
+                    cartridges=cartridges,
+                )
+
         payload = dict(payload)
         payload["backup"] = backup
+        payload["loadmaster"] = loadmaster
 
         self._cached_at = now
         self._cached_payload = deepcopy(payload)
@@ -127,6 +162,7 @@ def provider_from_config(
     sonarr = _dict(cargo.get("sonarr"))
     radarr = _dict(cargo.get("radarr"))
     backup = _dict(cargo.get("backup"))
+    loadmaster = _dict(cargo.get("loadmaster"))
 
     required = (
         _text(sonarr.get("url")),
@@ -178,6 +214,10 @@ def provider_from_config(
         backup.get("manifest_path")
     )
 
+    cartridge_registry_path_text = _text(
+        loadmaster.get("cartridge_registry_path")
+    )
+
     return CachedCargoProvider(
         resolver,
         cache_seconds=float(
@@ -187,6 +227,14 @@ def provider_from_config(
         backup_manifest_path=(
             Path(manifest_path_text)
             if manifest_path_text
+            else None
+        ),
+        loadmaster_enabled=(
+            loadmaster.get("enabled") is True
+        ),
+        cartridge_registry_path=(
+            Path(cartridge_registry_path_text)
+            if cartridge_registry_path_text
             else None
         ),
     )
