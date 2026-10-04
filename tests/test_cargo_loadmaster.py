@@ -395,3 +395,96 @@ def test_inventory_roundtrip(
     )
 
     assert loaded == files
+
+
+
+def test_scan_ignores_sdr_rescue_work_files(
+    tmp_path,
+):
+    root = tmp_path / "root"
+    root.mkdir()
+
+    write_file(
+        root / "Collateral (2004).mkv",
+        b"canonical",
+        10_000_000_000,
+    )
+    write_file(
+        root / (
+            "Collateral (2004).mkv."
+            "sdr-rescue-backup-20261003-201244"
+        ),
+        b"rollback",
+        10_000_000_000,
+    )
+    write_file(
+        root / (
+            ".Collateral (2004).mkv."
+            "sdr-rescue-partial"
+        ),
+        b"partial",
+        10_000_000_000,
+    )
+    write_file(
+        root / (
+            "Collateral (2004).mkv."
+            "failed-sdr-rescue"
+        ),
+        b"failed",
+        10_000_000_000,
+    )
+
+    files = scan_tree(root)
+
+    assert set(files) == {
+        "Collateral (2004).mkv",
+    }
+
+
+def test_sdr_rollback_file_never_plans_usb_backup(
+    tmp_path,
+):
+    item, mount, usb_root = prepare(tmp_path)
+
+    canonical = "Collateral (2004)/Collateral (2004).mkv"
+    rollback = (
+        "Collateral (2004)/"
+        "Collateral (2004).mkv."
+        "sdr-rescue-backup-20261003-201244"
+    )
+
+    write_file(
+        item.source_prefix / canonical,
+        b"new-sdr",
+        20_000_000_000,
+    )
+    write_file(
+        item.source_prefix / rollback,
+        b"old-hdr",
+        10_000_000_000,
+    )
+    write_file(
+        usb_root / canonical,
+        b"old-hdr",
+        10_000_000_000,
+    )
+
+    baseline = {
+        canonical: FileFingerprint(
+            size_bytes=7,
+            mtime_ns=10_000_000_000,
+        )
+    }
+
+    plan = build_sync_plan(
+        cartridge=item,
+        usb_mount=mount,
+        inventory=baseline,
+    )
+
+    assert plan["state"] == "READY"
+    assert plan["summary"]["backup_files"] == 1
+    assert len(plan["actions"]) == 1
+    assert plan["actions"][0]["relative_path"] == canonical
+    assert plan["actions"][0]["direction"] == "NAS_TO_USB"
+    assert plan["actions"][0]["reason"] == "NAS_UPDATED"
