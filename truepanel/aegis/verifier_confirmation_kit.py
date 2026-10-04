@@ -205,11 +205,20 @@ def export_verifier_confirmation_kit(
             with suppress(OSError):
                 output.rmdir()
         raise ValueError("VerifierConfirmationKitExportFailed") from error
-    return audit_verifier_confirmation_kit(output)
+    return audit_verifier_confirmation_kit(
+        output,
+        verifier_receipt_path=verifier_receipt_path,
+        verifier_source_path=verifier_source_path,
+    )
 
 
-def audit_verifier_confirmation_kit(directory: str | Path) -> dict[str, Any]:
-    """Reconstruct all three files instead of trusting the manifest as a root."""
+def audit_verifier_confirmation_kit(
+    directory: str | Path,
+    *,
+    verifier_receipt_path: str | Path,
+    verifier_source_path: str | Path,
+) -> dict[str, Any]:
+    """Reconstruct every file and bind it to the pinned verifier release."""
 
     root = Path(directory)
     if not root.is_absolute() or root.is_symlink():
@@ -249,6 +258,12 @@ def audit_verifier_confirmation_kit(directory: str | Path) -> dict[str, Any]:
         or manifest != _manifest(challenge_bytes, card)
     ):
         raise ValueError("VerifierConfirmationKitMismatch")
+    release = verify_verifier_release(
+        receipt_path=verifier_receipt_path,
+        source_path=verifier_source_path,
+    )
+    if challenge != build_verifier_confirmation_challenge(release):
+        raise ValueError("VerifierConfirmationKitReleaseMismatch")
     return {
         "schema": "truepanel.aegis-verifier-confirmation-kit-audit/v1",
         "status": KIT_STATUS,
@@ -267,13 +282,19 @@ def audit_verifier_confirmation_kit(directory: str | Path) -> dict[str, Any]:
 def confirm_from_verifier_confirmation_kit(
     *,
     directory: str | Path,
+    verifier_receipt_path: str | Path,
+    verifier_source_path: str | Path,
     independently_observed_sha256: str,
     channel: str,
     confirmed_at: str,
 ) -> dict[str, Any]:
     """Audit the exact human presentation before creating its short-lived receipt."""
 
-    audit = audit_verifier_confirmation_kit(directory)
+    audit = audit_verifier_confirmation_kit(
+        directory,
+        verifier_receipt_path=verifier_receipt_path,
+        verifier_source_path=verifier_source_path,
+    )
     return create_verifier_confirmation_receipt(
         challenge=audit["challenge"],
         independently_observed_sha256=independently_observed_sha256,
@@ -291,8 +312,12 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--output", required=True, type=Path)
     audit = commands.add_parser("audit")
     audit.add_argument("--kit", required=True, type=Path)
+    audit.add_argument("--verifier-receipt", required=True, type=Path)
+    audit.add_argument("--verifier-source", required=True, type=Path)
     confirm = commands.add_parser("confirm")
     confirm.add_argument("--kit", required=True, type=Path)
+    confirm.add_argument("--verifier-receipt", required=True, type=Path)
+    confirm.add_argument("--verifier-source", required=True, type=Path)
     confirm.add_argument("--observed-sha256", required=True)
     confirm.add_argument("--channel", required=True)
     confirm.add_argument("--confirmed-at", required=True)
@@ -309,10 +334,16 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 output_directory=values.output,
             )
         elif values.command == "audit":
-            result = audit_verifier_confirmation_kit(values.kit)
+            result = audit_verifier_confirmation_kit(
+                values.kit,
+                verifier_receipt_path=values.verifier_receipt,
+                verifier_source_path=values.verifier_source,
+            )
         else:
             result = confirm_from_verifier_confirmation_kit(
                 directory=values.kit,
+                verifier_receipt_path=values.verifier_receipt,
+                verifier_source_path=values.verifier_source,
                 independently_observed_sha256=values.observed_sha256,
                 channel=values.channel,
                 confirmed_at=values.confirmed_at,

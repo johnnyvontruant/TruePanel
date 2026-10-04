@@ -46,6 +46,8 @@ def run_verifier_confirmation_kit_checkride() -> dict[str, Any]:
         record("exact-public-kit", audit["status"], "all public views agree")
         receipt = confirm_from_verifier_confirmation_kit(
             directory=kit,
+            verifier_receipt_path=release_receipt,
+            verifier_source_path=source,
             independently_observed_sha256=release["source_sha256"],
             channel="SEPARATE_OPERATOR_DEVICE",
             confirmed_at="2026-10-03T04:00:00Z",
@@ -115,7 +117,11 @@ def run_verifier_confirmation_kit_checkride() -> dict[str, Any]:
             changed = candidate(name)
             mutate(changed)
             try:
-                audit_verifier_confirmation_kit(changed)
+                audit_verifier_confirmation_kit(
+                    changed,
+                    verifier_receipt_path=release_receipt,
+                    verifier_source_path=source,
+                )
             except ValueError as error:
                 record(name, "HOLD", str(error))
 
@@ -125,12 +131,20 @@ def run_verifier_confirmation_kit_checkride() -> dict[str, Any]:
             kit / "aegis-verifier-comparison.txt"
         )
         try:
-            audit_verifier_confirmation_kit(linked)
+            audit_verifier_confirmation_kit(
+                linked,
+                verifier_receipt_path=release_receipt,
+                verifier_source_path=source,
+            )
         except ValueError as error:
             record("symlinked-card", "HOLD", str(error))
 
         try:
-            audit_verifier_confirmation_kit(Path("relative-kit"))
+            audit_verifier_confirmation_kit(
+                Path("relative-kit"),
+                verifier_receipt_path=release_receipt,
+                verifier_source_path=source,
+            )
         except ValueError as error:
             record("relative-kit", "HOLD", str(error))
 
@@ -141,6 +155,8 @@ def run_verifier_confirmation_kit_checkride() -> dict[str, Any]:
             try:
                 confirm_from_verifier_confirmation_kit(
                     directory=kit,
+                    verifier_receipt_path=release_receipt,
+                    verifier_source_path=source,
                     independently_observed_sha256=digest,
                     channel=channel,
                     confirmed_at="2026-10-03T04:00:00Z",
