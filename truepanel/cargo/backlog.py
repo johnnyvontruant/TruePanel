@@ -237,6 +237,28 @@ def validate_backlog_payload(
     }
 
 
+def backlog_cargo_items(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return backlog rows in the Cargo backup-correlation shape."""
+
+    validated = validate_backlog_payload(
+        payload
+    )
+
+    result = []
+
+    for item in validated["items"]:
+        row = dict(item)
+        row["imported_at"] = _parse_iso(
+            item["required_after"],
+            field="required_after",
+        ).timestamp()
+        result.append(row)
+
+    return result
+
+
 def load_backlog(
     path: Path,
     *,
