@@ -85,6 +85,7 @@ def test_receipt_source_translates_verified_sdr(tmp_path):
     assert report == {
         "files_scanned": 1,
         "items": 1,
+        "ignored_before_baseline": 0,
     }
     assert len(rows) == 1
     row = rows[0]
@@ -188,3 +189,46 @@ def test_receipt_source_keeps_latest_receipt_per_path(tmp_path):
         0,
         tzinfo=UTC,
     ).timestamp()
+
+
+
+def test_receipt_source_skips_pre_baseline_before_file_validation(
+    tmp_path,
+):
+    media_root = tmp_path / "Movies 1-D"
+    media_root.mkdir()
+
+    receipts = tmp_path / "receipts"
+    receipts.mkdir()
+
+    missing = (
+        media_root
+        / "Old Movie (2025)"
+        / "Old Movie (2025).mkv"
+    )
+    _receipt(
+        receipts,
+        missing,
+        generated_at="2026-10-04T02:00:00+00:00",
+    )
+
+    rows, report = sdr_rescue_receipt_cargo_items(
+        receipts,
+        cartridges=_registry(tmp_path, media_root),
+        observe_after=datetime(
+            2026,
+            10,
+            4,
+            2,
+            36,
+            7,
+            tzinfo=UTC,
+        ),
+    )
+
+    assert rows == []
+    assert report == {
+        "files_scanned": 1,
+        "items": 0,
+        "ignored_before_baseline": 1,
+    }
