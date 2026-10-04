@@ -168,6 +168,9 @@ class CachedCargoProvider:
                             "updated_at": backlog.get(
                                 "updated_at"
                             ),
+                            "observe_after": backlog.get(
+                                "observe_after"
+                            ),
                             "pending_items": len(
                                 loadmaster_items
                             ),
