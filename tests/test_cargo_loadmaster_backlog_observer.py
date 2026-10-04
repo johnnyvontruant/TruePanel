@@ -475,3 +475,97 @@ def test_observer_requires_registry_path(
         match="cartridge_registry_path",
     ):
         observe_once(provider)
+
+
+
+def test_observer_ingests_post_baseline_sdr_receipt(
+    tmp_path,
+):
+    backlog = prepare_backlog(tmp_path)
+
+    media_root = tmp_path / "Movies 1-D"
+    current = (
+        media_root
+        / "Collateral (2004)"
+        / "Collateral (2004).mkv"
+    )
+    current.parent.mkdir(parents=True)
+    current.write_bytes(b"x" * 256)
+
+    registry = tmp_path / "receipt-cartridges.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "kind": (
+                    "truepanel.loadmaster_cartridge_registry"
+                ),
+                "cartridges": [
+                    {
+                        "id": "movies-num-d",
+                        "label": "Movies #-D",
+                        "uuid": "TEST-NUM-D",
+                        "role": "movies",
+                        "source_prefix": str(media_root),
+                        "usb_relative_path": "Movies 1-D",
+                        "allow_ingest": True,
+                        "allow_backup": True,
+                        "delete_policy": "never",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    receipts = tmp_path / "receipts"
+    receipts.mkdir()
+    (receipts / "678-test.json").write_text(
+        json.dumps(
+            {
+                "generated_at": (
+                    "2026-10-03T20:14:05.695916-07:00"
+                ),
+                "engine": "sdr-rescue-apply-one",
+                "movie_id": 678,
+                "title": "Collateral",
+                "year": 2004,
+                "result": (
+                    "PASS_REPLACED_AND_RADARR_VERIFIED"
+                ),
+                "final": {
+                    "dynamic_range": "SDR",
+                    "resolution": 2160,
+                },
+                "new_sdr_file": str(current),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    provider = Provider(
+        backlog_path=backlog,
+        registry_path=registry,
+        payload={
+            "schema_version": 1,
+            "groups": {
+                "tv": [],
+                "movies": [],
+            },
+        },
+    )
+    provider.sdr_rescue_receipts_path = receipts
+
+    report = observe_once(
+        provider,
+        observed_at=OBSERVED,
+        dry_run=True,
+    )
+
+    assert report["observed_items"] == 1
+    assert report["pending_items"] == 1
+    assert report["awaiting"] == 1
+    assert report["sdr_receipt_files"] == 1
+    assert report["sdr_receipt_items"] == 1
+    assert report["items"][0]["title"] == "Collateral"
+    assert load_backlog(backlog)["items"] == []
