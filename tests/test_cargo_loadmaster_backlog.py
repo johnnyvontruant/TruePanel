@@ -352,3 +352,96 @@ def test_duplicate_paths_are_rejected(tmp_path):
         match="duplicate",
     ):
         load_backlog(path)
+
+
+def test_commissioning_watermark_ignores_older_history():
+    baseline = empty_backlog(
+        updated_at=NOW,
+        observe_after=NOW,
+    )
+
+    older = cargo_item(
+        imported_at=datetime(
+            2026,
+            10,
+            3,
+            19,
+            59,
+            tzinfo=UTC,
+        ).timestamp(),
+    )
+
+    first, report = reconcile_backlog(
+        previous=baseline,
+        cargo_items=[older],
+        manifest=None,
+        observed_at=datetime(
+            2026,
+            10,
+            3,
+            20,
+            1,
+            tzinfo=UTC,
+        ),
+    )
+
+    assert first["items"] == []
+    assert (
+        report["ignored_before_baseline"]
+        == 1
+    )
+
+    newer = cargo_item(
+        imported_at=datetime(
+            2026,
+            10,
+            3,
+            20,
+            2,
+            tzinfo=UTC,
+        ).timestamp(),
+    )
+
+    second, report = reconcile_backlog(
+        previous=first,
+        cargo_items=[older, newer],
+        manifest=None,
+        observed_at=datetime(
+            2026,
+            10,
+            3,
+            20,
+            3,
+            tzinfo=UTC,
+        ),
+    )
+
+    assert len(second["items"]) == 1
+    assert report["pending_items"] == 1
+    assert (
+        report["ignored_before_baseline"]
+        == 1
+    )
+
+
+def test_legacy_backlog_without_watermark_defaults_to_epoch(
+    tmp_path,
+):
+    path = tmp_path / "legacy.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "kind": LOADMASTER_BACKLOG_KIND,
+                "updated_at": NOW.isoformat(),
+                "items": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = load_backlog(path)
+
+    assert loaded["observe_after"].startswith(
+        "1970-01-01T00:00:00"
+    )
