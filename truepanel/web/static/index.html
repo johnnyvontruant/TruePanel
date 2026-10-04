@@ -910,6 +910,18 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
       </div>
     </div>
   </details>
+
+  <details class="cargo-drawer" id="cargoLoadmasterDrawer">
+    <summary>
+      <span>Loadmaster</span>
+      <small id="cargoLoadmasterSummary">DISABLED</small>
+    </summary>
+    <div id="cargoLoadmaster" class="cargo-list">
+      <div class="detail">
+        Loadmaster cartridge planning is disabled.
+      </div>
+    </div>
+  </details>
 </div>
 </article>
 </section></main>
@@ -3463,6 +3475,221 @@ function renderCargoDownloads(downloads){
     });
 }
 
+function renderCargoLoadmaster(loadmaster){
+    const payload=(
+        loadmaster&&typeof loadmaster==="object"
+    )?loadmaster:{};
+
+    const enabled=payload.enabled===true;
+    const state=String(
+        payload.state||(enabled?"INVALID":"DISABLED")
+    ).toUpperCase();
+    const pending=Number(
+        payload.pending_items
+    )||0;
+    const pendingBytes=Number(
+        payload.pending_bytes
+    )||0;
+
+    let summary="DISABLED";
+
+    if(enabled){
+        if(state==="INVALID"){
+            summary="INVALID";
+        }else if(state==="REVIEW"){
+            summary="REVIEW";
+        }else if(pending>0){
+            summary=`${pending} WAITING`;
+        }else{
+            summary="CLEAR";
+        }
+    }
+
+    if(q("cargoLoadmasterSummary")){
+        q("cargoLoadmasterSummary").textContent=
+            summary;
+    }
+
+    const root=q("cargoLoadmaster");
+
+    if(!root){
+        return;
+    }
+
+    root.replaceChildren();
+
+    if(!enabled){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                "Loadmaster cartridge planning is disabled."
+            )
+        );
+        return;
+    }
+
+    if(state==="INVALID"){
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                val(
+                    payload.invalid_reason,
+                    "Loadmaster cartridge registry is invalid."
+                )
+            )
+        );
+        return;
+    }
+
+    const next=(
+        payload.next_cartridge
+        &&typeof payload.next_cartridge==="object"
+    )?payload.next_cartridge:null;
+
+    if(next){
+        const card=cargoElement(
+            "div",
+            "cargo-item"
+        );
+
+        const head=cargoElement(
+            "div",
+            "cargo-item-head"
+        );
+
+        head.append(
+            cargoElement(
+                "strong",
+                "cargo-title",
+                `NEXT CARTRIDGE • ${val(next.label,"Unknown")}`
+            ),
+            cargoElement(
+                "span",
+                "cargo-size",
+                cargoBytes(
+                    next.pending_bytes
+                )
+            )
+        );
+
+        card.append(head);
+
+        card.append(
+            cargoElement(
+                "div",
+                "cargo-detail",
+                `${Number(next.pending_items)||0} item${
+                    Number(next.pending_items)===1?"":"s"
+                } waiting for backup`
+            )
+        );
+
+        card.append(
+            cargoElement(
+                "div",
+                "cargo-meta",
+                "Dock this cartridge for the next Loadmaster run."
+            )
+        );
+
+        root.append(card);
+    }else{
+        root.append(
+            cargoElement(
+                "div",
+                "detail",
+                pendingBytes>0
+                    ?`${cargoBytes(pendingBytes)} awaiting cartridge assignment`
+                    :"All tracked cartridge cargo is current."
+            )
+        );
+    }
+
+    const cartridges=Array.isArray(
+        payload.cartridges
+    )?payload.cartridges:[];
+
+    cartridges.forEach(item=>{
+        const card=cargoElement(
+            "div",
+            "cargo-item"
+        );
+
+        const head=cargoElement(
+            "div",
+            "cargo-item-head"
+        );
+
+        const itemPending=Number(
+            item&&item.pending_items
+        )||0;
+
+        const itemBytes=Number(
+            item&&item.pending_bytes
+        )||0;
+
+        const review=Number(
+            item&&item.review_items
+        )||0;
+
+        head.append(
+            cargoElement(
+                "strong",
+                "cargo-title",
+                val(item&&item.label,"Unknown cartridge")
+            ),
+            cargoElement(
+                "span",
+                "cargo-size",
+                cargoBytes(itemBytes)
+            )
+        );
+
+        card.append(head);
+
+        const cartridgeState=review>0
+            ?"REVIEW"
+            :itemPending>0
+                ?"AWAITING"
+                :"VERIFIED";
+
+        card.append(
+            cargoElement(
+                "span",
+                `cargo-backup-state ${cartridgeState.toLowerCase()}`,
+                cartridgeState==="VERIFIED"
+                    ?"CURRENT"
+                    :cartridgeState
+            )
+        );
+
+        card.append(
+            cargoElement(
+                "div",
+                "cargo-detail",
+                itemPending>0
+                    ?`${itemPending} pending ${itemPending===1?"item":"items"}`
+                    :"No pending cargo"
+            )
+        );
+
+        if(item&&item.source_prefix){
+            card.append(
+                cargoElement(
+                    "code",
+                    "cargo-path",
+                    item.source_prefix
+                )
+            );
+        }
+
+        root.append(card);
+    });
+}
+
+
 function renderCargoBay(cargo){
     const payload=(
         cargo&&typeof cargo==="object"
@@ -3534,6 +3761,23 @@ function renderCargoBay(cargo){
         payload.backup
         &&typeof payload.backup==="object"
     )?payload.backup:{};
+
+    const loadmaster=(
+        payload.loadmaster
+        &&typeof payload.loadmaster==="object"
+    )?payload.loadmaster:{};
+
+    const loadmasterEnabled=
+        loadmaster.enabled===true;
+
+    const loadmasterPending=Number(
+        loadmaster.pending_items
+    )||0;
+
+    const loadmasterNext=(
+        loadmaster.next_cartridge
+        &&typeof loadmaster.next_cartridge==="object"
+    )?loadmaster.next_cartridge:null;
 
     const backupTracking=
         backup.tracking===true;
@@ -3677,6 +3921,24 @@ function renderCargoBay(cargo){
             } recent arrivals backup verified`;
     }
 
+    if(
+        state!=="UNAVAILABLE"
+        &&loadmasterEnabled
+        &&loadmasterPending>0
+        &&loadmasterNext
+    ){
+        if(downloadReview===0){
+            tertiary=
+                `Next backup: ${val(loadmasterNext.label,"Unknown cartridge")}`;
+        }
+
+        summaryText+=
+            ` • ${loadmasterPending} awaiting ${val(
+                loadmasterNext.label,
+                "cartridge"
+            )}`;
+    }
+
     if(q("cargoGlancePrimary")){
         q("cargoGlancePrimary").textContent=primary;
     }
@@ -3716,6 +3978,10 @@ function renderCargoBay(cargo){
 
     renderCargoBackup(
         payload.backup
+    );
+
+    renderCargoLoadmaster(
+        payload.loadmaster
     );
 }
 

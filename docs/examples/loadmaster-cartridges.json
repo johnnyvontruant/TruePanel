@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "truepanel.loadmaster_cartridge_registry",
+  "cartridges": [
+    {
+      "id": "movies-num-d",
+      "label": "Movies #-D",
+      "uuid": "SET-FILESYSTEM-UUID",
+      "role": "movies",
+      "source_prefix": "/mnt/HDDs/Movies/Movies 1-D",
+      "usb_relative_path": "Movies 1-D",
+      "allow_ingest": true,
+      "allow_backup": true,
+      "delete_policy": "never"
+    },
+    {
+      "id": "movies-e-i",
+      "label": "Movies E-I",
+      "uuid": "SET-FILESYSTEM-UUID-E-I",
+      "role": "movies",
+      "source_prefix": "/mnt/HDDs/Movies/Movies E-I",
+      "usb_relative_path": "Movies E-I",
+      "allow_ingest": true,
+      "allow_backup": true,
+      "delete_policy": "never"
+    },
+    {
+      "id": "movies-j-s",
+      "label": "Movies J-S",
+      "uuid": "SET-FILESYSTEM-UUID-J-S",
+      "role": "movies",
+      "source_prefix": "/mnt/HDDs/Movies/Movies J-S",
+      "usb_relative_path": "Movies J-S",
+      "allow_ingest": true,
+      "allow_backup": true,
+      "delete_policy": "never"
+    },
+    {
+      "id": "movies-t-z",
+      "label": "Movies T-Z",
+      "uuid": "SET-FILESYSTEM-UUID-T-Z",
+      "role": "movies",
+      "source_prefix": "/mnt/HDDs/Movies/Movies T-Z",
+      "usb_relative_path": "Movies T-Z",
+      "allow_ingest": true,
+      "allow_backup": true,
+      "delete_policy": "never"
+    }
+  ]
+}

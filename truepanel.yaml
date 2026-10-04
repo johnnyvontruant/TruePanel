@@ -219,3 +219,11 @@ mission_control:
       config_path: /mnt/SSDs/Applications/radarr/config.xml
       media_prefix: /media/movies
       host_prefix: /mnt/HDDs/Movies
+
+    # Loadmaster begins read-only. Enabling it only exposes cartridge
+    # planning in Cargo Bay; physical USB transfer authority is a
+    # separately gated commissioning step.
+    loadmaster:
+      enabled: false
+      cartridge_registry_path: /var/lib/truepanel/loadmaster/cartridges.json
+      backlog_path: /var/lib/truepanel/loadmaster/pending-cargo.json
