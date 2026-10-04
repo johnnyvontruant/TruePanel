@@ -179,6 +179,7 @@ def observe_once(
     receipt_report = {
         "files_scanned": 0,
         "items": 0,
+        "ignored_before_baseline": 0,
     }
     receipt_path = getattr(
         provider,
@@ -192,6 +193,12 @@ def observe_once(
                 sdr_rescue_receipt_cargo_items(
                     receipt_path,
                     cartridges=cartridges,
+                    observe_after=datetime.fromisoformat(
+                        str(previous["observe_after"]).replace(
+                            "Z",
+                            "+00:00",
+                        )
+                    ),
                 )
             )
         except LoadmasterReceiptSourceError as error:
@@ -217,6 +224,9 @@ def observe_once(
         )
 
     result = dict(report)
+    result["ignored_before_baseline"] += int(
+        receipt_report["ignored_before_baseline"]
+    )
     result["ignored_out_of_scope"] = (
         ignored_out_of_scope
     )
@@ -225,6 +235,9 @@ def observe_once(
     )
     result["sdr_receipt_items"] = int(
         receipt_report["items"]
+    )
+    result["sdr_receipts_ignored_before_baseline"] = int(
+        receipt_report["ignored_before_baseline"]
     )
     result["dry_run"] = bool(dry_run)
     result["backlog_path"] = str(
