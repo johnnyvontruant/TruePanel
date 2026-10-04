@@ -46,6 +46,7 @@ class CartridgeDefinition:
     role: str
     source_prefix: Path
     usb_relative_path: Path
+    device_serial: str | None = None
     allow_ingest: bool = True
     allow_backup: bool = True
     delete_policy: str = "never"
@@ -91,6 +92,13 @@ class CartridgeDefinition:
             role=str(payload.get("role") or "").strip(),
             source_prefix=_canonical_lexical(Path(source)),
             usb_relative_path=_canonical_lexical(Path(usb_path)),
+            device_serial=(
+                str(
+                    payload.get("device_serial")
+                    or ""
+                ).strip()
+                or None
+            ),
             allow_ingest=payload.get("allow_ingest") is not False,
             allow_backup=payload.get("allow_backup") is not False,
             delete_policy=str(payload.get("delete_policy") or "never").strip(),

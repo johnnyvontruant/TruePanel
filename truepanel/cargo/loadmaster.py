@@ -715,6 +715,340 @@ def build_sync_plan(
     }
 
 
+def _regular_file_fingerprint(
+    path: Path,
+) -> FileFingerprint | None:
+    """Inspect one optional regular file without following symlinks."""
+
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return None
+    except OSError as error:
+        raise LoadmasterPlanError(
+            f"file unreadable: {path}: {error}"
+        ) from error
+
+    if stat.S_ISLNK(info.st_mode):
+        raise LoadmasterPlanError(
+            f"symlink file is not allowed: {path}"
+        )
+
+    if not stat.S_ISREG(info.st_mode):
+        raise LoadmasterPlanError(
+            f"non-regular file is not allowed: {path}"
+        )
+
+    return FileFingerprint.from_stat(info)
+
+
+def _validate_existing_directory_chain(
+    root: Path,
+    parent: Path,
+) -> None:
+    """Reject symlink or non-directory ancestors under one trusted root."""
+
+    try:
+        relative = parent.relative_to(root)
+    except ValueError as error:
+        raise LoadmasterPlanError(
+            f"destination escaped USB root: {parent}"
+        ) from error
+
+    current = root
+
+    for part in relative.parts:
+        current = current / part
+
+        try:
+            info = current.lstat()
+        except FileNotFoundError:
+            return
+        except OSError as error:
+            raise LoadmasterPlanError(
+                f"directory unreadable: {current}: {error}"
+            ) from error
+
+        if stat.S_ISLNK(info.st_mode):
+            raise LoadmasterPlanError(
+                f"symlink directory is not allowed: {current}"
+            )
+
+        if not stat.S_ISDIR(info.st_mode):
+            raise LoadmasterPlanError(
+                f"unexpected non-directory entry: {current}"
+            )
+
+
+def build_backlog_backup_plan(
+    *,
+    cartridge: CartridgeDefinition,
+    usb_mount: Path,
+    backlog_items: list[dict[str, Any]],
+    inventory: (
+        dict[str, FileFingerprint]
+        | None
+    ) = None,
+    tolerance_seconds: float = (
+        DEFAULT_MTIME_TOLERANCE_SECONDS
+    ),
+) -> dict[str, Any]:
+    """Plan NAS-to-USB work only for durable Loadmaster backlog items.
+
+    Unlike the full sync planner, this intentionally does not scan unrelated
+    USB files. Pre-existing cartridge-only files therefore cannot turn a
+    backup run into accidental ingest work.
+    """
+
+    if not usb_mount.is_absolute():
+        raise LoadmasterPlanError(
+            "USB mount path must be absolute"
+        )
+
+    nas_root = cartridge.source_prefix
+    usb_root = (
+        usb_mount
+        / cartridge.usb_relative_path
+    )
+    baseline = inventory or {}
+
+    if not usb_root.is_dir():
+        raise LoadmasterPlanError(
+            f"USB cartridge root is unavailable: {usb_root}"
+        )
+
+    actions: list[LoadmasterAction] = []
+    conflicts: list[LoadmasterConflict] = []
+    unchanged = 0
+    seen: set[str] = set()
+
+    for item in backlog_items:
+        if not isinstance(item, dict):
+            raise LoadmasterPlanError(
+                "Loadmaster backlog item must be an object"
+            )
+
+        source_text = str(
+            item.get("current_path")
+            or ""
+        ).strip()
+        source = Path(source_text)
+
+        if (
+            not source.is_absolute()
+            or ".." in source.parts
+        ):
+            raise LoadmasterPlanError(
+                "Loadmaster backlog path is invalid"
+            )
+
+        try:
+            relative_path = source.relative_to(
+                nas_root
+            )
+        except ValueError as error:
+            raise LoadmasterPlanError(
+                "Loadmaster backlog path is outside "
+                f"cartridge scope: {source}"
+            ) from error
+
+        relative = relative_path.as_posix()
+
+        if relative in seen:
+            raise LoadmasterPlanError(
+                f"duplicate Loadmaster backlog path: {relative}"
+            )
+        seen.add(relative)
+
+        source_fp = _regular_file_fingerprint(
+            source
+        )
+
+        if source_fp is None:
+            raise LoadmasterPlanError(
+                f"Loadmaster source is unavailable: {source}"
+            )
+
+        expected_size = item.get(
+            "size_bytes"
+        )
+
+        if (
+            isinstance(expected_size, bool)
+            or not isinstance(
+                expected_size,
+                int,
+            )
+            or expected_size < 0
+        ):
+            raise LoadmasterPlanError(
+                f"Loadmaster backlog size is invalid: {source}"
+            )
+
+        if source_fp.size_bytes != expected_size:
+            raise LoadmasterPlanError(
+                "Loadmaster source size no longer "
+                f"matches backlog: {source}"
+            )
+
+        destination = (
+            usb_root
+            / relative_path
+        )
+
+        _validate_existing_directory_chain(
+            usb_root,
+            destination.parent,
+        )
+
+        usb_fp = _regular_file_fingerprint(
+            destination
+        )
+        old_fp = baseline.get(relative)
+
+        if (
+            usb_fp is not None
+            and _fingerprints_match(
+                source_fp,
+                usb_fp,
+                tolerance_seconds=(
+                    tolerance_seconds
+                ),
+            )
+        ):
+            unchanged += 1
+            continue
+
+        if usb_fp is None:
+            actions.append(
+                LoadmasterAction(
+                    direction="NAS_TO_USB",
+                    relative_path=relative,
+                    size_bytes=(
+                        source_fp.size_bytes
+                    ),
+                    reason=(
+                        "MISSING_ON_USB"
+                        if old_fp is not None
+                        else "NEW_ON_NAS"
+                    ),
+                )
+            )
+            continue
+
+        if old_fp is None:
+            conflicts.append(
+                LoadmasterConflict(
+                    relative_path=relative,
+                    reason=(
+                        "USB_DESTINATION_WITHOUT_BASELINE"
+                    ),
+                    nas=source_fp,
+                    usb=usb_fp,
+                    baseline=None,
+                )
+            )
+            continue
+
+        if not _fingerprints_match(
+            usb_fp,
+            old_fp,
+            tolerance_seconds=(
+                tolerance_seconds
+            ),
+        ):
+            conflicts.append(
+                LoadmasterConflict(
+                    relative_path=relative,
+                    reason=(
+                        "USB_CHANGED_SINCE_BASELINE"
+                    ),
+                    nas=source_fp,
+                    usb=usb_fp,
+                    baseline=old_fp,
+                )
+            )
+            continue
+
+        actions.append(
+            LoadmasterAction(
+                direction="NAS_TO_USB",
+                relative_path=relative,
+                size_bytes=(
+                    source_fp.size_bytes
+                ),
+                reason="BACKLOG_UPDATED",
+            )
+        )
+
+    state = (
+        "HOLD"
+        if conflicts
+        else "READY"
+        if actions
+        else "CLEAR"
+    )
+
+    return {
+        "schema_version": 1,
+        "read_only": True,
+        "delete_policy": "never",
+        "scope": "durable_backlog",
+        "state": state,
+        "cartridge": (
+            cartridge.public_dict()
+        ),
+        "nas_root": str(nas_root),
+        "usb_root": str(usb_root),
+        "summary": {
+            "scoped_items": len(
+                backlog_items
+            ),
+            "ingest_files": 0,
+            "ingest_bytes": 0,
+            "backup_files": len(
+                actions
+            ),
+            "backup_bytes": sum(
+                item.size_bytes
+                for item in actions
+            ),
+            "unchanged_files": unchanged,
+            "conflicts": len(
+                conflicts
+            ),
+        },
+        "actions": [
+            asdict(action)
+            for action in actions
+        ],
+        "conflicts": [
+            {
+                "relative_path": (
+                    item.relative_path
+                ),
+                "reason": item.reason,
+                "nas": (
+                    asdict(item.nas)
+                    if item.nas
+                    else None
+                ),
+                "usb": (
+                    asdict(item.usb)
+                    if item.usb
+                    else None
+                ),
+                "baseline": (
+                    asdict(item.baseline)
+                    if item.baseline
+                    else None
+                ),
+            }
+            for item in conflicts
+        ],
+    }
+
+
 def inventory_payload(
     *,
     cartridge: CartridgeDefinition,
