@@ -166,33 +166,41 @@ def capture_zero_delta_baselines(
         UTC
     ).isoformat()
 
-    reports = []
-
-    for cartridge in cartridges:
-        files = scan_tree(
-            cartridge.source_prefix
-        )
-
-        payload = inventory_payload(
-            cartridge=cartridge,
-            files=files,
-            captured_at=timestamp,
-        )
-
-        output = (
+    outputs = {
+        cartridge.cartridge_id: (
             inventory_dir
             / f"{cartridge.cartridge_id}.json"
         )
+        for cartridge in cartridges
+    }
 
+    for output in outputs.values():
         if output.exists():
             raise LoadmasterCommissionError(
                 "refusing to overwrite existing "
                 f"inventory: {output}"
             )
 
-        _write_json_atomic(
-            output,
-            payload,
+    snapshots = []
+    reports = []
+
+    for cartridge in cartridges:
+        files = scan_tree(
+            cartridge.source_prefix
+        )
+        output = outputs[
+            cartridge.cartridge_id
+        ]
+
+        snapshots.append(
+            (
+                output,
+                inventory_payload(
+                    cartridge=cartridge,
+                    files=files,
+                    captured_at=timestamp,
+                ),
+            )
         )
 
         reports.append(
@@ -213,6 +221,12 @@ def capture_zero_delta_baselines(
                     for item in files.values()
                 ),
             }
+        )
+
+    for output, payload in snapshots:
+        _write_json_atomic(
+            output,
+            payload,
         )
 
     return {
