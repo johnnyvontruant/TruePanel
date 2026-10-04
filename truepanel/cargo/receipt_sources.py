@@ -69,6 +69,7 @@ def sdr_rescue_receipt_cargo_items(
     path: Path,
     *,
     cartridges: list[CartridgeDefinition],
+    observe_after: datetime | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     """Return one latest cargo row per canonical SDR Rescue media path."""
 
@@ -79,6 +80,12 @@ def sdr_rescue_receipt_cargo_items(
 
     files = sorted(path.glob("*.json"))
     by_path: dict[str, tuple[datetime, dict[str, Any]]] = {}
+    ignored_before_baseline = 0
+
+    if observe_after is not None:
+        if observe_after.tzinfo is None:
+            observe_after = observe_after.replace(tzinfo=UTC)
+        observe_after = observe_after.astimezone(UTC)
 
     for receipt_path in files:
         receipt = _load_receipt(
@@ -104,6 +111,13 @@ def sdr_rescue_receipt_cargo_items(
         generated = _parse_generated_at(
             receipt.get("generated_at")
         )
+
+        if (
+            observe_after is not None
+            and generated < observe_after
+        ):
+            ignored_before_baseline += 1
+            continue
 
         final_probe = receipt.get("final")
 
@@ -189,4 +203,5 @@ def sdr_rescue_receipt_cargo_items(
     return rows, {
         "files_scanned": len(files),
         "items": len(rows),
+        "ignored_before_baseline": ignored_before_baseline,
     }
