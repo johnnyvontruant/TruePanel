@@ -50,11 +50,15 @@ class Provider:
         self,
         *,
         backlog_path,
+        registry_path,
         payload,
         manifest_path=None,
     ):
         self.loadmaster_backlog_path = (
             backlog_path
+        )
+        self.cartridge_registry_path = (
+            registry_path
         )
         self.backup_manifest_path = (
             manifest_path
@@ -102,6 +106,37 @@ def prepare_backlog(tmp_path):
     return path
 
 
+def prepare_registry(tmp_path):
+    path = tmp_path / "cartridges.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "kind": (
+                    "truepanel.loadmaster_cartridge_registry"
+                ),
+                "cartridges": [
+                    {
+                        "id": "movies-e-i",
+                        "label": "Movies E-I",
+                        "uuid": "TEST-E-I",
+                        "role": "movies",
+                        "source_prefix": (
+                            "/mnt/HDDs/Movies/Movies E-I"
+                        ),
+                        "usb_relative_path": "Movies E-I",
+                        "allow_ingest": True,
+                        "allow_backup": True,
+                        "delete_policy": "never",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_observer_persists_post_baseline_cargo(
     tmp_path,
 ):
@@ -110,6 +145,7 @@ def test_observer_persists_post_baseline_cargo(
     )
     provider = Provider(
         backlog_path=backlog,
+        registry_path=prepare_registry(tmp_path),
         payload=cargo_payload(
             imported_at=datetime(
                 2026,
@@ -150,6 +186,7 @@ def test_observer_ignores_pre_baseline_history(
     )
     provider = Provider(
         backlog_path=backlog,
+        registry_path=prepare_registry(tmp_path),
         payload=cargo_payload(
             imported_at=datetime(
                 2026,
@@ -189,6 +226,7 @@ def test_observer_dry_run_does_not_change_backlog(
 
     provider = Provider(
         backlog_path=backlog,
+        registry_path=prepare_registry(tmp_path),
         payload=cargo_payload(
             imported_at=datetime(
                 2026,
@@ -225,6 +263,7 @@ def test_observer_requires_existing_baseline(
             tmp_path
             / "missing.json"
         ),
+        registry_path=prepare_registry(tmp_path),
         payload=cargo_payload(
             imported_at=OBSERVED.timestamp(),
         ),
@@ -257,6 +296,7 @@ def test_observer_verified_manifest_clears_pending(
 
     first = Provider(
         backlog_path=backlog,
+        registry_path=prepare_registry(tmp_path),
         payload=cargo_payload(
             imported_at=imported.timestamp(),
         ),
@@ -298,6 +338,7 @@ def test_observer_verified_manifest_clears_pending(
 
     second = Provider(
         backlog_path=backlog,
+        registry_path=prepare_registry(tmp_path),
         manifest_path=manifest,
         payload={
             "schema_version": 1,
@@ -330,6 +371,7 @@ def test_observer_verified_manifest_clears_pending(
 def test_observer_rejects_missing_backlog_path():
     provider = Provider(
         backlog_path=None,
+        registry_path=Path("/unused/cartridges.json"),
         payload={
             "groups": {
                 "tv": [],
@@ -341,5 +383,95 @@ def test_observer_rejects_missing_backlog_path():
     with pytest.raises(
         LoadmasterObserverError,
         match="backlog_path",
+    ):
+        observe_once(provider)
+
+
+def test_observer_ignores_uncommissioned_tv_role(
+    tmp_path,
+):
+    backlog = prepare_backlog(tmp_path)
+    registry = prepare_registry(tmp_path)
+    payload = cargo_payload(
+        imported_at=OBSERVED.timestamp(),
+    )
+    payload["groups"]["movies"] = []
+    payload["groups"]["tv"] = [
+        {
+            "title": "Vigil",
+            "detail": "3x04",
+            "source": "sonarr",
+            "current_path": (
+                "/mnt/HDDs/Shows/TV N-Z/"
+                "Vigil (2021)/3x04.mkv"
+            ),
+            "size_bytes": 50,
+            "imported_at": OBSERVED.timestamp(),
+        }
+    ]
+
+    provider = Provider(
+        backlog_path=backlog,
+        registry_path=registry,
+        payload=payload,
+    )
+
+    report = observe_once(
+        provider,
+        observed_at=OBSERVED,
+    )
+
+    assert report["pending_items"] == 0
+    assert report["ignored_out_of_scope"] == 1
+    assert load_backlog(backlog)["items"] == []
+
+
+def test_observer_holds_unmapped_in_scope_movie(
+    tmp_path,
+):
+    backlog = prepare_backlog(tmp_path)
+    registry = prepare_registry(tmp_path)
+    payload = cargo_payload(
+        imported_at=OBSERVED.timestamp(),
+    )
+    payload["groups"]["movies"][0][
+        "current_path"
+    ] = (
+        "/mnt/HDDs/Movies/Movies T-Z/"
+        "Heat (1995)/Heat (1995).mkv"
+    )
+
+    provider = Provider(
+        backlog_path=backlog,
+        registry_path=registry,
+        payload=payload,
+    )
+
+    with pytest.raises(
+        LoadmasterObserverError,
+        match="no cartridge mapping",
+    ):
+        observe_once(
+            provider,
+            observed_at=OBSERVED,
+        )
+
+
+def test_observer_requires_registry_path(
+    tmp_path,
+):
+    backlog = prepare_backlog(tmp_path)
+
+    provider = Provider(
+        backlog_path=backlog,
+        registry_path=None,
+        payload=cargo_payload(
+            imported_at=OBSERVED.timestamp(),
+        ),
+    )
+
+    with pytest.raises(
+        LoadmasterObserverError,
+        match="cartridge_registry_path",
     ):
         observe_once(provider)

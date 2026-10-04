@@ -23,6 +23,11 @@ from .backlog import (
     reconcile_backlog,
     write_backlog_atomic,
 )
+from .cartridges import (
+    CartridgeDefinition,
+    assign_cartridge,
+    load_cartridge_registry,
+)
 from .provider import CachedCargoProvider, provider_from_config
 
 
@@ -32,7 +37,8 @@ class LoadmasterObserverError(RuntimeError):
 
 def _cargo_items(
     payload: dict[str, Any],
-) -> list[dict[str, Any]]:
+    cartridges: list[CartridgeDefinition],
+) -> tuple[list[dict[str, Any]], int]:
     groups = payload.get("groups")
 
     if not isinstance(groups, dict):
@@ -40,7 +46,17 @@ def _cargo_items(
             "Cargo resolver groups are unavailable"
         )
 
+    configured_roles = {
+        cartridge.role.casefold()
+        for cartridge in cartridges
+    }
+    source_roles = {
+        "radarr": "movies",
+        "sonarr": "tv",
+    }
+
     result = []
+    ignored_out_of_scope = 0
 
     for name in ("tv", "movies"):
         values = groups.get(name)
@@ -59,9 +75,35 @@ def _cargo_items(
                     f"Cargo group {name} contains an invalid item"
                 )
 
+            source = str(
+                item.get("source") or ""
+            ).strip().casefold()
+            role = source_roles.get(source)
+
+            if (
+                role is not None
+                and role not in configured_roles
+            ):
+                ignored_out_of_scope += 1
+                continue
+
+            current_path = str(
+                item.get("current_path") or ""
+            ).strip()
+            cartridge = assign_cartridge(
+                current_path,
+                cartridges,
+            )
+
+            if cartridge is None:
+                raise LoadmasterObserverError(
+                    "in-scope cargo has no cartridge mapping: "
+                    f"{current_path or '(missing path)'}"
+                )
+
             result.append(item)
 
-    return result
+    return result, ignored_out_of_scope
 
 
 def observe_once(
@@ -73,10 +115,16 @@ def observe_once(
     """Observe current Servarr cargo and reconcile the durable backlog."""
 
     backlog_path = provider.loadmaster_backlog_path
+    registry_path = provider.cartridge_registry_path
 
     if backlog_path is None:
         raise LoadmasterObserverError(
             "Loadmaster backlog_path is not configured"
+        )
+
+    if registry_path is None:
+        raise LoadmasterObserverError(
+            "Loadmaster cartridge_registry_path is not configured"
         )
 
     try:
@@ -101,6 +149,15 @@ def observe_once(
                 str(error)
             ) from error
 
+    try:
+        cartridges = load_cartridge_registry(
+            registry_path
+        )
+    except ValueError as error:
+        raise LoadmasterObserverError(
+            str(error)
+        ) from error
+
     payload = provider.resolver.snapshot()
 
     if not isinstance(payload, dict):
@@ -108,11 +165,16 @@ def observe_once(
             "Cargo resolver returned a non-dict payload"
         )
 
+    cargo_items, ignored_out_of_scope = (
+        _cargo_items(
+            payload,
+            cartridges,
+        )
+    )
+
     backlog, report = reconcile_backlog(
         previous=previous,
-        cargo_items=_cargo_items(
-            payload
-        ),
+        cargo_items=cargo_items,
         manifest=manifest,
         observed_at=observed_at,
     )
@@ -124,6 +186,9 @@ def observe_once(
         )
 
     result = dict(report)
+    result["ignored_out_of_scope"] = (
+        ignored_out_of_scope
+    )
     result["dry_run"] = bool(dry_run)
     result["backlog_path"] = str(
         backlog_path
