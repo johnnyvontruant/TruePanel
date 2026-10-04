@@ -10,6 +10,7 @@ from truepanel.cargo.backlog import (
     empty_backlog,
     load_backlog,
     reconcile_backlog,
+    run,
     write_backlog_atomic,
 )
 
@@ -445,3 +446,51 @@ def test_legacy_backlog_without_watermark_defaults_to_epoch(
     assert loaded["observe_after"].startswith(
         "1970-01-01T00:00:00"
     )
+
+
+def test_cli_initializes_empty_commissioning_baseline(
+    tmp_path,
+):
+    output = tmp_path / "pending-cargo.json"
+
+    result = run(
+        [
+            "--backlog",
+            str(output),
+            "--initialize-baseline",
+        ]
+    )
+
+    assert result == 0
+
+    loaded = load_backlog(output)
+
+    assert loaded["items"] == []
+    assert not loaded["observe_after"].startswith(
+        "1970-01-01T00:00:00"
+    )
+
+
+def test_cli_baseline_refuses_to_overwrite_existing(
+    tmp_path,
+):
+    output = tmp_path / "pending-cargo.json"
+
+    write_backlog_atomic(
+        output,
+        empty_backlog(
+            updated_at=NOW,
+            observe_after=NOW,
+        ),
+    )
+
+    with pytest.raises(SystemExit) as error:
+        run(
+            [
+                "--backlog",
+                str(output),
+                "--initialize-baseline",
+            ]
+        )
+
+    assert error.value.code == 30
