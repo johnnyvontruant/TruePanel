@@ -1,8 +1,11 @@
 # AEGIS verifier confirmation handoff
 
-Status: development-only, simulation-proven, not accepted, not deployed  
-Reviewed: 2026-10-03  
-Branch: `feature/aegis-verifier-comparison-handoff`  
+Status: development-only, simulation-proven, not accepted, not deployed
+
+Reviewed: 2026-10-03
+
+Branch: `feature/aegis-verifier-comparison-handoff`
+
 Dependency: draft PR #187 at `318f01c3e0174272b8b2b60eb5fd52eaa79e2c91`, transitively dependent on frozen baseline PR #78
 
 ## Result
