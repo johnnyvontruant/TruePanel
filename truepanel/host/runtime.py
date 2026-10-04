@@ -28,6 +28,7 @@ class HostAgentRuntime:
         fan_status_reader: Callable[..., Any] | None = None,
         fan_reconciliation: Any | None = None,
         thermal_lifecycle: Any | None = None,
+        loadmaster_copy_button_service: Any | None = None,
     ):
         self._fan_runtime = fan_runtime
         self._safety = safety
@@ -36,6 +37,9 @@ class HostAgentRuntime:
         self._fan_status_reader = fan_status_reader
         self._fan_reconciliation = fan_reconciliation
         self._thermal_lifecycle = thermal_lifecycle
+        self._loadmaster_copy_button_service = (
+            loadmaster_copy_button_service
+        )
         self._fan_server_factory = fan_server_factory
 
         self._fan_server = None
@@ -205,6 +209,40 @@ class HostAgentRuntime:
         )
 
     @property
+    def loadmaster_copy_button_service(self) -> Any | None:
+        return self._loadmaster_copy_button_service
+
+    def arm_loadmaster_copy_button(
+        self,
+        preflight: Any,
+    ) -> None:
+        if self._loadmaster_copy_button_service is None:
+            raise RuntimeError(
+                "Loadmaster physical confirmation is disabled"
+            )
+        self._loadmaster_copy_button_service.arm(preflight)
+
+    def disarm_loadmaster_copy_button(
+        self,
+        *,
+        reason: str = "operator",
+    ) -> None:
+        if self._loadmaster_copy_button_service is None:
+            return
+        self._loadmaster_copy_button_service.disarm(
+            reason=reason
+        )
+
+    def loadmaster_copy_button_status(
+        self,
+    ) -> dict[str, object] | None:
+        if self._loadmaster_copy_button_service is None:
+            return None
+        return (
+            self._loadmaster_copy_button_service.snapshot()
+        )
+
+    @property
     def started(self) -> bool:
         return self._started
 
@@ -240,6 +278,9 @@ class HostAgentRuntime:
             if self._fan_server is not None:
                 self._fan_server.start()
 
+            if self._loadmaster_copy_button_service is not None:
+                self._loadmaster_copy_button_service.start()
+
             self._started = True
         except Exception:
             LOGGER.exception(
@@ -271,6 +312,14 @@ class HostAgentRuntime:
                 )
             finally:
                 self._fan_server = None
+
+        if self._loadmaster_copy_button_service is not None:
+            try:
+                self._loadmaster_copy_button_service.stop()
+            except Exception:
+                LOGGER.exception(
+                    "Loadmaster Copy-button service shutdown failed"
+                )
 
         if (
             self._ownership_guard is None
