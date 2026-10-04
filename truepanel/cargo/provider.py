@@ -10,6 +10,11 @@ from typing import Any
 
 from .backup_manifest import validate_backup_manifest
 from .backup_state import correlate_backup_manifest
+from .backlog import (
+    LoadmasterBacklogError,
+    backlog_cargo_items,
+    load_backlog,
+)
 from .cartridges import (
     disabled_loadmaster_summary,
     load_cartridge_registry,
@@ -35,6 +40,7 @@ class CachedCargoProvider:
         backup_manifest_path: Path | None = None,
         loadmaster_enabled: bool = False,
         cartridge_registry_path: Path | None = None,
+        loadmaster_backlog_path: Path | None = None,
     ) -> None:
         self.resolver = resolver
         self.cache_seconds = max(0.0, float(cache_seconds))
@@ -42,6 +48,7 @@ class CachedCargoProvider:
         self.backup_manifest_path = backup_manifest_path
         self.loadmaster_enabled = bool(loadmaster_enabled)
         self.cartridge_registry_path = cartridge_registry_path
+        self.loadmaster_backlog_path = loadmaster_backlog_path
         self._cached_at: float | None = None
         self._cached_payload: dict[str, Any] | None = None
 
@@ -77,6 +84,8 @@ class CachedCargoProvider:
                 )
 
         manifest_path = self.backup_manifest_path
+        manifest = None
+        manifest_error = None
 
         if manifest_path is None:
             backup = correlate_backup_manifest(
@@ -90,6 +99,7 @@ class CachedCargoProvider:
                     manifest_path
                 )
             except ValueError as error:
+                manifest_error = str(error)
                 backup = correlate_backup_manifest(
                     cargo_items=cargo_items,
                     manifest=None,
@@ -104,6 +114,7 @@ class CachedCargoProvider:
                 )
 
         registry_path = self.cartridge_registry_path
+        backlog_path = self.loadmaster_backlog_path
 
         if not self.loadmaster_enabled:
             loadmaster = disabled_loadmaster_summary()
@@ -121,11 +132,64 @@ class CachedCargoProvider:
                     str(error)
                 )
             else:
-                loadmaster = summarize_cartridge_cargo(
-                    cargo_items=cargo_items,
-                    backup=backup,
-                    cartridges=cartridges,
-                )
+                loadmaster_items = cargo_items
+                loadmaster_backup = backup
+                backlog_metadata = {
+                    "tracking": False,
+                    "updated_at": None,
+                    "pending_items": len(
+                        loadmaster_items
+                    ),
+                }
+
+                if backlog_path is not None:
+                    try:
+                        backlog = load_backlog(
+                            backlog_path
+                        )
+                    except LoadmasterBacklogError as error:
+                        loadmaster = unavailable_loadmaster_summary(
+                            str(error)
+                        )
+                    else:
+                        loadmaster_items = backlog_cargo_items(
+                            backlog
+                        )
+                        loadmaster_backup = correlate_backup_manifest(
+                            cargo_items=loadmaster_items,
+                            manifest=manifest,
+                            tracking=(
+                                manifest_path is not None
+                            ),
+                            invalid_reason=manifest_error,
+                        )
+                        backlog_metadata = {
+                            "tracking": True,
+                            "updated_at": backlog.get(
+                                "updated_at"
+                            ),
+                            "pending_items": len(
+                                loadmaster_items
+                            ),
+                        }
+                        loadmaster = summarize_cartridge_cargo(
+                            cargo_items=loadmaster_items,
+                            backup=loadmaster_backup,
+                            cartridges=cartridges,
+                        )
+                        loadmaster["backlog"] = (
+                            backlog_metadata
+                        )
+
+                else:
+                    loadmaster = summarize_cartridge_cargo(
+                        cargo_items=loadmaster_items,
+                        backup=loadmaster_backup,
+                        cartridges=cartridges,
+                    )
+                    loadmaster["backlog"] = (
+                        backlog_metadata
+                    )
 
         payload = dict(payload)
         payload["backup"] = backup
@@ -217,6 +281,9 @@ def provider_from_config(
     cartridge_registry_path_text = _text(
         loadmaster.get("cartridge_registry_path")
     )
+    loadmaster_backlog_path_text = _text(
+        loadmaster.get("backlog_path")
+    )
 
     return CachedCargoProvider(
         resolver,
@@ -235,6 +302,11 @@ def provider_from_config(
         cartridge_registry_path=(
             Path(cartridge_registry_path_text)
             if cartridge_registry_path_text
+            else None
+        ),
+        loadmaster_backlog_path=(
+            Path(loadmaster_backlog_path_text)
+            if loadmaster_backlog_path_text
             else None
         ),
     )
