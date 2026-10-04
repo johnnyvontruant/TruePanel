@@ -92,6 +92,17 @@ def sdr_rescue_receipt_cargo_items(
             receipt_path
         )
 
+        generated = _parse_generated_at(
+            receipt.get("generated_at")
+        )
+
+        if (
+            observe_after is not None
+            and generated < observe_after
+        ):
+            ignored_before_baseline += 1
+            continue
+
         if receipt.get("engine") != "sdr-rescue-apply-one":
             raise LoadmasterReceiptSourceError(
                 "unexpected SDR Rescue receipt engine: "
@@ -107,17 +118,6 @@ def sdr_rescue_receipt_cargo_items(
                 "unsupported SDR Rescue receipt result "
                 f"{result!r}: {receipt_path}"
             )
-
-        generated = _parse_generated_at(
-            receipt.get("generated_at")
-        )
-
-        if (
-            observe_after is not None
-            and generated < observe_after
-        ):
-            ignored_before_baseline += 1
-            continue
 
         final_probe = receipt.get("final")
 
