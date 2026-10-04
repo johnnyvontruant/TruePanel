@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.03.1 · refreshed 2026-10-03 · 30 experiment(s)
+Registry version 2026.10.03.1 · refreshed 2026-10-03 · 31 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -243,3 +243,11 @@ One exact public kit and one audited-kit attestation succeed; ten custody presen
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Export and audit one real public kit, obtain the full verifier SHA-256 through an operator-controlled channel, compare all eight blocks, and create the short-lived development attestation.
 - Revisit when: JT performs the first real comparison; the verifier release or challenge schema changes; comparison moves to a different operator device; any consumer seeks stronger authority
+
+## TP-EXP-0036 · AEGIS release-bound verifier confirmation handoff
+
+One exact release-bound handoff verifies, the field ceremony reaches only its public-roster action gate, twelve foreign-kit custody drift freshness and authority attacks hold, and two unsafe confirmations are denied with no stronger authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Export and audit one real comparison kit, let JT obtain and compare the verifier digest independently, stage this short-lived public handoff, then let the read-only coordinator name the protected public-roster gate.
+- Revisit when: JT performs the first real digest comparison; the verifier release receipt or kit schema changes; a cryptographic operator identity becomes available; any consumer seeks stronger authority
