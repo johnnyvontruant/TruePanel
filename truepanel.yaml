@@ -226,3 +226,4 @@ mission_control:
     loadmaster:
       enabled: false
       cartridge_registry_path: /var/lib/truepanel/loadmaster/cartridges.json
+      backlog_path: /var/lib/truepanel/loadmaster/pending-cargo.json
