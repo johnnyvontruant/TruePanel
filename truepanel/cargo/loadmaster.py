@@ -33,6 +33,13 @@ DEFAULT_IGNORED_NAMES = frozenset(
         "System Volume Information",
     }
 )
+SDR_RESCUE_IGNORED_MARKERS = (
+    ".sdr-rescue-backup-",
+)
+SDR_RESCUE_IGNORED_SUFFIXES = (
+    ".sdr-rescue-partial",
+    ".failed-sdr-rescue",
+)
 
 
 class LoadmasterPlanError(RuntimeError):
@@ -126,6 +133,24 @@ def _fingerprints_match(
     )
 
 
+def _ignored_name(
+    name: str,
+    ignored_names: frozenset[str],
+) -> bool:
+    if name in ignored_names:
+        return True
+
+    if any(
+        marker in name
+        for marker in SDR_RESCUE_IGNORED_MARKERS
+    ):
+        return True
+
+    return name.endswith(
+        SDR_RESCUE_IGNORED_SUFFIXES
+    )
+
+
 def scan_tree(
     root: Path,
     *,
@@ -171,7 +196,10 @@ def scan_tree(
         kept_dirs = []
 
         for name in dirs:
-            if name in ignored_names:
+            if _ignored_name(
+                name,
+                ignored_names,
+            ):
                 continue
 
             candidate = current_path / name
@@ -201,7 +229,10 @@ def scan_tree(
         dirs[:] = kept_dirs
 
         for name in files:
-            if name in ignored_names:
+            if _ignored_name(
+                name,
+                ignored_names,
+            ):
                 continue
 
             candidate = current_path / name
