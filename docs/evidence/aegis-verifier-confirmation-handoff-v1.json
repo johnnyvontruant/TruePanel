@@ -1,0 +1,112 @@
+{
+  "control_authority": false,
+  "measurements": {
+    "adversarial_holds": 12,
+    "coherent_foreign_kits_accepted": 0,
+    "cryptographic_independence_claims": 0,
+    "deployments": 0,
+    "field_ceremony_next_gates": 1,
+    "hardware_actions": 0,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "release_bound_handoffs": 1,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_confirmations_denied": 2
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-verifier-confirmation-handoff-v1",
+  "scenarios": [
+    {
+      "reason": "OPERATOR_ATTESTATION_NOT_CRYPTOGRAPHIC_PROOF",
+      "scenario": "exact-release-bound-handoff",
+      "status": "VERIFIER_CONFIRMATION_HANDOFF_VERIFIED"
+    },
+    {
+      "reason": "JT_PROVISIONS_DEVELOPMENT_PUBLIC_ROSTER",
+      "scenario": "field-ceremony-consumes-handoff",
+      "status": "ACTION_REQUIRED_PUBLIC_ROSTER"
+    },
+    {
+      "reason": "VerifierConfirmationKitReleaseMismatch",
+      "scenario": "coherent-foreign-kit",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationReceiptInvalid",
+      "scenario": "receipt-substitution",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffMismatch",
+      "scenario": "manifest-substitution",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationReceiptInvalid",
+      "scenario": "receipt-authority-escalation",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffFileSetInvalid",
+      "scenario": "extra-file",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffFileSetInvalid",
+      "scenario": "missing-file",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffUnsafePath",
+      "scenario": "symlinked-receipt",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationExpired",
+      "scenario": "expired-handoff",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationKitMismatch",
+      "scenario": "kit-drift-after-staging",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierBootstrapSourceMismatch",
+      "scenario": "verifier-source-drift",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffUnsafePath",
+      "scenario": "relative-handoff",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffOutputUnsafe",
+      "scenario": "occupied-output",
+      "status": "HOLD"
+    },
+    {
+      "reason": "IndependentVerifierFingerprintMismatch",
+      "scenario": "wrong-independent-digest",
+      "status": "DENIED"
+    },
+    {
+      "reason": "VerifierConfirmationChannelInvalid",
+      "scenario": "same-repository-channel",
+      "status": "DENIED"
+    }
+  ],
+  "status_counts": {
+    "ACTION_REQUIRED_PUBLIC_ROSTER": 1,
+    "DENIED": 2,
+    "HOLD": 12,
+    "VERIFIER_CONFIRMATION_HANDOFF_VERIFIED": 1
+  }
+}

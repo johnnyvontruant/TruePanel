@@ -584,6 +584,25 @@
       "revisit_conditions": ["JT performs the first real comparison", "the verifier release or challenge schema changes", "comparison moves to a different operator device", "any consumer seeks stronger authority"],
       "strongest_follow_up": "Export and audit one real public kit, obtain the full verifier SHA-256 through an operator-controlled channel, compare all eight blocks, and create the short-lived development attestation.",
       "freshness": {"reviewed_at": "2026-10-03", "review_after": "2027-03-31"}
+    },
+    {
+      "id": "TP-EXP-0036", "title": "AEGIS release-bound verifier confirmation handoff", "state": "COMPLETED",
+      "hypothesis": "A short-lived public operator attestation can cross into the field ceremony through an exclusive re-audited handoff only when its complete comparison kit still matches the pinned verifier release.",
+      "value": "Closes whole-kit substitution and stdout-custody gaps before JT provisions a public development roster, without adding a signer or claiming cryptographic operator identity.",
+      "prior_art": ["Sigstore Bundle", "Git tempfile lifecycle", "in-toto Statement v1", "TUF consistent snapshots and expiry"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-verifier-comparison-handoff", "pr": null, "commits": []},
+      "protocol": ["reverify the pinned standalone verifier", "reconstruct every comparison-kit view", "require the kit challenge to equal the release-derived challenge", "create a short-lived public operator attestation", "write a new owner-protected two-file handoff without overwrite", "reconstruct kit receipt manifest source and expiry at the consumer", "pass only the verified public receipt to the read-only field coordinator"],
+      "fixtures": ["aegis-verifier-confirmation-handoff-v1", "tests/test_aegis_verifier_confirmation_handoff.py"],
+      "success_criteria": ["one release-bound handoff verifies", "one field-ceremony path reaches only the public-roster action gate", "a coherent foreign kit holds", "custody substitution drift and expiry attacks hold", "unsafe confirmations are denied", "zero private-key input signer invocation false independence claim stronger authority or live action"],
+      "abort_criteria": ["an internally consistent foreign kit is accepted", "receipt is persisted by overwrite or shell redirection", "manifest is treated as operator authentication", "expired evidence advances the ceremony", "private-key path or signer is accepted", "production deployment or hardware authority is added"],
+      "evidence": [{"path": "docs/evidence/aegis-verifier-confirmation-handoff-v1.json", "sha256": "99ef04e1f0272e7f006721a140034ab75344e2c363bde860814e6be7ba6d9368"}],
+      "outcome": {"conclusion": "One exact release-bound handoff verifies, the field ceremony reaches only its public-roster action gate, twelve foreign-kit custody drift freshness and authority attacks hold, and two unsafe confirmations are denied with no stronger authority."},
+      "invalidated_assumptions": ["internal agreement among challenge card and manifest proves the kit belongs to the pinned verifier release", "printing a receipt to stdout is an adequate custody handoff", "an unsigned manifest can authenticate JT"],
+      "reproduction": ["pytest -q tests/test_aegis_verifier_confirmation_handoff.py tests/test_aegis_verifier_confirmation_kit.py tests/test_aegis_verifier_confirmation.py tests/test_aegis_field_ceremony.py", "python -c \"from truepanel.holodeck.aegis_verifier_confirmation_handoff import run_verifier_confirmation_handoff_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.verifier_confirmation_handoff --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT performs the first real digest comparison", "the verifier release receipt or kit schema changes", "a cryptographic operator identity becomes available", "any consumer seeks stronger authority"],
+      "strongest_follow_up": "Export and audit one real comparison kit, let JT obtain and compare the verifier digest independently, stage this short-lived public handoff, then let the read-only coordinator name the protected public-roster gate.",
+      "freshness": {"reviewed_at": "2026-10-03", "review_after": "2027-03-31"}
     }
   ]
 }
