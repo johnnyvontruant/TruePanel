@@ -1,5 +1,15 @@
 """Read-only application cargo discovery for Mission Control."""
 
+from .backlog import (
+    LOADMASTER_BACKLOG_KIND,
+    LOADMASTER_BACKLOG_SCHEMA_VERSION,
+    LoadmasterBacklogError,
+    backlog_cargo_items,
+    empty_backlog,
+    load_backlog,
+    reconcile_backlog,
+    write_backlog_atomic,
+)
 from .provider import CachedCargoProvider, provider_from_config
 from .loadmaster import (
     FileFingerprint,
@@ -24,6 +34,14 @@ from .resolver import (
 )
 
 __all__ = [
+    "LOADMASTER_BACKLOG_KIND",
+    "LOADMASTER_BACKLOG_SCHEMA_VERSION",
+    "LoadmasterBacklogError",
+    "backlog_cargo_items",
+    "empty_backlog",
+    "load_backlog",
+    "reconcile_backlog",
+    "write_backlog_atomic",
     "CachedCargoProvider",
     "provider_from_config",
     "CargoResolver",
