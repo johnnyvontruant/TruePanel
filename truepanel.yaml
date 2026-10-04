@@ -230,3 +230,16 @@ mission_control:
       cartridge_registry_path: /var/lib/truepanel/loadmaster/cartridges.json
       backlog_path: /var/lib/truepanel/loadmaster/pending-cargo.json
       sdr_rescue_receipts_path: /mnt/SSDs/Applications/Library-Audit/sdr-rescue/receipts
+
+      # TVS-671 front-panel Copy button. Characterized 2026-10-04 as
+      # Fintek GPIO75 (bank 7, bit 5), active-low. This is confirmation
+      # input only; transfer execution remains separately gated.
+      physical_confirmation:
+        enabled: false
+        source: fintek_gpio
+        bank: 7
+        bit: 5
+        active_low: true
+        debounce_ms: 75
+        rearm_ms: 750
+        confirmation_window_seconds: 30

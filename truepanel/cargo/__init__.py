@@ -10,7 +10,22 @@ from .backlog import (
     reconcile_backlog,
     write_backlog_atomic,
 )
-from .provider import CachedCargoProvider, provider_from_config
+from .cartridges import (
+    CartridgeDefinition,
+    assign_cartridge,
+    disabled_loadmaster_summary,
+    load_cartridge_registry,
+    summarize_cartridge_cargo,
+    unavailable_loadmaster_summary,
+)
+from .copy_button import (
+    COPY_BUTTON_ACTIVE_LOW,
+    COPY_BUTTON_BANK,
+    COPY_BUTTON_BIT,
+    CopyButtonConfirmation,
+    LoadmasterCopyButtonGate,
+    LoadmasterPhysicalPreflight,
+)
 from .loadmaster import (
     FileFingerprint,
     LoadmasterPlanError,
@@ -20,14 +35,7 @@ from .loadmaster import (
     load_inventory,
     scan_tree,
 )
-from .cartridges import (
-    CartridgeDefinition,
-    assign_cartridge,
-    disabled_loadmaster_summary,
-    load_cartridge_registry,
-    summarize_cartridge_cargo,
-    unavailable_loadmaster_summary,
-)
+from .provider import CachedCargoProvider, provider_from_config
 from .resolver import (
     CargoResolver,
     ServarrClient,
@@ -35,6 +43,12 @@ from .resolver import (
 )
 
 __all__ = [
+    "COPY_BUTTON_ACTIVE_LOW",
+    "COPY_BUTTON_BANK",
+    "COPY_BUTTON_BIT",
+    "CopyButtonConfirmation",
+    "LoadmasterCopyButtonGate",
+    "LoadmasterPhysicalPreflight",
     "LOADMASTER_BACKLOG_KIND",
     "LOADMASTER_BACKLOG_SCHEMA_VERSION",
     "LoadmasterBacklogError",
