@@ -227,3 +227,4 @@ mission_control:
       enabled: false
       cartridge_registry_path: /var/lib/truepanel/loadmaster/cartridges.json
       backlog_path: /var/lib/truepanel/loadmaster/pending-cargo.json
+      sdr_rescue_receipts_path: /mnt/SSDs/Applications/Library-Audit/sdr-rescue/receipts
