@@ -232,3 +232,47 @@ def test_receipt_source_skips_pre_baseline_before_file_validation(
         "items": 0,
         "ignored_before_baseline": 1,
     }
+
+
+
+def test_receipt_source_ignores_pre_baseline_legacy_engine(
+    tmp_path,
+):
+    media_root = tmp_path / "Movies 1-D"
+    media_root.mkdir()
+
+    receipts = tmp_path / "receipts"
+    receipts.mkdir()
+
+    (receipts / "118-old.json").write_text(
+        json.dumps(
+            {
+                "generated_at": "2026-10-01T09:56:37-07:00",
+                "engine": "legacy-sdr-rescue",
+                "result": "OLD_RECEIPT",
+                "new_sdr_file": "/missing/old-file.mkv",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows, report = sdr_rescue_receipt_cargo_items(
+        receipts,
+        cartridges=_registry(tmp_path, media_root),
+        observe_after=datetime(
+            2026,
+            10,
+            4,
+            2,
+            36,
+            7,
+            tzinfo=UTC,
+        ),
+    )
+
+    assert rows == []
+    assert report == {
+        "files_scanned": 1,
+        "items": 0,
+        "ignored_before_baseline": 1,
+    }
