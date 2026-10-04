@@ -22,6 +22,7 @@ from .backup_manifest import validate_backup_manifest
 
 LOADMASTER_BACKLOG_SCHEMA_VERSION = 1
 LOADMASTER_BACKLOG_KIND = "truepanel.loadmaster_backlog"
+LOADMASTER_BACKLOG_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 class LoadmasterBacklogError(RuntimeError):
@@ -123,11 +124,19 @@ def _size(value: Any) -> int:
 def empty_backlog(
     *,
     updated_at: datetime | None = None,
+    observe_after: datetime | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": LOADMASTER_BACKLOG_SCHEMA_VERSION,
         "kind": LOADMASTER_BACKLOG_KIND,
         "updated_at": _iso(_utc(updated_at)),
+        "observe_after": _iso(
+            _utc(
+                observe_after
+                if observe_after is not None
+                else LOADMASTER_BACKLOG_EPOCH
+            )
+        ),
         "items": [],
     }
 
@@ -158,6 +167,19 @@ def validate_backlog_payload(
             payload.get("updated_at"),
             field="updated_at",
         )
+    )
+    observe_after_raw = payload.get(
+        "observe_after"
+    )
+    observe_after = (
+        _iso(
+            _parse_iso(
+                observe_after_raw,
+                field="observe_after",
+            )
+        )
+        if observe_after_raw is not None
+        else _iso(LOADMASTER_BACKLOG_EPOCH)
     )
 
     items = payload.get("items")
@@ -233,6 +255,7 @@ def validate_backlog_payload(
         "schema_version": LOADMASTER_BACKLOG_SCHEMA_VERSION,
         "kind": LOADMASTER_BACKLOG_KIND,
         "updated_at": updated_at,
+        "observe_after": observe_after,
         "items": normalized,
     }
 
@@ -416,8 +439,13 @@ def reconcile_backlog(
         item["current_path"]: dict(item)
         for item in current["items"]
     }
+    observe_after = _parse_iso(
+        current["observe_after"],
+        field="observe_after",
+    )
 
     observed = 0
+    ignored_before_baseline = 0
 
     for recent in cargo_items:
         if not isinstance(recent, dict):
@@ -428,10 +456,23 @@ def reconcile_backlog(
         path = _canonical(
             recent.get("current_path")
         )
+        previous_item = by_path.get(path)
+
+        if previous_item is None:
+            imported = _imported_at(
+                recent.get("imported_at")
+            )
+
+            if (
+                imported is not None
+                and imported < observe_after
+            ):
+                ignored_before_baseline += 1
+                continue
 
         by_path[path] = _upsert_item(
             recent=recent,
-            previous=by_path.get(path),
+            previous=previous_item,
             observed_at=now,
         )
         observed += 1
@@ -492,12 +533,21 @@ def reconcile_backlog(
         "schema_version": LOADMASTER_BACKLOG_SCHEMA_VERSION,
         "kind": LOADMASTER_BACKLOG_KIND,
         "updated_at": _iso(now),
+        "observe_after": _iso(
+            observe_after
+        ),
         "items": kept,
     }
 
     report = {
         "observed_at": _iso(now),
         "observed_items": observed,
+        "ignored_before_baseline": (
+            ignored_before_baseline
+        ),
+        "observe_after": _iso(
+            observe_after
+        ),
         "previous_items": len(
             current["items"]
         ),
@@ -658,7 +708,6 @@ def run(
     )
     parser.add_argument(
         "--cargo-json",
-        required=True,
         type=Path,
     )
     parser.add_argument(
@@ -670,10 +719,66 @@ def run(
         "--backup-manifest",
         type=Path,
     )
+    parser.add_argument(
+        "--initialize-baseline",
+        action="store_true",
+        help=(
+            "Create an empty backlog whose watermark starts now; "
+            "existing older Cargo history will be ignored."
+        ),
+    )
 
     args = parser.parse_args(argv)
 
     try:
+        if args.initialize_baseline:
+            if args.cargo_json is not None:
+                raise LoadmasterBacklogError(
+                    "--initialize-baseline cannot be combined "
+                    "with --cargo-json"
+                )
+
+            if args.backup_manifest is not None:
+                raise LoadmasterBacklogError(
+                    "--initialize-baseline cannot be combined "
+                    "with --backup-manifest"
+                )
+
+            if args.backlog.exists():
+                raise LoadmasterBacklogError(
+                    "Loadmaster backlog already exists"
+                )
+
+            now = _utc()
+            payload = empty_backlog(
+                updated_at=now,
+                observe_after=now,
+            )
+            write_backlog_atomic(
+                args.backlog,
+                payload,
+            )
+            print(
+                json.dumps(
+                    {
+                        "state": "BASELINE_INITIALIZED",
+                        "observe_after": payload[
+                            "observe_after"
+                        ],
+                        "pending_items": 0,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 0
+
+        if args.cargo_json is None:
+            raise LoadmasterBacklogError(
+                "--cargo-json is required unless "
+                "--initialize-baseline is used"
+            )
+
         cargo_payload = json.loads(
             args.cargo_json.read_text(
                 encoding="utf-8",
