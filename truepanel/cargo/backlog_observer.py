@@ -29,6 +29,10 @@ from .cartridges import (
     load_cartridge_registry,
 )
 from .provider import CachedCargoProvider, provider_from_config
+from .receipt_sources import (
+    LoadmasterReceiptSourceError,
+    sdr_rescue_receipt_cargo_items,
+)
 
 
 class LoadmasterObserverError(RuntimeError):
@@ -172,6 +176,33 @@ def observe_once(
         )
     )
 
+    receipt_report = {
+        "files_scanned": 0,
+        "items": 0,
+    }
+    receipt_path = getattr(
+        provider,
+        "sdr_rescue_receipts_path",
+        None,
+    )
+
+    if receipt_path is not None:
+        try:
+            receipt_items, receipt_report = (
+                sdr_rescue_receipt_cargo_items(
+                    receipt_path,
+                    cartridges=cartridges,
+                )
+            )
+        except LoadmasterReceiptSourceError as error:
+            raise LoadmasterObserverError(
+                str(error)
+            ) from error
+
+        cargo_items.extend(
+            receipt_items
+        )
+
     backlog, report = reconcile_backlog(
         previous=previous,
         cargo_items=cargo_items,
@@ -188,6 +219,12 @@ def observe_once(
     result = dict(report)
     result["ignored_out_of_scope"] = (
         ignored_out_of_scope
+    )
+    result["sdr_receipt_files"] = int(
+        receipt_report["files_scanned"]
+    )
+    result["sdr_receipt_items"] = int(
+        receipt_report["items"]
     )
     result["dry_run"] = bool(dry_run)
     result["backlog_path"] = str(
