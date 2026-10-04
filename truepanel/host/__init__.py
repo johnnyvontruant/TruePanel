@@ -20,6 +20,9 @@ from .factory import (
     build_host_agent_runtime_from_bootstrap,
 )
 from .hooks import HostAgentSafetyServices
+from .loadmaster_copy_button import (
+    LoadmasterCopyButtonService,
+)
 from .ownership import (
     DEFAULT_HOST_OWNERSHIP_PATH,
     HostOwnershipError,
@@ -39,6 +42,7 @@ __all__ = [
     "HostAgentBootstrap",
     "HostAgentCapabilities",
     "HostAgentRuntime",
+    "LoadmasterCopyButtonService",
     "HostAgentSafetyCoordinator",
     "HostAgentSafetyServices",
     "HostAgentStatusClient",
