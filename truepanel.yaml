@@ -220,11 +220,13 @@ mission_control:
       media_prefix: /media/movies
       host_prefix: /mnt/HDDs/Movies
 
-    # Loadmaster begins read-only. Enabling it only exposes cartridge
-    # planning in Cargo Bay; physical USB transfer authority is a
-    # separately gated commissioning step.
+    backup:
+      manifest_path: /var/lib/truepanel/loadmaster/backup-manifest.json
+
+    # Loadmaster planning is enabled after commissioning. Physical USB
+    # transfer authority remains separately gated and manual.
     loadmaster:
-      enabled: false
+      enabled: true
       cartridge_registry_path: /var/lib/truepanel/loadmaster/cartridges.json
       backlog_path: /var/lib/truepanel/loadmaster/pending-cargo.json
       sdr_rescue_receipts_path: /mnt/SSDs/Applications/Library-Audit/sdr-rescue/receipts

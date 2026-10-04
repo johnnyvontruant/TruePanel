@@ -14,6 +14,7 @@ from .provider import CachedCargoProvider, provider_from_config
 from .loadmaster import (
     FileFingerprint,
     LoadmasterPlanError,
+    build_backlog_backup_plan,
     build_sync_plan,
     inventory_payload,
     load_inventory,
@@ -55,6 +56,7 @@ __all__ = [
     "unavailable_loadmaster_summary",
     "FileFingerprint",
     "LoadmasterPlanError",
+    "build_backlog_backup_plan",
     "build_sync_plan",
     "inventory_payload",
     "load_inventory",

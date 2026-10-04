@@ -10,6 +10,7 @@ from truepanel.cargo.cartridges import (
 from truepanel.cargo.loadmaster import (
     FileFingerprint,
     LoadmasterPlanError,
+    build_backlog_backup_plan,
     build_sync_plan,
     inventory_payload,
     load_inventory,
@@ -488,3 +489,190 @@ def test_sdr_rollback_file_never_plans_usb_backup(
     assert plan["actions"][0]["relative_path"] == canonical
     assert plan["actions"][0]["direction"] == "NAS_TO_USB"
     assert plan["actions"][0]["reason"] == "NAS_UPDATED"
+
+
+def test_backlog_backup_plan_ignores_unrelated_usb_files(
+    tmp_path,
+):
+    item, mount, usb_root = prepare(tmp_path)
+
+    source = item.source_prefix / "Heat.mkv"
+    write_file(
+        source,
+        b"newer",
+        20_000_000_000,
+    )
+    write_file(
+        usb_root / "Heat.mkv",
+        b"old",
+        10_000_000_000,
+    )
+    write_file(
+        usb_root / "Legacy" / "Old Copy.avi",
+        b"usb-only",
+        5_000_000_000,
+    )
+
+    baseline = {
+        "Heat.mkv": FileFingerprint(
+            size_bytes=3,
+            mtime_ns=10_000_000_000,
+        )
+    }
+
+    plan = build_backlog_backup_plan(
+        cartridge=item,
+        usb_mount=mount,
+        backlog_items=[
+            {
+                "current_path": str(source),
+                "size_bytes": 5,
+            }
+        ],
+        inventory=baseline,
+    )
+
+    assert plan["scope"] == "durable_backlog"
+    assert plan["state"] == "READY"
+    assert plan["summary"]["scoped_items"] == 1
+    assert plan["summary"]["ingest_files"] == 0
+    assert plan["summary"]["backup_files"] == 1
+    assert plan["summary"]["conflicts"] == 0
+    assert plan["actions"] == [
+        {
+            "direction": "NAS_TO_USB",
+            "relative_path": "Heat.mkv",
+            "size_bytes": 5,
+            "reason": "BACKLOG_UPDATED",
+        }
+    ]
+
+
+def test_backlog_backup_plan_holds_if_usb_target_changed(
+    tmp_path,
+):
+    item, mount, usb_root = prepare(tmp_path)
+
+    source = item.source_prefix / "Heat.mkv"
+    write_file(
+        source,
+        b"newer",
+        20_000_000_000,
+    )
+    write_file(
+        usb_root / "Heat.mkv",
+        b"tampered",
+        15_000_000_000,
+    )
+
+    baseline = {
+        "Heat.mkv": FileFingerprint(
+            size_bytes=3,
+            mtime_ns=10_000_000_000,
+        )
+    }
+
+    plan = build_backlog_backup_plan(
+        cartridge=item,
+        usb_mount=mount,
+        backlog_items=[
+            {
+                "current_path": str(source),
+                "size_bytes": 5,
+            }
+        ],
+        inventory=baseline,
+    )
+
+    assert plan["state"] == "HOLD"
+    assert plan["summary"]["backup_files"] == 0
+    assert plan["summary"]["conflicts"] == 1
+    assert (
+        plan["conflicts"][0]["reason"]
+        == "USB_CHANGED_SINCE_BASELINE"
+    )
+
+
+def test_backlog_backup_plan_clear_when_usb_matches_source(
+    tmp_path,
+):
+    item, mount, usb_root = prepare(tmp_path)
+
+    source = item.source_prefix / "Heat.mkv"
+    write_file(
+        source,
+        b"same",
+        20_000_000_000,
+    )
+    write_file(
+        usb_root / "Heat.mkv",
+        b"same",
+        21_500_000_000,
+    )
+
+    plan = build_backlog_backup_plan(
+        cartridge=item,
+        usb_mount=mount,
+        backlog_items=[
+            {
+                "current_path": str(source),
+                "size_bytes": 4,
+            }
+        ],
+        inventory={},
+    )
+
+    assert plan["state"] == "CLEAR"
+    assert plan["summary"]["backup_files"] == 0
+    assert plan["summary"]["unchanged_files"] == 1
+
+
+def test_backlog_backup_plan_rejects_source_size_drift(
+    tmp_path,
+):
+    item, mount, _ = prepare(tmp_path)
+
+    source = item.source_prefix / "Heat.mkv"
+    write_file(
+        source,
+        b"changed",
+        20_000_000_000,
+    )
+
+    with pytest.raises(
+        LoadmasterPlanError,
+        match="source size no longer matches backlog",
+    ):
+        build_backlog_backup_plan(
+            cartridge=item,
+            usb_mount=mount,
+            backlog_items=[
+                {
+                    "current_path": str(source),
+                    "size_bytes": 3,
+                }
+            ],
+            inventory={},
+        )
+
+
+def test_cartridge_device_serial_is_preserved(
+    tmp_path,
+):
+    item = CartridgeDefinition.from_dict(
+        {
+            "id": "movies-num-d",
+            "label": "Movies #-D",
+            "uuid": "6989-100A",
+            "device_serial": "2532EA8D3ED1",
+            "role": "movies",
+            "source_prefix": str(
+                tmp_path / "nas"
+            ),
+            "usb_relative_path": "Movies 1-D",
+            "delete_policy": "never",
+        }
+    )
+
+    assert item.device_serial == "2532EA8D3ED1"
+    assert "device_serial" not in item.public_dict()
