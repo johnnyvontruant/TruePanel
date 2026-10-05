@@ -27,8 +27,8 @@
       "status": "ACTION_REQUIRED_INDEPENDENT_VERIFIER_CONFIRMATION"
     },
     {
-      "reason": "IndependentVerifierFingerprintMismatch",
-      "scenario": "wrong-independent-fingerprint",
+      "reason": "VerifierConfirmationHandoffContextIncomplete",
+      "scenario": "receipt-only-bypass-context",
       "status": "HOLD"
     },
     {
