@@ -21,9 +21,11 @@ from truepanel.aegis.field_ceremony import (
 from truepanel.aegis.operator_handoff import OPERATOR_KEY_ID
 from truepanel.aegis.signing_session import SIGNING_SESSION_NAMESPACE
 from truepanel.aegis.signing_tool import MATERIALS_SCHEMA, export_signing_kit
-from truepanel.aegis.verifier_confirmation import (
-    build_verifier_confirmation_challenge,
-    create_verifier_confirmation_receipt,
+from truepanel.aegis.verifier_confirmation_handoff import (
+    stage_verifier_confirmation_handoff,
+)
+from truepanel.aegis.verifier_confirmation_kit import (
+    export_verifier_confirmation_kit,
 )
 from truepanel.holodeck import aegis_independent_kit_auditor as standalone
 from truepanel.holodeck.aegis_single_operator_development import (
@@ -125,17 +127,27 @@ def run_field_ceremony_checkride() -> dict[str, Any]:
         release = verifier_bootstrap.verify_verifier_release(
             receipt_path=receipt, source_path=source
         )
-        challenge = build_verifier_confirmation_challenge(release)
-        confirmation = create_verifier_confirmation_receipt(
-            challenge=challenge,
+        comparison_kit = root / "verifier-comparison-kit"
+        export_verifier_confirmation_kit(
+            verifier_receipt_path=receipt,
+            verifier_source_path=source,
+            output_directory=comparison_kit,
+        )
+        confirmation_handoff = root / "verifier-confirmation-handoff"
+        stage_verifier_confirmation_handoff(
+            kit_directory=comparison_kit,
+            verifier_receipt_path=receipt,
+            verifier_source_path=source,
             independently_observed_sha256=release["source_sha256"],
             channel="SEPARATE_OPERATOR_DEVICE",
             confirmed_at="2026-09-19T11:50:00Z",
+            output_directory=confirmation_handoff,
         )
         baseline = {
             "verifier_receipt_path": receipt,
             "verifier_source_path": source,
-            "verifier_confirmation_receipt": confirmation,
+            "verifier_confirmation_handoff_directory": confirmation_handoff,
+            "verifier_comparison_kit_directory": comparison_kit,
             "confirmation_observed_at": "2026-09-19T12:00:00Z",
             "allowed_signers_path": roster,
             "materials_path": materials_path,
@@ -149,14 +161,11 @@ def run_field_ceremony_checkride() -> dict[str, Any]:
             ),
         )
         record(
-            "wrong-independent-fingerprint",
+            "receipt-only-bypass-context",
             assess_field_ceremony(
                 verifier_receipt_path=receipt,
                 verifier_source_path=source,
-                verifier_confirmation_receipt={
-                    **confirmation,
-                    "source_sha256": "0" * 64,
-                },
+                verifier_confirmation_handoff_directory=confirmation_handoff,
                 confirmation_observed_at="2026-09-19T12:00:00Z",
             ),
         )

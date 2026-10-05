@@ -520,7 +520,7 @@
       "fixtures": ["aegis-field-ceremony-v1", "tests/test_aegis_field_ceremony.py"],
       "success_criteria": ["five missing-artifact states name exact operator actions", "one complete fixture reaches development-candidate review", "all supplied-invalid paths hold", "zero private-key input signer invocation stronger authority or live action"],
       "abort_criteria": ["coordinator creates an operator-owned artifact", "missing and invalid evidence share a successful state", "an earlier stage can be skipped", "independent delivery is represented as mechanically proven", "production deployment or hardware authority added"],
-      "evidence": [{"path": "docs/evidence/aegis-field-ceremony-v1.json", "sha256": "f4e688726fe657e5c0c7b61fbb9c2af02e94e30cf09e1ff84e4574e044fc968f"}],
+      "evidence": [{"path": "docs/evidence/aegis-field-ceremony-v1.json", "sha256": "29e0c3d7424229c38d9ce25f5a3664fdf5a585a0bd5fa6847b1e241487481331"}],
       "outcome": {"conclusion": "Five exact operator action gates, one complete development-eligible fixture, and seven adversarial holds are distinguished with zero unsafe-ready result, signer invocation, private-key input, stronger authority, or live action."},
       "invalidated_assumptions": ["individually safe commands automatically form a safe operator workflow", "missing operator material and invalid supplied evidence should share one generic hold state", "a same-channel digest proves independent delivery"],
       "reproduction": ["pytest -q tests/test_aegis_field_ceremony.py", "python -c \"from truepanel.holodeck.aegis_field_ceremony import run_field_ceremony_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.field_ceremony --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
@@ -592,7 +592,7 @@
       "prior_art": ["Sigstore Bundle", "Git tempfile lifecycle", "in-toto Statement v1", "TUF consistent snapshots and expiry"],
       "safety_class": "SIMULATION_ONLY",
       "development": {"branch": "feature/aegis-verifier-comparison-handoff", "pr": null, "commits": []},
-      "protocol": ["reverify the pinned standalone verifier", "reconstruct every comparison-kit view", "require the kit challenge to equal the release-derived challenge", "create a short-lived public operator attestation", "write a new owner-protected two-file handoff without overwrite", "reconstruct kit receipt manifest source and expiry at the consumer", "pass only the verified public receipt to the read-only field coordinator"],
+      "protocol": ["reverify the pinned standalone verifier", "reconstruct every comparison-kit view", "require the kit challenge to equal the release-derived challenge", "create a short-lived public operator attestation", "write a new owner-protected two-file handoff without overwrite", "reconstruct kit receipt manifest source and expiry at the consumer", "pass the complete handoff and comparison-kit context to the read-only field coordinator"],
       "fixtures": ["aegis-verifier-confirmation-handoff-v1", "tests/test_aegis_verifier_confirmation_handoff.py"],
       "success_criteria": ["one release-bound handoff verifies", "one field-ceremony path reaches only the public-roster action gate", "a coherent foreign kit holds", "custody substitution drift and expiry attacks hold", "unsafe confirmations are denied", "zero private-key input signer invocation false independence claim stronger authority or live action"],
       "abort_criteria": ["an internally consistent foreign kit is accepted", "receipt is persisted by overwrite or shell redirection", "manifest is treated as operator authentication", "expired evidence advances the ceremony", "private-key path or signer is accepted", "production deployment or hardware authority is added"],
@@ -603,6 +603,25 @@
       "revisit_conditions": ["JT performs the first real digest comparison", "the verifier release receipt or kit schema changes", "a cryptographic operator identity becomes available", "any consumer seeks stronger authority"],
       "strongest_follow_up": "Export and audit one real comparison kit, let JT obtain and compare the verifier digest independently, stage this short-lived public handoff, then let the read-only coordinator name the protected public-roster gate.",
       "freshness": {"reviewed_at": "2026-10-03", "review_after": "2027-03-31"}
+    },
+    {
+      "id": "TP-EXP-0037", "title": "AEGIS final-consumer verifier handoff binding", "state": "COMPLETED",
+      "hypothesis": "The field-ceremony consumer can advance safely only when it re-audits the complete release-bound handoff and comparison kit instead of accepting a nested receipt supplied by its caller.",
+      "value": "Closes a composition bypass at the final consumer while preserving the development-only public-roster gate and every stronger authority boundary.",
+      "prior_art": ["in-toto ordered link verification", "Sigstore bundle verification material", "python-tuf client-side ordered verification", "SLSA verification summary attestations"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-field-handoff-binding", "pr": null, "commits": []},
+      "protocol": ["verify the pinned standalone verifier", "require the release-bound handoff and complete comparison kit as one consumer context", "re-audit the handoff file set manifest receipt kit source and expiry inside the final consumer", "remove the raw receipt API and CLI paths", "advance success only to the protected development public-roster action", "retain all development-only authority boundaries"],
+      "fixtures": ["aegis-field-handoff-binding-v1", "tests/test_aegis_field_handoff_binding.py", "tests/test_aegis_field_ceremony.py"],
+      "success_criteria": ["one exact final-consumer path reaches only the public-roster action", "the raw receipt-only path is structurally denied", "all missing substituted drifted extended and expired contexts hold", "zero private-key input signer invocation stronger authority or live action"],
+      "abort_criteria": ["a nested receipt can bypass handoff or comparison-kit audit", "a caller-controlled verified flag is trusted", "expired or substituted evidence advances the ceremony", "private-key path or signer is accepted", "production deployment or hardware authority is added"],
+      "evidence": [{"path": "docs/evidence/aegis-field-handoff-binding-v1.json", "sha256": "2d089b842dff3b9d76abe7bb55ac153209e4d0c83876e7392d478f3b4e73ad46"}],
+      "outcome": {"conclusion": "One exact handoff reaches only the public-roster action, one raw-receipt bypass is denied, and seven incomplete substituted drifted extended or expired contexts hold with zero unsafe-ready result or stronger authority."},
+      "invalidated_assumptions": ["auditing a handoff before calling the final consumer makes that consumer enforce the audit", "a valid nested receipt proves the complete handoff and kit were supplied", "a caller-controlled verification claim can replace evidence reconstruction"],
+      "reproduction": ["pytest -q tests/test_aegis_field_handoff_binding.py tests/test_aegis_field_ceremony.py tests/test_aegis_verifier_confirmation_handoff.py", "python -c \"from truepanel.holodeck.aegis_field_handoff_binding import run_field_handoff_binding_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.field_ceremony --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT performs the first real digest comparison", "the handoff comparison-kit or field-ceremony schema changes", "a cryptographic operator identity becomes available", "any consumer seeks stronger authority"],
+      "strongest_follow_up": "JT independently compares the pinned verifier digest, stages one real short-lived handoff, provisions only the protected development public roster, and lets the final consumer re-audit the complete public evidence chain.",
+      "freshness": {"reviewed_at": "2026-10-05", "review_after": "2027-03-31"}
     }
   ]
 }

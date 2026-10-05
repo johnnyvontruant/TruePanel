@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -21,10 +21,7 @@ from .signing_tool import (
 )
 from .ssh_verifier import OpenSshSignatureVerifier
 from .verifier_bootstrap import verify_verifier_release
-from .verifier_confirmation import (
-    load_verifier_confirmation_document,
-    verify_verifier_confirmation_receipt,
-)
+from .verifier_confirmation_handoff import audit_verifier_confirmation_handoff
 
 FIELD_CEREMONY_SCHEMA = "truepanel.aegis-development-field-ceremony/v1"
 _AUTHORITY = {
@@ -67,7 +64,8 @@ def assess_field_ceremony(
     *,
     verifier_receipt_path: str | Path,
     verifier_source_path: str | Path,
-    verifier_confirmation_receipt: Mapping[str, Any] | None = None,
+    verifier_confirmation_handoff_directory: str | Path | None = None,
+    verifier_comparison_kit_directory: str | Path | None = None,
     confirmation_observed_at: str | None = None,
     allowed_signers_path: str | Path | None = None,
     kit_directory: str | Path | None = None,
@@ -94,29 +92,36 @@ def assess_field_ceremony(
         }
     )
 
-    if verifier_confirmation_receipt is None and confirmation_observed_at is None:
+    confirmation_inputs = (
+        verifier_confirmation_handoff_directory,
+        verifier_comparison_kit_directory,
+        confirmation_observed_at,
+    )
+    if all(value is None for value in confirmation_inputs):
         return _result(
             "ACTION_REQUIRED_INDEPENDENT_VERIFIER_CONFIRMATION",
             stages=stages,
             next_action="JT_CONFIRMS_VERIFIER_SHA256_THROUGH_INDEPENDENT_CHANNEL",
         )
-    if verifier_confirmation_receipt is None or confirmation_observed_at is None:
-        return _hold(stages, "IndependentVerifierConfirmationIncomplete")
-    if verifier_confirmation_receipt.get("source_sha256") != bootstrap["source_sha256"]:
-        return _hold(stages, "IndependentVerifierFingerprintMismatch")
+    if any(value is None for value in confirmation_inputs):
+        return _hold(stages, "VerifierConfirmationHandoffContextIncomplete")
     try:
-        confirmation = verify_verifier_confirmation_receipt(
-            receipt=verifier_confirmation_receipt,
-            release=bootstrap,
+        confirmation = audit_verifier_confirmation_handoff(
+            handoff_directory=verifier_confirmation_handoff_directory,
+            kit_directory=verifier_comparison_kit_directory,
+            verifier_receipt_path=verifier_receipt_path,
+            verifier_source_path=verifier_source_path,
             observed_at=confirmation_observed_at,
         )
     except ValueError as error:
-        return _hold(stages, str(error))
+        return _hold(stages, f"VerifierConfirmationHandoffInvalid:{error}")
     stages.append(
         {
-            "stage": "independent_channel",
+            "stage": "release_bound_confirmation_handoff",
             "status": confirmation["status"],
             "source_sha256": confirmation["source_sha256"],
+            "receipt_sha256": confirmation["receipt_sha256"],
+            "kit_challenge_sha256": confirmation["kit_challenge_sha256"],
             "evidence_class": confirmation["evidence_class"],
             "confirmed_at": confirmation["confirmed_at"],
             "expires_at": confirmation["expires_at"],
@@ -223,7 +228,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--verifier-receipt", required=True, type=Path)
     parser.add_argument("--verifier-source", required=True, type=Path)
-    parser.add_argument("--verifier-confirmation-receipt", type=Path)
+    parser.add_argument("--verifier-confirmation-handoff", type=Path)
+    parser.add_argument("--verifier-comparison-kit", type=Path)
     parser.add_argument("--confirmation-observed-at")
     parser.add_argument("--allowed-signers", type=Path)
     parser.add_argument("--kit", type=Path)
@@ -236,19 +242,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(arguments: Sequence[str] | None = None) -> int:
     values = build_parser().parse_args(arguments)
-    confirmation = None
-    if values.verifier_confirmation_receipt is not None:
-        try:
-            confirmation = load_verifier_confirmation_document(
-                values.verifier_confirmation_receipt
-            )
-        except ValueError as error:
-            print(json.dumps({"status": "HOLD", "reason": str(error)}, sort_keys=True))
-            return 2
     result = assess_field_ceremony(
         verifier_receipt_path=values.verifier_receipt,
         verifier_source_path=values.verifier_source,
-        verifier_confirmation_receipt=confirmation,
+        verifier_confirmation_handoff_directory=values.verifier_confirmation_handoff,
+        verifier_comparison_kit_directory=values.verifier_comparison_kit,
         confirmation_observed_at=values.confirmation_observed_at,
         allowed_signers_path=values.allowed_signers,
         kit_directory=values.kit,

@@ -1,0 +1,74 @@
+{
+  "control_authority": false,
+  "measurements": {
+    "adversarial_holds": 7,
+    "deployments": 0,
+    "hardware_actions": 0,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "raw_receipt_bypasses_denied": 1,
+    "release_bound_consumers": 1,
+    "runtime_writes": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_ready": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {
+    "gaps": 0,
+    "total": 8,
+    "trusted": 8
+  },
+  "scenario": "aegis-field-handoff-binding-v1",
+  "scenarios": [
+    {
+      "reason": "JT_PROVISIONS_DEVELOPMENT_PUBLIC_ROSTER",
+      "scenario": "exact-bound-handoff",
+      "status": "ACTION_REQUIRED_PUBLIC_ROSTER"
+    },
+    {
+      "reason": "TypeError",
+      "scenario": "raw-receipt-only-bypass",
+      "status": "DENIED"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffContextIncomplete",
+      "scenario": "handoff-without-kit",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffContextIncomplete",
+      "scenario": "kit-without-handoff",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffInvalid:VerifierConfirmationReceiptInvalid",
+      "scenario": "receipt-substitution-at-final-consumer",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffInvalid:VerifierConfirmationHandoffMismatch",
+      "scenario": "manifest-substitution-at-final-consumer",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffInvalid:VerifierConfirmationKitMismatch",
+      "scenario": "comparison-kit-drift-at-final-consumer",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffInvalid:VerifierConfirmationHandoffFileSetInvalid",
+      "scenario": "handoff-file-set-extension",
+      "status": "HOLD"
+    },
+    {
+      "reason": "VerifierConfirmationHandoffInvalid:VerifierConfirmationExpired",
+      "scenario": "expired-handoff-at-final-consumer",
+      "status": "HOLD"
+    }
+  ],
+  "status_counts": {
+    "ACTION_REQUIRED_PUBLIC_ROSTER": 1,
+    "DENIED": 1,
+    "HOLD": 7
+  }
+}

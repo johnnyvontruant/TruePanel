@@ -110,7 +110,8 @@ def run_verifier_confirmation_handoff_checkride() -> dict[str, Any]:
         ceremony = assess_field_ceremony(
             verifier_receipt_path=release_receipt,
             verifier_source_path=source,
-            verifier_confirmation_receipt=exact["receipt"],
+            verifier_confirmation_handoff_directory=handoff,
+            verifier_comparison_kit_directory=kit,
             confirmation_observed_at="2026-10-04T04:10:00Z",
         )
         record("field-ceremony-consumes-handoff", ceremony["status"], ceremony["next_action"])
