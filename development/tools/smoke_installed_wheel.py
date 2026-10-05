@@ -84,7 +84,7 @@ def main() -> int:
                     "from truepanel.hangar import load_registry, validate_registry; "
                     "registry = load_registry(); "
                     "assert validate_registry(registry) == (); "
-                    "assert len(registry['experiments']) == 36; "
+                    "assert len(registry['experiments']) == 37; "
                     "checkride = next(item for item in registry['experiments'] "
                     "if item['id'] == 'TP-EXP-0015'); "
                     "assert checkride['state'] == 'IN_PROGRESS'; "
