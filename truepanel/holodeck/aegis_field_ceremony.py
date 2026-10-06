@@ -19,8 +19,13 @@ from truepanel.aegis.field_ceremony import (
     assess_field_ceremony,
 )
 from truepanel.aegis.operator_handoff import OPERATOR_KEY_ID
+from truepanel.aegis.roster_enrollment import (
+    ENROLLMENT_CONFIRMATION,
+    provision_development_roster,
+)
 from truepanel.aegis.signing_session import SIGNING_SESSION_NAMESPACE
 from truepanel.aegis.signing_tool import MATERIALS_SCHEMA, export_signing_kit
+from truepanel.aegis.ssh_verifier import validate_allowed_signers_roster
 from truepanel.aegis.verifier_confirmation_handoff import (
     stage_verifier_confirmation_handoff,
 )
@@ -85,10 +90,22 @@ def run_field_ceremony_checkride() -> dict[str, Any]:
             check=True,
             capture_output=True,
         )
-        public = key.with_suffix(".pub").read_text().split()
+        public_key = key.with_suffix(".pub")
+        public = public_key.read_text().split()
         roster = root / "allowed_signers"
-        roster.write_text(f"{OPERATOR_KEY_ID} {public[0]} {public[1]}\n")
-        os.chmod(roster, 0o600)
+        fingerprint = validate_allowed_signers_roster(
+            f"{OPERATOR_KEY_ID} {public[0]} {public[1]}\n".encode(),
+            expected_key_ids=(OPERATOR_KEY_ID,),
+        )[OPERATOR_KEY_ID]
+        roster_receipt = root / "roster-enrollment.json"
+        provision_development_roster(
+            public_key_path=public_key,
+            destination_path=roster,
+            checkout_root=checkout,
+            expected_fingerprint=fingerprint,
+            operator_confirmation=ENROLLMENT_CONFIRMATION,
+            receipt_path=roster_receipt,
+        )
         wrong_roster = root / "wrong-roster"
         wrong_roster.write_text(f"another-reviewer {public[0]} {public[1]}\n")
         os.chmod(wrong_roster, 0o600)
@@ -150,6 +167,8 @@ def run_field_ceremony_checkride() -> dict[str, Any]:
             "verifier_comparison_kit_directory": comparison_kit,
             "confirmation_observed_at": "2026-09-19T12:00:00Z",
             "allowed_signers_path": roster,
+            "roster_enrollment_receipt_path": roster_receipt,
+            "operator_confirmed_fingerprint": fingerprint,
             "materials_path": materials_path,
             "checkout_root": checkout,
         }
@@ -171,6 +190,8 @@ def run_field_ceremony_checkride() -> dict[str, Any]:
         )
         without_roster = dict(baseline)
         without_roster.pop("allowed_signers_path")
+        without_roster.pop("roster_enrollment_receipt_path")
+        without_roster.pop("operator_confirmed_fingerprint")
         record("public-roster-not-provisioned", assess_field_ceremony(**without_roster))
         record(
             "wrong-public-roster",

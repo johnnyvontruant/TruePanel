@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.03.1 · refreshed 2026-10-03 · 32 experiment(s)
+Registry version 2026.10.06.1 · refreshed 2026-10-06 · 33 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -259,3 +259,11 @@ One exact handoff reaches only the public-roster action, one raw-receipt bypass 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: JT independently compares the pinned verifier digest, stages one real short-lived handoff, provisions only the protected development public roster, and lets the final consumer re-audit the complete public evidence chain.
 - Revisit when: JT performs the first real digest comparison; the handoff comparison-kit or field-ceremony schema changes; a cryptographic operator identity becomes available; any consumer seeks stronger authority
+
+## TP-EXP-0038 · AEGIS final-consumer roster enrollment binding
+
+One exact roster enrollment reaches only signing-kit export and seven raw substituted mutated extended symlinked or writable evidence paths hold with zero unsafe-ready result or stronger authority.
+
+- Safety: `DEVELOPMENT_PUBLIC_MATERIAL_ONLY`
+- Strongest follow-up: JT compares the real development public-key fingerprint, provisions the protected roster and receipt, then lets the final consumer re-audit both before one public signing-kit export.
+- Revisit when: JT provisions the real protected development roster; the operator fingerprint comparison method changes; the roster enrollment or field-ceremony schema changes; any consumer seeks stronger authority

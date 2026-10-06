@@ -1,0 +1,31 @@
+{
+  "control_authority": false,
+  "fixture_private_keys_retained": 0,
+  "measurements": {
+    "adversarial_holds": 7,
+    "deployments": 0,
+    "enrollment_bound_consumers": 1,
+    "hardware_actions": 0,
+    "private_keys_accepted_by_truepanel": 0,
+    "production_acceptances": 0,
+    "raw_roster_bypasses_accepted": 0,
+    "runtime_writes": 0,
+    "same_principal_substitutions_accepted": 0,
+    "signer_invocations_by_truepanel": 0,
+    "unsafe_ready": 0
+  },
+  "production_mutation": false,
+  "recovery_coverage": {"gaps": 0, "total": 8, "trusted": 8},
+  "scenario": "aegis-roster-enrollment-binding-v1",
+  "scenarios": [
+    {"reason": "EXPORT_PUBLIC_SIGNING_KIT_FROM_PINNED_CHECKOUT", "scenario": "exact-enrollment-bound-consumer", "status": "ACTION_REQUIRED_SIGNING_KIT_EXPORT"},
+    {"reason": "PublicRosterEnrollmentContextIncomplete", "scenario": "raw-roster-only-bypass", "status": "HOLD"},
+    {"reason": "PublicRosterInvalid:RosterEnrollmentReceiptMismatch", "scenario": "same-principal-key-substitution", "status": "HOLD"},
+    {"reason": "PublicRosterInvalid:RosterEnrollmentFingerprintMismatch", "scenario": "operator-fingerprint-substitution", "status": "HOLD"},
+    {"reason": "PublicRosterInvalid:RosterEnrollmentReceiptMismatch", "scenario": "receipt-substitution", "status": "HOLD"},
+    {"reason": "PublicRosterInvalid:RosterEnrollmentReceiptMismatch", "scenario": "authority-extension", "status": "HOLD"},
+    {"reason": "PublicRosterInvalid:PublicKeyPathUnsafe", "scenario": "symlinked-enrollment-receipt", "status": "HOLD"},
+    {"reason": "PublicRosterInvalid:PublicKeyFileUnsafe", "scenario": "writable-enrollment-receipt", "status": "HOLD"}
+  ],
+  "status_counts": {"ACTION_REQUIRED_SIGNING_KIT_EXPORT": 1, "HOLD": 7}
+}
