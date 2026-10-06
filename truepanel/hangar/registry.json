@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.03.1",
-  "updated_at": "2026-10-03",
+  "registry_version": "2026.10.06.1",
+  "updated_at": "2026-10-06",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -622,6 +622,25 @@
       "revisit_conditions": ["JT performs the first real digest comparison", "the handoff comparison-kit or field-ceremony schema changes", "a cryptographic operator identity becomes available", "any consumer seeks stronger authority"],
       "strongest_follow_up": "JT independently compares the pinned verifier digest, stages one real short-lived handoff, provisions only the protected development public roster, and lets the final consumer re-audit the complete public evidence chain.",
       "freshness": {"reviewed_at": "2026-10-05", "review_after": "2027-03-31"}
+    },
+    {
+      "id": "TP-EXP-0038", "title": "AEGIS final-consumer roster enrollment binding", "state": "COMPLETED",
+      "hypothesis": "The final field-ceremony consumer can reject a same-principal public-key substitution only when it reconstructs the exact roster, enrollment receipt, and operator-confirmed fingerprint together.",
+      "value": "Closes the gap between syntactically valid allowed-signers input and JT's explicit development-key enrollment without accepting private material or widening authority.",
+      "prior_art": ["OpenSSH allowed-signers exact key matching", "TUF client-side trusted-key reconstruction", "Sigstore root-signing keyholder ceremony", "in-toto digest-bound subjects"],
+      "safety_class": "DEVELOPMENT_PUBLIC_MATERIAL_ONLY",
+      "development": {"branch": "feature/aegis-roster-enrollment-binding", "pr": null, "commits": []},
+      "protocol": ["provision one protected Ed25519 public roster", "persist a canonical public enrollment receipt by exclusive write", "carry the independently compared fingerprint as explicit operator input", "re-read owner-protected roster and receipt at the final consumer", "recompute key fingerprint roster digest receipt digest and fixed authority map", "hold raw roster-only and same-principal substitution paths", "advance only to public signing-kit export", "retain every development-only authority boundary"],
+      "fixtures": ["aegis-roster-enrollment-binding-v1", "tests/test_aegis_roster_enrollment_binding.py"],
+      "success_criteria": ["one exact enrollment-bound consumer reaches only signing-kit export", "raw roster-only input holds", "same-principal substituted key holds", "all fingerprint receipt permission symlink and authority attacks hold", "zero private-key input signer invocation stronger authority or live action"],
+      "abort_criteria": ["principal label substitutes for key provenance", "unsigned receipt authenticates JT", "same-principal key substitution advances", "private-key path or signer is accepted", "production deployment or hardware authority is added"],
+      "evidence": [{"path": "docs/evidence/aegis-roster-enrollment-binding-v1.json", "sha256": "e04a440be735e843536b784f9fabae71faa01bfdeeab0b7e01e911037692af93"}],
+      "outcome": {"conclusion": "One exact roster enrollment reaches only signing-kit export and seven raw substituted mutated extended symlinked or writable evidence paths hold with zero unsafe-ready result or stronger authority."},
+      "invalidated_assumptions": ["an allowed-signers principal proves which public key JT enrolled", "running enrollment before the final consumer makes that consumer enforce enrollment", "an unsigned receipt can authenticate JT"],
+      "reproduction": ["pytest -q tests/test_aegis_roster_enrollment_binding.py tests/test_aegis_roster_enrollment.py tests/test_aegis_field_ceremony.py", "python -c \"from truepanel.holodeck.aegis_roster_enrollment_binding import run_roster_enrollment_binding_checkride as run; print(run()['measurements'])\"", "python -m truepanel.aegis.roster_enrollment --help", "python -m truepanel.aegis.field_ceremony --help", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT provisions the real protected development roster", "the operator fingerprint comparison method changes", "the roster enrollment or field-ceremony schema changes", "any consumer seeks stronger authority"],
+      "strongest_follow_up": "JT compares the real development public-key fingerprint, provisions the protected roster and receipt, then lets the final consumer re-audit both before one public signing-kit export.",
+      "freshness": {"reviewed_at": "2026-10-06", "review_after": "2027-04-30"}
     }
   ]
 }
