@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import stat
+from collections.abc import Mapping
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from .ssh_verifier import validate_allowed_signers_roster
 ENROLLMENT_SCHEMA = "truepanel.aegis-development-public-roster-enrollment/v1"
 ENROLLMENT_CONFIRMATION = "ENROLL_JT_DEVELOPMENT_REVIEW_PUBLIC_KEY"
 MAX_PUBLIC_KEY_BYTES = 16 * 1024
+MAX_ENROLLMENT_RECEIPT_BYTES = 64 * 1024
 AUTHORITY = {
     "production_authority": False,
     "deployment_authority": False,
@@ -110,6 +112,49 @@ def _is_within(path: Path, parent: Path) -> bool:
     return True
 
 
+def _canonical(value: Mapping[str, Any]) -> bytes:
+    return json.dumps(
+        dict(value), sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode() + b"\n"
+
+
+def _receipt_path_safe(path: Path, *, checkout: Path) -> bool:
+    try:
+        parent = path.parent.resolve(strict=True)
+        parent_stat = parent.stat()
+        return (
+            path.is_absolute()
+            and path.name not in {"", ".", ".."}
+            and not path.is_symlink()
+            and not path.exists()
+            and parent == path.parent
+            and parent.is_dir()
+            and parent_stat.st_uid == os.geteuid()
+            and not parent_stat.st_mode & 0o022
+            and not _is_within(path, checkout)
+        )
+    except OSError:
+        return False
+
+
+def _write_exclusive(path: Path, content: bytes) -> None:
+    descriptor = os.open(
+        path,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
+        0o600,
+    )
+    try:
+        view = memoryview(content)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError("short receipt write")
+            view = view[written:]
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def provision_development_roster(
     *,
     public_key_path: str | Path,
@@ -117,6 +162,7 @@ def provision_development_roster(
     checkout_root: str | Path,
     expected_fingerprint: str,
     operator_confirmation: str,
+    receipt_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Create one protected public roster outside the source checkout."""
 
@@ -217,7 +263,7 @@ def provision_development_roster(
         if parent_descriptor is not None:
             os.close(parent_descriptor)
 
-    return {
+    result = {
         "schema": ENROLLMENT_SCHEMA,
         "status": "PUBLIC_ROSTER_PROVISIONED_FOR_DEVELOPMENT_REVIEW",
         "operator_id": "jt",
@@ -231,6 +277,93 @@ def provision_development_roster(
         "next_gate": "BUILD_CONTENT_BOUND_SIGNING_SESSION",
         **AUTHORITY,
     }
+    if receipt_path is not None:
+        receipt = Path(receipt_path)
+        if not _receipt_path_safe(receipt, checkout=checkout):
+            with suppress(OSError):
+                destination.unlink()
+            raise ValueError("RosterEnrollmentReceiptPathUnsafe")
+        try:
+            _write_exclusive(receipt, _canonical(result))
+            audit_development_roster_enrollment(
+                receipt_path=receipt,
+                allowed_signers_path=destination,
+                operator_confirmed_fingerprint=fingerprint,
+            )
+        except (OSError, ValueError) as error:
+            with suppress(OSError):
+                destination.unlink()
+            with suppress(OSError):
+                receipt.unlink()
+            raise ValueError("RosterEnrollmentReceiptWriteFailed") from error
+    return result
+
+
+def audit_development_roster_enrollment(
+    *,
+    receipt_path: str | Path,
+    allowed_signers_path: str | Path,
+    operator_confirmed_fingerprint: str,
+) -> dict[str, Any]:
+    """Reconstruct one public roster enrollment at its final consumer.
+
+    The fingerprint remains operator-confirmed public input.  This unsigned
+    receipt records and binds that ceremony; it does not authenticate JT.
+    """
+
+    roster_path = Path(allowed_signers_path)
+    roster = _snapshot(roster_path, maximum=MAX_PUBLIC_KEY_BYTES)
+    fingerprints = validate_allowed_signers_roster(
+        roster, expected_key_ids=(OPERATOR_KEY_ID,)
+    )
+    fingerprint = fingerprints[OPERATOR_KEY_ID]
+    if not operator_confirmed_fingerprint or fingerprint != operator_confirmed_fingerprint:
+        raise ValueError("RosterEnrollmentFingerprintMismatch")
+    receipt_bytes = _snapshot(
+        Path(receipt_path), maximum=MAX_ENROLLMENT_RECEIPT_BYTES
+    )
+    def no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("RosterEnrollmentReceiptDuplicateJsonKey")
+            value[key] = item
+        return value
+
+    try:
+        receipt = json.loads(receipt_bytes, object_pairs_hook=no_duplicates)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("RosterEnrollmentReceiptInvalid") from error
+    expected = {
+        "schema": ENROLLMENT_SCHEMA,
+        "status": "PUBLIC_ROSTER_PROVISIONED_FOR_DEVELOPMENT_REVIEW",
+        "operator_id": "jt",
+        "key_id": OPERATOR_KEY_ID,
+        "public_key_fingerprint": fingerprint,
+        "roster_sha256": hashlib.sha256(roster).hexdigest(),
+        "roster_path": str(roster_path),
+        "scope": "DEVELOPMENT_ONLY",
+        "private_key_accepted": False,
+        "signer_invoked": False,
+        "next_gate": "BUILD_CONTENT_BOUND_SIGNING_SESSION",
+        **AUTHORITY,
+    }
+    if not isinstance(receipt, dict) or receipt != expected or receipt_bytes != _canonical(receipt):
+        raise ValueError("RosterEnrollmentReceiptMismatch")
+    return {
+        "schema": "truepanel.aegis-development-public-roster-enrollment-audit/v1",
+        "status": "PUBLIC_ROSTER_ENROLLMENT_VERIFIED",
+        "operator_id": "jt",
+        "key_id": OPERATOR_KEY_ID,
+        "public_key_fingerprint": fingerprint,
+        "roster_sha256": expected["roster_sha256"],
+        "receipt_sha256": hashlib.sha256(receipt_bytes).hexdigest(),
+        "operator_identity_cryptographically_verified": False,
+        "scope": "DEVELOPMENT_ONLY",
+        "private_key_accepted": False,
+        "signer_invoked": False,
+        **AUTHORITY,
+    }
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -242,6 +375,7 @@ def main(arguments: list[str] | None = None) -> int:
     parser.add_argument("--checkout", required=True, type=Path)
     parser.add_argument("--expected-fingerprint", required=True)
     parser.add_argument("--confirm", required=True)
+    parser.add_argument("--receipt", required=True, type=Path)
     values = parser.parse_args(arguments)
     try:
         result = provision_development_roster(
@@ -250,6 +384,7 @@ def main(arguments: list[str] | None = None) -> int:
             checkout_root=values.checkout,
             expected_fingerprint=values.expected_fingerprint,
             operator_confirmation=values.confirm,
+            receipt_path=values.receipt,
         )
     except ValueError as error:
         print(json.dumps({"status": "HOLD", "reason": str(error)}, sort_keys=True))
@@ -265,5 +400,6 @@ if __name__ == "__main__":
 __all__ = [
     "ENROLLMENT_CONFIRMATION",
     "ENROLLMENT_SCHEMA",
+    "audit_development_roster_enrollment",
     "provision_development_roster",
 ]

@@ -13,13 +13,12 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from .operator_handoff import OPERATOR_KEY_ID
+from .roster_enrollment import audit_development_roster_enrollment
 from .signing_tool import (
     audit_signing_kit,
     dual_audit_signing_kit,
     verify_returned_signature,
 )
-from .ssh_verifier import OpenSshSignatureVerifier
 from .verifier_bootstrap import verify_verifier_release
 from .verifier_confirmation_handoff import audit_verifier_confirmation_handoff
 
@@ -68,6 +67,8 @@ def assess_field_ceremony(
     verifier_comparison_kit_directory: str | Path | None = None,
     confirmation_observed_at: str | None = None,
     allowed_signers_path: str | Path | None = None,
+    roster_enrollment_receipt_path: str | Path | None = None,
+    operator_confirmed_fingerprint: str | None = None,
     kit_directory: str | Path | None = None,
     independent_witness_path: str | Path | None = None,
     signature_path: str | Path | None = None,
@@ -128,25 +129,35 @@ def assess_field_ceremony(
         }
     )
 
-    if allowed_signers_path is None:
+    roster_inputs = (
+        allowed_signers_path,
+        roster_enrollment_receipt_path,
+        operator_confirmed_fingerprint,
+    )
+    if all(value is None for value in roster_inputs):
         return _result(
             "ACTION_REQUIRED_PUBLIC_ROSTER",
             stages=stages,
             next_action="JT_PROVISIONS_DEVELOPMENT_PUBLIC_ROSTER",
         )
+    if any(value is None for value in roster_inputs):
+        return _hold(stages, "PublicRosterEnrollmentContextIncomplete")
     try:
-        roster = OpenSshSignatureVerifier(
-            allowed_signers_path,
-            expected_key_ids=(OPERATOR_KEY_ID,),
-        ).inspect_roster()
+        roster = audit_development_roster_enrollment(
+            receipt_path=roster_enrollment_receipt_path,
+            allowed_signers_path=allowed_signers_path,
+            operator_confirmed_fingerprint=operator_confirmed_fingerprint,
+        )
     except (OSError, ValueError) as error:
         return _hold(stages, f"PublicRosterInvalid:{error}")
     stages.append(
         {
-            "stage": "public_roster",
-            "status": "PUBLIC_ROSTER_VALIDATED",
-            "operator_key_id": OPERATOR_KEY_ID,
-            "public_key_fingerprint": roster[OPERATOR_KEY_ID],
+            "stage": "public_roster_enrollment",
+            "status": roster["status"],
+            "operator_key_id": roster["key_id"],
+            "public_key_fingerprint": roster["public_key_fingerprint"],
+            "roster_sha256": roster["roster_sha256"],
+            "receipt_sha256": roster["receipt_sha256"],
         }
     )
 
@@ -232,6 +243,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--verifier-comparison-kit", type=Path)
     parser.add_argument("--confirmation-observed-at")
     parser.add_argument("--allowed-signers", type=Path)
+    parser.add_argument("--roster-enrollment-receipt", type=Path)
+    parser.add_argument("--operator-confirmed-fingerprint")
     parser.add_argument("--kit", type=Path)
     parser.add_argument("--independent-witness", type=Path)
     parser.add_argument("--signature", type=Path)
@@ -249,6 +262,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
         verifier_comparison_kit_directory=values.verifier_comparison_kit,
         confirmation_observed_at=values.confirmation_observed_at,
         allowed_signers_path=values.allowed_signers,
+        roster_enrollment_receipt_path=values.roster_enrollment_receipt,
+        operator_confirmed_fingerprint=values.operator_confirmed_fingerprint,
         kit_directory=values.kit,
         independent_witness_path=values.independent_witness,
         signature_path=values.signature,
