@@ -641,6 +641,25 @@
       "revisit_conditions": ["JT provisions the real protected development roster", "the operator fingerprint comparison method changes", "the roster enrollment or field-ceremony schema changes", "any consumer seeks stronger authority"],
       "strongest_follow_up": "JT compares the real development public-key fingerprint, provisions the protected roster and receipt, then lets the final consumer re-audit both before one public signing-kit export.",
       "freshness": {"reviewed_at": "2026-10-06", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0039", "title": "AEGIS signing-kit enrollment identity binding", "state": "COMPLETED",
+      "hypothesis": "The field coordinator can prevent a pre-signing same-principal key substitution by comparing the identity reconstructed from the complete signing kit with the exact independently confirmed roster enrollment.",
+      "value": "Prevents JT from being instructed to inspect or sign an internally valid kit for the wrong development key while preserving the lone-human policy and every stronger authority boundary.",
+      "prior_art": ["OpenSSH SSHSIG embedded public-key identity and namespace", "TUF client-side trusted-key reconstruction", "in-toto digest-bound subjects", "Sigstore root-signing keyholder review events"],
+      "safety_class": "DEVELOPMENT_PUBLIC_MATERIAL_ONLY",
+      "development": {"branch": "feature/aegis-signing-kit-enrollment-binding", "pr": null, "commits": []},
+      "protocol": ["re-audit the exact public roster enrollment", "audit all fixed signing-kit files and canonical presentation views", "extract the kit handoff key ID and fingerprint only after successful audit", "compare both with the enrollment audit at the final coordinator", "hold same-principal foreign-key and reverse-binding substitutions", "advance only to the independent public-kit audit", "retain all development-only authority boundaries"],
+      "fixtures": ["aegis-signing-kit-enrollment-binding-v1", "tests/test_aegis_signing_kit_enrollment_binding.py"],
+      "success_criteria": ["one exact enrollment-bound kit reaches only independent audit", "a valid same-principal foreign-key kit holds before signing", "reverse-binding coordinated-presentation key-ID and roster substitutions hold", "zero private-key input signer invocation stronger authority or live action"],
+      "abort_criteria": ["principal label substitutes for key identity", "later signature rejection substitutes for a safe pre-signing instruction", "kit manifest is trusted without reconstruction", "unsigned enrollment evidence authenticates JT", "production deployment or hardware authority is added"],
+      "evidence": [{"path": "docs/evidence/aegis-signing-kit-enrollment-binding-v1.json", "sha256": "4c3f5f850a01947393a2fad1ffb77ee4758337f3aa9ad1ed88e85bfb29feacf1"}],
+      "outcome": {"conclusion": "One exact enrollment-bound kit reaches only independent audit, one missing kit names export, and five same-principal reverse-binding presentation key-ID or roster substitutions hold before JT is asked to sign."},
+      "invalidated_assumptions": ["returned-signature verification is early enough to protect the operator from signing a wrong-key kit", "an internally consistent kit belongs to the roster that the surrounding workflow already audited", "a principal label identifies a public key"],
+      "reproduction": ["pytest -q tests/test_aegis_signing_kit_enrollment_binding.py tests/test_aegis_signing_tool.py tests/test_aegis_roster_enrollment_binding.py tests/test_aegis_field_ceremony.py", "python -c \"from truepanel.holodeck.aegis_signing_kit_enrollment_binding import run_signing_kit_enrollment_binding_checkride as run; print(run()['measurements'])\"", "node --check truepanel/web/static/reliability-view.js", "python -m truepanel.hangar validate --root ."],
+      "revisit_conditions": ["JT exports the first real signing kit", "the operator key ID fingerprint or signing-session schema changes", "the enrollment trust channel changes", "any consumer seeks stronger authority"],
+      "strongest_follow_up": "JT provisions the real protected development roster and receipt, exports one exact bound kit, compares its displayed fingerprint, and runs the independent public-kit audit before any offline signature.",
+      "freshness": {"reviewed_at": "2026-10-07", "review_after": "2027-05-31"}
     }
   ]
 }
