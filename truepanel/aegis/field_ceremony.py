@@ -171,11 +171,20 @@ def assess_field_ceremony(
         internal = audit_signing_kit(kit_directory)
     except ValueError as error:
         return _hold(stages, f"SigningKitInvalid:{error}")
+    if (
+        internal.get("operator_key_id") != roster["key_id"]
+        or internal.get("public_key_fingerprint")
+        != roster["public_key_fingerprint"]
+    ):
+        return _hold(stages, "SigningKitEnrollmentMismatch")
     stages.append(
         {
             "stage": "internal_kit_audit",
             "status": internal["status"],
             "session_sha256": internal["session_sha256"],
+            "operator_key_id": internal["operator_key_id"],
+            "public_key_fingerprint": internal["public_key_fingerprint"],
+            "enrollment_bound": True,
         }
     )
 
