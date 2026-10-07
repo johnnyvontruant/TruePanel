@@ -196,7 +196,7 @@ function render(view,payload){
         <details class="ag-coverage ag-field-workflow"><summary>Field Evidence Workflow <span>${esc(title(fieldWorkflow?.state||"not started"))}</span></summary>${fieldWorkflowRows(fieldWorkflow)}</details>
         ${passivePanel}
         ${developmentPanel}
-        ${Object.keys(developmentReview).length?'<section class="ag-dev-review" aria-label="AEGIS roster enrollment binding"><div><span>ROSTER TRUST BOUNDARY</span><strong>Final consumer · re-audits roster enrollment + fingerprint</strong><small>Raw roster-only path · HOLD</small><small>Unsigned enrollment evidence records the ceremony; it does not authenticate JT.</small></div></section>':""}
+        ${Object.keys(developmentReview).length?'<section class="ag-dev-review" aria-label="AEGIS roster and signing-kit identity binding"><div><span>ROSTER + KIT TRUST BOUNDARY</span><strong>Final consumer · re-audits roster enrollment + fingerprint</strong><small>Signing kit · bound to enrolled fingerprint</small><small>Same-principal foreign-key kit · HOLD</small><small>Raw roster-only path · HOLD · unsigned enrollment receipt is not operator authentication.</small></div></section>':""}
         <p class="ag-safety">Correlation uses ${esc(policy?.semantics||"evidence grouping")}; it retains raw alerts, grants no control authority, and performs no repair.</p>
     `;
 }

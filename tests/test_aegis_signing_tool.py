@@ -135,6 +135,8 @@ def test_export_contains_only_public_content_bound_material(tmp_path):
     audit = audit_signing_kit(output)
     assert audit["status"] == "INTERNAL_AUDIT_PASS"
     assert audit["session_sha256"] == result["session_sha256"]
+    assert audit["operator_key_id"] == OPERATOR_KEY_ID
+    assert audit["public_key_fingerprint"].startswith("SHA256:")
 
 
 @pytest.mark.parametrize(

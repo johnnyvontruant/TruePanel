@@ -340,6 +340,8 @@ def audit_signing_kit(kit_directory: str | Path) -> dict[str, Any]:
         "review_sha256": expected_manifest["review_sha256"],
         "manifest_sha256": _sha256(canonical_manifest),
         "namespace": SIGNING_SESSION_NAMESPACE,
+        "operator_key_id": session["handoff"]["key_id"],
+        "public_key_fingerprint": session["handoff"]["public_key_fingerprint"],
         "scope": "DEVELOPMENT_ONLY",
         **_AUTHORITY_FIELDS,
     }

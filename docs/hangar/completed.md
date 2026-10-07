@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.06.1 · refreshed 2026-10-06 · 33 experiment(s)
+Registry version 2026.10.06.1 · refreshed 2026-10-06 · 34 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -267,3 +267,11 @@ One exact roster enrollment reaches only signing-kit export and seven raw substi
 - Safety: `DEVELOPMENT_PUBLIC_MATERIAL_ONLY`
 - Strongest follow-up: JT compares the real development public-key fingerprint, provisions the protected roster and receipt, then lets the final consumer re-audit both before one public signing-kit export.
 - Revisit when: JT provisions the real protected development roster; the operator fingerprint comparison method changes; the roster enrollment or field-ceremony schema changes; any consumer seeks stronger authority
+
+## TP-EXP-0039 · AEGIS signing-kit enrollment identity binding
+
+One exact enrollment-bound kit reaches only independent audit, one missing kit names export, and five same-principal reverse-binding presentation key-ID or roster substitutions hold before JT is asked to sign.
+
+- Safety: `DEVELOPMENT_PUBLIC_MATERIAL_ONLY`
+- Strongest follow-up: JT provisions the real protected development roster and receipt, exports one exact bound kit, compares its displayed fingerprint, and runs the independent public-kit audit before any offline signature.
+- Revisit when: JT exports the first real signing kit; the operator key ID fingerprint or signing-session schema changes; the enrollment trust channel changes; any consumer seeks stronger authority
