@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.14.1",
-  "updated_at": "2026-09-14",
+  "registry_version": "2026.10.08.1",
+  "updated_at": "2026-10-08",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -318,6 +318,25 @@
       "revisit_conditions": ["identity migration from serial-model to WWN or ZFS GUID is implemented", "Lifeline identity coverage becomes a Recovery Coverage Matrix condition", "TrueNAS exposes a supported leaf-vdev GUID"],
       "strongest_follow_up": "Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.",
       "freshness": {"reviewed_at": "2026-09-14", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0022", "title": "AEGIS drive-temperature telemetry blind spot", "state": "COMPLETED",
+      "hypothesis": "A known present pool member that loses its temperature record can be detected and correlated with exact-identity SMART evidence without inventing a temperature or claiming overheating.",
+      "value": "Turns an isolated-threshold false negative into one evidence-backed observability incident with a machine-verifiable restoration path.",
+      "prior_art": ["Prometheus absent_over_time", "Zabbix nodata", "smartmontools JSON output", "Prometheus Alertmanager grouping"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-telemetry-blind-spot", "pr": null, "commits": []},
+      "protocol": ["reconcile present members to finite temperature records", "preserve unknown thermal state", "join SMART evidence only by exact device or bay identity", "consolidate presentation while retaining raw alerts", "require three complete recovery observations", "record sanitized Black Box frames"],
+      "fixtures": ["aegis-drive-temperature-blind-spot", "tests/test_aegis_temperature_blind_spot.py"],
+      "success_criteria": ["missing Bay 3 detected on first incomplete sample", "isolated temperature threshold remains silent", "matching SMART evidence produces one incident", "cross-drive evidence does not correlate", "false overheating claims remain zero", "unaccepted candidate reaches 9/9 trusted while the accepted matrix remains 8/8"],
+      "abort_criteria": ["missing value converted into temperature", "cross-drive correlation", "one restored sample clears the incident", "new polling or runtime dependency", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-blind-spot-v1.json", "sha256": "766284b84bfedb955412016795bc3e1ff22c9e5c84d2d6d8be612305009f1fb0"}],
+      "outcome": {"conclusion": "Five HoloDeck cases detect the Bay 3 observability gap at the first incomplete sample, correlate exact-member SMART evidence at 0.84 confidence, avoid the threshold-only false negative, reduce two actionable cards to one incident, and preserve zero overheating claims, cross-drive correlations, writes, or hardware actions. The result is a 9/9 review candidate; accepted runtime coverage remains 8/8."},
+      "invalidated_assumptions": ["an absent temperature is equivalent to a normal temperature", "generic host staleness covers member-specific omissions", "device-health and temperature alerts can be grouped without an identity join", "one restored reading proves telemetry recovery"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_blind_spot.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_temperature_blind_spot import run_temperature_blind_spot_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["the storage snapshot identity schema changes", "temperature collection gains per-reading timestamps", "a live read-only field check is authorized", "any consumer seeks repair authority"],
+      "strongest_follow_up": "Collect a governed read-only field snapshot that proves the expected-member inventory contract and calibrate the three-observation recovery window without deploying or changing storage.",
+      "freshness": {"reviewed_at": "2026-10-08", "review_after": "2027-04-30"}
     }
   ]
 }
