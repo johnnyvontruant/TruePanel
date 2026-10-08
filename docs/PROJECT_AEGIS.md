@@ -47,10 +47,48 @@ all of these are present:
 | `network.link_down` | verified primary link state | link and address recheck | network flap |
 | `front_panel.lcd_unavailable` | LCD status bridges | reader and dispatcher recheck | LCD loss/recovery |
 | `telemetry.stale` | explicit Host thermal freshness failure | freshness/domain/safety recheck | stale telemetry recovery |
-
 `tests/test_aegis.py::test_recovery_coverage_contract_is_complete_and_ci_enforceable`
 is the shipping contract. Adding a guidance code without a coverage definition,
 fault-specific verifier, guidance arc, or scenario makes CI fail.
+
+The accepted matrix remains **8/8 trusted paths with zero gaps**. A separately
+rehearsed v2 candidate adds the following ninth path without installing it:
+
+| Candidate fault | Detector | Machine verifier | Regression coverage |
+| --- | --- | --- | --- |
+| `storage.temperature_telemetry_missing` | exact present-member/temperature reconciliation | three-sample identity-stable inventory recheck | drive-temperature blind spot |
+
+The candidate is **9/9 trusted, unaccepted, and uninstalled**. It distinguishes
+a member-specific missing drive temperature from host-wide stale thermal
+telemetry and publishes `temperature_state: unknown`; it cannot turn an absent
+value into a healthy value or an overheating claim. Mission Control exposes
+the candidate's review boundary while normal runtime guidance remains on the
+accepted 8/8 catalog.
+
+## Drive-temperature blind-spot experiment
+
+`run_temperature_blind_spot_checkride()` reconciles three explicitly present
+pool members with finite temperature records. Bay 3 loses its record while the
+same exact device carries independent SMART evidence. AEGIS detects the missing
+expected signal at the first incomplete sample and groups the two actionable
+cards by exact device/bay identity.
+
+Current deterministic result:
+
+- AEGIS detection: sample **1**;
+- isolated temperature threshold: **never fires** because the value is absent;
+- raw actionable alerts: **2**;
+- consolidated incidents: **1**;
+- operator alert-count reduction: **50%**;
+- false overheating claims: **0**;
+- cross-drive false correlations: **0**;
+- resolution: **three consecutive complete, identity-stable observations**;
+- production mutation and hardware actions: **0**.
+
+Two privacy-sanitized Black Box frames preserve the complete-inventory baseline
+and the correlated blind spot. The exact evidence and field research are in
+[`aegis-temperature-blind-spot-v1.json`](evidence/aegis-temperature-blind-spot-v1.json)
+and the [temperature telemetry field report](AEGIS_TEMPERATURE_TELEMETRY_BLIND_SPOT.md).
 
 ## Shared cooling experiment
 
