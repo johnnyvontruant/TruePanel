@@ -337,6 +337,25 @@
       "revisit_conditions": ["the storage snapshot identity schema changes", "temperature collection gains per-reading timestamps", "a live read-only field check is authorized", "any consumer seeks repair authority"],
       "strongest_follow_up": "Collect a governed read-only field snapshot that proves the expected-member inventory contract and calibrate the three-observation recovery window without deploying or changing storage.",
       "freshness": {"reviewed_at": "2026-10-08", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0023", "title": "AEGIS temperature coverage appraisal", "state": "COMPLETED",
+      "hypothesis": "An independent evaluator can reject self-consistent candidate and evidence rewrites by reconstructing the candidate and pinning every reviewed subject.",
+      "value": "Separates evidence-backed appraisal from acceptance and installation while making substitution and predecessor drift machine-verifiable.",
+      "prior_art": ["in-toto Statement v1", "SLSA Verification Summary Attestation", "Prometheus promtool rule tests", "The Update Framework", "Open Policy Agent"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-coverage-appraisal", "pr": null, "commits": []},
+      "protocol": ["pin accepted predecessor", "pin complete candidate and self-digest", "pin complete HoloDeck evidence and self-digest", "pin evaluator implementation", "independently reconstruct candidate", "reject authority escalation", "render mobile appraisal boundary"],
+      "fixtures": ["aegis-temperature-coverage-appraisal", "tests/test_aegis_temperature_coverage_appraisal.py"],
+      "success_criteria": ["exact subjects reach independent review only", "self-consistent candidate rewrite holds", "self-consistent evidence rewrite holds", "predecessor and implementation drift hold", "accepted matrix remains 8/8", "candidate remains unaccepted and uninstalled", "runtime and hardware authority remain false"],
+      "abort_criteria": ["appraisal accepts or installs candidate", "candidate self-digest is treated as independent proof", "unknown field accepted", "runtime or hardware authority granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-coverage-appraisal-v1.json", "sha256": "b25789a8830f178e634325821d3b3c81a490e6e469912e13cd3cee8d31054dad"}],
+      "outcome": {"conclusion": "Ten deterministic cases produce one exact-subject result ready only for independent review and nine HOLD results, with zero unsafe-ready results, acceptances, installations, writes, or hardware actions. Accepted coverage remains 8/8; the 9/9 candidate remains unaccepted and uninstalled."},
+      "invalidated_assumptions": ["a valid self-digest proves an untampered candidate", "a valid evidence self-digest prevents evidence substitution", "9/9 counters are sufficient appraisal evidence", "review-ready means accepted"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_coverage_appraisal.py tests/test_aegis_temperature_blind_spot.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_temperature_coverage_appraisal import run_temperature_coverage_appraisal_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["PR #202 or a pinned subject changes", "the appraisal schema changes", "manual acceptance or installation is proposed"],
+      "strongest_follow_up": "Independently review the exact candidate and appraisal before drafting a separate development-only acceptance record.",
+      "freshness": {"reviewed_at": "2026-10-09", "review_after": "2027-04-30"}
     }
   ]
 }

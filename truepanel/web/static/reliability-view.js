@@ -148,6 +148,7 @@ function render(view,payload){
     const incident=reliability?.active_incident||null;
     const matrix=reliability?.coverage_matrix||{};
     const coverageCandidate=reliability?.coverage_candidate||{};
+    const coverageAppraisal=reliability?.coverage_appraisal||{};
     const summary=reliability?.coverage_summary||{};
     const policy=reliability?.correlation_policy||{};
     const calibration=policy?.calibration||{};
@@ -177,6 +178,7 @@ function render(view,payload){
     const hasCacheAge=passiveCache.last_age_seconds!==null&&passiveCache.last_age_seconds!==undefined&&Number.isFinite(cacheAge);
     const passivePanel=Object.keys(passiveEvidence).length?`<details class="ag-coverage ag-passive-evidence"><summary>Passive TrueNAS Evidence <span>${passiveEvidence.restore_verified?"restore verified":"HOLD"}</span></summary><div class="ag-evidence-metric"><strong>${esc(passiveEvidence.successful_tasks??0)} successful protection task(s)</strong><br>${esc(passiveEvidence.restore_verified?"A separate restore-verification receipt matched the active incident.":passiveEvidence.hold_reason||"No governed restore verification is available.")}<br>Role gate: ${esc(roleGate.status||"not checked")} · ${esc(roleGate.reason||"No session-role evidence.")}<br>Receipt store: ${receiptStore.governed===true?"GOVERNED":"HOLD"} · ${esc(receiptStore.reason||"Not configured.")}<br>Cache: ${esc(passiveCache.last_source||"inactive")}${hasCacheAge?` · ${Math.round(cacheAge)}s old`:""} · TTL ${esc(passiveCache.ttl_seconds??"unknown")}s<br>Read-only: ${passiveEvidence.read_only===true?"YES":"UNKNOWN"} · Control authority: ${passiveEvidence.control_authority===false?"NO":"UNKNOWN"}</div></details>`:"";
     const candidatePanel=Object.keys(coverageCandidate).length?`<details class="ag-coverage ag-coverage-candidate"><summary>Recovery Coverage Candidate <span>${esc(coverageCandidate.trusted??0)}/${esc(coverageCandidate.total??0)} rehearsed · UNACCEPTED</span></summary><div class="ag-evidence-metric"><strong>${esc(title(coverageCandidate.status||"hold"))}</strong><br>UNACCEPTED · NOT INSTALLED<br>Automatic acceptance: ${coverageCandidate.automatic_acceptance===false?"NO":"UNKNOWN"} · Runtime authority: NO<br>Candidate SHA-256 ${esc(String(coverageCandidate.candidate_sha256||"").slice(0,16))}…</div></details>`:"";
+    const appraisalPanel=Object.keys(coverageAppraisal).length?`<details class="ag-coverage ag-coverage-appraisal"><summary>Candidate Appraisal <span>${esc(title(coverageAppraisal.status||"hold"))}</span></summary><div class="ag-evidence-metric"><strong>Exact candidate + HoloDeck evidence</strong><br>Accepted: ${coverageAppraisal.accepted===false?"NO":"UNKNOWN"} · Installed: ${coverageAppraisal.installed===false?"NO":"UNKNOWN"}<br>Runtime authority: ${coverageAppraisal.runtime_authority===false?"NO":"UNKNOWN"} · Hardware authority: ${coverageAppraisal.hardware_authority===false?"NO":"UNKNOWN"}<br>${coverageAppraisal.ready_for_independent_review===true?"Ready only for a separate independent review.":esc((coverageAppraisal.errors||[]).join(" · ")||"Appraisal held closed.")}<br>Appraisal SHA-256 ${esc(String(coverageAppraisal.appraisal_sha256||"").slice(0,16))}…</div></details>`:"";
 
     view.classList.toggle("incident",Boolean(incident));
     view.innerHTML=`
@@ -197,6 +199,7 @@ function render(view,payload){
         ${flightDirectorView(flightDirector,incident)}
         <details class="ag-coverage"><summary>Recovery Coverage Matrix <span>${gaps?`${gaps} gap${gaps===1?"":"s"}`:"complete"}</span></summary>${gapRows(matrix)}</details>
         ${candidatePanel}
+        ${appraisalPanel}
         <details class="ag-coverage ag-evidence"><summary>Evidence Promotion Gate <span>${evidenceGate?.eligible_for_field_validation?"field candidate":`${Number(evidenceGate?.gaps?.length||0)} holds`}</span></summary>${evidenceGateRows(evidenceGate)}</details>
         <details class="ag-coverage ag-field-workflow"><summary>Field Evidence Workflow <span>${esc(title(fieldWorkflow?.state||"not started"))}</span></summary>${fieldWorkflowRows(fieldWorkflow)}</details>
         ${passivePanel}

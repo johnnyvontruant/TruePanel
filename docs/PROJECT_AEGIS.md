@@ -90,6 +90,21 @@ and the correlated blind spot. The exact evidence and field research are in
 [`aegis-temperature-blind-spot-v1.json`](evidence/aegis-temperature-blind-spot-v1.json)
 and the [temperature telemetry field report](AEGIS_TEMPERATURE_TELEMETRY_BLIND_SPOT.md).
 
+## Temperature coverage appraisal
+
+`run_temperature_coverage_appraisal_checkride()` independently rebuilds the
+exact 9/9 candidate from the accepted 8/8 matrix and the reviewed HoloDeck
+rehearsal. It pins the predecessor, full candidate, full evidence report, both
+declared self-digests, and the evaluator implementation. A self-consistent
+rewrite therefore still produces `HOLD`.
+
+The deterministic appraisal records **10 scenarios: 1 ready for independent
+review and 9 HOLD**, with zero false-ready results, candidate acceptances,
+installations, runtime writes, or hardware actions. `READY_FOR_INDEPENDENT_REVIEW`
+is not acceptance. The preserved evidence and prior-art analysis are in
+[`aegis-temperature-coverage-appraisal-v1.json`](evidence/aegis-temperature-coverage-appraisal-v1.json)
+and the [temperature coverage appraisal report](AEGIS_TEMPERATURE_COVERAGE_APPRAISAL.md).
+
 ## Shared cooling experiment
 
 `run_shared_cooling_experiment()` reuses ORACLE's bounded fan-bearing scenario.

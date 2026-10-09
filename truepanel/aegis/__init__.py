@@ -106,6 +106,13 @@ from .temperature_coverage import (
     validate_temperature_coverage_candidate,
     verify_temperature_coverage,
 )
+from .temperature_coverage_appraisal import (
+    PINNED_SUBJECTS as TEMPERATURE_COVERAGE_APPRAISAL_SUBJECTS,
+)
+from .temperature_coverage_appraisal import (
+    appraise_temperature_coverage,
+    temperature_coverage_implementation_sha256,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -179,4 +186,7 @@ __all__ = [
     "temperature_guidance_for_snapshot",
     "validate_temperature_coverage_candidate",
     "verify_temperature_coverage",
+    "TEMPERATURE_COVERAGE_APPRAISAL_SUBJECTS",
+    "appraise_temperature_coverage",
+    "temperature_coverage_implementation_sha256",
 ]

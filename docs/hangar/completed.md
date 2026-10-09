@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.08.1 · refreshed 2026-10-08 · 17 experiment(s)
+Registry version 2026.10.08.1 · refreshed 2026-10-08 · 18 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -139,3 +139,11 @@ Five HoloDeck cases detect the Bay 3 observability gap at the first incomplete s
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Collect a governed read-only field snapshot that proves the expected-member inventory contract and calibrate the three-observation recovery window without deploying or changing storage.
 - Revisit when: the storage snapshot identity schema changes; temperature collection gains per-reading timestamps; a live read-only field check is authorized; any consumer seeks repair authority
+
+## TP-EXP-0023 · AEGIS temperature coverage appraisal
+
+Ten deterministic cases produce one exact-subject result ready only for independent review and nine HOLD results, with zero unsafe-ready results, acceptances, installations, writes, or hardware actions. Accepted coverage remains 8/8; the 9/9 candidate remains unaccepted and uninstalled.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Independently review the exact candidate and appraisal before drafting a separate development-only acceptance record.
+- Revisit when: PR #202 or a pinned subject changes; the appraisal schema changes; manual acceptance or installation is proposed
