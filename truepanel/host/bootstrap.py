@@ -9,6 +9,7 @@ remains locked until the migration is explicitly completed.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -351,6 +352,7 @@ def build_host_agent_bootstrap(
     config: dict[str, Any],
     *,
     fan_runtime_factory=build_fan_control_runtime,
+    fan_startup_sleep=time.sleep,
     fan_history_factory=FanControlHistory,
     commissioning_history_factory=(
         ThermalCommissioningHistory
@@ -374,6 +376,29 @@ def build_host_agent_bootstrap(
     fan_runtime = fan_runtime_factory(
         config
     )
+
+    # The Fintek hwmon interface can appear shortly after the LCD process
+    # starts. Retry only the exact discovery-unavailable result before wiring
+    # this runtime into safety, thermal authority and command handling.
+    # Do not retry other failures or a disabled controller.
+    for attempt in range(3):
+        if not (
+            getattr(fan_runtime, "enabled", False)
+            and getattr(fan_runtime, "service", None) is None
+            and getattr(fan_runtime, "unavailable_reason", None)
+            == "Fintek fan controller is unavailable."
+        ):
+            break
+
+        LOGGER.info(
+            "Fintek not yet discoverable at startup; "
+            "retrying fan-control construction (%d/3)",
+            attempt + 1,
+        )
+        fan_startup_sleep(1.0)
+        fan_runtime = fan_runtime_factory(
+            config
+        )
 
     history = config.get(
         "history",
