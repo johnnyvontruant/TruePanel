@@ -6,7 +6,14 @@ import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    """Keep model-visible evidence on the explicitly configured endpoint."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 class WingmanProvider(Protocol):
@@ -71,7 +78,10 @@ class LlamaCppProvider:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310
+        # Endpoint validation must not be undone by a redirect, ambient proxy,
+        # or a process-global opener installed by unrelated application code.
+        opener = build_opener(ProxyHandler({}), _RejectRedirects())
+        with opener.open(request, timeout=self.timeout_seconds) as response:  # noqa: S310
             decoded = json.loads(response.read().decode("utf-8"))
         content = decoded["choices"][0]["message"]["content"]
         if isinstance(content, dict):
