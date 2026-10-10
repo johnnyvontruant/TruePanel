@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.08.1 · refreshed 2026-10-08 · 18 experiment(s)
+Registry version 2026.10.10.1 · refreshed 2026-10-10 · 19 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -147,3 +147,11 @@ Ten deterministic cases produce one exact-subject result ready only for independ
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Independently review the exact candidate and appraisal before drafting a separate development-only acceptance record.
 - Revisit when: PR #202 or a pinned subject changes; the appraisal schema changes; manual acceptance or installation is proposed
+
+## TP-EXP-0024 · AEGIS development-only temperature acceptance
+
+Eleven deterministic cases produce one operator-action-required result, one fixture development-review acceptance, and nine HOLD results. Every case preserves zero runtime acceptances, installations, production authorizations, writes, or hardware actions; the live view has no operator confirmation.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add a public-only, operator-owned authentication adapter for this exact record, then rehearse a separate installation proposal that still cannot deploy or actuate hardware.
+- Revisit when: JT supplies an authenticated development signature; the candidate or appraisal changes; any consumer proposes runtime installation or deployment

@@ -28,6 +28,9 @@ from .temperature_coverage_appraisal import (
     appraise_temperature_coverage,
     temperature_coverage_implementation_sha256,
 )
+from .temperature_development_acceptance import (
+    evaluate_temperature_development_acceptance,
+)
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -98,6 +101,14 @@ class AegisReliabilityEngine:
             implementation_sha256=temperature_coverage_implementation_sha256(
                 run_temperature_blind_spot_checkride
             ),
+        )
+        self.temperature_development_acceptance = (
+            evaluate_temperature_development_acceptance(
+                self.temperature_coverage_candidate,
+                self.temperature_coverage_appraisal,
+                None,
+                now_utc="2026-10-10T04:30:00Z",
+            )
         )
         proof = run_flight_director_proof()
         self.flight_director = {
@@ -362,6 +373,7 @@ class AegisReliabilityEngine:
             "coverage_matrix": self.matrix,
             "coverage_candidate": self.temperature_coverage_candidate,
             "coverage_appraisal": self.temperature_coverage_appraisal,
+            "coverage_development_acceptance": self.temperature_development_acceptance,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

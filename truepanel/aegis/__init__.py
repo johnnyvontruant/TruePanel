@@ -113,10 +113,16 @@ from .temperature_coverage_appraisal import (
     appraise_temperature_coverage,
     temperature_coverage_implementation_sha256,
 )
+from .temperature_development_acceptance import (
+    evaluate_temperature_development_acceptance,
+    prepare_temperature_development_acceptance,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
     "AegisReliabilityEngine",
+    "evaluate_temperature_development_acceptance",
+    "prepare_temperature_development_acceptance",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",

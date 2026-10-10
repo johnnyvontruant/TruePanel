@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.08.1",
-  "updated_at": "2026-10-08",
+  "registry_version": "2026.10.10.1",
+  "updated_at": "2026-10-10",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -356,6 +356,25 @@
       "revisit_conditions": ["PR #202 or a pinned subject changes", "the appraisal schema changes", "manual acceptance or installation is proposed"],
       "strongest_follow_up": "Independently review the exact candidate and appraisal before drafting a separate development-only acceptance record.",
       "freshness": {"reviewed_at": "2026-10-09", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0024", "title": "AEGIS development-only temperature acceptance", "state": "COMPLETED",
+      "hypothesis": "One explicit JT acknowledgement can advance an exact appraised candidate to development review without being misrepresented as cryptographic authentication, runtime acceptance, installation, or deployment authority.",
+      "value": "Fits the lone-human-plus-Vega team honestly while preserving machine-enforced production and hardware boundaries.",
+      "prior_art": ["in-toto Statement v1", "SLSA Verification Summary Attestation", "The Update Framework", "GitHub deployment environments"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-development-acceptance", "pr": null, "commits": []},
+      "protocol": ["bind exact candidate and appraisal documents", "require exact JT statement and development-only scope", "limit acknowledgement to 24 hours", "label acknowledgement unauthenticated", "reject unknown fields and substitution", "deny runtime, deployment, storage, network, and hardware authority", "render mobile operator action state"],
+      "fixtures": ["aegis-temperature-development-acceptance", "tests/test_aegis_temperature_development_acceptance.py"],
+      "success_criteria": ["no confirmation yields action required", "exact fixture confirmation reaches development review only", "Vega is never treated as human authority", "stale, extended, substituted, or escalated confirmation holds", "accepted matrix remains 8/8", "candidate remains uninstalled", "production and hardware authority remain false"],
+      "abort_criteria": ["missing confirmation inferred", "acknowledgement called cryptographically authenticated", "runtime candidate accepted or installed", "deployment or hardware authority granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-development-acceptance-v1.json", "sha256": "38428ef9e8cfccb4fcf4e17d2ba0f644e38f367e1b2016331fb36afb519978ce"}],
+      "outcome": {"conclusion": "Eleven deterministic cases produce one operator-action-required result, one fixture development-review acceptance, and nine HOLD results. Every case preserves zero runtime acceptances, installations, production authorizations, writes, or hardware actions; the live view has no operator confirmation."},
+      "invalidated_assumptions": ["a review-ready appraisal is operator acceptance", "Vega can stand in for a second human signer", "an explicit acknowledgement is cryptographic authentication", "development acceptance implies installation or deployment authority"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_development_acceptance.py tests/test_aegis_temperature_coverage_appraisal.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_temperature_development_acceptance import run_temperature_development_acceptance_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies an authenticated development signature", "the candidate or appraisal changes", "any consumer proposes runtime installation or deployment"],
+      "strongest_follow_up": "Add a public-only, operator-owned authentication adapter for this exact record, then rehearse a separate installation proposal that still cannot deploy or actuate hardware.",
+      "freshness": {"reviewed_at": "2026-10-10", "review_after": "2027-04-30"}
     }
   ]
 }

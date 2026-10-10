@@ -105,6 +105,21 @@ is not acceptance. The preserved evidence and prior-art analysis are in
 [`aegis-temperature-coverage-appraisal-v1.json`](evidence/aegis-temperature-coverage-appraisal-v1.json)
 and the [temperature coverage appraisal report](AEGIS_TEMPERATURE_COVERAGE_APPRAISAL.md).
 
+## Development-only temperature acceptance
+
+`run_temperature_development_acceptance_checkride()` binds JT's exact statement
+to the complete candidate and appraisal documents. The live engine contains no
+confirmation and therefore reports `ACTION_REQUIRED_OPERATOR_CONFIRMATION`.
+HoloDeck can exercise one explicit fixture acknowledgement, but labels it
+unauthenticated and limits its result to `DEVELOPMENT_ACCEPTED_FOR_REVIEW`.
+
+The proof records **11 scenarios: 1 action required, 1 fixture development
+acceptance, and 9 HOLD**, with zero runtime acceptances, installations,
+production authorizations, writes, or hardware actions. The accepted matrix
+remains 8/8. Evidence and prior-art analysis are in
+[`aegis-temperature-development-acceptance-v1.json`](evidence/aegis-temperature-development-acceptance-v1.json)
+and the [development acceptance field report](AEGIS_TEMPERATURE_DEVELOPMENT_ACCEPTANCE.md).
+
 ## Shared cooling experiment
 
 `run_shared_cooling_experiment()` reuses ORACLE's bounded fan-bearing scenario.
