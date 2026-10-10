@@ -94,8 +94,9 @@ def test_glass_cockpit_builds_bounded_live_trends():
     assert "rememberTrend" in source
 
 
-def test_glass_cockpit_uses_incident_bay_fallback():
+def test_glass_cockpit_never_uses_incident_bay_for_hottest_drive():
     source = (ROOT / "truepanel/web/static/glass-cockpit.js").read_text()
-    assert "function incidentBay(incident)" in source
-    assert "supporting_signals" in source
-    assert "hottestBay" in source
+    assert "function hottestDriveSummary(readings)" in source
+    assert "hottestSummary.label" in source
+    assert "incidentBay(incident)" not in source
+    assert "hottestBay" not in source
