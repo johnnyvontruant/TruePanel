@@ -43,6 +43,15 @@ from .final_handoff import (
     issue_final_handoff_seal,
 )
 from .flight_director import run_flight_director_proof
+from .identity_coverage import (
+    ACCEPTED_IDENTITY_MODES,
+    IDENTITY_REQUIRED_CODES,
+    build_identity_coverage_candidate,
+    evaluate_identity_handoff,
+    evaluate_identity_uniqueness,
+    rehearse_identity_coverage_contract,
+    validate_identity_coverage_candidate,
+)
 from .passive_providers import (
     TrueNASProtectionEvidenceProvider,
     TrueNASReadOnlyQueryClient,
@@ -103,6 +112,7 @@ from .stage_witness import witness_validated_stage
 __all__ = [
     "ACCEPTANCE_SCHEMA",
     "AegisReliabilityEngine",
+    "ACCEPTED_IDENTITY_MODES",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",
@@ -111,6 +121,7 @@ __all__ = [
     "GovernedAPIKeyFile",
     "GovernedTLSCAFile",
     "HypothesisRule",
+    "IDENTITY_REQUIRED_CODES",
     "GovernedPassiveEvidenceRuntime",
     "GovernedRestoreReceiptStore",
     "TrueNASProtectionEvidenceProvider",
@@ -123,6 +134,7 @@ __all__ = [
     "bind_platform_witness",
     "build_promotion_request",
     "build_witnessed_promotion_request",
+    "build_identity_coverage_candidate",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "classify_platform_transition",
@@ -131,6 +143,8 @@ __all__ = [
     "evaluate_acceptance_receipt",
     "evaluate_pre_service_clearance",
     "evaluate_manual_promotion",
+    "evaluate_identity_handoff",
+    "evaluate_identity_uniqueness",
     "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",
@@ -145,6 +159,7 @@ __all__ = [
     "coverage_matrix",
     "evaluate_evidence_gate",
     "rehearse_recovery_paths",
+    "rehearse_identity_coverage_contract",
     "renewal_contract_sha256",
     "renewal_guidance",
     "run_flight_director_proof",
@@ -153,6 +168,7 @@ __all__ = [
     "confirmation_contract_sha256",
     "reconcile_recovery_attestations",
     "validate_recovery_coverage",
+    "validate_identity_coverage_candidate",
     "validate_correlation_policy",
     "validate_field_manifest",
     "validate_recovery_attestation",

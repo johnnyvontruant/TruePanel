@@ -16,6 +16,10 @@ from .consequences import correlate_consequences
 from .correlation import correlate_incident
 from .coverage import coverage_matrix
 from .flight_director import run_flight_director_proof
+from .identity_coverage import (
+    build_identity_coverage_candidate,
+    rehearse_identity_coverage_contract,
+)
 from .platform_witness import bind_platform_witness
 from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 from .rehearsal import rehearse_recovery_paths
@@ -72,6 +76,10 @@ class AegisReliabilityEngine:
         self.sample_interval_seconds = interval
         self.rehearsals = rehearse_recovery_paths()
         self.matrix = coverage_matrix(self.rehearsals)
+        self.identity_coverage_candidate = build_identity_coverage_candidate(
+            self.matrix,
+            rehearse_identity_coverage_contract(),
+        )
         proof = run_flight_director_proof()
         self.flight_director = {
             "scenario": proof["scenario"],
@@ -333,6 +341,7 @@ class AegisReliabilityEngine:
                 "request_count": self._sequence,
             },
             "coverage_matrix": self.matrix,
+            "coverage_candidate": self.identity_coverage_candidate,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

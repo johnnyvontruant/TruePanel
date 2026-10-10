@@ -147,6 +147,7 @@ function render(view,payload){
     const reliability=payload?.reliability||{};
     const incident=reliability?.active_incident||null;
     const matrix=reliability?.coverage_matrix||{};
+    const candidate=reliability?.coverage_candidate||{};
     const summary=reliability?.coverage_summary||{};
     const policy=reliability?.correlation_policy||{};
     const calibration=policy?.calibration||{};
@@ -166,6 +167,9 @@ function render(view,payload){
     const trusted=Number(summary.trusted||0);
     const total=Number(summary.total||0);
     const gaps=Number(summary.gaps||0);
+    const candidateStatus=candidate?.status||"HOLD";
+    const identityCodes=Array.isArray(candidate?.identity_required_codes)?candidate.identity_required_codes:[];
+    const candidatePanel=Object.keys(candidate).length?`<details class="ag-coverage ag-coverage-candidate"><summary>Recovery Coverage Next · Identity <span>${esc(title(candidateStatus))}</span></summary><div class="ag-evidence-metric"><strong>${esc(identityCodes.length)} storage recovery classes identity-bound</strong><br>Serial-model, ZFS-member, and WWN continuity are rehearsed across device-path change. This candidate is not accepted and cannot alter the current airworthiness envelope.<br>Independent review: ${candidate.review_required===true?"REQUIRED":"HOLD"} · Automatic acceptance: ${candidate.automatic_acceptance===false?"DISABLED":"HOLD"} · Control authority: NO</div></details>`:"";
     const roleGate=passiveEvidence.role_verification||{};
     const receiptStore=passiveEvidence.receipt_store||{};
     const passiveCache=passiveEvidence.cache||{};
@@ -190,6 +194,7 @@ function render(view,payload){
         ${incident?consequenceView(incident?.consequence_context):""}
         ${flightDirectorView(flightDirector,incident)}
         <details class="ag-coverage"><summary>Recovery Coverage Matrix <span>${gaps?`${gaps} gap${gaps===1?"":"s"}`:"complete"}</span></summary>${gapRows(matrix)}</details>
+        ${candidatePanel}
         <details class="ag-coverage ag-evidence"><summary>Evidence Promotion Gate <span>${evidenceGate?.eligible_for_field_validation?"field candidate":`${Number(evidenceGate?.gaps?.length||0)} holds`}</span></summary>${evidenceGateRows(evidenceGate)}</details>
         <details class="ag-coverage ag-field-workflow"><summary>Field Evidence Workflow <span>${esc(title(fieldWorkflow?.state||"not started"))}</span></summary>${fieldWorkflowRows(fieldWorkflow)}</details>
         ${passivePanel}

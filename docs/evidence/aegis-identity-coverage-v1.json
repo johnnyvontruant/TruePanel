@@ -1,0 +1,109 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "c84cee1d0638734bdfa28871c7b947224d6b76b547e6f4984bb58dfd199564ca",
+  "experiment_id": "TP-EXP-0029",
+  "field_validated": false,
+  "measurements": {
+    "additional_telemetry_reads": 0,
+    "different_drive_merges": 0,
+    "false_outcomes": 0,
+    "holds": 3,
+    "identity_downgrades": 0,
+    "migration_session_splits": 0,
+    "production_writes": 0,
+    "raw_identifier_occurrences": 0,
+    "scenarios": 6,
+    "temporary_fixture_writes": 3,
+    "trusted": 3
+  },
+  "production_mutation": false,
+  "result": "PASS",
+  "safety": {
+    "disposable_directory_removed": true,
+    "hardware_actions": 0,
+    "live_provider_access": false,
+    "recovery_actions": 0
+  },
+  "scenarios": [
+    {
+      "active_sessions": 1,
+      "expected": "TRUSTED",
+      "name": "serial-model-to-wwn-with-path-change",
+      "result": {
+        "after_mode": "wwn",
+        "before_mode": "serial_model",
+        "continuity": "MIGRATED",
+        "holds": [],
+        "privacy_safe": true,
+        "scope_preserved": true,
+        "status": "TRUSTED"
+      }
+    },
+    {
+      "active_sessions": 2,
+      "expected": "TRUSTED",
+      "name": "different-drives-same-bay-remain-distinct",
+      "result": {
+        "active_sessions": 2,
+        "holds": [],
+        "status": "TRUSTED",
+        "unique_identities": 2
+      }
+    },
+    {
+      "active_sessions": 1,
+      "expected": "TRUSTED",
+      "name": "weaker-observation-cannot-downgrade-wwn",
+      "result": {
+        "after_mode": "wwn",
+        "before_mode": "wwn",
+        "continuity": "STABLE",
+        "holds": [],
+        "privacy_safe": true,
+        "scope_preserved": true,
+        "status": "TRUSTED"
+      }
+    },
+    {
+      "expected": "HOLD",
+      "name": "missing-migration-lineage",
+      "result": {
+        "after_mode": "wwn",
+        "before_mode": "serial_model",
+        "continuity": "MIGRATED",
+        "holds": [
+          "predecessor session ID is missing from migration lineage"
+        ],
+        "privacy_safe": true,
+        "scope_preserved": true,
+        "status": "HOLD"
+      }
+    },
+    {
+      "expected": "HOLD",
+      "name": "cloned-stable-identity",
+      "result": {
+        "active_sessions": 2,
+        "holds": [
+          "one stable identity is active in multiple recovery sessions"
+        ],
+        "status": "HOLD",
+        "unique_identities": 1
+      }
+    },
+    {
+      "expected": "HOLD",
+      "name": "runtime-path-reused-by-different-drive",
+      "result": {
+        "active_sessions": 2,
+        "holds": [
+          "one runtime device path maps to multiple stable identities"
+        ],
+        "status": "HOLD",
+        "unique_identities": 2
+      }
+    }
+  ],
+  "schema": "truepanel.holodeck-aegis-identity-coverage/v1",
+  "simulation": true
+}
