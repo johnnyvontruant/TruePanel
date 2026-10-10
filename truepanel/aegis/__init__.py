@@ -99,10 +99,30 @@ from .ssh_verifier import (
     validate_allowed_signers_roster,
 )
 from .stage_witness import witness_validated_stage
+from .temperature_coverage import (
+    build_temperature_coverage_candidate,
+    rehearse_temperature_coverage,
+    temperature_guidance_for_snapshot,
+    validate_temperature_coverage_candidate,
+    verify_temperature_coverage,
+)
+from .temperature_coverage_appraisal import (
+    PINNED_SUBJECTS as TEMPERATURE_COVERAGE_APPRAISAL_SUBJECTS,
+)
+from .temperature_coverage_appraisal import (
+    appraise_temperature_coverage,
+    temperature_coverage_implementation_sha256,
+)
+from .temperature_development_acceptance import (
+    evaluate_temperature_development_acceptance,
+    prepare_temperature_development_acceptance,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
     "AegisReliabilityEngine",
+    "evaluate_temperature_development_acceptance",
+    "prepare_temperature_development_acceptance",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",
@@ -167,4 +187,12 @@ __all__ = [
     "validate_allowed_signers_roster",
     "validate_review_bundle",
     "wilson_interval",
+    "build_temperature_coverage_candidate",
+    "rehearse_temperature_coverage",
+    "temperature_guidance_for_snapshot",
+    "validate_temperature_coverage_candidate",
+    "verify_temperature_coverage",
+    "TEMPERATURE_COVERAGE_APPRAISAL_SUBJECTS",
+    "appraise_temperature_coverage",
+    "temperature_coverage_implementation_sha256",
 ]

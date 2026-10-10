@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.14.1 · refreshed 2026-09-14 · 16 experiment(s)
+Registry version 2026.10.10.1 · refreshed 2026-10-10 · 19 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -131,3 +131,27 @@ One stable identity preserves six proved consequences across /dev/sdc to /dev/sd
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.
 - Revisit when: identity migration from serial-model to WWN or ZFS GUID is implemented; Lifeline identity coverage becomes a Recovery Coverage Matrix condition; TrueNAS exposes a supported leaf-vdev GUID
+
+## TP-EXP-0022 · AEGIS drive-temperature telemetry blind spot
+
+Five HoloDeck cases detect the Bay 3 observability gap at the first incomplete sample, correlate exact-member SMART evidence at 0.84 confidence, avoid the threshold-only false negative, reduce two actionable cards to one incident, and preserve zero overheating claims, cross-drive correlations, writes, or hardware actions. The result is a 9/9 review candidate; accepted runtime coverage remains 8/8.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Collect a governed read-only field snapshot that proves the expected-member inventory contract and calibrate the three-observation recovery window without deploying or changing storage.
+- Revisit when: the storage snapshot identity schema changes; temperature collection gains per-reading timestamps; a live read-only field check is authorized; any consumer seeks repair authority
+
+## TP-EXP-0023 · AEGIS temperature coverage appraisal
+
+Ten deterministic cases produce one exact-subject result ready only for independent review and nine HOLD results, with zero unsafe-ready results, acceptances, installations, writes, or hardware actions. Accepted coverage remains 8/8; the 9/9 candidate remains unaccepted and uninstalled.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Independently review the exact candidate and appraisal before drafting a separate development-only acceptance record.
+- Revisit when: PR #202 or a pinned subject changes; the appraisal schema changes; manual acceptance or installation is proposed
+
+## TP-EXP-0024 · AEGIS development-only temperature acceptance
+
+Eleven deterministic cases produce one operator-action-required result, one fixture development-review acceptance, and nine HOLD results. Every case preserves zero runtime acceptances, installations, production authorizations, writes, or hardware actions; the live view has no operator confirmation.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add a public-only, operator-owned authentication adapter for this exact record, then rehearse a separate installation proposal that still cannot deploy or actuate hardware.
+- Revisit when: JT supplies an authenticated development signature; the candidate or appraisal changes; any consumer proposes runtime installation or deployment
