@@ -20,6 +20,9 @@ from .platform_witness import bind_platform_witness
 from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 from .rehearsal import rehearse_recovery_paths
 from .requalification import renewal_guidance
+from .temperature_authenticated_acceptance import (
+    evaluate_authenticated_temperature_acceptance,
+)
 from .temperature_coverage import (
     build_temperature_coverage_candidate,
     rehearse_temperature_coverage,
@@ -27,9 +30,6 @@ from .temperature_coverage import (
 from .temperature_coverage_appraisal import (
     appraise_temperature_coverage,
     temperature_coverage_implementation_sha256,
-)
-from .temperature_development_acceptance import (
-    evaluate_temperature_development_acceptance,
 )
 
 
@@ -103,9 +103,11 @@ class AegisReliabilityEngine:
             ),
         )
         self.temperature_development_acceptance = (
-            evaluate_temperature_development_acceptance(
+            evaluate_authenticated_temperature_acceptance(
                 self.temperature_coverage_candidate,
                 self.temperature_coverage_appraisal,
+                None,
+                None,
                 None,
                 now_utc="2026-10-10T04:30:00Z",
             )

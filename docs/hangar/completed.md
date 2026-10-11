@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.10.1 · refreshed 2026-10-10 · 19 experiment(s)
+Registry version 2026.10.11.1 · refreshed 2026-10-11 · 20 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -155,3 +155,11 @@ Eleven deterministic cases produce one operator-action-required result, one fixt
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add a public-only, operator-owned authentication adapter for this exact record, then rehearse a separate installation proposal that still cannot deploy or actuate hardware.
 - Revisit when: JT supplies an authenticated development signature; the candidate or appraisal changes; any consumer proposes runtime installation or deployment
+
+## TP-EXP-0026 · AEGIS authenticated temperature development acceptance
+
+Eleven real-SSHSIG cases produce one confirmation-required result, one signature-required result, one authenticated development-review result, and eight HOLD results. Disposable keys are removed and all production, installation, deployment, write, and hardware authority remains false.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Export the exact statement for JT's offline signature and run a read-only field verification before drafting any separate installation proposal.
+- Revisit when: JT provisions the protected development public roster; the candidate appraisal acknowledgement or namespace changes; installation or deployment is proposed

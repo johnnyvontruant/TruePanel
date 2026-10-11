@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.10.1",
-  "updated_at": "2026-10-10",
+  "registry_version": "2026.10.11.1",
+  "updated_at": "2026-10-11",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -375,6 +375,25 @@
       "revisit_conditions": ["JT supplies an authenticated development signature", "the candidate or appraisal changes", "any consumer proposes runtime installation or deployment"],
       "strongest_follow_up": "Add a public-only, operator-owned authentication adapter for this exact record, then rehearse a separate installation proposal that still cannot deploy or actuate hardware.",
       "freshness": {"reviewed_at": "2026-10-10", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0026", "title": "AEGIS authenticated temperature development acceptance", "state": "COMPLETED",
+      "hypothesis": "One operator-owned SSHSIG over the exact development-only record can prove JT's acknowledgement without granting installation, deployment, or hardware authority.",
+      "value": "Closes the identity ambiguity in the lone-human-plus-Vega review model while keeping the private key outside TruePanel.",
+      "prior_art": ["OpenSSH SSHSIG", "in-toto Statement v1", "The Update Framework", "Sigstore Cosign"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-authenticated-temperature-acceptance", "pr": null, "commits": []},
+      "protocol": ["build canonical exact-subject statement", "use dedicated SSHSIG namespace", "verify one exact Ed25519 identity from protected public roster", "reject corruption substitution replay expiry and unsafe roster", "retain no fixture private keys", "deny runtime installation deployment and hardware authority"],
+      "fixtures": ["aegis-temperature-authenticated-acceptance", "tests/test_aegis_temperature_authenticated_acceptance.py"],
+      "success_criteria": ["missing confirmation and missing signature are distinct action gates", "exact disposable fixture SSHSIG reaches development review only", "wrong key namespace data and roster state hold", "fixture private keys are removed", "accepted matrix remains 8/8", "candidate remains uninstalled", "production and hardware authority remain false"],
+      "abort_criteria": ["TruePanel accepts a private-key path", "signature from another namespace or key is accepted", "unsafe or symlinked roster is accepted", "runtime candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-authenticated-acceptance-v1.json", "sha256": "0cac861b4fe0330ad0505922a7187382ba566b59729010fee8304541fa412fab"}],
+      "outcome": {"conclusion": "Eleven real-SSHSIG cases produce one confirmation-required result, one signature-required result, one authenticated development-review result, and eight HOLD results. Disposable keys are removed and all production, installation, deployment, write, and hardware authority remains false."},
+      "invalidated_assumptions": ["an explicit acknowledgement proves signer identity", "any SSH signature namespace is interchangeable", "bytes appended after SSH armor necessarily corrupt a signature", "roster permissions can be checked after verification"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_authenticated_acceptance.py tests/test_aegis_temperature_development_acceptance.py", "python -c \"from truepanel.holodeck.aegis_temperature_authenticated_acceptance import run_temperature_authenticated_acceptance_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT provisions the protected development public roster", "the candidate appraisal acknowledgement or namespace changes", "installation or deployment is proposed"],
+      "strongest_follow_up": "Export the exact statement for JT's offline signature and run a read-only field verification before drafting any separate installation proposal.",
+      "freshness": {"reviewed_at": "2026-10-11", "review_after": "2027-04-30"}
     }
   ]
 }

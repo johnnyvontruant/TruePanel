@@ -120,6 +120,25 @@ remains 8/8. Evidence and prior-art analysis are in
 [`aegis-temperature-development-acceptance-v1.json`](evidence/aegis-temperature-development-acceptance-v1.json)
 and the [development acceptance field report](AEGIS_TEMPERATURE_DEVELOPMENT_ACCEPTANCE.md).
 
+## Authenticated temperature development acceptance
+
+`run_temperature_authenticated_acceptance_checkride()` connects the exact
+development-only record to the existing public-only OpenSSH SSHSIG verifier.
+The signed statement binds the candidate, appraisal, acknowledgement,
+expiration, development scope, and all negative authority flags under a new
+protocol namespace. TruePanel accepts no private-key path and performs no
+signing.
+
+The real-SSHSIG proof records **11 scenarios: 1 confirmation required, 1
+signature required, 1 authenticated development-review result, and 8 HOLD**.
+Corrupt, wrong-namespace, foreign-key, replayed, expired, unsafe-roster,
+symlink-roster, and verifier-substitution cases fail closed. Fixture keys are
+removed; runtime acceptances, installations, deployments, writes, and hardware
+actions remain zero. The live view still requires JT's confirmation because no
+real operator material is present. Evidence and prior-art analysis are in
+[`aegis-temperature-authenticated-acceptance-v1.json`](evidence/aegis-temperature-authenticated-acceptance-v1.json)
+and the [authenticated acceptance field report](AEGIS_TEMPERATURE_AUTHENTICATED_ACCEPTANCE.md).
+
 ## Shared cooling experiment
 
 `run_shared_cooling_experiment()` reuses ORACLE's bounded fan-bearing scenario.
