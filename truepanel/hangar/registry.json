@@ -394,6 +394,25 @@
       "revisit_conditions": ["JT provisions the protected development public roster", "the candidate appraisal acknowledgement or namespace changes", "installation or deployment is proposed"],
       "strongest_follow_up": "Export the exact statement for JT's offline signature and run a read-only field verification before drafting any separate installation proposal.",
       "freshness": {"reviewed_at": "2026-10-11", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0027", "title": "AEGIS public-only temperature signing kit", "state": "COMPLETED",
+      "hypothesis": "A new-directory public export and exact return verifier can carry JT's offline SSHSIG without admitting private-key material or widening development-only authority.",
+      "value": "Turns the authenticated design into a reviewable operator ceremony with tamper-evident public material and fail-closed return verification.",
+      "prior_art": ["OpenSSH SSHSIG", "in-toto Statement v1", "Minisign", "Sigstore Cosign", "The Update Framework"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-signing-checkride", "pr": null, "commits": []},
+      "protocol": ["export outside source checkout", "create exact three-file public kit", "use exclusive no-follow complete writes", "accept no private-key input", "reconstruct all public files", "verify protected detached SSHSIG", "deny installation deployment and hardware authority"],
+      "fixtures": ["aegis-temperature-public-signing-kit", "tests/test_aegis_temperature_signing_kit.py"],
+      "success_criteria": ["one exact public kit reaches signing ready", "one disposable fixture signature reaches development review only", "tampering symlinks unsafe permissions extra files and expiry hold", "accepted matrix remains 8/8", "candidate remains uninstalled", "private-key inputs and TruePanel signer invocations remain zero"],
+      "abort_criteria": ["private-key path accepted", "TruePanel invokes a signer", "export is written into source checkout", "tampered or incomplete kit accepted", "runtime candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-signing-kit-v1.json", "sha256": "ec7097ed1102ce804fa2b07ddf4f4abbbc6fd708b8997aa102f94691bb8ee84b"}],
+      "outcome": {"conclusion": "Twelve deterministic cases produce one public kit ready for offline signature, one fixture-authenticated development-review result, and ten HOLD results with zero private-key inputs, signer invocations, installations, deployments, writes, or hardware actions."},
+      "invalidated_assumptions": ["a signed statement makes adjacent manifest and instructions trustworthy", "an existing output directory is safe to reuse", "a single write necessarily persists the full public file", "convenience signing can preserve private-key separation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_signing_kit.py tests/test_aegis_temperature_authenticated_acceptance.py", "python -c \"from truepanel.holodeck.aegis_temperature_signing_kit import run_temperature_signing_kit_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT provides a real development public key", "the candidate appraisal acknowledgement namespace or export schema changes", "installation or deployment is proposed"],
+      "strongest_follow_up": "Provision JT's protected development public roster, export one exact kit from the pinned checkout, and run the read-only returned-signature checkride.",
+      "freshness": {"reviewed_at": "2026-10-12", "review_after": "2027-04-30"}
     }
   ]
 }

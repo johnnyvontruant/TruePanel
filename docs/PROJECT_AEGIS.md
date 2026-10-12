@@ -249,3 +249,13 @@ The strongest next step is an opt-in Black Box field-evidence campaign: replay
 sanitized normal workloads and reviewed incidents through this same interface,
 measure false positives and confidence stability, and keep live deployment as
 a separate explicit gate.
+
+## Public-only temperature signing kit
+
+The reviewed temperature acceptance can now be exported as an exact three-file
+public kit outside the source checkout and verified on detached-signature
+return. TruePanel has no signing API and accepts no private-key path. Exact-file
+reconstruction, protected reads, the dedicated SSHSIG namespace, and the
+existing public roster fail closed before development-review eligibility. This
+does not install the 9/9 candidate or grant runtime, deployment, or hardware
+authority. See `AEGIS_TEMPERATURE_SIGNING_KIT.md`.

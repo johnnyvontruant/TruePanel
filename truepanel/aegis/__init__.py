@@ -121,6 +121,10 @@ from .temperature_development_acceptance import (
     evaluate_temperature_development_acceptance,
     prepare_temperature_development_acceptance,
 )
+from .temperature_signing_kit import (
+    export_temperature_signing_kit,
+    verify_temperature_signing_return,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -129,6 +133,8 @@ __all__ = [
     "evaluate_authenticated_temperature_acceptance",
     "evaluate_temperature_development_acceptance",
     "prepare_temperature_development_acceptance",
+    "export_temperature_signing_kit",
+    "verify_temperature_signing_return",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",
