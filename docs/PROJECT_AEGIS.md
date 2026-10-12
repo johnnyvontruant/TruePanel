@@ -47,10 +47,97 @@ all of these are present:
 | `network.link_down` | verified primary link state | link and address recheck | network flap |
 | `front_panel.lcd_unavailable` | LCD status bridges | reader and dispatcher recheck | LCD loss/recovery |
 | `telemetry.stale` | explicit Host thermal freshness failure | freshness/domain/safety recheck | stale telemetry recovery |
-
 `tests/test_aegis.py::test_recovery_coverage_contract_is_complete_and_ci_enforceable`
 is the shipping contract. Adding a guidance code without a coverage definition,
 fault-specific verifier, guidance arc, or scenario makes CI fail.
+
+The accepted matrix remains **8/8 trusted paths with zero gaps**. A separately
+rehearsed v2 candidate adds the following ninth path without installing it:
+
+| Candidate fault | Detector | Machine verifier | Regression coverage |
+| --- | --- | --- | --- |
+| `storage.temperature_telemetry_missing` | exact present-member/temperature reconciliation | three-sample identity-stable inventory recheck | drive-temperature blind spot |
+
+The candidate is **9/9 trusted, unaccepted, and uninstalled**. It distinguishes
+a member-specific missing drive temperature from host-wide stale thermal
+telemetry and publishes `temperature_state: unknown`; it cannot turn an absent
+value into a healthy value or an overheating claim. Mission Control exposes
+the candidate's review boundary while normal runtime guidance remains on the
+accepted 8/8 catalog.
+
+## Drive-temperature blind-spot experiment
+
+`run_temperature_blind_spot_checkride()` reconciles three explicitly present
+pool members with finite temperature records. Bay 3 loses its record while the
+same exact device carries independent SMART evidence. AEGIS detects the missing
+expected signal at the first incomplete sample and groups the two actionable
+cards by exact device/bay identity.
+
+Current deterministic result:
+
+- AEGIS detection: sample **1**;
+- isolated temperature threshold: **never fires** because the value is absent;
+- raw actionable alerts: **2**;
+- consolidated incidents: **1**;
+- operator alert-count reduction: **50%**;
+- false overheating claims: **0**;
+- cross-drive false correlations: **0**;
+- resolution: **three consecutive complete, identity-stable observations**;
+- production mutation and hardware actions: **0**.
+
+Two privacy-sanitized Black Box frames preserve the complete-inventory baseline
+and the correlated blind spot. The exact evidence and field research are in
+[`aegis-temperature-blind-spot-v1.json`](evidence/aegis-temperature-blind-spot-v1.json)
+and the [temperature telemetry field report](AEGIS_TEMPERATURE_TELEMETRY_BLIND_SPOT.md).
+
+## Temperature coverage appraisal
+
+`run_temperature_coverage_appraisal_checkride()` independently rebuilds the
+exact 9/9 candidate from the accepted 8/8 matrix and the reviewed HoloDeck
+rehearsal. It pins the predecessor, full candidate, full evidence report, both
+declared self-digests, and the evaluator implementation. A self-consistent
+rewrite therefore still produces `HOLD`.
+
+The deterministic appraisal records **10 scenarios: 1 ready for independent
+review and 9 HOLD**, with zero false-ready results, candidate acceptances,
+installations, runtime writes, or hardware actions. `READY_FOR_INDEPENDENT_REVIEW`
+is not acceptance. The preserved evidence and prior-art analysis are in
+[`aegis-temperature-coverage-appraisal-v1.json`](evidence/aegis-temperature-coverage-appraisal-v1.json)
+and the [temperature coverage appraisal report](AEGIS_TEMPERATURE_COVERAGE_APPRAISAL.md).
+
+## Development-only temperature acceptance
+
+`run_temperature_development_acceptance_checkride()` binds JT's exact statement
+to the complete candidate and appraisal documents. The live engine contains no
+confirmation and therefore reports `ACTION_REQUIRED_OPERATOR_CONFIRMATION`.
+HoloDeck can exercise one explicit fixture acknowledgement, but labels it
+unauthenticated and limits its result to `DEVELOPMENT_ACCEPTED_FOR_REVIEW`.
+
+The proof records **11 scenarios: 1 action required, 1 fixture development
+acceptance, and 9 HOLD**, with zero runtime acceptances, installations,
+production authorizations, writes, or hardware actions. The accepted matrix
+remains 8/8. Evidence and prior-art analysis are in
+[`aegis-temperature-development-acceptance-v1.json`](evidence/aegis-temperature-development-acceptance-v1.json)
+and the [development acceptance field report](AEGIS_TEMPERATURE_DEVELOPMENT_ACCEPTANCE.md).
+
+## Authenticated temperature development acceptance
+
+`run_temperature_authenticated_acceptance_checkride()` connects the exact
+development-only record to the existing public-only OpenSSH SSHSIG verifier.
+The signed statement binds the candidate, appraisal, acknowledgement,
+expiration, development scope, and all negative authority flags under a new
+protocol namespace. TruePanel accepts no private-key path and performs no
+signing.
+
+The real-SSHSIG proof records **11 scenarios: 1 confirmation required, 1
+signature required, 1 authenticated development-review result, and 8 HOLD**.
+Corrupt, wrong-namespace, foreign-key, replayed, expired, unsafe-roster,
+symlink-roster, and verifier-substitution cases fail closed. Fixture keys are
+removed; runtime acceptances, installations, deployments, writes, and hardware
+actions remain zero. The live view still requires JT's confirmation because no
+real operator material is present. Evidence and prior-art analysis are in
+[`aegis-temperature-authenticated-acceptance-v1.json`](evidence/aegis-temperature-authenticated-acceptance-v1.json)
+and the [authenticated acceptance field report](AEGIS_TEMPERATURE_AUTHENTICATED_ACCEPTANCE.md).
 
 ## Shared cooling experiment
 
@@ -162,3 +249,13 @@ The strongest next step is an opt-in Black Box field-evidence campaign: replay
 sanitized normal workloads and reviewed incidents through this same interface,
 measure false positives and confidence stability, and keep live deployment as
 a separate explicit gate.
+
+## Public-only temperature signing kit
+
+The reviewed temperature acceptance can now be exported as an exact three-file
+public kit outside the source checkout and verified on detached-signature
+return. TruePanel has no signing API and accepts no private-key path. Exact-file
+reconstruction, protected reads, the dedicated SSHSIG namespace, and the
+existing public roster fail closed before development-review eligibility. This
+does not install the 9/9 candidate or grant runtime, deployment, or hardware
+authority. See `AEGIS_TEMPERATURE_SIGNING_KIT.md`.
