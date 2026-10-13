@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.11.1 · refreshed 2026-10-11 · 21 experiment(s)
+Registry version 2026.10.11.1 · refreshed 2026-10-11 · 22 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -171,3 +171,11 @@ Twelve deterministic cases produce one public kit ready for offline signature, o
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision JT's protected development public roster, export one exact kit from the pinned checkout, and run the read-only returned-signature checkride.
 - Revisit when: JT provides a real development public key; the candidate appraisal acknowledgement namespace or export schema changes; installation or deployment is proposed
+
+## TP-EXP-0028 · AEGIS read-only temperature field checkride
+
+Twelve deterministic cases produce one simulation rehearsal pass, one field-shaped fixture ready only for review, and ten HOLD results. False field validation, candidate acceptance, installation, deployment, hardware action, and runtime writes remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, complete the offline signature ceremony, then run this read-only checkride on one separately authorized sanitized recording.
+- Revisit when: JT returns a real development SSHSIG; a governed operator-opt-in Black Box recording exists; TrueNAS exposes a supported leaf-vdev GUID; installation or deployment is proposed

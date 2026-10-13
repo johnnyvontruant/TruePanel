@@ -413,6 +413,25 @@
       "revisit_conditions": ["JT provides a real development public key", "the candidate appraisal acknowledgement namespace or export schema changes", "installation or deployment is proposed"],
       "strongest_follow_up": "Provision JT's protected development public roster, export one exact kit from the pinned checkout, and run the read-only returned-signature checkride.",
       "freshness": {"reviewed_at": "2026-10-12", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0028", "title": "AEGIS read-only temperature field checkride", "state": "COMPLETED",
+      "hypothesis": "A returned operator SSHSIG and bounded sanitized Black Box replay can prove the temperature recovery verification path without claiming production validation or granting installation authority.",
+      "value": "Connects authenticated development review to operator-governed evidence while keeping simulation, field review, runtime installation, and deployment as distinct states.",
+      "prior_art": ["smartmontools JSON", "in-toto Statement v1", "Prometheus rule validation", "OpenZFS vdev identity", "OpenTelemetry semantic conventions"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-field-checkride", "pr": null, "commits": []},
+      "protocol": ["re-run exact public-kit SSHSIG verification", "admit exactly four pre-sanitized Black Box frames", "require monotonic sequence and capture time", "reproduce the initial missing-temperature fault", "require stable complete member identity", "verify three consecutive complete observations", "require opt-in and outcome review for field provenance", "deny validation installation deployment and hardware authority"],
+      "fixtures": ["aegis-temperature-read-only-field-checkride", "tests/test_aegis_temperature_field_checkride.py"],
+      "success_criteria": ["one deterministic replay proves the verification mechanics only", "one field-shaped fixture reaches separate review only", "invalid authentication raw identity replay drift and incomplete recovery hold", "simulation cannot claim field review", "accepted matrix remains 8/8", "candidate remains unaccepted and uninstalled", "production and hardware authority remain false"],
+      "abort_criteria": ["copied authentication result is trusted without re-verification", "raw identifier is silently sanitized during admission", "one healthy frame is accepted as recovery", "simulation is labeled field validated", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-field-checkride-v1.json", "sha256": "578a21ca7bf1e9dc331f7f7b54d1946fd4b0b8c4c37edd7989153d23891cdebf"}],
+      "outcome": {"conclusion": "Twelve deterministic cases produce one simulation rehearsal pass, one field-shaped fixture ready only for review, and ten HOLD results. False field validation, candidate acceptance, installation, deployment, hardware action, and runtime writes remain zero."},
+      "invalidated_assumptions": ["a copied authentication-result mapping is sufficient proof", "sanitizing during admission is equivalent to receiving sanitized evidence", "one restored temperature sample proves recovery", "a field-shaped simulation may be called field validated"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_field_checkride.py tests/test_aegis_temperature_signing_kit.py tests/test_aegis_temperature_blind_spot.py", "python -c \"from truepanel.holodeck.aegis_temperature_field_checkride import run_temperature_field_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT returns a real development SSHSIG", "a governed operator-opt-in Black Box recording exists", "TrueNAS exposes a supported leaf-vdev GUID", "installation or deployment is proposed"],
+      "strongest_follow_up": "Provision JT's protected development public roster, complete the offline signature ceremony, then run this read-only checkride on one separately authorized sanitized recording.",
+      "freshness": {"reviewed_at": "2026-10-13", "review_after": "2027-04-30"}
     }
   ]
 }

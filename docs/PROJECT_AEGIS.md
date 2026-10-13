@@ -139,6 +139,23 @@ real operator material is present. Evidence and prior-art analysis are in
 [`aegis-temperature-authenticated-acceptance-v1.json`](evidence/aegis-temperature-authenticated-acceptance-v1.json)
 and the [authenticated acceptance field report](AEGIS_TEMPERATURE_AUTHENTICATED_ACCEPTANCE.md).
 
+## Read-only temperature field checkride
+
+The public signing return now feeds a separate bounded replay contract. The
+evaluator re-runs the exact SSHSIG verification, admits only pre-sanitized
+Black Box frames, reproduces the missing-temperature condition, and requires
+three complete identity-stable observations before calling the recovery path
+reviewable. A HoloDeck pass remains simulation; an operator-opt-in field result
+remains review evidence. Neither is production validation or installation.
+
+TP-EXP-0028 records **12 scenarios: 1 simulation pass, 1 field-shaped fixture
+ready for review, and 10 HOLD**, with zero false field validation, candidate
+acceptance, installation, deployment, hardware action, or runtime write. The
+live Mission Control panel is blocked by the absent real JT SSHSIG and performs
+no capture. Evidence and prior-art analysis are in
+[`aegis-temperature-field-checkride-v1.json`](evidence/aegis-temperature-field-checkride-v1.json)
+and the [field checkride report](AEGIS_TEMPERATURE_FIELD_CHECKRIDE.md).
+
 ## Shared cooling experiment
 
 `run_shared_cooling_experiment()` reuses ORACLE's bounded fan-bearing scenario.
