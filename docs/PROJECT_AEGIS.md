@@ -267,6 +267,16 @@ sanitized normal workloads and reviewed incidents through this same interface,
 measure false positives and confidence stability, and keep live deployment as
 a separate explicit gate.
 
+## Protected Black Box temperature intake
+
+The temperature field checkride now has a one-shot, protected JSONL artifact
+boundary. It admits only one absolute, canonical, operator-owned regular file;
+opens without following the final symlink; bounds the bytes and every frame;
+and verifies stable device, inode, mode, owner, size, mtime, and ctime around
+the read. It neither tails nor captures data and retains only the content
+digest, byte count, and checkride evidence. See
+`AEGIS_TEMPERATURE_RECORDING_INTAKE.md`.
+
 ## Public-only temperature signing kit
 
 The reviewed temperature acceptance can now be exported as an exact three-file

@@ -125,6 +125,10 @@ from .temperature_field_checkride import (
     evaluate_temperature_field_checkride,
     pending_temperature_field_checkride,
 )
+from .temperature_recording_intake import (
+    evaluate_temperature_recording_intake,
+    pending_temperature_recording_intake,
+)
 from .temperature_signing_kit import (
     export_temperature_signing_kit,
     verify_temperature_signing_return,
@@ -137,7 +141,9 @@ __all__ = [
     "evaluate_authenticated_temperature_acceptance",
     "evaluate_temperature_development_acceptance",
     "evaluate_temperature_field_checkride",
+    "evaluate_temperature_recording_intake",
     "pending_temperature_field_checkride",
+    "pending_temperature_recording_intake",
     "prepare_temperature_development_acceptance",
     "export_temperature_signing_kit",
     "verify_temperature_signing_return",

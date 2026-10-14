@@ -32,6 +32,7 @@ from .temperature_coverage_appraisal import (
     temperature_coverage_implementation_sha256,
 )
 from .temperature_field_checkride import pending_temperature_field_checkride
+from .temperature_recording_intake import pending_temperature_recording_intake
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -115,6 +116,9 @@ class AegisReliabilityEngine:
         )
         self.temperature_field_checkride = pending_temperature_field_checkride(
             self.temperature_development_acceptance
+        )
+        self.temperature_recording_intake = pending_temperature_recording_intake(
+            self.temperature_field_checkride
         )
         proof = run_flight_director_proof()
         self.flight_director = {
@@ -381,6 +385,7 @@ class AegisReliabilityEngine:
             "coverage_appraisal": self.temperature_coverage_appraisal,
             "coverage_development_acceptance": self.temperature_development_acceptance,
             "coverage_field_checkride": self.temperature_field_checkride,
+            "coverage_recording_intake": self.temperature_recording_intake,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

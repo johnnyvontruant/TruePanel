@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.11.1",
-  "updated_at": "2026-10-11",
+  "registry_version": "2026.10.14.1",
+  "updated_at": "2026-10-14",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -432,6 +432,25 @@
       "revisit_conditions": ["JT returns a real development SSHSIG", "a governed operator-opt-in Black Box recording exists", "TrueNAS exposes a supported leaf-vdev GUID", "installation or deployment is proposed"],
       "strongest_follow_up": "Provision JT's protected development public roster, complete the offline signature ceremony, then run this read-only checkride on one separately authorized sanitized recording.",
       "freshness": {"reviewed_at": "2026-10-13", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0029", "title": "AEGIS protected temperature recording intake", "state": "COMPLETED",
+      "hypothesis": "A one-shot protected JSONL snapshot can bridge an operator-provided Black Box artifact into the authenticated field checkride without adding live capture, polling, path disclosure, or control authority.",
+      "value": "Closes the file-to-checkride boundary with bounded bytes, stable file identity, strict privacy admission, and replaceable standard-library I/O.",
+      "prior_art": ["OpenTelemetry Collector filelog receiver", "Fluent Bit Tail", "in-toto Statement v1", "smartmontools JSON"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-recording-intake", "pr": null, "commits": []},
+      "protocol": ["require an absolute canonical operator-owned regular file", "open with no-follow and compare file identity before and after read", "bound total bytes and each Black Box frame", "require exactly four nonblank UTF-8 JSON objects", "retain digest and byte count but never source path", "delegate authentication privacy ordering identity and recovery to the field checkride", "deny validation installation deployment and hardware authority"],
+      "fixtures": ["aegis-protected-temperature-recording-intake", "tests/test_aegis_temperature_recording_intake.py"],
+      "success_criteria": ["one protected deterministic artifact proves the replay path", "one reviewed field-shaped fixture reaches separate calibration review only", "symlinks unsafe permissions malformed or extra frames raw identity and failed SSHSIG hold", "source paths and private-key inputs remain zero", "accepted matrix remains 8/8", "candidate remains unaccepted and uninstalled", "production and hardware authority remain false"],
+      "abort_criteria": ["input file is captured tailed rewritten or deleted", "symlink or changing file is admitted", "source path or private key is retained", "raw identifier is silently sanitized", "field-shaped fixture is labeled field validated", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-recording-intake-v1.json", "sha256": "e2cc34aeea90975eef09c631901a8ed53ea19622826ff62d15a03face403c61f"}],
+      "outcome": {"conclusion": "Twelve deterministic cases produce one simulation pass, one field-shaped fixture ready only for review, and ten HOLD results with zero unsafe-ready outcomes, capture operations, path retention, private-key inputs, validation claims, installations, deployments, writes, or hardware actions."},
+      "invalidated_assumptions": ["a generic tailer is a harmless shortcut for a one-shot evidence ceremony", "Path.read_text proves stable file identity", "silently sanitizing during intake preserves operator review", "a valid field-shaped artifact is production validation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_recording_intake.py tests/test_aegis_temperature_field_checkride.py", "python -c \"from truepanel.holodeck.aegis_temperature_recording_intake import run_temperature_recording_intake_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT returns a real development SSHSIG", "a governed operator-opt-in sanitized recording exists", "portable non-POSIX intake is required", "installation or deployment is proposed"],
+      "strongest_follow_up": "Provision JT's protected development public roster, sign the exact kit offline, and pass one separately authorized sanitized recording through this read-only intake.",
+      "freshness": {"reviewed_at": "2026-10-14", "review_after": "2027-04-30"}
     }
   ]
 }

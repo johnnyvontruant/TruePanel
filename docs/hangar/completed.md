@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.11.1 · refreshed 2026-10-11 · 22 experiment(s)
+Registry version 2026.10.14.1 · refreshed 2026-10-14 · 23 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -179,3 +179,11 @@ Twelve deterministic cases produce one simulation rehearsal pass, one field-shap
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision JT's protected development public roster, complete the offline signature ceremony, then run this read-only checkride on one separately authorized sanitized recording.
 - Revisit when: JT returns a real development SSHSIG; a governed operator-opt-in Black Box recording exists; TrueNAS exposes a supported leaf-vdev GUID; installation or deployment is proposed
+
+## TP-EXP-0029 · AEGIS protected temperature recording intake
+
+Twelve deterministic cases produce one simulation pass, one field-shaped fixture ready only for review, and ten HOLD results with zero unsafe-ready outcomes, capture operations, path retention, private-key inputs, validation claims, installations, deployments, writes, or hardware actions.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, sign the exact kit offline, and pass one separately authorized sanitized recording through this read-only intake.
+- Revisit when: JT returns a real development SSHSIG; a governed operator-opt-in sanitized recording exists; portable non-POSIX intake is required; installation or deployment is proposed
