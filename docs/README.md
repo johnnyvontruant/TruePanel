@@ -21,6 +21,7 @@ This directory is the operating manual for the current TruePanel platform.
 - [Historical telemetry](HISTORICAL_TELEMETRY.md)
 - [Project AEGIS](PROJECT_AEGIS.md) for the accepted correlation layer, Recovery Coverage Matrix, experiment evidence, and remaining deployment gates
 - [AEGIS Prior-Art Field Report](AEGIS_PRIOR_ART_FIELD_REPORT.md) for ecosystem comparisons, licensing decisions, the declarative policy adaptation, and calibration evidence
+- [AEGIS read-only temperature field checkride](AEGIS_TEMPERATURE_FIELD_CHECKRIDE.md) for the authenticated, sanitized replay boundary and prior-art decisions
 - [Project HoloDeck](HOLODECK.md) for the hardware-isolated Digital Twin, fault injection, Black Box replay, invariant checks, and Incident Compiler
 - [Project HANGAR](PROJECT_HANGAR.md) for the canonical experiment registry, generated status views, evidence contracts, and contributor workflow
 - [Flight Director Prior-Art Field Report](FLIGHT_DIRECTOR_PRIOR_ART.md) for NAS comparisons, adopted semantics, licensing, and rejected routes
