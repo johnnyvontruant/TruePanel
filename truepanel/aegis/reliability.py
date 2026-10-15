@@ -32,6 +32,7 @@ from .temperature_coverage_appraisal import (
     temperature_coverage_implementation_sha256,
 )
 from .temperature_field_checkride import pending_temperature_field_checkride
+from .temperature_field_review_receipt import pending_temperature_field_review_receipt
 from .temperature_recording_intake import pending_temperature_recording_intake
 
 
@@ -119,6 +120,9 @@ class AegisReliabilityEngine:
         )
         self.temperature_recording_intake = pending_temperature_recording_intake(
             self.temperature_field_checkride
+        )
+        self.temperature_field_review_receipt = (
+            pending_temperature_field_review_receipt(self.temperature_recording_intake)
         )
         proof = run_flight_director_proof()
         self.flight_director = {
@@ -386,6 +390,7 @@ class AegisReliabilityEngine:
             "coverage_development_acceptance": self.temperature_development_acceptance,
             "coverage_field_checkride": self.temperature_field_checkride,
             "coverage_recording_intake": self.temperature_recording_intake,
+            "coverage_field_review_receipt": self.temperature_field_review_receipt,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

@@ -216,6 +216,9 @@ def evaluate_temperature_recording_intake(
         "status": status,
         "operator_signature_verified": checkride.get("operator_signature_verified")
         is True,
+        "development_authentication_record_sha256": checkride.get(
+            "authentication_record_sha256"
+        ),
         "recording_present": bool(payload),
         "recording_sha256": hashlib.sha256(payload).hexdigest() if payload else None,
         "recording_bytes": len(payload),

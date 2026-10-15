@@ -451,6 +451,25 @@
       "revisit_conditions": ["JT returns a real development SSHSIG", "a governed operator-opt-in sanitized recording exists", "portable non-POSIX intake is required", "installation or deployment is proposed"],
       "strongest_follow_up": "Provision JT's protected development public roster, sign the exact kit offline, and pass one separately authorized sanitized recording through this read-only intake.",
       "freshness": {"reviewed_at": "2026-10-14", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0030", "title": "AEGIS content-bound temperature field-review receipt", "state": "COMPLETED",
+      "hypothesis": "A second offline SSHSIG can bind JT's opt-in, privacy review, and incident-outcome review to one exact recording without converting review intent into validation or operational authority.",
+      "value": "Replaces caller-supplied review booleans with a machine-verifiable, expiring operator receipt anchored to the same protected development trust root.",
+      "prior_art": ["OpenSSH SSHSIG", "DSSE pre-authentication encoding", "in-toto Statement v1", "The Update Framework root roles", "SLSA verification summaries"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-field-review-receipt", "pr": null, "commits": []},
+      "protocol": ["reconstruct the protected recording and development authentication", "bind exact recording digest bytes frame count expiry and zero-authority fields", "export an exact public-only three-file kit", "use a distinct field-review SSHSIG namespace", "pin the same protected JT public-key roster and key fingerprint", "replay intake after signature verification", "deny field validation installation deployment and hardware authority"],
+      "fixtures": ["aegis-content-bound-temperature-field-review-receipt", "tests/test_aegis_temperature_field_review_receipt.py"],
+      "success_criteria": ["one exact kit reaches offline-signing ready", "one fixture signature reaches calibration review only", "wrong namespace foreign trust root recording drift tampering expiry and unsafe files hold", "private-key inputs and TruePanel signer invocations remain zero", "accepted matrix remains 8/8", "field validation installation deployment and hardware authority remain false"],
+      "abort_criteria": ["review is accepted from caller booleans alone", "review verifier can substitute another key for the same principal", "recording changes after export and remains accepted", "private-key path is accepted or TruePanel invokes a signer", "field validation installation deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-field-review-receipt-v1.json", "sha256": "1d696bfc4d68ef0893352f2f2412dc3c452016075fb23913f9806083a9ef26e2"}],
+      "outcome": {"conclusion": "Twelve deterministic cases produce one public kit ready for offline signing, two content-bound calibration-review results (immediate and delayed within the valid window), and nine HOLD results. Trust-root substitution, namespace replay, recording drift, tampering, unsafe permissions, expiry, and invalid signatures fail closed."},
+      "invalidated_assumptions": ["caller-supplied opt-in and reviewed booleans are an adequate audit record", "a distinct SSHSIG namespace alone anchors the reviewer's key", "the recording need not be reconstructed after signature verification", "review acceptance implies field validation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_field_review_receipt.py tests/test_aegis_temperature_recording_intake.py", "python -c \"from truepanel.holodeck.aegis_temperature_field_review_receipt import run_temperature_field_review_receipt_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT provisions the protected development public roster", "JT supplies one governed sanitized recording", "review policy or namespace changes", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Provision JT's protected development public roster, export one real field-review kit after the development SSHSIG and recording intake pass, and let JT inspect and sign the exact review statement offline.",
+      "freshness": {"reviewed_at": "2026-10-15", "review_after": "2027-04-30"}
     }
   ]
 }
