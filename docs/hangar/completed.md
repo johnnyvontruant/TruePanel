@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.14.1 · refreshed 2026-09-14 · 16 experiment(s)
+Registry version 2026.10.14.1 · refreshed 2026-10-14 · 24 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -131,3 +131,67 @@ One stable identity preserves six proved consequences across /dev/sdc to /dev/sd
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.
 - Revisit when: identity migration from serial-model to WWN or ZFS GUID is implemented; Lifeline identity coverage becomes a Recovery Coverage Matrix condition; TrueNAS exposes a supported leaf-vdev GUID
+
+## TP-EXP-0022 · AEGIS drive-temperature telemetry blind spot
+
+Five HoloDeck cases detect the Bay 3 observability gap at the first incomplete sample, correlate exact-member SMART evidence at 0.84 confidence, avoid the threshold-only false negative, reduce two actionable cards to one incident, and preserve zero overheating claims, cross-drive correlations, writes, or hardware actions. The result is a 9/9 review candidate; accepted runtime coverage remains 8/8.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Collect a governed read-only field snapshot that proves the expected-member inventory contract and calibrate the three-observation recovery window without deploying or changing storage.
+- Revisit when: the storage snapshot identity schema changes; temperature collection gains per-reading timestamps; a live read-only field check is authorized; any consumer seeks repair authority
+
+## TP-EXP-0023 · AEGIS temperature coverage appraisal
+
+Ten deterministic cases produce one exact-subject result ready only for independent review and nine HOLD results, with zero unsafe-ready results, acceptances, installations, writes, or hardware actions. Accepted coverage remains 8/8; the 9/9 candidate remains unaccepted and uninstalled.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Independently review the exact candidate and appraisal before drafting a separate development-only acceptance record.
+- Revisit when: PR #202 or a pinned subject changes; the appraisal schema changes; manual acceptance or installation is proposed
+
+## TP-EXP-0024 · AEGIS development-only temperature acceptance
+
+Eleven deterministic cases produce one operator-action-required result, one fixture development-review acceptance, and nine HOLD results. Every case preserves zero runtime acceptances, installations, production authorizations, writes, or hardware actions; the live view has no operator confirmation.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add a public-only, operator-owned authentication adapter for this exact record, then rehearse a separate installation proposal that still cannot deploy or actuate hardware.
+- Revisit when: JT supplies an authenticated development signature; the candidate or appraisal changes; any consumer proposes runtime installation or deployment
+
+## TP-EXP-0026 · AEGIS authenticated temperature development acceptance
+
+Eleven real-SSHSIG cases produce one confirmation-required result, one signature-required result, one authenticated development-review result, and eight HOLD results. Disposable keys are removed and all production, installation, deployment, write, and hardware authority remains false.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Export the exact statement for JT's offline signature and run a read-only field verification before drafting any separate installation proposal.
+- Revisit when: JT provisions the protected development public roster; the candidate appraisal acknowledgement or namespace changes; installation or deployment is proposed
+
+## TP-EXP-0027 · AEGIS public-only temperature signing kit
+
+Twelve deterministic cases produce one public kit ready for offline signature, one fixture-authenticated development-review result, and ten HOLD results with zero private-key inputs, signer invocations, installations, deployments, writes, or hardware actions.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, export one exact kit from the pinned checkout, and run the read-only returned-signature checkride.
+- Revisit when: JT provides a real development public key; the candidate appraisal acknowledgement namespace or export schema changes; installation or deployment is proposed
+
+## TP-EXP-0028 · AEGIS read-only temperature field checkride
+
+Twelve deterministic cases produce one simulation rehearsal pass, one field-shaped fixture ready only for review, and ten HOLD results. False field validation, candidate acceptance, installation, deployment, hardware action, and runtime writes remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, complete the offline signature ceremony, then run this read-only checkride on one separately authorized sanitized recording.
+- Revisit when: JT returns a real development SSHSIG; a governed operator-opt-in Black Box recording exists; TrueNAS exposes a supported leaf-vdev GUID; installation or deployment is proposed
+
+## TP-EXP-0029 · AEGIS protected temperature recording intake
+
+Twelve deterministic cases produce one simulation pass, one field-shaped fixture ready only for review, and ten HOLD results with zero unsafe-ready outcomes, capture operations, path retention, private-key inputs, validation claims, installations, deployments, writes, or hardware actions.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, sign the exact kit offline, and pass one separately authorized sanitized recording through this read-only intake.
+- Revisit when: JT returns a real development SSHSIG; a governed operator-opt-in sanitized recording exists; portable non-POSIX intake is required; installation or deployment is proposed
+
+## TP-EXP-0030 · AEGIS content-bound temperature field-review receipt
+
+Twelve deterministic cases produce one public kit ready for offline signing, two content-bound calibration-review results (immediate and delayed within the valid window), and nine HOLD results. Trust-root substitution, namespace replay, recording drift, tampering, unsafe permissions, expiry, and invalid signatures fail closed.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, export one real field-review kit after the development SSHSIG and recording intake pass, and let JT inspect and sign the exact review statement offline.
+- Revisit when: JT provisions the protected development public roster; JT supplies one governed sanitized recording; review policy or namespace changes; field validation installation or deployment is proposed
