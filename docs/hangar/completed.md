@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.14.1 · refreshed 2026-10-14 · 24 experiment(s)
+Registry version 2026.10.14.1 · refreshed 2026-10-14 · 25 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -195,3 +195,11 @@ Twelve deterministic cases produce one public kit ready for offline signing, two
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision JT's protected development public roster, export one real field-review kit after the development SSHSIG and recording intake pass, and let JT inspect and sign the exact review statement offline.
 - Revisit when: JT provisions the protected development public roster; JT supplies one governed sanitized recording; review policy or namespace changes; field validation installation or deployment is proposed
+
+## TP-EXP-0031 · AEGIS content-bound temperature calibration admission
+
+Twelve deterministic cases produce one public statement ready for offline signing, two authenticated import-only results, and nine HOLD results. Label drift, recording drift, authority escalation, namespace replay, foreign trust roots, unsafe permissions, and expiry fail closed before any corpus write.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, complete the development and field-review signatures, then inspect and sign one exact label-bound admission statement before a separate deduplicating corpus import.
+- Revisit when: JT provisions the protected development public roster; JT supplies a governed sanitized recording and signed field review; calibration label schema changes; corpus import field validation installation or deployment is proposed

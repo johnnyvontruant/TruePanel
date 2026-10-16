@@ -470,6 +470,25 @@
       "revisit_conditions": ["JT provisions the protected development public roster", "JT supplies one governed sanitized recording", "review policy or namespace changes", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Provision JT's protected development public roster, export one real field-review kit after the development SSHSIG and recording intake pass, and let JT inspect and sign the exact review statement offline.",
       "freshness": {"reviewed_at": "2026-10-15", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0031", "title": "AEGIS content-bound temperature calibration admission", "state": "COMPLETED",
+      "hypothesis": "A distinct offline SSHSIG can bind reviewed recording evidence to exact calibration labels before corpus import without granting validation, promotion, or write authority.",
+      "value": "Closes the label-substitution gap between the signed field-review receipt and the existing calibration corpus workflow.",
+      "prior_art": ["OpenSSH SSHSIG", "OpenLineage", "MLCommons Croissant", "DVC", "TensorFlow Data Validation"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-calibration-admission", "pr": null, "commits": []},
+      "protocol": ["reconstruct and verify the exact field-review receipt", "pin the same protected operator trust root", "bind corpus and case identity", "bind outcome profile workload and threshold labels", "use a distinct calibration-admission SSHSIG namespace", "perform no corpus write", "deny validation installation deployment and hardware authority"],
+      "fixtures": ["aegis-content-bound-temperature-calibration-admission", "tests/test_aegis_temperature_calibration_admission.py"],
+      "success_criteria": ["one exact public statement reaches offline-signing ready", "one fixture signature authenticates a case for corpus import only", "label recording namespace trust-root permission and expiry drift hold", "private-key inputs and TruePanel signer invocations remain zero", "accepted matrix remains 8/8", "corpus writes field validation installation deployment and hardware authority remain false"],
+      "abort_criteria": ["caller-supplied labels are admitted without signature", "field-review signature is replayed as label approval", "a different trust root is accepted", "a corpus write occurs during evaluation", "field validation installation deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-calibration-admission-v1.json", "sha256": "18812f7dadaac52f80a9fcb34e15c2ad358540b834f6536e52e5a0e141608b4b"}],
+      "outcome": {"conclusion": "Twelve deterministic cases produce one public statement ready for offline signing, two authenticated import-only results, and nine HOLD results. Label drift, recording drift, authority escalation, namespace replay, foreign trust roots, unsafe permissions, and expiry fail closed before any corpus write."},
+      "invalidated_assumptions": ["a signed field-review receipt also authenticates later caller-supplied labels", "reviewing an incident outcome is equivalent to binding the outcome label", "the same SSHSIG namespace can safely authorize a second semantic action", "corpus admission implies field validation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_calibration_admission.py tests/test_aegis_temperature_field_review_receipt.py tests/test_aegis_field_workflow.py", "python -c \"from truepanel.holodeck.aegis_temperature_calibration_admission import run_temperature_calibration_admission_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT provisions the protected development public roster", "JT supplies a governed sanitized recording and signed field review", "calibration label schema changes", "corpus import field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Provision JT's protected development public roster, complete the development and field-review signatures, then inspect and sign one exact label-bound admission statement before a separate deduplicating corpus import.",
+      "freshness": {"reviewed_at": "2026-10-16", "review_after": "2027-04-30"}
     }
   ]
 }

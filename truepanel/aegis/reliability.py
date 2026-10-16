@@ -23,6 +23,9 @@ from .requalification import renewal_guidance
 from .temperature_authenticated_acceptance import (
     evaluate_authenticated_temperature_acceptance,
 )
+from .temperature_calibration_admission import (
+    pending_temperature_calibration_admission,
+)
 from .temperature_coverage import (
     build_temperature_coverage_candidate,
     rehearse_temperature_coverage,
@@ -123,6 +126,11 @@ class AegisReliabilityEngine:
         )
         self.temperature_field_review_receipt = (
             pending_temperature_field_review_receipt(self.temperature_recording_intake)
+        )
+        self.temperature_calibration_admission = (
+            pending_temperature_calibration_admission(
+                self.temperature_field_review_receipt
+            )
         )
         proof = run_flight_director_proof()
         self.flight_director = {
@@ -391,6 +399,7 @@ class AegisReliabilityEngine:
             "coverage_field_checkride": self.temperature_field_checkride,
             "coverage_recording_intake": self.temperature_recording_intake,
             "coverage_field_review_receipt": self.temperature_field_review_receipt,
+            "coverage_calibration_admission": self.temperature_calibration_admission,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

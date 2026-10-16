@@ -103,6 +103,11 @@ from .temperature_authenticated_acceptance import (
     build_temperature_acceptance_statement,
     evaluate_authenticated_temperature_acceptance,
 )
+from .temperature_calibration_admission import (
+    evaluate_temperature_calibration_admission,
+    export_temperature_calibration_admission_statement,
+    pending_temperature_calibration_admission,
+)
 from .temperature_coverage import (
     build_temperature_coverage_candidate,
     rehearse_temperature_coverage,
@@ -148,11 +153,14 @@ __all__ = [
     "evaluate_temperature_development_acceptance",
     "evaluate_temperature_field_checkride",
     "evaluate_temperature_field_review_receipt",
+    "evaluate_temperature_calibration_admission",
     "evaluate_temperature_recording_intake",
     "build_temperature_field_review_statement",
     "export_temperature_field_review_kit",
     "pending_temperature_field_checkride",
     "pending_temperature_field_review_receipt",
+    "export_temperature_calibration_admission_statement",
+    "pending_temperature_calibration_admission",
     "pending_temperature_recording_intake",
     "prepare_temperature_development_acceptance",
     "export_temperature_signing_kit",
