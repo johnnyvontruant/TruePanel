@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.14.1",
-  "updated_at": "2026-10-14",
+  "registry_version": "2026.10.17.1",
+  "updated_at": "2026-10-17",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -489,6 +489,25 @@
       "revisit_conditions": ["JT provisions the protected development public roster", "JT supplies a governed sanitized recording and signed field review", "calibration label schema changes", "corpus import field validation installation or deployment is proposed"],
       "strongest_follow_up": "Provision JT's protected development public roster, complete the development and field-review signatures, then inspect and sign one exact label-bound admission statement before a separate deduplicating corpus import.",
       "freshness": {"reviewed_at": "2026-10-16", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0032", "title": "AEGIS authenticated append-only calibration corpus import", "state": "COMPLETED",
+      "hypothesis": "An authenticated admission can be consumed exactly once through a locked append-only case commit without conflating storage with field validation or operational authority.",
+      "value": "Closes the durable admission-to-corpus boundary with atomic visibility, content deduplication, independently replayed evidence, and an auditable receipt.",
+      "prior_art": ["DVC Objects", "OpenLineage dataset version facet", "MLCommons Croissant", "lakeFS"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-calibration-corpus-import", "pr": null, "commits": []},
+      "protocol": ["re-run exact calibration admission", "snapshot the protected recording again", "compare signed digest byte and frame bounds", "lock one local corpus", "reject duplicate case IDs and recording digests", "stage complete immutable case files", "publish with one atomic rename", "derive the index from verified receipts", "deny validation acceptance installation deployment and hardware authority"],
+      "fixtures": ["aegis-authenticated-append-only-calibration-corpus-import", "tests/test_aegis_temperature_calibration_corpus.py"],
+      "success_criteria": ["one exact fixture case commits", "duplicate IDs and recording bytes hold", "corpus drift tampering expiry unsafe permissions and structural corruption hold", "no partial case directories", "accepted matrix remains 8/8", "temperature candidate remains unaccepted and uninstalled", "production and hardware authority remain false"],
+      "abort_criteria": ["admission result trusted without reconstruction", "recording bytes differ from signed bounds", "partial case becomes visible", "duplicate evidence is imported", "corpus write is called field validation", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-calibration-corpus-v1.json", "sha256": "5e836f23fdd7d0bceef6e5bbc62e7116d2d079b6c97522b214fc0d89e92c3399"}],
+      "outcome": {"conclusion": "Nine deterministic cases produce one append-only offline import and eight HOLD results. Duplicate identity/content, corpus drift, authority tampering, recording drift, expiry, unsafe permissions, and structural corruption fail closed with exactly one committed case directory."},
+      "invalidated_assumptions": ["an admission digest alone gives the importer all signed artifact bounds", "a mutable aggregate manifest is the safest commit primitive", "case ID uniqueness guarantees content uniqueness", "corpus storage implies field validation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_calibration_corpus.py tests/test_aegis_temperature_calibration_admission.py", "python -c \"from truepanel.holodeck.aegis_temperature_calibration_corpus import run_temperature_calibration_corpus_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies the exact three authenticated signatures and governed recording", "remote multi-host corpus storage is required", "corpus withdrawal or assessment is proposed", "installation or deployment is proposed"],
+      "strongest_follow_up": "Complete the real offline signature chain, import one governed sanitized recording, and independently inspect its immutable receipt before any assessment or validation proposal.",
+      "freshness": {"reviewed_at": "2026-10-17", "review_after": "2027-04-30"}
     }
   ]
 }

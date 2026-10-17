@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.14.1 · refreshed 2026-10-14 · 25 experiment(s)
+Registry version 2026.10.17.1 · refreshed 2026-10-17 · 26 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -203,3 +203,11 @@ Twelve deterministic cases produce one public statement ready for offline signin
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision JT's protected development public roster, complete the development and field-review signatures, then inspect and sign one exact label-bound admission statement before a separate deduplicating corpus import.
 - Revisit when: JT provisions the protected development public roster; JT supplies a governed sanitized recording and signed field review; calibration label schema changes; corpus import field validation installation or deployment is proposed
+
+## TP-EXP-0032 · AEGIS authenticated append-only calibration corpus import
+
+Nine deterministic cases produce one append-only offline import and eight HOLD results. Duplicate identity/content, corpus drift, authority tampering, recording drift, expiry, unsafe permissions, and structural corruption fail closed with exactly one committed case directory.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Complete the real offline signature chain, import one governed sanitized recording, and independently inspect its immutable receipt before any assessment or validation proposal.
+- Revisit when: JT supplies the exact three authenticated signatures and governed recording; remote multi-host corpus storage is required; corpus withdrawal or assessment is proposed; installation or deployment is proposed

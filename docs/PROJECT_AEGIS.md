@@ -1,7 +1,7 @@
 # Project AEGIS
 
-The next calibration increment and its ecosystem decisions are recorded in the
-[AEGIS Prior-Art Field Report](AEGIS_PRIOR_ART_FIELD_REPORT.md). It leaves the
+The current calibration-import increment and its ecosystem decisions are recorded in
+[AEGIS Calibration Corpus Import](AEGIS_TEMPERATURE_CALIBRATION_CORPUS.md). It leaves the
 accepted PR #78 baseline frozen and adds a replaceable declarative correlation
 policy, adversarial HoloDeck cases, and explicit provenance on a separate
 follow-up branch.
