@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.17.1",
-  "updated_at": "2026-10-17",
+  "registry_version": "2026.10.18.1",
+  "updated_at": "2026-10-18",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -508,6 +508,25 @@
       "revisit_conditions": ["JT supplies the exact three authenticated signatures and governed recording", "remote multi-host corpus storage is required", "corpus withdrawal or assessment is proposed", "installation or deployment is proposed"],
       "strongest_follow_up": "Complete the real offline signature chain, import one governed sanitized recording, and independently inspect its immutable receipt before any assessment or validation proposal.",
       "freshness": {"reviewed_at": "2026-10-17", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0033", "title": "AEGIS authenticated calibration corpus assessment", "state": "COMPLETED",
+      "hypothesis": "A read-only assessment can independently replay every stored admission signature and enforce explicit corpus sufficiency gates without representing characterization as field validation.",
+      "value": "Closes the post-import authentication gap and makes corpus size balance and diversity visible before any detector-performance claim.",
+      "prior_art": ["TensorFlow Data Validation", "Evidently", "scikit-learn model evaluation", "Great Expectations"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-calibration-assessment", "pr": null, "commits": []},
+      "protocol": ["preserve the detached admission SSHSIG in each immutable case", "bind signature digest and size into the import receipt", "take a shared corpus lock", "validate every case twice", "replay every admission signature", "cross-check statement receipt labels and recording bounds", "enforce case outcome profile workload and threshold-landmark gates", "emit one deterministic corpus snapshot", "deny validation acceptance installation deployment and hardware authority"],
+      "fixtures": ["aegis-read-only-authenticated-calibration-corpus-assessment", "tests/test_aegis_temperature_calibration_assessment.py"],
+      "success_criteria": ["one balanced four-case fixture reaches independent review only", "insufficient imbalanced non-diverse tampered substituted escalated or drifted corpora hold", "all admission signatures in the passing corpus reverify", "corpus writes remain zero", "accepted matrix remains 8/8", "temperature candidate remains unaccepted and uninstalled", "production and hardware authority remain false"],
+      "abort_criteria": ["receipt digest is treated as signer authentication", "unsigned or substituted case influences gates", "small fixture score is called validation", "assessment mutates the corpus", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-calibration-assessment-v1.json", "sha256": "3e3b3a8a092b23a9e4024e80e77f969944aa04e28ed68e07ffb42dd1d54ddc48"}],
+      "outcome": {"conclusion": "Nine deterministic paths produce one authenticated balanced corpus characterized for independent review and eight HOLD results. Four authenticated cases span two outcomes, two profiles and two workloads, while every mutation and insufficient-corpus path fails closed with zero writes or authority."},
+      "invalidated_assumptions": ["an import receipt digest preserves operator authentication", "an admission statement remains independently authenticatable when its detached signature is discarded", "four balanced fixture cases establish field performance", "corpus characterization can safely imply validation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_calibration_assessment.py tests/test_aegis_temperature_calibration_corpus.py", "python -c \"from truepanel.holodeck.aegis_temperature_calibration_assessment import run_temperature_calibration_assessment_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies the exact authenticated signature chain and governed recordings", "independent detector outputs are bound into admission", "statistical performance assessment is proposed", "installation or deployment is proposed"],
+      "strongest_follow_up": "Extend the signed admission with immutable detector-result evidence, then predeclare sensitivity specificity lead-time and uncertainty gates before assessing predictions against operator labels.",
+      "freshness": {"reviewed_at": "2026-10-18", "review_after": "2027-04-30"}
     }
   ]
 }

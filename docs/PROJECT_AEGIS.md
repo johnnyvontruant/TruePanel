@@ -1,7 +1,8 @@
 # Project AEGIS
 
 The current calibration-import increment and its ecosystem decisions are recorded in
-[AEGIS Calibration Corpus Import](AEGIS_TEMPERATURE_CALIBRATION_CORPUS.md). It leaves the
+[AEGIS Calibration Corpus Import](AEGIS_TEMPERATURE_CALIBRATION_CORPUS.md) and
+[read-only corpus assessment](AEGIS_TEMPERATURE_CALIBRATION_ASSESSMENT.md). It leaves the
 accepted PR #78 baseline frozen and adds a replaceable declarative correlation
 policy, adversarial HoloDeck cases, and explicit provenance on a separate
 follow-up branch.

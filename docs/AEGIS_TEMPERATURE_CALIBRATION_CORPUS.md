@@ -12,8 +12,11 @@ then snapshots the same protected four-frame recording again.
 
 Only after the signed digest, byte count, frame count, corpus ID, case ID, and
 labels all agree does one case become visible. A committed case is one
-directory containing the exact recording, admission statement, and a
-content-addressed import receipt. Case directories are never updated. A POSIX
+directory containing the exact recording, admission statement, detached public
+admission SSHSIG, and a content-addressed import receipt. The follow-up
+assessment binds the signature digest and byte count into that receipt so an
+independent reader can replay operator authentication. Case directories are
+never updated. A POSIX
 exclusive lock serializes duplicate checks, complete files are flushed in a
 private staging directory, and one rename publishes the case atomically.
 

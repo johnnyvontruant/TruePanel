@@ -108,6 +108,10 @@ from .temperature_calibration_admission import (
     export_temperature_calibration_admission_statement,
     pending_temperature_calibration_admission,
 )
+from .temperature_calibration_assessment import (
+    assess_temperature_calibration_corpus,
+    pending_temperature_calibration_assessment,
+)
 from .temperature_calibration_corpus import (
     import_temperature_calibration_case,
     pending_temperature_calibration_corpus_import,
@@ -167,6 +171,8 @@ __all__ = [
     "pending_temperature_calibration_admission",
     "import_temperature_calibration_case",
     "pending_temperature_calibration_corpus_import",
+    "assess_temperature_calibration_corpus",
+    "pending_temperature_calibration_assessment",
     "pending_temperature_recording_intake",
     "prepare_temperature_development_acceptance",
     "export_temperature_signing_kit",

@@ -14,6 +14,7 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any, Final
 
+from .ssh_verifier import MAX_SIGNATURE_BYTES
 from .temperature_calibration_admission import (
     MAX_PUBLIC_BYTES,
     STATUS_ADMITTED,
@@ -151,6 +152,7 @@ def _case_receipts(cases: Path) -> list[dict[str, Any]]:
         expected_names = {
             "recording.jsonl",
             "admission-statement.json",
+            "admission-signature.sshsig",
             "import-receipt.json",
         }
         if {item.name for item in entry.iterdir()} != expected_names:
@@ -179,10 +181,13 @@ def _case_receipts(cases: Path) -> list[dict[str, Any]]:
             raise ValueError("CalibrationCorpusReceiptDigestMismatch")
         recording = (entry / "recording.jsonl").read_bytes()
         statement = (entry / "admission-statement.json").read_bytes()
+        signature = (entry / "admission-signature.sshsig").read_bytes()
         if (
             _sha256(recording) != receipt.get("recording_sha256")
             or len(recording) != receipt.get("recording_bytes")
             or _sha256(statement) != receipt.get("admission_statement_sha256")
+            or _sha256(signature) != receipt.get("admission_signature_sha256")
+            or len(signature) != receipt.get("admission_signature_bytes")
         ):
             raise ValueError("CalibrationCorpusCaseArtifactMismatch")
         receipts.append(receipt)
@@ -252,6 +257,9 @@ def import_temperature_calibration_case(
             raise ValueError("CalibrationCorpusRecordingMismatch")
         if len(statement) > MAX_PUBLIC_BYTES or len(payload) > MAX_RECORDING_BYTES:
             raise ValueError("CalibrationCorpusArtifactTooLarge")
+        if signature_path is None:
+            raise ValueError("CalibrationCorpusAdmissionSignatureRequired")
+        signature = _snapshot(Path(signature_path), MAX_SIGNATURE_BYTES)
 
         root, created_root = _safe_root(corpus_path, normalized["corpus_id"])
         lock_path = root / ".import.lock"
@@ -280,6 +288,8 @@ def import_temperature_calibration_case(
                 "frame_count": len(frames),
                 "admission_record_sha256": admission["record_sha256"],
                 "admission_statement_sha256": _sha256(statement),
+                "admission_signature_sha256": _sha256(signature),
+                "admission_signature_bytes": len(signature),
                 "labels": normalized,
                 "imported_for_offline_analysis": True,
                 "field_validated": False,
@@ -300,6 +310,7 @@ def import_temperature_calibration_case(
             try:
                 _write_complete(temporary / "recording.jsonl", payload)
                 _write_complete(temporary / "admission-statement.json", statement)
+                _write_complete(temporary / "admission-signature.sshsig", signature)
                 _write_complete(
                     temporary / "import-receipt.json",
                     _canonical(receipt) + b"\n",

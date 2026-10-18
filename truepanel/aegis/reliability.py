@@ -26,6 +26,9 @@ from .temperature_authenticated_acceptance import (
 from .temperature_calibration_admission import (
     pending_temperature_calibration_admission,
 )
+from .temperature_calibration_assessment import (
+    pending_temperature_calibration_assessment,
+)
 from .temperature_calibration_corpus import (
     pending_temperature_calibration_corpus_import,
 )
@@ -138,6 +141,11 @@ class AegisReliabilityEngine:
         self.temperature_calibration_corpus_import = (
             pending_temperature_calibration_corpus_import(
                 self.temperature_calibration_admission
+            )
+        )
+        self.temperature_calibration_assessment = (
+            pending_temperature_calibration_assessment(
+                self.temperature_calibration_corpus_import
             )
         )
         proof = run_flight_director_proof()
@@ -409,6 +417,7 @@ class AegisReliabilityEngine:
             "coverage_field_review_receipt": self.temperature_field_review_receipt,
             "coverage_calibration_admission": self.temperature_calibration_admission,
             "coverage_calibration_corpus_import": self.temperature_calibration_corpus_import,
+            "coverage_calibration_assessment": self.temperature_calibration_assessment,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],
