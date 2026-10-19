@@ -40,6 +40,9 @@ from .temperature_coverage_appraisal import (
     appraise_temperature_coverage,
     temperature_coverage_implementation_sha256,
 )
+from .temperature_detector_result_binding import (
+    pending_temperature_detector_result_binding,
+)
 from .temperature_field_checkride import pending_temperature_field_checkride
 from .temperature_field_review_receipt import pending_temperature_field_review_receipt
 from .temperature_recording_intake import pending_temperature_recording_intake
@@ -146,6 +149,11 @@ class AegisReliabilityEngine:
         self.temperature_calibration_assessment = (
             pending_temperature_calibration_assessment(
                 self.temperature_calibration_corpus_import
+            )
+        )
+        self.temperature_detector_result_binding = (
+            pending_temperature_detector_result_binding(
+                self.temperature_calibration_assessment
             )
         )
         proof = run_flight_director_proof()
@@ -418,6 +426,7 @@ class AegisReliabilityEngine:
             "coverage_calibration_admission": self.temperature_calibration_admission,
             "coverage_calibration_corpus_import": self.temperature_calibration_corpus_import,
             "coverage_calibration_assessment": self.temperature_calibration_assessment,
+            "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

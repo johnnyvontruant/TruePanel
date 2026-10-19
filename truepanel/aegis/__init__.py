@@ -130,6 +130,15 @@ from .temperature_coverage_appraisal import (
     appraise_temperature_coverage,
     temperature_coverage_implementation_sha256,
 )
+from .temperature_detector_result import (
+    build_temperature_detector_result,
+    export_temperature_detector_result,
+)
+from .temperature_detector_result_binding import (
+    evaluate_temperature_detector_result_binding,
+    export_temperature_detector_result_binding_statement,
+    pending_temperature_detector_result_binding,
+)
 from .temperature_development_acceptance import (
     evaluate_temperature_development_acceptance,
     prepare_temperature_development_acceptance,
@@ -173,6 +182,11 @@ __all__ = [
     "pending_temperature_calibration_corpus_import",
     "assess_temperature_calibration_corpus",
     "pending_temperature_calibration_assessment",
+    "build_temperature_detector_result",
+    "export_temperature_detector_result",
+    "evaluate_temperature_detector_result_binding",
+    "export_temperature_detector_result_binding_statement",
+    "pending_temperature_detector_result_binding",
     "pending_temperature_recording_intake",
     "prepare_temperature_development_acceptance",
     "export_temperature_signing_kit",

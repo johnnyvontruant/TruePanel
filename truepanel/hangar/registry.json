@@ -527,6 +527,25 @@
       "revisit_conditions": ["JT supplies the exact authenticated signature chain and governed recordings", "independent detector outputs are bound into admission", "statistical performance assessment is proposed", "installation or deployment is proposed"],
       "strongest_follow_up": "Extend the signed admission with immutable detector-result evidence, then predeclare sensitivity specificity lead-time and uncertainty gates before assessing predictions against operator labels.",
       "freshness": {"reviewed_at": "2026-10-18", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0034", "title": "AEGIS label-blind detector-result binding", "state": "COMPLETED",
+      "hypothesis": "A detector prediction created before outcome labels and rebound from the exact recording can prevent calibration label leakage and result substitution without granting validation or operational authority.",
+      "value": "Closes the prediction-to-label lineage gap and makes future statistical calibration depend on independently replayable detector evidence.",
+      "prior_art": ["Feast point-in-time joins", "MLflow dataset tracking", "Evidently evaluation", "OpenLineage run and dataset facets"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-detector-result-binding", "pr": null, "commits": []},
+      "protocol": ["snapshot one protected sanitized Black Box recording", "replay ORACLE and the replaceable AEGIS detector without labels", "bind detector policy recording result confidence and temporal lineage", "require result creation before the signed admission timestamp", "rebuild every artifact before trust", "use a distinct SSHSIG namespace", "deny corpus validation installation deployment and hardware authority"],
+      "fixtures": ["aegis-label-blind-detector-result-binding", "tests/test_aegis_temperature_detector_result_binding.py"],
+      "success_criteria": ["one exact pre-label result reaches calibration review only", "post-label prediction result recording policy signature namespace and authority drift hold", "fan degradation remains detected 27 samples before the isolated threshold in deterministic replay", "labels accepted by the detector remain zero", "accepted matrix remains 8/8", "production and hardware authority remain false"],
+      "abort_criteria": ["outcome labels are available to detector replay", "a result created after label admission is accepted", "a digest is trusted without deterministic replay", "field performance is inferred from synthetic fixtures", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-detector-result-binding-v1.json", "sha256": "e9a1f75a484a04dc9652bf19a39d9cb4ca78a6324eeb7556d9aaedf5c17957fb"}],
+      "outcome": {"conclusion": "Ten deterministic paths produce one label-blind result bound for calibration review and nine HOLD results. The positive shared-cooling case is detected at sample 19, 27 samples before the isolated threshold, with zero unsafe authority."},
+      "invalidated_assumptions": ["signed outcome labels alone are sufficient calibration evidence", "a prediction can be generated after labels without leakage risk", "a result digest is equivalent to re-executing its detector contract", "the existing four-frame recovery intake is a valid shared-cooling calibration window"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_detector_result_binding.py tests/test_aegis_temperature_calibration_assessment.py", "python -c \"from truepanel.holodeck.aegis_temperature_detector_result_binding import run_temperature_detector_result_binding_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies governed long-window recordings and the exact authenticated signature chain", "statistical performance gates are proposed", "a replaceable external evaluator is benchmarked", "installation or deployment is proposed"],
+      "strongest_follow_up": "Define a separate governed long-window Black Box intake and predeclare minimum corpus sensitivity specificity lead-time and uncertainty gates before scoring any bound predictions.",
+      "freshness": {"reviewed_at": "2026-10-19", "review_after": "2027-04-30"}
     }
   ]
 }

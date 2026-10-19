@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.18.1 · refreshed 2026-10-18 · 27 experiment(s)
+Registry version 2026.10.18.1 · refreshed 2026-10-18 · 28 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -219,3 +219,11 @@ Nine deterministic paths produce one authenticated balanced corpus characterized
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Extend the signed admission with immutable detector-result evidence, then predeclare sensitivity specificity lead-time and uncertainty gates before assessing predictions against operator labels.
 - Revisit when: JT supplies the exact authenticated signature chain and governed recordings; independent detector outputs are bound into admission; statistical performance assessment is proposed; installation or deployment is proposed
+
+## TP-EXP-0034 · AEGIS label-blind detector-result binding
+
+Ten deterministic paths produce one label-blind result bound for calibration review and nine HOLD results. The positive shared-cooling case is detected at sample 19, 27 samples before the isolated threshold, with zero unsafe authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Define a separate governed long-window Black Box intake and predeclare minimum corpus sensitivity specificity lead-time and uncertainty gates before scoring any bound predictions.
+- Revisit when: JT supplies governed long-window recordings and the exact authenticated signature chain; statistical performance gates are proposed; a replaceable external evaluator is benchmarked; installation or deployment is proposed
