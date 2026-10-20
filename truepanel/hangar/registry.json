@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.18.1",
-  "updated_at": "2026-10-18",
+  "registry_version": "2026.10.20.1",
+  "updated_at": "2026-10-20",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -546,6 +546,25 @@
       "revisit_conditions": ["JT supplies governed long-window recordings and the exact authenticated signature chain", "statistical performance gates are proposed", "a replaceable external evaluator is benchmarked", "installation or deployment is proposed"],
       "strongest_follow_up": "Define a separate governed long-window Black Box intake and predeclare minimum corpus sensitivity specificity lead-time and uncertainty gates before scoring any bound predictions.",
       "freshness": {"reviewed_at": "2026-10-19", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0035", "title": "AEGIS governed long-window Black Box intake", "state": "COMPLETED",
+      "hypothesis": "A separate bounded one-shot intake can prove a label-blind ordered correlation window with a stable baseline without reusing recovery evidence or adding a live collector.",
+      "value": "Closes the recording-governance gap before detector calibration and makes the no-tailing no-checkpoint boundary machine visible.",
+      "prior_art": ["OpenTelemetry filelog receiver", "Fluent Bit Tail input", "Prometheus TSDB", "OpenLineage dataset version facets"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-long-window-intake", "pr": null, "commits": []},
+      "protocol": ["snapshot one protected sanitized Black Box file", "bound bytes frames and per-frame size", "verify descriptor and path identity", "reconstruct canonical frames", "require contiguous sequence and increasing timestamps", "require cooling and temperature signals", "prove a stable opening baseline", "reject labels", "deny capture tail checkpoint validation deployment and hardware authority"],
+      "fixtures": ["aegis-governed-long-window-intake", "tests/test_aegis_temperature_long_window_intake.py"],
+      "success_criteria": ["one 52-frame label-blind window with a 12-frame stable baseline is accepted for replay only", "short unsafe malformed reordered missing-signal label-bearing and unstable inputs hold", "accepted labels remain zero", "capture tail and checkpoint writes remain zero", "accepted matrix remains 8/8", "production and hardware authority remain false"],
+      "abort_criteria": ["the four-frame recovery intake is reused", "labels or outcomes enter intake", "a watcher or checkpoint is created", "minimum length substitutes for baseline and signal checks", "field performance is inferred from fixtures", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-long-window-intake-v1.json", "sha256": "3acdf4f3a64e806a7cd05705a4183bcb5d44d2dee738c84efc0a6006903fbcf6"}],
+      "outcome": {"conclusion": "Ten deterministic paths produce one accepted 52-frame label-blind window with a stable 12-frame baseline and nine HOLD outcomes, with zero capture, tailing, checkpoint writes, validation, or operational authority."},
+      "invalidated_assumptions": ["minimum frame count proves a useful calibration window", "the four-frame recovery ceremony can safely serve long-window correlation calibration", "continuous file tailing is required for a governed offline replay artifact", "sanitized schema metadata alone excludes outcome labels"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_long_window_intake.py tests/test_aegis_temperature_detector_result_binding.py", "python -c \"from truepanel.holodeck.aegis_temperature_long_window_intake import run_temperature_long_window_intake_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a governed real long-window recording", "baseline policy requires chassis-specific calibration", "continuous ingestion or fleet-scale retention is proposed", "statistical scoring or deployment is proposed"],
+      "strongest_follow_up": "Bind the governed intake receipt into detector-result creation, then predeclare minimum sensitivity specificity lead-time and uncertainty gates before labels are made available.",
+      "freshness": {"reviewed_at": "2026-10-20", "review_after": "2027-04-30"}
     }
   ]
 }

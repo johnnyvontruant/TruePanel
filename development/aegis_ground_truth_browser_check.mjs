@@ -51,6 +51,22 @@ const payload = {
       next_action: "Replay each recording before labels, then sign the exact result binding offline.",
       record_sha256: "a".repeat(64),
     },
+    coverage_long_window_intake: {
+      status: "ACTION_REQUIRED_LONG_WINDOW_RECORDING",
+      recording_present: false,
+      frame_count: 0,
+      baseline_stable: false,
+      eligible_for_label_blind_replay: false,
+      capture_performed: false,
+      tailing_performed: false,
+      checkpoint_write_performed: false,
+      field_validated: false,
+      candidate_installed: false,
+      deployment_authority: false,
+      hardware_authority: false,
+      next_action: "Provide one protected sanitized long-window Black Box recording.",
+      record_sha256: "b".repeat(64),
+    },
     correlation_policy: { policy_id: "aegis-declarative-correlation-v1", semantics: "evidence grouping" },
     flight_director: {
       scenario: "storage-smart-recovery-v1",
@@ -101,6 +117,7 @@ for (const width of widths) {
     const boxes = annunciators.map(node => node.getBoundingClientRect());
     const ground = document.querySelector(".fd-attestations")?.getBoundingClientRect();
     const detector = document.querySelector(".ag-detector-result")?.getBoundingClientRect();
+    const longWindow = document.querySelector(".ag-long-window-intake")?.getBoundingClientRect();
     return {
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
@@ -111,6 +128,8 @@ for (const width of widths) {
       groundTruthInsideViewport: Boolean(ground && ground.left >= 0 && ground.right <= window.innerWidth),
       detectorBindingInsideViewport: Boolean(detector && detector.left >= 0 && detector.right <= window.innerWidth),
       detectorBoundaryDisclosed: document.querySelector(".ag-detector-result")?.textContent.includes("Prediction first · labels second") || false,
+      longWindowInsideViewport: Boolean(longWindow && longWindow.left >= 0 && longWindow.right <= window.innerWidth),
+      longWindowBoundaryDisclosed: document.querySelector(".ag-long-window-intake")?.textContent.includes("no tailing · labels forbidden") || false,
       groundTruthDisclosure: document.querySelector(".fd-attestations")?.textContent.includes("digest authenticates provider: NO") || false,
     };
   });
@@ -119,6 +138,8 @@ for (const width of widths) {
   if (!measure.groundTruthInsideViewport) throw new Error(`${width}: ground-truth panel overflow`);
   if (!measure.detectorBindingInsideViewport) throw new Error(`${width}: detector-binding panel overflow`);
   if (!measure.detectorBoundaryDisclosed) throw new Error(`${width}: detector-binding boundary missing`);
+  if (!measure.longWindowInsideViewport) throw new Error(`${width}: long-window panel overflow`);
+  if (!measure.longWindowBoundaryDisclosed) throw new Error(`${width}: long-window boundary missing`);
   if (measure.minimumAnnunciatorHeight < 44) throw new Error(`${width}: touch target under 44px`);
   if (!measure.visibleStates.every(Boolean)) throw new Error(`${width}: color-only state`);
   if (measure.annunciatorOrder[0] !== "storage") throw new Error(`${width}: critical state is not first`);

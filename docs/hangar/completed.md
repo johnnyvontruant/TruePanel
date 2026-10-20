@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.18.1 · refreshed 2026-10-18 · 28 experiment(s)
+Registry version 2026.10.20.1 · refreshed 2026-10-20 · 29 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -227,3 +227,11 @@ Ten deterministic paths produce one label-blind result bound for calibration rev
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Define a separate governed long-window Black Box intake and predeclare minimum corpus sensitivity specificity lead-time and uncertainty gates before scoring any bound predictions.
 - Revisit when: JT supplies governed long-window recordings and the exact authenticated signature chain; statistical performance gates are proposed; a replaceable external evaluator is benchmarked; installation or deployment is proposed
+
+## TP-EXP-0035 · AEGIS governed long-window Black Box intake
+
+Ten deterministic paths produce one accepted 52-frame label-blind window with a stable 12-frame baseline and nine HOLD outcomes, with zero capture, tailing, checkpoint writes, validation, or operational authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Bind the governed intake receipt into detector-result creation, then predeclare minimum sensitivity specificity lead-time and uncertainty gates before labels are made available.
+- Revisit when: JT supplies a governed real long-window recording; baseline policy requires chassis-specific calibration; continuous ingestion or fleet-scale retention is proposed; statistical scoring or deployment is proposed
