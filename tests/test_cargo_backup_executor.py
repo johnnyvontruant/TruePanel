@@ -1,0 +1,305 @@
+"""Loadmaster executor safety tests using standard-library unittest."""
+
+import tempfile
+import unittest
+from dataclasses import replace
+from pathlib import Path
+
+from truepanel.cargo.backup_executor import (
+    BackupExecutionError,
+    BackupPreflight,
+    validate_backup_preflight,
+)
+
+
+class BackupExecutorPreflightTests(unittest.TestCase):
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+
+        root = Path(self.temp.name)
+        nas = root / "nas"
+        usb = root / "usb"
+        nas.mkdir()
+        usb.mkdir()
+
+        (nas / "episode.mkv").write_bytes(b"test-episode")
+
+        self.request = BackupPreflight(
+            source_root=nas,
+            destination_root=usb,
+            relative_path="episode.mkv",
+            expected_size=12,
+            registered_uuid="TEST-UUID",
+            observed_uuid="TEST-UUID",
+            allow_backup=True,
+            mount_writable=True,
+            physical_confirmation=True,
+        )
+
+    def test_rejects_disabled_backup(self):
+        with self.assertRaisesRegex(BackupExecutionError, "authorization"):
+            validate_backup_preflight(
+                replace(self.request, allow_backup=False)
+            )
+
+    def test_rejects_wrong_uuid(self):
+        with self.assertRaisesRegex(BackupExecutionError, "identity"):
+            validate_backup_preflight(
+                replace(self.request, observed_uuid="WRONG")
+            )
+
+    def test_rejects_read_only_mount(self):
+        with self.assertRaisesRegex(BackupExecutionError, "not writable"):
+            validate_backup_preflight(
+                replace(self.request, mount_writable=False)
+            )
+
+    def test_rejects_existing_destination(self):
+        destination = (
+            self.request.destination_root / self.request.relative_path
+        )
+        destination.write_bytes(b"original")
+
+        with self.assertRaisesRegex(BackupExecutionError, "already exists"):
+            validate_backup_preflight(self.request)
+
+        self.assertEqual(destination.read_bytes(), b"original")
+
+    def test_rejects_changed_size(self):
+        with self.assertRaisesRegex(BackupExecutionError, "size changed"):
+            validate_backup_preflight(
+                replace(self.request, expected_size=999)
+            )
+
+    def test_rejects_path_traversal(self):
+        with self.assertRaisesRegex(BackupExecutionError, "unsafe"):
+            validate_backup_preflight(
+                replace(self.request, relative_path="../escape.mkv")
+            )
+
+    def test_rejects_symlink(self):
+        (self.request.source_root / "link.mkv").symlink_to(
+            self.request.source_root / "episode.mkv"
+        )
+
+        with self.assertRaisesRegex(BackupExecutionError, "symlink"):
+            validate_backup_preflight(
+                replace(self.request, relative_path="link.mkv")
+            )
+
+    def test_requires_confirmation(self):
+        with self.assertRaisesRegex(BackupExecutionError, "confirmation"):
+            validate_backup_preflight(
+                replace(self.request, physical_confirmation=False)
+            )
+
+    def test_valid_preflight_does_not_copy(self):
+        result = validate_backup_preflight(self.request)
+
+        self.assertEqual(result["state"], "PREFLIGHT_READY")
+        self.assertFalse(result["executed"])
+        self.assertTrue(result["read_only"])
+
+        self.assertFalse(
+            (
+                self.request.destination_root
+                / self.request.relative_path
+            ).exists()
+        )
+
+
+class DisposableCopyTests(unittest.TestCase):
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+
+        root = Path(self.temp.name)
+        self.source = root / "source.bin"
+        self.destination = root / "destination.bin"
+        self.source.write_bytes(b"Loadmaster test cargo" * 100)
+
+    def test_verified_copy(self):
+        import hashlib
+        from truepanel.cargo.backup_executor import copy_disposable_test_file
+
+        result = copy_disposable_test_file(
+            self.source,
+            self.destination,
+        )
+
+        self.assertEqual(result["state"], "VERIFIED_TEST_COPY")
+        self.assertEqual(
+            result["sha256"],
+            hashlib.sha256(self.source.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            self.destination.read_bytes(),
+            self.source.read_bytes(),
+        )
+
+    def test_existing_file_never_overwritten(self):
+        from truepanel.cargo.backup_executor import copy_disposable_test_file
+
+        self.destination.write_bytes(b"existing backup")
+
+        with self.assertRaises(BackupExecutionError):
+            copy_disposable_test_file(
+                self.source,
+                self.destination,
+            )
+
+        self.assertEqual(
+            self.destination.read_bytes(),
+            b"existing backup",
+        )
+
+    def test_interruption_does_not_publish(self):
+        from truepanel.cargo.backup_executor import copy_disposable_test_file
+
+        with self.assertRaisesRegex(
+            BackupExecutionError,
+            "interruption",
+        ):
+            copy_disposable_test_file(
+                self.source,
+                self.destination,
+                interrupt_after_bytes=1,
+            )
+
+        self.assertFalse(self.destination.exists())
+        self.assertEqual(
+            list(self.destination.parent.glob(".loadmaster-test-*")),
+            [],
+        )
+
+
+
+class AtomicPublicationTests(unittest.TestCase):
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+
+    def test_publishes_new_file(self):
+        from truepanel.cargo.backup_executor import publish_noreplace
+
+        (self.root / "temporary.bin").write_bytes(b"verified")
+
+        publish_noreplace(
+            "temporary.bin",
+            "published.bin",
+            self.root,
+        )
+
+        self.assertFalse((self.root / "temporary.bin").exists())
+        self.assertEqual(
+            (self.root / "published.bin").read_bytes(),
+            b"verified",
+        )
+
+    def test_refuses_existing_destination(self):
+        from truepanel.cargo.backup_executor import publish_noreplace
+
+        (self.root / "temporary.bin").write_bytes(b"new")
+        (self.root / "published.bin").write_bytes(b"original")
+
+        with self.assertRaisesRegex(
+            BackupExecutionError,
+            "publication refused",
+        ):
+            publish_noreplace(
+                "temporary.bin",
+                "published.bin",
+                self.root,
+            )
+
+        self.assertEqual(
+            (self.root / "published.bin").read_bytes(),
+            b"original",
+        )
+        self.assertEqual(
+            (self.root / "temporary.bin").read_bytes(),
+            b"new",
+        )
+
+    def test_rejects_unsafe_filenames(self):
+        from truepanel.cargo.backup_executor import publish_noreplace
+
+        with self.assertRaisesRegex(
+            BackupExecutionError,
+            "invalid publication filename",
+        ):
+            publish_noreplace(
+                "../escape.bin",
+                "published.bin",
+                self.root,
+            )
+
+
+
+class TransferIntegrityTests(unittest.TestCase):
+    """Requirements for the eventual production copy engine."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+
+    def test_source_mutation_must_be_rejected(self):
+        from truepanel.cargo.backup_executor import (
+            BackupExecutionError,
+            copy_disposable_test_file,
+        )
+
+        source = self.root / "episode.mkv"
+        destination = self.root / "backup.mkv"
+
+        source.write_bytes(b"original-content")
+
+        # This test documents the required execution-time recheck.
+        expected_size = source.stat().st_size
+
+        source.write_bytes(b"modified-content-with-different-size")
+
+        with self.assertRaises(BackupExecutionError):
+            from truepanel.cargo.backup_executor import validate_backup_preflight
+
+            validate_backup_preflight(
+                BackupPreflight(
+                    source_root=self.root,
+                    destination_root=self.root,
+                    relative_path="episode.mkv",
+                    expected_size=expected_size,
+                    registered_uuid="TEST",
+                    observed_uuid="TEST",
+                    allow_backup=True,
+                    mount_writable=True,
+                    physical_confirmation=True,
+                )
+            )
+
+        self.assertFalse(destination.exists())
+
+    def test_corrupted_destination_digest_must_fail(self):
+        import hashlib
+
+        source = self.root / "episode.mkv"
+        temporary = self.root / "temporary.mkv"
+        destination = self.root / "backup.mkv"
+
+        source.write_bytes(b"valid-data")
+        temporary.write_bytes(b"corrupted-data")
+
+        source_hash = hashlib.sha256(source.read_bytes()).digest()
+        destination_hash = hashlib.sha256(temporary.read_bytes()).digest()
+
+        self.assertNotEqual(source_hash, destination_hash)
+        self.assertFalse(destination.exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
