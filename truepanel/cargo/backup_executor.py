@@ -548,3 +548,132 @@ def execute_physical_backup(*args, **kwargs):
         "physical executor not enabled: hardware attestation, persistent "
         "authorization, and exFAT no-replace validation incomplete"
     )
+
+
+@dataclass(frozen=True)
+class HardwareAttestation:
+    """Observed, read-only physical device identity (never write authority)."""
+    mount: str
+    device: str
+    filesystem: str
+    uuid: str
+    by_id: str
+    read_only: bool
+    matches_registry: bool
+
+
+def attest_cartridge_read_only(
+    *, mount: Path, registered_uuid: str, registered_by_id: str,
+    command_runner=None,
+) -> HardwareAttestation:
+    """Independently inspect mount, UUID and hardware by-id link.
+
+    This explicitly refuses writable mounts and cannot authorize execution.
+    Require a pinned /dev/disk/by-id/*-partN identity; generic udev serials
+    are not accepted. The command_runner injection is for unit tests only.
+    """
+    import subprocess
+    from pathlib import PurePosixPath
+
+    if command_runner is None:
+        def command_runner(args):
+            return subprocess.check_output(args, text=True, timeout=10)
+
+    if (not mount.is_absolute() or '..' in mount.parts or mount.is_symlink()
+            or not registered_uuid or not registered_by_id.startswith('/dev/disk/by-id/')
+            or '..' in PurePosixPath(registered_by_id).parts
+            or PurePosixPath(registered_by_id).name in ('', '.', '..')):
+        raise BackupExecutionError('invalid attestation input')
+
+    try:
+        # -M means an exact mount, never an enclosing parent filesystem.
+        info = command_runner([
+            'findmnt', '-n', '-M', str(mount), '-o',
+            'SOURCE,TARGET,FSTYPE,OPTIONS', '--raw',
+        ]).strip().split(None, 3)
+        if len(info) != 4:
+            raise BackupExecutionError('mount not uniquely identified')
+        device, target, filesystem, options = info
+        if target != str(mount) or not device.startswith('/dev/'):
+            raise BackupExecutionError('unexpected mount target or source')
+        opts = set(options.split(','))
+        if 'ro' not in opts or 'rw' in opts:
+            raise BackupExecutionError('mount not read-only')
+        if filesystem.lower() != 'exfat':
+            raise BackupExecutionError('unexpected cartridge filesystem')
+        observed_uuid = command_runner([
+            'blkid', '-s', 'UUID', '-o', 'value', device,
+        ]).strip()
+        observed_fs = command_runner([
+            'blkid', '-s', 'TYPE', '-o', 'value', device,
+        ]).strip()
+        # Realpath is applied to the by-id link *and* mounted source.
+        mounted_realpath = command_runner(['readlink', '-f', device]).strip()
+        by_id_realpath = command_runner([
+            'readlink', '-f', registered_by_id,
+        ]).strip()
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        raise BackupExecutionError('cartridge observation failed') from error
+
+    if (observed_uuid != registered_uuid or observed_fs.lower() != 'exfat'
+            or not mounted_realpath or mounted_realpath != by_id_realpath):
+        raise BackupExecutionError('physical cartridge identity mismatch')
+    return HardwareAttestation(
+        mount=str(mount), device=device, filesystem=filesystem,
+        uuid=observed_uuid, by_id=registered_by_id, read_only=True,
+        matches_registry=True,
+    )
+
+
+class DurableConfirmationJournal:
+    """Fail-closed, crash-persistent plan consumption on a trusted local disk.
+
+    A digest is burned before any physical action. Journal state is not a
+    GPIO provenance guarantee. The caller must own and protect this directory.
+    """
+
+    def __init__(self, directory: Path):
+        if not directory.is_absolute() or directory.is_symlink():
+            raise BackupExecutionError('unsafe journal directory')
+        self.directory = directory
+        self._lock = threading.Lock()
+
+    def consume(self, *, cartridge_id: str, plan_digest: str) -> Path:
+        import hashlib
+        import json
+        import re
+        if (not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}', cartridge_id)
+                or not re.fullmatch(r'[a-fA-F0-9]{64}', plan_digest)):
+            raise BackupExecutionError('invalid confirmation identity')
+        if not self.directory.is_dir() or self.directory.is_symlink():
+            raise BackupExecutionError('journal directory unavailable')
+        if self.directory.stat().st_mode & 0o022:
+            raise BackupExecutionError('journal directory is writable by others')
+        digest = hashlib.sha256((cartridge_id + ':' + plan_digest.lower()).encode()).hexdigest()
+        path = self.directory / (digest + '.consumed')
+        with self._lock:
+            fd = None
+            try:
+                fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                with os.fdopen(fd, 'w') as f:
+                    fd = None
+                    json.dump({'cartridge_id': cartridge_id, 'plan_digest': plan_digest.lower(),
+                               'status': 'CONSUMED_BEFORE_TRANSFER'}, f)
+                    f.write('\n')
+                    f.flush()
+                    os.fsync(f.fileno())
+                parent_fd = os.open(self.directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                try:
+                    os.fsync(parent_fd)
+                finally:
+                    os.close(parent_fd)
+            except FileExistsError as error:
+                raise BackupExecutionError('physical authorization already consumed') from error
+            except OSError as error:
+                # If a record was created before an I/O failure, leave it
+                # in place to avoid accidentally re-authorizing on retry.
+                raise BackupExecutionError('durable authorization recording failed') from error
+            finally:
+                if fd is not None:
+                    os.close(fd)
+        return path

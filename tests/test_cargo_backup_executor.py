@@ -644,5 +644,103 @@ class HostHandoffAndManifestTests(unittest.TestCase):
             execute_physical_backup()
 
 
+class CartridgeHardwareAttestationTests(unittest.TestCase):
+    def setUp(self):
+        self.mount = Path('/mnt/usb-tv-n-z')
+        self.by_id = '/dev/disk/by-id/usb-Micron_CT8000X10SSD9_2532EA8D3DC7-0:0-part2'
+        self.answers = {
+            ('findmnt', '-n', '-M', str(self.mount), '-o', 'SOURCE,TARGET,FSTYPE,OPTIONS', '--raw'):
+                '/dev/sdi2 /mnt/usb-tv-n-z exfat ro,nosuid,nodev,noexec\n',
+            ('blkid', '-s', 'UUID', '-o', 'value', '/dev/sdi2'): '6988-53EB\n',
+            ('blkid', '-s', 'TYPE', '-o', 'value', '/dev/sdi2'): 'exfat\n',
+            ('readlink', '-f', '/dev/sdi2'): '/dev/sdi2\n',
+            ('readlink', '-f', self.by_id): '/dev/sdi2\n',
+        }
+
+    def observe(self):
+        from truepanel.cargo.backup_executor import attest_cartridge_read_only
+        return attest_cartridge_read_only(
+            mount=self.mount, registered_uuid='6988-53EB',
+            registered_by_id=self.by_id,
+            command_runner=lambda argv: self.answers[tuple(argv)],
+        )
+
+    def test_expected_read_only_hardware(self):
+        observed = self.observe()
+        self.assertTrue(observed.matches_registry)
+        self.assertTrue(observed.read_only)
+
+    def test_rejects_writable_mount(self):
+        key = next(k for k in self.answers if k[0] == 'findmnt')
+        self.answers[key] = self.answers[key].replace('ro,', 'rw,')
+        with self.assertRaisesRegex(BackupExecutionError, 'not read-only'):
+            self.observe()
+
+    def test_rejects_wrong_uuid(self):
+        key = next(k for k in self.answers if k[0] == 'blkid' and 'UUID' in k)
+        self.answers[key] = 'WRONG\n'
+        with self.assertRaisesRegex(BackupExecutionError, 'identity mismatch'):
+            self.observe()
+
+    def test_rejects_wrong_by_id_device(self):
+        self.answers[('readlink', '-f', self.by_id)] = '/dev/sdz2\n'
+        with self.assertRaisesRegex(BackupExecutionError, 'identity mismatch'):
+            self.observe()
+
+    def test_rejects_parent_mount(self):
+        key = next(k for k in self.answers if k[0] == 'findmnt')
+        self.answers[key] = '/dev/sdi2 /mnt exfat ro\n'
+        with self.assertRaisesRegex(BackupExecutionError, 'unexpected mount'):
+            self.observe()
+
+    def test_rejects_wrong_filesystem(self):
+        key = next(k for k in self.answers if k[0] == 'findmnt')
+        self.answers[key] = self.answers[key].replace('exfat', 'zfs')
+        with self.assertRaisesRegex(BackupExecutionError, 'filesystem'):
+            self.observe()
+
+
+class DurableJournalTests(unittest.TestCase):
+    def setUp(self):
+        from truepanel.cargo.backup_executor import DurableConfirmationJournal
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name)
+        self.path.chmod(0o700)
+        self.journal = DurableConfirmationJournal(self.path)
+        self.digest = 'f' * 64
+
+    def test_consume_once_and_survive_new_instance(self):
+        from truepanel.cargo.backup_executor import DurableConfirmationJournal
+        marker = self.journal.consume(cartridge_id='tv-n-z', plan_digest=self.digest)
+        self.assertTrue(marker.exists())
+        with self.assertRaisesRegex(BackupExecutionError, 'already consumed'):
+            DurableConfirmationJournal(self.path).consume(
+                cartridge_id='tv-n-z', plan_digest=self.digest)
+
+    def test_rejects_invalid_digest(self):
+        with self.assertRaisesRegex(BackupExecutionError, 'invalid confirmation'):
+            self.journal.consume(cartridge_id='tv-n-z', plan_digest='not-a-sha')
+
+    def test_rejects_world_writable_journal(self):
+        self.path.chmod(0o777)
+        with self.assertRaisesRegex(BackupExecutionError, 'writable by others'):
+            self.journal.consume(cartridge_id='tv-n-z', plan_digest=self.digest)
+
+    def test_concurrent_consumption_across_instances(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from truepanel.cargo.backup_executor import DurableConfirmationJournal
+        def attempt(_):
+            try:
+                DurableConfirmationJournal(self.path).consume(
+                    cartridge_id='tv-n-z', plan_digest=self.digest)
+                return True
+            except BackupExecutionError:
+                return False
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(attempt, range(8)))
+        self.assertEqual(results.count(True), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
