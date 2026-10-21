@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import stat
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -398,6 +399,7 @@ class SingleUseTransferAuthority:
         self._clock = clock
         self._max_age = float(max_age_seconds)
         self._consumed = set()
+        self._lock = threading.Lock()
 
         if self._max_age <= 0:
             raise ValueError("confirmation lifetime must be positive")
@@ -445,9 +447,104 @@ class SingleUseTransferAuthority:
                 "physical confirmation expired"
             )
 
-        if plan_digest in self._consumed:
-            raise BackupExecutionError(
-                "physical confirmation already consumed"
-            )
+        with self._lock:
+            if plan_digest in self._consumed:
+                raise BackupExecutionError(
+                    "physical confirmation already consumed"
+                )
+            self._consumed.add(plan_digest)
 
-        self._consumed.add(plan_digest)
+
+class HostConfirmationHandoff:
+    """In-process, non-actuating bridge for the host GPIO callback.
+
+    The host owns this object and passes `on_confirmation` only to its
+    LoadmasterCopyButtonService instance. It refuses a second callback,
+    consumption, or arm for the same plan. This is intentionally not a
+    cross-process or durable authorization mechanism.
+    """
+
+    def __init__(self, *, clock, max_age_seconds=30.0):
+        self._authority = SingleUseTransferAuthority(
+            clock=clock, max_age_seconds=max_age_seconds
+        )
+        self._lock = threading.Lock()
+        self._expected = None
+        self._received = None
+        self._used = False
+
+    def arm(self, *, cartridge_id, cartridge_uuid, device_serial, plan_digest):
+        expected = (cartridge_id, cartridge_uuid, device_serial, plan_digest)
+        if not all(isinstance(x, str) and x for x in expected):
+            raise BackupExecutionError("incomplete host authorization context")
+        with self._lock:
+            if self._expected is not None:
+                raise BackupExecutionError("handoff already armed or consumed")
+            self._expected = expected
+
+    def on_confirmation(self, confirmation):
+        """Callback intended for host service; never executes a transfer."""
+        from .copy_button import CopyButtonConfirmation
+        with self._lock:
+            if self._expected is None or self._received is not None or self._used:
+                raise BackupExecutionError("handoff not waiting for confirmation")
+            if type(confirmation) is not CopyButtonConfirmation:
+                raise BackupExecutionError("invalid confirmation object")
+            self._received = confirmation
+
+    def consume(self):
+        """Validate callback evidence once; returns no copy authority token."""
+        with self._lock:
+            if self._used or self._received is None or self._expected is None:
+                raise BackupExecutionError("no unused host confirmation")
+            self._used = True  # fail closed even if validation raises
+            cartridge_id, cartridge_uuid, device_serial, plan_digest = self._expected
+            self._authority.consume(
+                self._received,
+                cartridge_id=cartridge_id,
+                cartridge_uuid=cartridge_uuid,
+                device_serial=device_serial,
+                plan_digest=plan_digest,
+            )
+            return {"state": "HOST_CONFIRMATION_CONSUMED", "executed": False}
+
+    def disarm(self):
+        with self._lock:
+            self._used = True
+            self._received = None
+
+
+def build_verified_sandbox_manifest(*, source: Path, copy_result: dict) -> dict:
+    """Prepare manifest evidence only from an already verified sandbox copy.
+
+    Caller must persist through existing manifest writer. This method never
+    claims a physical cartridge backup.
+    """
+    from datetime import datetime, timezone
+    if (copy_result.get("state") != "VERIFIED_SANDBOX_COPY"
+            or copy_result.get("executed") is not True):
+        raise BackupExecutionError("copy is not verified")
+    digest = copy_result.get("sha256")
+    size = copy_result.get("size_bytes")
+    if (not isinstance(digest, str) or len(digest) != 64
+            or any(c not in "0123456789abcdef" for c in digest)
+            or type(size) is not int or size < 0
+            or not source.is_absolute()):
+        raise BackupExecutionError("invalid verification evidence")
+    stamp = datetime.now(timezone.utc).isoformat()
+    return {
+        "schema_version": 1,
+        "kind": "truepanel.cargo_backup_manifest",
+        "created_at": stamp,
+        "source": "loadmaster-sandbox-verification-only",
+        "items": [{"path": str(source), "size_bytes": size,
+                   "backed_up_at": stamp, "sha256": digest}],
+    }
+
+
+def execute_physical_backup(*args, **kwargs):
+    """Hard stop: cannot perform hardware writes from development package."""
+    raise BackupExecutionError(
+        "physical executor not enabled: hardware attestation, persistent "
+        "authorization, and exFAT no-replace validation incomplete"
+    )

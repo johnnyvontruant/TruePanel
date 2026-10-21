@@ -514,5 +514,135 @@ class SingleUseAuthorityTests(unittest.TestCase):
             )
 
 
+
+class ConcurrentAuthorityTests(unittest.TestCase):
+    """Ensure concurrent requests cannot reuse one confirmation."""
+
+    def test_simultaneous_consumers_allow_exactly_one(self):
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+
+        from truepanel.cargo.backup_executor import (
+            SingleUseTransferAuthority,
+        )
+        from truepanel.cargo.copy_button import CopyButtonConfirmation
+
+        authority = SingleUseTransferAuthority(
+            clock=lambda: 100.0,
+            max_age_seconds=30.0,
+        )
+
+        confirmation = CopyButtonConfirmation(
+            cartridge_id="tv-n-z",
+            cartridge_uuid="6988-53EB",
+            device_serial="TEST-SERIAL",
+            plan_digest="CONCURRENT-PLAN",
+            confirmed_at_monotonic=95.0,
+        )
+
+        expected = {
+            "cartridge_id": "tv-n-z",
+            "cartridge_uuid": "6988-53EB",
+            "device_serial": "TEST-SERIAL",
+            "plan_digest": "CONCURRENT-PLAN",
+        }
+
+        barrier = threading.Barrier(8)
+
+        def attempt():
+            barrier.wait(timeout=5)
+            try:
+                authority.consume(confirmation, **expected)
+                return "accepted"
+            except BackupExecutionError:
+                return "rejected"
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(lambda _: attempt(), range(8)))
+
+        self.assertEqual(results.count("accepted"), 1)
+        self.assertEqual(results.count("rejected"), 7)
+
+
+class HostHandoffAndManifestTests(unittest.TestCase):
+    def make_handoff(self):
+        from truepanel.cargo.backup_executor import HostConfirmationHandoff
+        from truepanel.cargo.copy_button import CopyButtonConfirmation
+        handoff = HostConfirmationHandoff(clock=lambda: 100.0)
+        handoff.arm(cartridge_id="tv-n-z", cartridge_uuid="6988-53EB",
+                    device_serial="SERIAL", plan_digest="PLAN")
+        confirmation = CopyButtonConfirmation(
+            cartridge_id="tv-n-z", cartridge_uuid="6988-53EB",
+            device_serial="SERIAL", plan_digest="PLAN",
+            confirmed_at_monotonic=95.0)
+        return handoff, confirmation
+
+    def test_host_callback_once_and_consumed(self):
+        handoff, confirmation = self.make_handoff()
+        handoff.on_confirmation(confirmation)
+        self.assertFalse(handoff.consume()["executed"])
+        with self.assertRaises(BackupExecutionError):
+            handoff.consume()
+        with self.assertRaises(BackupExecutionError):
+            handoff.on_confirmation(confirmation)
+
+    def test_host_unarmed_callback_rejected(self):
+        handoff, confirmation = self.make_handoff()
+        handoff.disarm()
+        with self.assertRaises(BackupExecutionError):
+            handoff.on_confirmation(confirmation)
+
+    def test_host_mismatch_consumed_fail_closed(self):
+        from dataclasses import replace
+        handoff, confirmation = self.make_handoff()
+        handoff.on_confirmation(replace(confirmation, plan_digest="WRONG"))
+        with self.assertRaises(BackupExecutionError):
+            handoff.consume()
+        with self.assertRaises(BackupExecutionError):
+            handoff.consume()
+
+    def test_host_concurrent_consumption(self):
+        from concurrent.futures import ThreadPoolExecutor
+        handoff, confirmation = self.make_handoff()
+        handoff.on_confirmation(confirmation)
+        def attempt(_):
+            try:
+                handoff.consume()
+                return True
+            except BackupExecutionError:
+                return False
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            outcomes = list(pool.map(attempt, range(12)))
+        self.assertEqual(sum(outcomes), 1)
+
+    def test_sandbox_manifest_validates(self):
+        from truepanel.cargo.backup_executor import build_verified_sandbox_manifest
+        from truepanel.cargo.backup_manifest import validate_backup_manifest
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            manifest = build_verified_sandbox_manifest(
+                source=root / "episode.mkv",
+                copy_result={"state": "VERIFIED_SANDBOX_COPY",
+                             "executed": True, "size_bytes": 12,
+                             "sha256": "a" * 64})
+            path = root / "manifest.json"
+            path.write_text(json.dumps(manifest))
+            checked = validate_backup_manifest(path)
+            self.assertEqual(checked["items"][0]["sha256"], "a" * 64)
+
+    def test_failed_copy_cannot_make_manifest(self):
+        from truepanel.cargo.backup_executor import build_verified_sandbox_manifest
+        with self.assertRaises(BackupExecutionError):
+            build_verified_sandbox_manifest(
+                source=Path("/test"),
+                copy_result={"state": "FAILED", "executed": False})
+
+    def test_physical_entrypoint_always_blocked(self):
+        from truepanel.cargo.backup_executor import execute_physical_backup
+        with self.assertRaisesRegex(BackupExecutionError, "not enabled"):
+            execute_physical_backup()
+
+
 if __name__ == "__main__":
     unittest.main()
