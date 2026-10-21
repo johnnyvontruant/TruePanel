@@ -677,3 +677,75 @@ class DurableConfirmationJournal:
                 if fd is not None:
                     os.close(fd)
         return path
+
+
+class DurableHostAuthorizationSession:
+    """Non-actuating host callback handoff with durable one-plan consumption.
+
+    The host must wire `on_confirmation` as the LoadmasterCopyButtonService
+    callback. This class cannot verify callback origin on its own, and it
+    never grants real filesystem write authority.
+    """
+
+    def __init__(self, *, clock, journal: DurableConfirmationJournal,
+                 max_age_seconds: float = 30.0):
+        self._handoff = HostConfirmationHandoff(
+            clock=clock, max_age_seconds=max_age_seconds,
+        )
+        self._journal = journal
+        self._lock = threading.Lock()
+        self._expected = None
+        self._spent = False
+
+    def arm(self, *, cartridge_id: str, cartridge_uuid: str,
+            device_serial: str, plan_digest: str) -> None:
+        import re
+        if not re.fullmatch(r'[0-9a-fA-F]{64}', plan_digest):
+            raise BackupExecutionError('invalid plan digest')
+        with self._lock:
+            if self._spent or self._expected is not None:
+                raise BackupExecutionError('session already armed or consumed')
+            self._handoff.arm(
+                cartridge_id=cartridge_id,
+                cartridge_uuid=cartridge_uuid,
+                device_serial=device_serial,
+                plan_digest=plan_digest,
+            )
+            self._expected = (cartridge_id, plan_digest.lower())
+
+    def on_confirmation(self, confirmation) -> None:
+        """Callback for the host-owned GPIO service; no transfer occurs."""
+        with self._lock:
+            if self._spent:
+                raise BackupExecutionError('session already consumed')
+            self._handoff.on_confirmation(confirmation)
+
+    def consume(self) -> dict:
+        """Burn authorization on disk before reporting confirmed state.
+
+        If journal durability fails, the in-memory authorization is still
+        spent. New sessions also cannot reuse a successfully burned digest.
+        """
+        with self._lock:
+            if self._spent or self._expected is None:
+                raise BackupExecutionError('session unavailable')
+            self._spent = True
+            accepted = self._handoff.consume()
+            if accepted['state'] != 'HOST_CONFIRMATION_CONSUMED':
+                raise BackupExecutionError('unrecognized host confirmation')
+            cartridge_id, plan_digest = self._expected
+            self._journal.consume(
+                cartridge_id=cartridge_id, plan_digest=plan_digest,
+            )
+            return {
+                'state': 'DURABLY_CONSUMED_NO_TRANSFER',
+                'cartridge_id': cartridge_id,
+                'plan_digest': plan_digest,
+                'executed': False,
+                'backup_authorized': False,
+            }
+
+    def disarm(self) -> None:
+        with self._lock:
+            self._spent = True
+            self._handoff.disarm()

@@ -742,5 +742,97 @@ class DurableJournalTests(unittest.TestCase):
         self.assertEqual(results.count(True), 1)
 
 
+class DurableHostSessionTests(unittest.TestCase):
+    def setUp(self):
+        import time
+        from truepanel.cargo.backup_executor import (
+            DurableHostAuthorizationSession, DurableConfirmationJournal,
+        )
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.journal_path = Path(self.tmp.name)
+        self.journal = DurableConfirmationJournal(self.journal_path)
+        self.now = time.monotonic()
+        self.session = DurableHostAuthorizationSession(
+            clock=lambda: self.now, journal=self.journal,
+        )
+        self.digest = 'a' * 64
+        self.fields = {
+            'cartridge_id': 'tv-n-z', 'cartridge_uuid': '6988-53EB',
+            'device_serial': 'TEST-SERIAL', 'plan_digest': self.digest,
+        }
+
+    def confirm(self, session=None, **changes):
+        from truepanel.cargo.copy_button import CopyButtonConfirmation
+        fields = dict(self.fields)
+        fields.update(changes)
+        (session or self.session).on_confirmation(CopyButtonConfirmation(
+            **fields, confirmed_at_monotonic=self.now,
+        ))
+
+    def test_receipt_burned_and_no_transfer_authorized(self):
+        self.session.arm(**self.fields)
+        self.confirm()
+        response = self.session.consume()
+        self.assertEqual(response['state'], 'DURABLY_CONSUMED_NO_TRANSFER')
+        self.assertFalse(response['executed'])
+        self.assertFalse(response['backup_authorized'])
+        records = list(self.journal_path.glob('*.consumed'))
+        self.assertEqual(len(records), 1)
+
+    def test_second_consume_fails(self):
+        self.session.arm(**self.fields)
+        self.confirm()
+        self.session.consume()
+        with self.assertRaises(BackupExecutionError):
+            self.session.consume()
+
+    def test_new_session_cannot_replay_after_restart(self):
+        from truepanel.cargo.backup_executor import DurableHostAuthorizationSession
+        self.session.arm(**self.fields)
+        self.confirm()
+        self.session.consume()
+        restart = DurableHostAuthorizationSession(
+            clock=lambda: self.now, journal=self.journal,
+        )
+        restart.arm(**self.fields)
+        self.confirm(restart)
+        with self.assertRaisesRegex(BackupExecutionError, 'already consumed'):
+            restart.consume()
+
+    def test_mismatched_plan_fails_and_spends_session(self):
+        self.session.arm(**self.fields)
+        self.confirm(plan_digest='b' * 64)
+        with self.assertRaisesRegex(BackupExecutionError, 'does not match'):
+            self.session.consume()
+        with self.assertRaises(BackupExecutionError):
+            self.session.consume()
+        self.assertEqual(list(self.journal_path.glob('*.consumed')), [])
+
+    def test_missing_confirmation_fails_closed(self):
+        self.session.arm(**self.fields)
+        with self.assertRaises(BackupExecutionError):
+            self.session.consume()
+        self.confirm() if False else None
+        self.assertEqual(list(self.journal_path.glob('*.consumed')), [])
+
+    def test_disabled_journal_refuses_without_execution(self):
+        self.session.arm(**self.fields)
+        self.confirm()
+        self.journal_path.rmdir()
+        with self.assertRaisesRegex(BackupExecutionError, 'unavailable'):
+            self.session.consume()
+
+    def test_invalid_plan_digest_cannot_arm(self):
+        with self.assertRaisesRegex(BackupExecutionError, 'invalid plan digest'):
+            self.session.arm(**{**self.fields, 'plan_digest': 'not-a-hash'})
+
+    def test_disarm_blocks_confirmation(self):
+        self.session.arm(**self.fields)
+        self.session.disarm()
+        with self.assertRaises(BackupExecutionError):
+            self.confirm()
+
+
 if __name__ == "__main__":
     unittest.main()
