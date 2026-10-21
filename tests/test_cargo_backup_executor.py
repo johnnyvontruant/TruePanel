@@ -301,5 +301,114 @@ class TransferIntegrityTests(unittest.TestCase):
         self.assertFalse(destination.exists())
 
 
+
+class IntegratedSandboxTests(unittest.TestCase):
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+
+        self.root = Path(self.temp.name)
+        self.nas = self.root / "nas"
+        self.usb = self.root / "usb"
+        self.nas.mkdir()
+        self.usb.mkdir()
+
+        self.payload = b"VisionQuest sandbox data" * 10000
+        (self.nas / "episode.mkv").write_bytes(self.payload)
+
+        self.request = BackupPreflight(
+            source_root=self.nas,
+            destination_root=self.usb,
+            relative_path="episode.mkv",
+            expected_size=len(self.payload),
+            registered_uuid="TEST",
+            observed_uuid="TEST",
+            allow_backup=True,
+            mount_writable=True,
+            physical_confirmation=True,
+        )
+
+    def execute(self, **kwargs):
+        from truepanel.cargo.backup_executor import execute_sandbox_backup
+        return execute_sandbox_backup(
+            self.request,
+            sandbox_root=self.root,
+            **kwargs,
+        )
+
+    def assert_no_temporary_files(self):
+        self.assertEqual(
+            list(self.usb.glob(".loadmaster-sandbox-*")), []
+        )
+
+    def test_integrated_verified_copy(self):
+        result = self.execute()
+        self.assertEqual(result["state"], "VERIFIED_SANDBOX_COPY")
+        self.assertEqual(
+            (self.usb / "episode.mkv").read_bytes(),
+            self.payload,
+        )
+        self.assert_no_temporary_files()
+
+    def test_integrated_interruption(self):
+        with self.assertRaisesRegex(
+            BackupExecutionError, "interruption"
+        ):
+            self.execute(fault="interrupt")
+        self.assertFalse((self.usb / "episode.mkv").exists())
+        self.assert_no_temporary_files()
+
+    def test_integrated_corruption(self):
+        with self.assertRaisesRegex(
+            BackupExecutionError, "checksum mismatch"
+        ):
+            self.execute(fault="corrupt")
+        self.assertFalse((self.usb / "episode.mkv").exists())
+        self.assert_no_temporary_files()
+
+    def test_integrated_source_change(self):
+        with self.assertRaisesRegex(
+            BackupExecutionError, "source mutation"
+        ):
+            self.execute(fault="source_change")
+        self.assertFalse((self.usb / "episode.mkv").exists())
+        self.assert_no_temporary_files()
+
+    def test_integrated_destination_race(self):
+        with self.assertRaisesRegex(
+            BackupExecutionError, "publication refused"
+        ):
+            self.execute(fault="destination_race")
+        self.assertEqual(
+            (self.usb / "episode.mkv").read_bytes(),
+            b"other writer",
+        )
+        self.assert_no_temporary_files()
+
+    def test_integrated_rejects_outside_sandbox(self):
+        from truepanel.cargo.backup_executor import execute_sandbox_backup
+
+        with self.assertRaisesRegex(
+            BackupExecutionError, "outside sandbox"
+        ):
+            execute_sandbox_backup(
+                self.request,
+                sandbox_root=self.usb,
+            )
+
+    def test_integrated_rejects_unauthorized_copy(self):
+        from truepanel.cargo.backup_executor import execute_sandbox_backup
+
+        with self.assertRaisesRegex(
+            BackupExecutionError, "authorization"
+        ):
+            execute_sandbox_backup(
+                replace(self.request, allow_backup=False),
+                sandbox_root=self.root,
+            )
+        self.assertFalse((self.usb / "episode.mkv").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -250,3 +250,137 @@ def publish_noreplace(
 
     finally:
         os.close(fd)
+
+
+
+def execute_sandbox_backup(
+    request: BackupPreflight,
+    *,
+    sandbox_root: Path,
+    fault: str | None = None,
+) -> dict:
+    """Integrated test-only executor confined to one temporary sandbox.
+
+    Not suitable for hardware use. Authorization is simulated.
+    """
+    import hashlib
+    import tempfile
+
+    if fault not in (None, "interrupt", "corrupt", "source_change",
+                     "destination_race"):
+        raise BackupExecutionError("unknown test fault")
+
+    sandbox = sandbox_root.resolve(strict=True)
+    if not sandbox.is_dir() or sandbox.is_symlink():
+        raise BackupExecutionError("invalid test sandbox")
+
+    for root in (request.source_root, request.destination_root):
+        if root.is_symlink() or not root.is_dir():
+            raise BackupExecutionError("invalid test root")
+        resolved = root.resolve(strict=True)
+        if resolved == sandbox or sandbox not in resolved.parents:
+            raise BackupExecutionError("transfer root outside sandbox")
+
+    result = validate_backup_preflight(request)
+    source = Path(result["source"])
+    destination = Path(result["destination"])
+
+    # This test implementation supports an existing destination directory.
+    # Directory creation and race-safe path walking come later.
+    if not destination.parent.is_dir():
+        raise BackupExecutionError("destination parent missing")
+
+    _reject_symlink_chain(destination.parent)
+
+    temporary = None
+    size = 0
+    source_hash = hashlib.sha256()
+
+    try:
+        flags = os.O_RDONLY | os.O_NOFOLLOW
+        source_fd = os.open(source, flags)
+        try:
+            before = os.fstat(source_fd)
+
+            if not stat.S_ISREG(before.st_mode):
+                raise BackupExecutionError("source not regular")
+            if before.st_size != request.expected_size:
+                raise BackupExecutionError("source size changed")
+
+            fd, name = tempfile.mkstemp(
+                prefix=".loadmaster-sandbox-",
+                dir=destination.parent,
+            )
+            temporary = Path(name)
+
+            with os.fdopen(fd, "wb") as writer:
+                with os.fdopen(os.dup(source_fd), "rb") as reader:
+                    while chunk := reader.read(1024 * 1024):
+                        writer.write(chunk)
+                        source_hash.update(chunk)
+                        size += len(chunk)
+
+                        if fault == "interrupt":
+                            raise BackupExecutionError(
+                                "simulated interruption"
+                            )
+
+                writer.flush()
+                os.fsync(writer.fileno())
+
+            after = os.fstat(source_fd)
+
+            if fault == "source_change":
+                raise BackupExecutionError(
+                    "simulated source mutation"
+                )
+
+            if (
+                size != request.expected_size
+                or before.st_dev != after.st_dev
+                or before.st_ino != after.st_ino
+                or before.st_size != after.st_size
+                or before.st_mtime_ns != after.st_mtime_ns
+                or before.st_ctime_ns != after.st_ctime_ns
+            ):
+                raise BackupExecutionError(
+                    "source changed during transfer"
+                )
+        finally:
+            os.close(source_fd)
+
+        if fault == "corrupt":
+            with temporary.open("r+b") as writer:
+                writer.seek(0)
+                writer.write(b"X")
+                writer.flush()
+                os.fsync(writer.fileno())
+
+        verified = hashlib.sha256()
+        with temporary.open("rb") as reader:
+            while chunk := reader.read(1024 * 1024):
+                verified.update(chunk)
+
+        if verified.digest() != source_hash.digest():
+            raise BackupExecutionError("checksum mismatch")
+
+        if fault == "destination_race":
+            destination.write_bytes(b"other writer")
+
+        publish_noreplace(
+            temporary.name,
+            destination.name,
+            destination.parent,
+        )
+        temporary = None
+
+        return {
+            "state": "VERIFIED_SANDBOX_COPY",
+            "size_bytes": size,
+            "sha256": verified.hexdigest(),
+            "executed": True,
+        }
+
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
