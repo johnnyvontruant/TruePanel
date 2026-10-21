@@ -384,3 +384,70 @@ def execute_sandbox_backup(
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
+
+
+
+class SingleUseTransferAuthority:
+    """Process-local, single-use confirmation validation.
+
+    Development-stage authorization component. Not a persistent or
+    independently authenticated physical hardware boundary.
+    """
+
+    def __init__(self, *, clock, max_age_seconds=30.0):
+        self._clock = clock
+        self._max_age = float(max_age_seconds)
+        self._consumed = set()
+
+        if self._max_age <= 0:
+            raise ValueError("confirmation lifetime must be positive")
+
+    def consume(
+        self,
+        confirmation,
+        *,
+        cartridge_id: str,
+        cartridge_uuid: str,
+        device_serial: str,
+        plan_digest: str,
+    ) -> None:
+        from .copy_button import CopyButtonConfirmation
+
+        if type(confirmation) is not CopyButtonConfirmation:
+            raise BackupExecutionError(
+                "untrusted confirmation type"
+            )
+
+        expected = (
+            cartridge_id,
+            cartridge_uuid,
+            device_serial,
+            plan_digest,
+        )
+
+        actual = (
+            confirmation.cartridge_id,
+            confirmation.cartridge_uuid,
+            confirmation.device_serial,
+            confirmation.plan_digest,
+        )
+
+        if not all(expected) or actual != expected:
+            raise BackupExecutionError(
+                "confirmation does not match approved transfer"
+            )
+
+        now = float(self._clock())
+        age = now - confirmation.confirmed_at_monotonic
+
+        if age < 0 or age > self._max_age:
+            raise BackupExecutionError(
+                "physical confirmation expired"
+            )
+
+        if plan_digest in self._consumed:
+            raise BackupExecutionError(
+                "physical confirmation already consumed"
+            )
+
+        self._consumed.add(plan_digest)

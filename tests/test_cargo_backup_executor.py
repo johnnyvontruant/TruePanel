@@ -410,5 +410,109 @@ class IntegratedSandboxTests(unittest.TestCase):
         self.assertFalse((self.usb / "episode.mkv").exists())
 
 
+
+class SingleUseAuthorityTests(unittest.TestCase):
+
+    def setUp(self):
+        from truepanel.cargo.backup_executor import SingleUseTransferAuthority
+        from truepanel.cargo.copy_button import CopyButtonConfirmation
+
+        self.now = 100.0
+        self.authority = SingleUseTransferAuthority(
+            clock=lambda: self.now,
+            max_age_seconds=30,
+        )
+
+        self.confirmation = CopyButtonConfirmation(
+            cartridge_id="tv-n-z",
+            cartridge_uuid="6988-53EB",
+            device_serial="TEST-SERIAL",
+            plan_digest="TEST-PLAN-DIGEST",
+            confirmed_at_monotonic=95.0,
+        )
+
+        self.expected = {
+            "cartridge_id": "tv-n-z",
+            "cartridge_uuid": "6988-53EB",
+            "device_serial": "TEST-SERIAL",
+            "plan_digest": "TEST-PLAN-DIGEST",
+        }
+
+    def test_accepts_matching_confirmation_once(self):
+        self.authority.consume(
+            self.confirmation,
+            **self.expected,
+        )
+
+        with self.assertRaisesRegex(
+            BackupExecutionError, "already consumed"
+        ):
+            self.authority.consume(
+                self.confirmation,
+                **self.expected,
+            )
+
+    def test_rejects_wrong_cartridge(self):
+        with self.assertRaisesRegex(
+            BackupExecutionError, "does not match"
+        ):
+            self.authority.consume(
+                self.confirmation,
+                **{**self.expected, "cartridge_uuid": "WRONG"},
+            )
+
+    def test_rejects_wrong_serial(self):
+        with self.assertRaisesRegex(
+            BackupExecutionError, "does not match"
+        ):
+            self.authority.consume(
+                self.confirmation,
+                **{**self.expected, "device_serial": "WRONG"},
+            )
+
+    def test_rejects_wrong_plan(self):
+        with self.assertRaisesRegex(
+            BackupExecutionError, "does not match"
+        ):
+            self.authority.consume(
+                self.confirmation,
+                **{**self.expected, "plan_digest": "OTHER"},
+            )
+
+    def test_rejects_expired_confirmation(self):
+        self.now = 130.1
+
+        with self.assertRaisesRegex(
+            BackupExecutionError, "expired"
+        ):
+            self.authority.consume(
+                self.confirmation,
+                **self.expected,
+            )
+
+    def test_rejects_future_confirmation(self):
+        self.now = 90.0
+
+        with self.assertRaisesRegex(
+            BackupExecutionError, "expired"
+        ):
+            self.authority.consume(
+                self.confirmation,
+                **self.expected,
+            )
+
+    def test_rejects_fabricated_dictionary(self):
+        with self.assertRaisesRegex(
+            BackupExecutionError, "untrusted confirmation type"
+        ):
+            self.authority.consume(
+                {
+                    **self.expected,
+                    "confirmed_at_monotonic": 95.0,
+                },
+                **self.expected,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
