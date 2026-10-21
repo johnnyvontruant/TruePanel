@@ -565,6 +565,25 @@
       "revisit_conditions": ["JT supplies a governed real long-window recording", "baseline policy requires chassis-specific calibration", "continuous ingestion or fleet-scale retention is proposed", "statistical scoring or deployment is proposed"],
       "strongest_follow_up": "Bind the governed intake receipt into detector-result creation, then predeclare minimum sensitivity specificity lead-time and uncertainty gates before labels are made available.",
       "freshness": {"reviewed_at": "2026-10-20", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0036", "title": "AEGIS intake-bound detector replay", "state": "COMPLETED",
+      "hypothesis": "Reconstructing and byte-binding the governed long-window intake receipt before detector replay can prevent direct-path bypass, substitution, and post-intake drift without granting validation or operational authority.",
+      "value": "Closes the intake-to-detector lineage gap before statistical calibration and preserves a replaceable deterministic evidence boundary.",
+      "prior_art": ["in-toto Statement subjects", "in-toto Link materials", "SLSA resolvedDependencies", "OpenLineage dataset version facets"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-intake-bound-detector", "pr": null, "commits": []},
+      "protocol": ["export one canonical governed long-window intake receipt", "snapshot the protected receipt", "independently reconstruct intake from the exact recording", "require semantic and byte-for-byte receipt equality", "replay ORACLE and AEGIS without labels", "bind receipt recording detector baseline and result digests", "deny validation acceptance installation deployment and hardware authority"],
+      "fixtures": ["aegis-intake-bound-detector-result", "tests/test_aegis_temperature_intake_bound_detector_result.py"],
+      "success_criteria": ["one exact receipt-bound fan-degradation replay reaches calibration binding only", "missing tampered unsafe symlinked foreign stale label-bearing occupied and legacy-bypass paths hold", "shared cooling remains detected 27 samples before the isolated threshold", "accepted bypasses and labels remain zero", "accepted matrix remains 8/8", "production and hardware authority remain false"],
+      "abort_criteria": ["a detector path is treated as proof of intake", "semantic JSON equality accepts non-canonical receipt bytes", "a legacy v1 result is accepted as an intake receipt", "labels reach replay", "field performance is inferred from fixtures", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-intake-bound-detector-result-v1.json", "sha256": "5ca7b28815834c3a8221fa7d3897a0e26560298f4bc74d2353fc8095062a888c"}],
+      "outcome": {"conclusion": "Ten deterministic paths produce one exact intake-bound result ready for calibration binding and nine HOLD results. Shared cooling is detected at sample 19, 27 samples before the isolated threshold, with zero bypasses, labels, writes, or unsafe authority."},
+      "invalidated_assumptions": ["using the same recording path proves governed intake", "semantic JSON equality proves canonical receipt identity", "the legacy detector-result schema can safely stand in for an intake receipt", "a digest can replace independent receipt reconstruction"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_intake_bound_detector_result.py tests/test_aegis_temperature_long_window_intake.py tests/test_aegis_temperature_detector_result_binding.py", "python -c \"from truepanel.holodeck.aegis_temperature_intake_bound_detector_result import run_temperature_intake_bound_detector_result_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a governed real long-window recording", "the statistical calibration contract is proposed", "fleet-scale lineage export is proposed", "installation or deployment is proposed"],
+      "strongest_follow_up": "Predeclare minimum sensitivity specificity lead-time uncertainty and cohort-size gates before authenticated outcome labels are available.",
+      "freshness": {"reviewed_at": "2026-10-21", "review_after": "2027-04-30"}
     }
   ]
 }

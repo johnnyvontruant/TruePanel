@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.20.1 · refreshed 2026-10-20 · 29 experiment(s)
+Registry version 2026.10.20.1 · refreshed 2026-10-20 · 30 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -235,3 +235,11 @@ Ten deterministic paths produce one accepted 52-frame label-blind window with a 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Bind the governed intake receipt into detector-result creation, then predeclare minimum sensitivity specificity lead-time and uncertainty gates before labels are made available.
 - Revisit when: JT supplies a governed real long-window recording; baseline policy requires chassis-specific calibration; continuous ingestion or fleet-scale retention is proposed; statistical scoring or deployment is proposed
+
+## TP-EXP-0036 · AEGIS intake-bound detector replay
+
+Ten deterministic paths produce one exact intake-bound result ready for calibration binding and nine HOLD results. Shared cooling is detected at sample 19, 27 samples before the isolated threshold, with zero bypasses, labels, writes, or unsafe authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Predeclare minimum sensitivity specificity lead-time uncertainty and cohort-size gates before authenticated outcome labels are available.
+- Revisit when: JT supplies a governed real long-window recording; the statistical calibration contract is proposed; fleet-scale lineage export is proposed; installation or deployment is proposed

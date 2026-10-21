@@ -17,7 +17,7 @@ from truepanel.oracle import OracleEngine
 
 from .correlation import correlate_incident
 from .policy import DEFAULT_CORRELATION_POLICY
-from .temperature_recording_intake import _read_protected_recording
+from .temperature_long_window_intake import _read_once
 
 SCHEMA: Final = "truepanel.aegis-temperature-detector-result/v1"
 DETECTOR_ID: Final = "aegis-declarative-correlation-v1"
@@ -78,7 +78,10 @@ def build_temperature_detector_result(
     """Replay without labels and return a deterministic, content-addressed result."""
 
     _utc(generated_at_utc)
-    payload, errors = _read_protected_recording(recording_path)
+    # Detector replay uses the same bounded snapshot primitive as the governed
+    # long-window intake.  Stronger receipt binding is provided by the v2
+    # envelope; this legacy result remains available for historical evidence.
+    payload, errors = _read_once(recording_path)
     if errors:
         raise ValueError("DetectorResultRecordingUnavailable")
     frames = _parse_frames(payload)
