@@ -44,6 +44,15 @@ class RuntimeBridgeTests(unittest.TestCase):
             rt.arm_loadmaster_copy_button(object())
         rt.shutdown()
 
+    def test_direct_arm_blocked_without_bridge(self):
+        service = Mock()
+        rt = self.make_runtime(None, service)
+        rt.start()
+        with self.assertRaisesRegex(RuntimeError, 'direct arm disabled'):
+            rt.arm_loadmaster_copy_button(object())
+        service.arm.assert_not_called()
+        rt.shutdown()
+
     def test_prestart_and_postshutdown_blocked(self):
         rt = self.make_runtime(Mock(), Mock())
         with self.assertRaisesRegex(RuntimeError, 'not running'):

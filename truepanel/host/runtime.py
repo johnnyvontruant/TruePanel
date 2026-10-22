@@ -239,13 +239,9 @@ class HostAgentRuntime:
         self,
         preflight: Any,
     ) -> None:
-        if self._loadmaster_session_bridge is not None:
-            raise RuntimeError("direct arm disabled: use Loadmaster session")
-        if self._loadmaster_copy_button_service is None:
-            raise RuntimeError(
-                "Loadmaster physical confirmation is disabled"
-            )
-        self._loadmaster_copy_button_service.arm(preflight)
+        # Never expose a parallel approval channel, even when the bridge
+        # has not been configured. Session preparation owns all arming.
+        raise RuntimeError("direct arm disabled: use Loadmaster session")
 
     def disarm_loadmaster_copy_button(
         self,

@@ -92,6 +92,21 @@ class BridgeTests(unittest.TestCase):
         with self.assertRaises(BackupExecutionError):
             self.bridge.prepare_and_arm(self.spec)
 
+    def test_changed_callback_blocks_arm(self):
+        self.service.on_confirmation = lambda _: None
+        with self.assertRaisesRegex(BackupExecutionError, 'ownership lost'):
+            self.bridge.prepare_and_arm(self.spec)
+        self.assertFalse(self.service.snapshot()['armed'])
+
+    def test_changed_callback_blocks_consumption_and_disarms(self):
+        self.bridge.prepare_and_arm(self.spec)
+        self.clock = 102.0
+        self.service.on_confirmation(self.confirmation())
+        self.service.on_confirmation = lambda _: None
+        with self.assertRaisesRegex(BackupExecutionError, 'ownership lost'):
+            self.bridge.consume_read_only()
+        self.assertFalse(self.service.snapshot()['armed'])
+
     def test_physical_copy_stays_disabled(self):
         with self.assertRaisesRegex(BackupExecutionError, 'PHYSICAL_EXECUTION_DISABLED'):
             self.bridge.execute_physical()

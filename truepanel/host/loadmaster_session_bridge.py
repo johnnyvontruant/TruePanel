@@ -32,10 +32,20 @@ class LoadmasterHostSessionBridge:
         self._state = 'NEW'
         service.on_confirmation = self._on_confirmation
 
+    def _assert_callback_owned(self) -> None:
+        # Callback is a public field on the legacy service. Fail closed if
+        # anyone replaces it after construction, before arming or consuming.
+        callback = self._service.on_confirmation
+        if (getattr(callback, '__self__', None) is not self or
+                getattr(callback, '__func__', None) is not
+                LoadmasterHostSessionBridge._on_confirmation):
+            raise BackupExecutionError('button callback ownership lost')
+
     def prepare_and_arm(self, spec: PhysicalSessionSpec) -> dict[str, Any]:
         with self._lock:
             if self._state != 'NEW':
                 raise BackupExecutionError('bridge cannot be rearmed')
+            self._assert_callback_owned()
             preflight = self._session.prepare(spec)
             try:
                 self._service.arm(preflight)
@@ -60,6 +70,11 @@ class LoadmasterHostSessionBridge:
         with self._lock:
             if self._state != 'CONFIRMED':
                 raise BackupExecutionError('physical confirmation not received')
+            try:
+                self._assert_callback_owned()
+            except BackupExecutionError:
+                self.disarm()
+                raise
             self._state = 'CLOSED'
             try:
                 evidence = self._session.consume_after_physical_press()
