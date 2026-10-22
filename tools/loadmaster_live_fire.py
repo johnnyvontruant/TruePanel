@@ -94,10 +94,13 @@ def main() -> int:
             raise BackupExecutionError('armed plan changed')
         print('ARMED: Press the QNAP physical Copy button ONCE to authorize '
               'this exact single-file backup.', flush=True)
-        deadline = time.monotonic() + 120.0
+        # Confirmation gate and durable host session both expire after 30s.
+        # Never advertise a longer physical authorization window.
+        from truepanel.cargo.copy_button import DEFAULT_CONFIRMATION_WINDOW_SECONDS
+        deadline = time.monotonic() + DEFAULT_CONFIRMATION_WINDOW_SECONDS - 2.0
         while not bridge.confirmed:
             if time.monotonic() >= deadline:
-                raise BackupExecutionError('physical button confirmation timed out')
+                raise BackupExecutionError('physical confirmation expired (30-second authorization window); no copy started')
             snapshot = service.snapshot()
             if snapshot.get('last_error'):
                 raise BackupExecutionError('GPIO polling error')
