@@ -72,6 +72,19 @@ def transfer_one_file(*, source_root: Path, usb_root: Path,
                 or os.path.ismount(root)
                 or root.stat().st_dev != sandbox.stat().st_dev):
             raise BackupExecutionError('transfer root outside sandbox')
+    return _copy_validated_roots(source_root=source_root, usb_root=usb_root,
+                                 relative_path=relative_path, expected_size=expected_size,
+                                 fault=fault)
+
+
+def _copy_validated_roots(*, source_root: Path, usb_root: Path,
+                          relative_path: str, expected_size: int,
+                          fault: str | None = None) -> dict:
+    """Descriptor-relative transfer core. PRIVATE: caller must attest roots.
+
+    No external entry point grants this function USB authority. The sandbox
+    wrapper remains constrained to disposable, non-mounted roots.
+    """
     folder, filename = _safe_parts(relative_path)
     dflags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
     nas = os.open(source_root, dflags)
