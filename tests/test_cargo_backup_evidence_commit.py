@@ -42,6 +42,31 @@ class EvidenceCommitTests(unittest.TestCase):
         self.run_commit()
         self.assertEqual(len(json.loads(self.manifest.read_text())['items']), 2)
 
+    def test_live_legacy_manifest_without_created_at_preserved(self):
+        # Shape of the existing TruePanel physical producer manifest.
+        payload = {'kind': 'truepanel.cargo_backup_manifest', 'schema_version': 1,
+                   'source': 'truepanel-loadmaster-physical',
+                   'items': [{'path': '/mnt/HDDs/Movies/Movies 1-D/Collateral (2004)/Collateral (2004).mkv',
+                              'size_bytes': 18897361329,
+                              'backed_up_at': '2026-10-04T04:43:26.216109+00:00'}]}
+        self.manifest.write_text(json.dumps(payload))
+        self.assertEqual(self.run_commit()['state'], 'EVIDENCE_RECORDED')
+        merged = json.loads(self.manifest.read_text())
+        self.assertEqual(merged['items'][0], payload['items'][0])
+        self.assertEqual(merged['items'][1]['sha256'], self.digest)
+        self.assertEqual(merged['source'], 'truepanel-loadmaster-physical')
+        self.assertIn('created_at', merged)
+
+    def test_invalid_legacy_manifest_not_silently_replaced(self):
+        payload = {'kind': 'truepanel.cargo_backup_manifest', 'schema_version': 1,
+                   'source': 'truepanel-loadmaster-physical',
+                   'items': [{'path': '/old/movie.mkv', 'size_bytes': -1,
+                              'backed_up_at': '2026-10-04T04:43:26+00:00'}]}
+        raw = json.dumps(payload)
+        self.manifest.write_text(raw)
+        with self.assertRaises(BackupExecutionError): self.run_commit()
+        self.assertEqual(self.manifest.read_text(), raw)
+
     def test_missing_copy_does_not_report(self):
         self.dest.unlink()
         with self.assertRaises(OSError):

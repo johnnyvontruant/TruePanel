@@ -61,7 +61,10 @@ def _read_manifest(path: Path) -> dict[str, Any]:
             or obj.get('kind') != KIND or not isinstance(obj.get('items'), list)):
         raise BackupExecutionError('manifest schema mismatch')
     try:
-        datetime.fromisoformat(obj['created_at'].replace('Z', '+00:00'))
+        # Original TruePanel manifests omit created_at. Preserve that
+        # valid legacy schema and stamp created_at on successful merge.
+        if 'created_at' in obj:
+            datetime.fromisoformat(obj['created_at'].replace('Z', '+00:00'))
         assert isinstance(obj['source'], str) and obj['source']
         seen = set()
         for item in obj['items']:
