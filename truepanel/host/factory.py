@@ -155,6 +155,7 @@ def build_host_agent_runtime(
     ownership_guard: Any | None = None,
     fan_server_factory: Callable[[], Any | None] | None = None,
     loadmaster_copy_button_service: Any | None = None,
+    loadmaster_session_bridge: Any | None = None,
 ) -> HostAgentRuntime:
     """Assemble the current privileged TruePanel Host Agent runtime."""
 
@@ -241,6 +242,7 @@ def build_host_agent_runtime(
         loadmaster_copy_button_service=(
             loadmaster_copy_button_service
         ),
+        loadmaster_session_bridge=loadmaster_session_bridge,
     )
 
 
@@ -258,6 +260,17 @@ def build_host_agent_runtime_from_bootstrap(
         )
     )
 
+    # The bridge owns the existing service's callback. It is evidence-only;
+    # no transfer actuator is instantiated by the host factory.
+    loadmaster_session_bridge = None
+    if loadmaster_copy_button_service is not None:
+        from truepanel.cargo.physical_session import ReadOnlyHostSession
+        from .loadmaster_session_bridge import LoadmasterHostSessionBridge
+        loadmaster_session_bridge = LoadmasterHostSessionBridge(
+            service=loadmaster_copy_button_service,
+            session=ReadOnlyHostSession(),
+        )
+
     return build_host_agent_runtime(
         fan_runtime=bootstrap.fan_runtime,
         safety_services=bootstrap.safety_services(),
@@ -268,6 +281,7 @@ def build_host_agent_runtime_from_bootstrap(
         loadmaster_copy_button_service=(
             loadmaster_copy_button_service
         ),
+        loadmaster_session_bridge=loadmaster_session_bridge,
     )
 
 

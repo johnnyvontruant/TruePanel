@@ -29,6 +29,7 @@ class HostAgentRuntime:
         fan_reconciliation: Any | None = None,
         thermal_lifecycle: Any | None = None,
         loadmaster_copy_button_service: Any | None = None,
+        loadmaster_session_bridge: Any | None = None,
     ):
         self._fan_runtime = fan_runtime
         self._safety = safety
@@ -40,6 +41,7 @@ class HostAgentRuntime:
         self._loadmaster_copy_button_service = (
             loadmaster_copy_button_service
         )
+        self._loadmaster_session_bridge = loadmaster_session_bridge
         self._fan_server_factory = fan_server_factory
 
         self._fan_server = None
@@ -212,10 +214,33 @@ class HostAgentRuntime:
     def loadmaster_copy_button_service(self) -> Any | None:
         return self._loadmaster_copy_button_service
 
+    def prepare_loadmaster_session(self, spec: Any) -> dict[str, Any]:
+        """Host-owned approval only; never performs a physical transfer."""
+        self._require_hardware_ownership()
+        if not self._started or self._shutdown:
+            raise RuntimeError("Host Agent is not running")
+        if self._loadmaster_session_bridge is None:
+            raise RuntimeError("Loadmaster session bridge is disabled")
+        return self._loadmaster_session_bridge.prepare_and_arm(spec)
+
+    def consume_loadmaster_session_read_only(self) -> dict[str, Any]:
+        self._require_hardware_ownership()
+        if not self._started or self._shutdown:
+            raise RuntimeError("Host Agent is not running")
+        if self._loadmaster_session_bridge is None:
+            raise RuntimeError("Loadmaster session bridge is disabled")
+        return self._loadmaster_session_bridge.consume_read_only()
+
+    def disarm_loadmaster_session(self) -> None:
+        if self._loadmaster_session_bridge is not None:
+            self._loadmaster_session_bridge.disarm()
+
     def arm_loadmaster_copy_button(
         self,
         preflight: Any,
     ) -> None:
+        if self._loadmaster_session_bridge is not None:
+            raise RuntimeError("direct arm disabled: use Loadmaster session")
         if self._loadmaster_copy_button_service is None:
             raise RuntimeError(
                 "Loadmaster physical confirmation is disabled"
@@ -312,6 +337,12 @@ class HostAgentRuntime:
                 )
             finally:
                 self._fan_server = None
+
+        if self._loadmaster_session_bridge is not None:
+            try:
+                self._loadmaster_session_bridge.disarm()
+            except Exception:
+                LOGGER.exception("Loadmaster session disarm failed")
 
         if self._loadmaster_copy_button_service is not None:
             try:
