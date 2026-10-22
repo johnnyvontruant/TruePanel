@@ -584,6 +584,25 @@
       "revisit_conditions": ["JT supplies a governed real long-window recording", "the statistical calibration contract is proposed", "fleet-scale lineage export is proposed", "installation or deployment is proposed"],
       "strongest_follow_up": "Predeclare minimum sensitivity specificity lead-time uncertainty and cohort-size gates before authenticated outcome labels are available.",
       "freshness": {"reviewed_at": "2026-10-21", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0037", "title": "AEGIS predeclared statistical calibration contract", "state": "COMPLETED",
+      "hypothesis": "Locking cohort floors, confidence intervals, lead-time populations, abstention rules, and anti-tuning constraints before labels are exposed can prevent metric shopping without granting validation or operational authority.",
+      "value": "Creates a mathematically feasible, content-addressed scoring policy before any authenticated outcomes can influence its thresholds or denominators.",
+      "prior_art": ["scikit-learn classification metrics", "NIST Wilson intervals", "MLCommons benchmark governance", "Evidently evaluation reports"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-statistical-calibration-contract", "pr": null, "commits": []},
+      "protocol": ["build one fixed policy without accepting recordings results or labels", "bind the receipt-bound detector-result schema", "require 40 positive and 400 negative cases", "predeclare Wilson sensitivity false-positive and abstention bounds", "predeclare median and p10 lead-time gates", "require an immutable blinded cohort", "permit one evaluation per detector contract", "deny post-label tuning exclusions promotion validation deployment and hardware authority"],
+      "fixtures": ["aegis-predeclared-statistical-calibration-contract", "tests/test_aegis_temperature_statistical_calibration_contract.py"],
+      "success_criteria": ["one exact policy is predeclared before labels", "relaxed floors bounds lead-time rules post-label tuning outcome injection unknown fields and authority escalation hold", "the 440-case floor can mathematically satisfy every Wilson bound", "labels and scores accepted remain zero", "accepted matrix remains 8/8", "production and hardware authority remain false"],
+      "abort_criteria": ["observed labels or scores influence policy construction", "point estimates substitute for confidence bounds", "abstentions count as negatives", "mean lead time hides tail performance", "a policy change retains the same contract identity", "fixture success is called field validation", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-statistical-calibration-contract-v1.json", "sha256": "e92f9b594ee808b3a8ff5f730ac58ef9f300d4d2b973c07d84004f4836a71896"}],
+      "outcome": {"conclusion": "Ten deterministic paths produce one exact predeclared policy and nine HOLD results. The fixed 440-case floor is mathematically able to satisfy its sensitivity, false-positive, and abstention confidence bounds, while accepting zero labels, scores, writes, or unsafe authority."},
+      "invalidated_assumptions": ["metric names prevent calibration bias", "point estimates are sufficient for rare errors", "mean lead time represents early-warning reliability", "abstentions may be counted as correct negatives", "small fixture success implies field validity"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_statistical_calibration_contract.py tests/test_aegis_temperature_intake_bound_detector_result.py tests/test_aegis_evidence_gate.py", "python -c \"from truepanel.holodeck.aegis_temperature_statistical_calibration_contract import run_temperature_statistical_calibration_contract_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies enough governed field cases to freeze a blinded cohort", "the detector contract changes", "external statistical review recommends a new policy version", "installation or deployment is proposed"],
+      "strongest_follow_up": "Freeze one content-addressed blinded cohort manifest containing every authenticated intake-bound detector result before any outcome labels are revealed.",
+      "freshness": {"reviewed_at": "2026-10-22", "review_after": "2027-04-30"}
     }
   ]
 }

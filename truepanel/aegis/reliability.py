@@ -50,6 +50,9 @@ from .temperature_intake_bound_detector_result import (
 )
 from .temperature_long_window_intake import pending_temperature_long_window_intake
 from .temperature_recording_intake import pending_temperature_recording_intake
+from .temperature_statistical_calibration_contract import (
+    pending_temperature_statistical_calibration_contract,
+)
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -162,6 +165,9 @@ class AegisReliabilityEngine:
             pending_temperature_intake_bound_detector_result(
                 self.temperature_long_window_intake
             )
+        )
+        self.temperature_statistical_calibration_contract = (
+            pending_temperature_statistical_calibration_contract()
         )
         self.temperature_detector_result_binding = (
             pending_temperature_detector_result_binding(
@@ -440,6 +446,7 @@ class AegisReliabilityEngine:
             "coverage_calibration_assessment": self.temperature_calibration_assessment,
             "coverage_long_window_intake": self.temperature_long_window_intake,
             "coverage_intake_bound_detector_result": self.temperature_intake_bound_detector_result,
+            "coverage_statistical_calibration_contract": self.temperature_statistical_calibration_contract,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {

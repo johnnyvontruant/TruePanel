@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.20.1 · refreshed 2026-10-20 · 30 experiment(s)
+Registry version 2026.10.20.1 · refreshed 2026-10-20 · 31 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -243,3 +243,11 @@ Ten deterministic paths produce one exact intake-bound result ready for calibrat
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Predeclare minimum sensitivity specificity lead-time uncertainty and cohort-size gates before authenticated outcome labels are available.
 - Revisit when: JT supplies a governed real long-window recording; the statistical calibration contract is proposed; fleet-scale lineage export is proposed; installation or deployment is proposed
+
+## TP-EXP-0037 · AEGIS predeclared statistical calibration contract
+
+Ten deterministic paths produce one exact predeclared policy and nine HOLD results. The fixed 440-case floor is mathematically able to satisfy its sensitivity, false-positive, and abstention confidence bounds, while accepting zero labels, scores, writes, or unsafe authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Freeze one content-addressed blinded cohort manifest containing every authenticated intake-bound detector result before any outcome labels are revealed.
+- Revisit when: JT supplies enough governed field cases to freeze a blinded cohort; the detector contract changes; external statistical review recommends a new policy version; installation or deployment is proposed

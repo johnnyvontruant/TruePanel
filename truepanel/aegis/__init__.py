@@ -171,6 +171,11 @@ from .temperature_signing_kit import (
     export_temperature_signing_kit,
     verify_temperature_signing_return,
 )
+from .temperature_statistical_calibration_contract import (
+    build_temperature_statistical_calibration_contract,
+    pending_temperature_statistical_calibration_contract,
+    validate_temperature_statistical_calibration_contract,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -207,6 +212,9 @@ __all__ = [
     "prepare_temperature_development_acceptance",
     "export_temperature_signing_kit",
     "verify_temperature_signing_return",
+    "build_temperature_statistical_calibration_contract",
+    "pending_temperature_statistical_calibration_contract",
+    "validate_temperature_statistical_calibration_contract",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",
