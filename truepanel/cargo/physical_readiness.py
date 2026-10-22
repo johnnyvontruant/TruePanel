@@ -30,11 +30,19 @@ def probe_one_episode(*, registry: Path, backlog: Path, cartridge_id: str,
         raise BackupExecutionError('cartridge safety policy mismatch')
     if c.allow_backup:
         raise BackupExecutionError('backup permission must remain disabled during probe')
-    if not c.device_serial:
-        # Hardware by-id was validated, but registered serial is still required
-        # for the existing Copy-button preflight contract.
-        identity_ready = False
-    else:
+    # A populated registry field is not sufficient: bind it to the
+    # persistent USB by-id identity that the mount attestation resolves.
+    # This is corroborating evidence, not independent USB descriptor proof.
+    import re
+    identity_ready = False
+    if c.device_serial:
+        if not re.fullmatch(r'[A-Za-z0-9]{6,64}', c.device_serial):
+            raise BackupExecutionError('invalid registered USB serial')
+        if re.search(
+            r'_' + re.escape(c.device_serial) + r'-[0-9]+:[0-9]+-part[0-9]+$',
+            Path(by_id).name,
+        ) is None:
+            raise BackupExecutionError('registered USB serial does not match device link')
         identity_ready = True
     attestation = attest_cartridge_read_only(
         mount=mount, registered_uuid=c.uuid, registered_by_id=by_id)

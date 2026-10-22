@@ -63,10 +63,23 @@ class PhysicalReadinessTests(unittest.TestCase):
         self.assertFalse((self.usb / 'TV N-Z' / 'Show').exists())
 
     def test_serial_only_removes_serial_blocker(self):
-        self.cartridge.device_serial = 'trusted-device-serial'
-        answer = self.probe()
+        self.cartridge.device_serial = 'TESTSERIAL1'
+        answer = probe_one_episode(registry=self.registry, backlog=self.backlog,
+            cartridge_id='tv-n-z', mount=self.usb,
+            by_id='/dev/disk/by-id/usb-Micron_CT8000X10SSD9_TESTSERIAL1-0:0-part2',
+            source_path=self.source)
         self.assertNotIn('REGISTER_TRUSTED_DEVICE_SERIAL', answer['remaining_gates'])
         self.assertIn('LIVE_WRITABLE_MOUNT_ATTESTATION', answer['remaining_gates'])
+
+    def test_rejects_serial_mismatch_even_when_uuid_matches(self):
+        self.cartridge.device_serial = 'TESTSERIAL1'
+        with self.assertRaisesRegex(BackupExecutionError, 'serial does not match'):
+            self.probe()
+
+    def test_rejects_malformed_serial(self):
+        self.cartridge.device_serial = 'serial-with-hyphens'
+        with self.assertRaisesRegex(BackupExecutionError, 'invalid registered'):
+            self.probe()
 
     def test_rejects_backup_enabled(self):
         self.cartridge.allow_backup = True
