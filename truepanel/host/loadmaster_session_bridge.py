@@ -32,6 +32,12 @@ class LoadmasterHostSessionBridge:
         self._state = 'NEW'
         service.on_confirmation = self._on_confirmation
 
+    @property
+    def confirmed(self) -> bool:
+        """True only after the owned GPIO callback has reached the bridge."""
+        with self._lock:
+            return self._state == 'CONFIRMED'
+
     def _assert_callback_owned(self) -> None:
         # Callback is a public field on the legacy service. Fail closed if
         # anyone replaces it after construction, before arming or consuming.

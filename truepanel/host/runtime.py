@@ -231,6 +231,59 @@ class HostAgentRuntime:
             raise RuntimeError("Loadmaster session bridge is disabled")
         return self._loadmaster_session_bridge.consume_read_only()
 
+    def execute_loadmaster_supervised_backup(self, *,
+                                            plan: dict[str, Any],
+                                            inspection: dict[str, Any],
+                                            registry: Any, mount: Any,
+                                            by_id: str, manifest: Any) -> dict[str, Any]:
+        """Privileged single-file transaction following Host-owned Copy press.
+
+        Requires a live Host runtime and its owned session bridge.
+        No call is made unless the caller explicitly invokes this method.
+        """
+        self._require_hardware_ownership()
+        if not self._started or self._shutdown:
+            raise RuntimeError("Host Agent is not running")
+        if self._loadmaster_session_bridge is None:
+            raise RuntimeError("Loadmaster session bridge is disabled")
+        from truepanel.cargo.physical_backup_actuator import (
+            execute_supervised_single_file,
+        )
+        from truepanel.cargo.supervised_mount import SupervisedWriteWindow
+        from pathlib import Path
+        from truepanel.cargo.cartridges import load_cartridge_registry
+        cart = [c for c in load_cartridge_registry(Path(registry))
+                if c.cartridge_id == plan.get("cartridge", {}).get("id")]
+        if len(cart) != 1:
+            raise RuntimeError("Loadmaster cartridge not uniquely registered")
+        window = SupervisedWriteWindow(mount=Path(mount), uuid=cart[0].uuid,
+                                       by_id=by_id)
+        return execute_supervised_single_file(
+            plan=plan, inspection=inspection,
+            host_bridge=self._loadmaster_session_bridge,
+            writable_session=window, registry=Path(registry),
+            mount=Path(mount), by_id=by_id, manifest=Path(manifest))
+
+    def reconcile_loadmaster_backup_receipt(self, *, registry: Any,
+                                           backlog: Any, mount: Any,
+                                           by_id: str, cartridge_id: str,
+                                           source: Any, manifest: Any) -> dict[str, Any]:
+        """Host-owned crash recovery with cartridge RO; no GPIO replay.
+
+        This only reconciles checksummed evidence for a copy already on USB.
+        It does not perform or authorize a transfer.
+        """
+        self._require_hardware_ownership()
+        if not self._started or self._shutdown:
+            raise RuntimeError("Host Agent is not running")
+        from pathlib import Path
+        from truepanel.cargo.physical_backup_actuator import recover_read_only_evidence
+        return recover_read_only_evidence(
+            registry=Path(registry), backlog=Path(backlog),
+            mount=Path(mount), by_id=by_id,
+            cartridge_id=cartridge_id, source=Path(source),
+            manifest=Path(manifest))
+
     def disarm_loadmaster_session(self) -> None:
         if self._loadmaster_session_bridge is not None:
             self._loadmaster_session_bridge.disarm()

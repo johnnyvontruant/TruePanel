@@ -98,7 +98,7 @@ def validate_physical_handoff(*, plan: dict[str, Any],
         raise BackupExecutionError('invalid host approval state')
     if approval.get('physical_execution_enabled') is not False:
         raise BackupExecutionError('host approval must remain non-actuating')
-    if readiness.get('state') != 'READ_ONLY_PREPARED':
+    if readiness.get('state') not in ('READ_ONLY_PREPARED', 'READ_ONLY_TRANSACTION_ACCEPTED'):
         raise BackupExecutionError('cartridge readiness missing')
     if readiness.get('mount_read_only') is not True:
         raise BackupExecutionError('cartridge was not probed read-only')
