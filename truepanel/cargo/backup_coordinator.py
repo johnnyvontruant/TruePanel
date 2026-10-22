@@ -80,6 +80,48 @@ def execute_sandbox_plan(*, plan: dict[str, Any], sandbox_root: Path,
             'shared_manifest_updated': False, 'physical_transfer': False}
 
 
+def validate_physical_handoff(*, plan: dict[str, Any],
+                              approval: dict[str, Any],
+                              readiness: dict[str, Any]) -> dict[str, Any]:
+    """Bind spent GPIO approval to one immutable read-only cartridge plan.
+
+    This is an in-memory, non-actuating contract: the eventual host executor
+    must still attest the writable mount and possess the genuine GPIO callback.
+    """
+    action = _action(plan)
+    digest = canonical_plan_digest(plan)
+    if not isinstance(approval, dict) or not isinstance(readiness, dict):
+        raise BackupExecutionError('missing approval or readiness evidence')
+    if approval.get('state') != 'HOST_APPROVAL_EVIDENCE_ONLY':
+        raise BackupExecutionError('host approval not consumed')
+    if approval.get('executed') is not False or approval.get('backup_authorized') is not False:
+        raise BackupExecutionError('invalid host approval state')
+    if approval.get('physical_execution_enabled') is not False:
+        raise BackupExecutionError('host approval must remain non-actuating')
+    if readiness.get('state') != 'READ_ONLY_PREPARED':
+        raise BackupExecutionError('cartridge readiness missing')
+    if readiness.get('mount_read_only') is not True:
+        raise BackupExecutionError('cartridge was not probed read-only')
+    if readiness.get('device_serial_registered') is not True:
+        raise BackupExecutionError('device serial verification missing')
+    expected_id = plan.get('cartridge', {}).get('id')
+    if not expected_id or readiness.get('cartridge_id') != expected_id:
+        raise BackupExecutionError('cartridge mismatch')
+    if readiness.get('plan_digest') != digest:
+        raise BackupExecutionError('readiness digest mismatch')
+    if readiness.get('relative_path') != action['relative_path'] or readiness.get('size_bytes') != action['size_bytes']:
+        raise BackupExecutionError('source action mismatch')
+    if approval.get('plan_digest') != digest:
+        raise BackupExecutionError('host approval digest mismatch')
+    # The authorization object varies by version; require its public identity.
+    if approval.get('cartridge_id') != expected_id:
+        raise BackupExecutionError('approval cartridge mismatch')
+    return {'state': 'PHYSICAL_HANDOFF_CONTRACT_VALIDATED',
+            'plan_digest': digest, 'cartridge_id': expected_id,
+            'relative_path': action['relative_path'],
+            'executed': False, 'physical_execution_enabled': False}
+
+
 def execute_physical_plan(*args: Any, **kwargs: Any) -> None:
     """Mandatory hard stop: trusted host transaction is not wired yet."""
     raise BackupExecutionError(
