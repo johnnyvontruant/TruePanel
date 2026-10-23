@@ -221,3 +221,126 @@ def test_existing_manifest_evidence_is_preserved(tmp_path):
 def test_settings_reject_unknown_verify_mode():
     with pytest.raises(ValueError):
         ExecutorSettings(verify="trust-me")
+
+
+# ---------------------------------------------------------------- resume
+
+
+def _copy(bay, source, relative, stop, **kwargs):
+    from pathlib import PurePosixPath
+
+    info = source.stat()
+    return executor_module.copy_verified(
+        source=source,
+        destination_root=bay.usb_root,
+        relative=PurePosixPath(relative),
+        expected_size=info.st_size,
+        expected_mtime_ns=info.st_mtime_ns,
+        allow_replace=False,
+        settings=ExecutorSettings(chunk_bytes=1024 * 1024),
+        stop=stop,
+        **kwargs,
+    )
+
+
+def test_interrupted_copy_resumes_from_verified_partial(tmp_path):
+    import os
+    import threading
+
+    bay = make_bay(tmp_path)
+    data = os.urandom(6 * 1024 * 1024)
+    source = bay.nas("Dune (2021)/Dune.mkv", data)
+    stop = threading.Event()
+    seen = {"bytes": 0}
+
+    def unplug_after_two_mib(count):
+        seen["bytes"] += count
+        if seen["bytes"] >= 2 * 1024 * 1024:
+            stop.set()
+
+    with pytest.raises(executor_module._Cancelled):
+        _copy(bay, source, "Dune (2021)/Dune.mkv", stop, on_bytes=unplug_after_two_mib)
+
+    destination = bay.usb_root / "Dune (2021)/Dune.mkv"
+    partials = list(destination.parent.glob("*.loadmaster-partial"))
+    assert not destination.exists()
+    assert len(partials) == 1
+    kept = partials[0].stat().st_size
+    assert kept >= 2 * 1024 * 1024
+
+    result = _copy(bay, source, "Dune (2021)/Dune.mkv", threading.Event())
+
+    assert result.resumed_bytes == kept
+    assert destination.read_bytes() == data
+    assert not list(destination.parent.glob("*.loadmaster-partial"))
+
+
+def test_corrupt_partial_is_discarded_and_copy_restarts(tmp_path):
+    import os
+    import threading
+    from pathlib import PurePosixPath
+
+    bay = make_bay(tmp_path)
+    data = os.urandom(3 * 1024 * 1024)
+    source = bay.nas("Dune (2021)/Dune.mkv", data)
+    parent = bay.usb_root / "Dune (2021)"
+    parent.mkdir(parents=True)
+    info = source.stat()
+    partial = executor_module.partial_path_for(
+        parent,
+        PurePosixPath("Dune (2021)/Dune.mkv"),
+        expected_size=info.st_size,
+        expected_mtime_ns=info.st_mtime_ns,
+    )
+    partial.write_bytes(b"\0" * 4096)  # same name, wrong bytes
+
+    result = _copy(bay, source, "Dune (2021)/Dune.mkv", threading.Event())
+
+    assert result.resumed_bytes == 0
+    assert (parent / "Dune.mkv").read_bytes() == data
+
+
+def test_partial_from_older_source_version_is_never_reused(tmp_path):
+    import os
+    import threading
+
+    bay = make_bay(tmp_path)
+    source = bay.nas("Dune (2021)/Dune.mkv", os.urandom(1024 * 1024))
+    parent = bay.usb_root / "Dune (2021)"
+    parent.mkdir(parents=True)
+    stale = parent / ".Dune.mkv.0123456789ab.loadmaster-partial"
+    stale.write_bytes(source.read_bytes()[:4096])
+
+    result = _copy(bay, source, "Dune (2021)/Dune.mkv", threading.Event())
+
+    assert result.resumed_bytes == 0
+    assert not stale.exists()
+
+
+def test_last_instant_collision_is_never_clobbered(tmp_path, monkeypatch):
+    import os
+    import threading
+
+    bay = make_bay(tmp_path)
+    source = bay.nas("Dune (2021)/Dune.mkv", os.urandom(1024 * 1024))
+    destination = bay.usb_root / "Dune (2021)/Dune.mkv"
+
+    def intruder_during_verify(fd):
+        if not destination.exists():
+            destination.write_bytes(b"another writer")
+
+    monkeypatch.setattr(executor_module, "_drop_cache", intruder_during_verify)
+
+    with pytest.raises(executor_module._ItemError, match="DESTINATION_APPEARED"):
+        _copy(bay, source, "Dune (2021)/Dune.mkv", threading.Event())
+
+    assert destination.read_bytes() == b"another writer"
+
+
+def test_receipt_records_atomic_publish(tmp_path):
+    bay, baseline, backlog, state = stage(tmp_path)
+
+    receipt = execute_run(context(bay, baseline, backlog, state))
+
+    assert {r["publish"] for r in receipt["results"]} == {"renameat2_noreplace"}
+    assert {r["resumed_bytes"] for r in receipt["results"]} == {0}

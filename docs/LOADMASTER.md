@@ -107,12 +107,22 @@ The executor (`truepanel/cargo/executor.py`):
 1. Re-plans from live disk state and **refuses to run** unless the fresh plan is
    `READY` with the digest that was confirmed.
 2. Checks free space on each destination.
-3. Copies each file into a hidden `.<name>.loadmaster-partial` sibling, hashing
-   as it streams, `fsync`s, stamps the source mtime, drops the page cache and
-   **reads the copy back** to compare SHA-256, then atomically renames it into
-   place. A new file never overwrites anything that appeared meanwhile.
+3. Copies each file into a hidden partial file next to its destination
+   (named after that exact source version: path, size, mtime), hashing as it
+   streams, `fsync`s, stamps the source mtime, drops the page cache and
+   **reads the copy back** to compare SHA-256. New files are published with
+   Linux `renameat2(RENAME_NOREPLACE)`, so a file that appears at the last
+   instant is never overwritten; filesystems that reject the flag fall back to
+   a check-then-rename and the receipt records which method was used.
+   Planned updates replace atomically.
 4. Stops the whole run on device-level errors (no space, I/O error, read-only
    filesystem, device gone); per-file problems fail just that file.
+   **Interrupted copies resume.** After an unplug, power loss, or shutdown the
+   partial file stays put. The next confirmed run (a new Copy press) reads the
+   partial back, proves it is a byte-exact prefix of the unchanged source, and
+   continues from there; the finished file is still fully verified. A partial
+   that does not match, or belongs to an older version of the source, is
+   discarded and the copy starts over.
 5. Writes evidence: verified backups are merged into the Cargo backup manifest
    (which clears them from the backlog on the observer's next pass), the
    inventory baseline is advanced, and a receipt is written.
@@ -205,8 +215,9 @@ requires unplugging and replugging before another run.
 | Combined backup + ingest run plan with digest | Done (this branch) |
 | Verified executor with receipts, evidence, baseline advance | Done (this branch) |
 | Host controller: plug in → arm → press → run → unmount | Done (this branch) |
+| Resumable partial copies and `RENAME_NOREPLACE` publish (ideas from the rsync resume lab, checkpoint 3) | Done (this branch) |
 | TV cartridges in example registry | Done (placeholders) |
-| On-NAS validation of mount/umount on real cartridges | **Next** |
+| On-NAS validation of mount/umount, `RENAME_NOREPLACE` and directory fsync on exFAT, using the spare drive | **Next** |
 | Operator feedback on LCD / LEDs (READY, copying %, safe to remove) | **Next** |
 | Mission Control card for live Loadmaster status and receipts | Planned |
 | Retire backlog rows whose source vanished | Planned |

@@ -28,6 +28,7 @@ stop the run immediately.
 
 from __future__ import annotations
 
+import ctypes
 import errno
 import fcntl
 import hashlib
@@ -234,6 +235,174 @@ def _locked(path: Path) -> Iterator[None]:
 # ------------------------------------------------------------------ file copy
 
 
+@dataclass(frozen=True)
+class CopyResult:
+    sha256: str
+    resumed_bytes: int
+    publish: str
+
+
+RENAME_NOREPLACE = 1
+_AT_FDCWD = -100
+_renameat2: Any = None
+
+
+def _renameat2_function() -> Any:
+    global _renameat2
+    if _renameat2 is None:
+        try:
+            libc = ctypes.CDLL(None, use_errno=True)
+            function = libc.renameat2
+            function.argtypes = (
+                ctypes.c_int,
+                ctypes.c_char_p,
+                ctypes.c_int,
+                ctypes.c_char_p,
+                ctypes.c_uint,
+            )
+            function.restype = ctypes.c_int
+            _renameat2 = function
+        except (AttributeError, OSError):
+            _renameat2 = False
+    return _renameat2
+
+
+def _publish_new(partial: Path, destination: Path) -> str:
+    """Atomically publish without ever replacing an existing destination.
+
+    Uses Linux renameat2(RENAME_NOREPLACE) so a file that appears at the last
+    instant is never clobbered. Filesystems that reject the flag fall back to
+    an existence check immediately before the rename.
+    """
+
+    function = _renameat2_function()
+    if function:
+        rc = function(
+            _AT_FDCWD,
+            os.fsencode(partial),
+            _AT_FDCWD,
+            os.fsencode(destination),
+            RENAME_NOREPLACE,
+        )
+        if rc == 0:
+            return "renameat2_noreplace"
+        error = ctypes.get_errno()
+        if error == errno.EEXIST:
+            raise _ItemError("DESTINATION_APPEARED", str(destination))
+        if error not in {errno.EINVAL, errno.ENOSYS, errno.EOPNOTSUPP}:
+            raise OSError(error, os.strerror(error), str(destination))
+
+    try:
+        destination.lstat()
+    except FileNotFoundError:
+        os.rename(partial, destination)
+        return "checked_rename"
+    raise _ItemError("DESTINATION_APPEARED", str(destination))
+
+
+def partial_path_for(
+    parent: Path,
+    relative: PurePosixPath,
+    *,
+    expected_size: int,
+    expected_mtime_ns: int,
+) -> Path:
+    """Name the in-flight copy after the exact source version it belongs to.
+
+    A partial is only ever resumed by a copy of the same path, size and mtime,
+    so an edited or replaced source can never be stitched onto stale bytes.
+    """
+
+    key = hashlib.sha256(
+        f"{relative.as_posix()}\n{expected_size}\n{expected_mtime_ns}".encode()
+    ).hexdigest()
+    name = f".{relative.name}.{key[:12]}{LOADMASTER_PARTIAL_SUFFIX}"
+    if len(os.fsencode(name)) > 240:
+        name = f".{key[:24]}{LOADMASTER_PARTIAL_SUFFIX}"
+    return parent / name
+
+
+def _discard_stale_partials(parent: Path, relative: PurePosixPath, keep: Path) -> None:
+    prefix = f".{relative.name}."
+    with suppress(OSError):
+        for entry in os.scandir(parent):
+            if (
+                entry.name.startswith(prefix)
+                and entry.name.endswith(LOADMASTER_PARTIAL_SUFFIX)
+                and entry.name != keep.name
+                and entry.is_file(follow_symlinks=False)
+            ):
+                with suppress(OSError):
+                    os.unlink(entry.path)
+
+
+def _resume_offset(
+    *,
+    partial: Path,
+    source_fd: int,
+    expected_size: int,
+    chunk_bytes: int,
+    stop: threading.Event,
+) -> tuple[int, int | None, Any]:
+    """Return (offset, open partial fd, digest) once the partial is a proven prefix.
+
+    The returned digest already covers the source's first ``offset`` bytes.
+
+    The partial's bytes are read back from the device and compared with the
+    same span of the source. Any mismatch discards the partial and restarts.
+    """
+
+    fresh = hashlib.sha256()
+
+    try:
+        info = partial.lstat()
+    except FileNotFoundError:
+        return 0, None, fresh
+
+    if not stat.S_ISREG(info.st_mode):
+        raise _ItemError("PARTIAL_NOT_REGULAR", str(partial))
+
+    size = info.st_size
+    if size == 0 or size > expected_size:
+        partial.unlink()
+        return 0, None, fresh
+
+    fd = os.open(partial, os.O_RDWR | os.O_NOFOLLOW)
+    try:
+        _drop_cache(fd)
+        partial_hash = hashlib.sha256()
+        source_hash = hashlib.sha256()
+        remaining = size
+        while remaining:
+            if stop.is_set():
+                raise _Cancelled()
+            count = min(chunk_bytes, remaining)
+            ours = os.read(fd, count)
+            theirs = os.read(source_fd, count)
+            if len(ours) != count or len(theirs) != count:
+                raise _ItemError("PARTIAL_SHORT_READ", str(partial))
+            partial_hash.update(ours)
+            source_hash.update(theirs)
+            remaining -= count
+    except _ItemError:
+        os.close(fd)
+        partial.unlink()
+        os.lseek(source_fd, 0, os.SEEK_SET)
+        return 0, None, fresh
+    except BaseException:
+        os.close(fd)
+        raise
+
+    if partial_hash.digest() != source_hash.digest():
+        os.close(fd)
+        partial.unlink()
+        os.lseek(source_fd, 0, os.SEEK_SET)
+        return 0, None, fresh
+
+    os.lseek(fd, size, os.SEEK_SET)
+    return size, fd, source_hash
+
+
 def copy_verified(
     *,
     source: Path,
@@ -248,14 +417,25 @@ def copy_verified(
     file_mode: int | None = None,
     dir_mode: int | None = None,
     on_bytes: Callable[[int], None] | None = None,
-) -> str:
-    """Copy one file into place only after verification. Returns its SHA-256."""
+) -> CopyResult:
+    """Copy one file into place only after verification.
+
+    An interrupted copy (cancel, unplug, I/O error, power loss) keeps its
+    partial file. The next confirmed run proves the partial is a byte-exact
+    prefix of the unchanged source and continues from there; the finished file
+    is still read back in full and SHA-256 compared before publication.
+    """
 
     parent = _ensure_directory_chain(
         destination_root, relative.parent, mode=dir_mode, owner=owner
     )
     destination = parent / relative.name
-    partial = parent / f".{relative.name}{LOADMASTER_PARTIAL_SUFFIX}"
+    partial = partial_path_for(
+        parent,
+        relative,
+        expected_size=expected_size,
+        expected_mtime_ns=expected_mtime_ns,
+    )
 
     try:
         existing = destination.lstat()
@@ -284,21 +464,27 @@ def copy_verified(
         if info.st_size != expected_size or info.st_mtime_ns != expected_mtime_ns:
             raise _ItemError("SOURCE_CHANGED", str(source))
 
-        # A partial with our private suffix can only be a crashed earlier run.
-        with suppress(FileNotFoundError):
-            partial_info = partial.lstat()
-            if not stat.S_ISREG(partial_info.st_mode):
-                raise _ItemError("PARTIAL_NOT_REGULAR", str(partial))
-            partial.unlink()
+        _discard_stale_partials(parent, relative, keep=partial)
 
-        partial_fd = os.open(
-            partial,
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-            0o644,
+        resumed, partial_fd, digest = _resume_offset(
+            partial=partial,
+            source_fd=source_fd,
+            expected_size=expected_size,
+            chunk_bytes=settings.chunk_bytes,
+            stop=stop,
         )
+        if resumed:
+            if on_bytes is not None:
+                on_bytes(resumed)
+        else:
+            partial_fd = os.open(
+                partial,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                0o644,
+            )
+
         try:
-            digest = hashlib.sha256()
-            written = 0
+            written = resumed
             while True:
                 if stop.is_set():
                     raise _Cancelled()
@@ -352,20 +538,20 @@ def copy_verified(
         finally:
             os.close(verify_fd)
 
-        # Re-check right before publishing: a "new" destination must still be empty.
-        if not allow_replace:
-            try:
-                destination.lstat()
-            except FileNotFoundError:
-                pass
-            else:
-                raise _ItemError("DESTINATION_APPEARED", str(destination))
-
-        os.replace(partial, destination)
+        if allow_replace:
+            os.replace(partial, destination)
+            publish = "replace_planned_update"
+        else:
+            publish = _publish_new(partial, destination)
         _fsync_directory(parent)
-        return source_hash
+        return CopyResult(sha256=source_hash, resumed_bytes=resumed, publish=publish)
+
+    except (_Cancelled, OSError):
+        # Interruption or device trouble: keep the partial for a later resume.
+        raise
 
     except BaseException:
+        # Verification or identity failures: the partial is not trustworthy.
         with suppress(OSError):
             partial.unlink()
         raise
@@ -559,7 +745,7 @@ def _execute_into(context: RunContext, receipt: dict[str, Any]) -> None:
 
         try:
             relative = _safe_relative(action.relative_path)
-            sha = copy_verified(
+            copy = copy_verified(
                 source=source_root / Path(*relative.parts),
                 destination_root=destination_root,
                 relative=relative,
@@ -587,8 +773,10 @@ def _execute_into(context: RunContext, receipt: dict[str, Any]) -> None:
                 fatal = result["error"]
         else:
             result["outcome"] = "COPIED"
-            result["sha256"] = sha
-            copied.append((action, sha))
+            result["sha256"] = copy.sha256
+            result["resumed_bytes"] = copy.resumed_bytes
+            result["publish"] = copy.publish
+            copied.append((action, copy.sha256))
 
         progress["done_files"] += 1
         report()
@@ -661,6 +849,7 @@ def _record_evidence(
 
 
 __all__ = [
+    "CopyResult",
     "ExecutorSettings",
     "LOADMASTER_RECEIPT_KIND",
     "LOADMASTER_RECEIPT_SCHEMA_VERSION",
