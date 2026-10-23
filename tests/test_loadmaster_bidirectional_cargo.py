@@ -54,6 +54,25 @@ class TestBidirectionalCargo(unittest.TestCase):
                     expected_size=len(data),
                     expected_sha256=hashlib.sha256(data).hexdigest())
 
+    def test_staged_transport_uses_resumable_local_delta_options(self):
+        from unittest.mock import patch
+        import subprocess
+        from truepanel.cargo import resumable_rsync
+        source = self.put(self.nas, 'Show/resume.mkv', b'x' * 320000)
+        actual_run = subprocess.run
+        seen = []
+        def record_call(argv, **kwargs):
+            seen.append(argv)
+            return actual_run(argv, **kwargs)
+        with patch.object(resumable_rsync.subprocess, 'run', side_effect=record_call):
+            rsync_sandbox_copy(sandbox=self.sandbox,
+                source_root=self.nas, destination_root=self.usb,
+                relative_path='Show/resume.mkv', expected_size=source.stat().st_size,
+                expected_sha256=hashlib.sha256(source.read_bytes()).hexdigest())
+        assert seen and '--no-whole-file' in seen[0]
+        assert '--partial' in seen[0]
+        assert not any(x in seen[0] for x in ('--delete', '--inplace', '--append'))
+
     def test_reject_wrong_digest_and_preserve_target(self):
         self.put(self.nas,'Show/new.mkv',b'real')
         with self.assertRaisesRegex(BackupExecutionError,'disagrees'):

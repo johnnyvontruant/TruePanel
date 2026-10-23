@@ -67,8 +67,9 @@ def rsync_sandbox_copy(*, sandbox: Path, source_root: Path,
         raise BackupExecutionError('staged file symlink rejected')
     # rsync keeps interrupted data in a private partial-dir on the same
     # filesystem. Never pass --inplace, --append or --delete.
-    cmd = ['rsync', '--checksum', '--partial-dir=.loadmaster-partials',
-           '--no-owner', '--no-group', '--', str(source), str(staged)]
+    cmd = ['rsync', '--checksum', '--no-whole-file', '--partial',
+           '--partial-dir=.loadmaster-partials', '--no-owner', '--no-group',
+           '--', str(source), str(staged)]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True,
                               timeout=timeout_seconds, check=False)
