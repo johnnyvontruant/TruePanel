@@ -15,6 +15,7 @@ import stat
 import subprocess
 import tempfile
 import time
+import urllib.request
 from pathlib import Path
 
 from truepanel.cargo.flightdeck import read_flightdeck
@@ -131,13 +132,15 @@ def _restart_healthy() -> None:
             ["systemctl", "is-active", SERVICE],
             capture_output=True, text=True, timeout=8)
         if state.returncode == 0 and state.stdout.strip() == "active":
-            # Give the process time to initialize before calling it healthy.
-            time.sleep(1)
-            second = subprocess.run(
-                ["systemctl", "is-active", SERVICE],
-                capture_output=True, text=True, timeout=8)
-            if second.returncode == 0 and second.stdout.strip() == "active":
-                return
+            try:
+                with urllib.request.urlopen(
+                        "http://127.0.0.1:8787/healthz", timeout=2) as response:
+                    healthy = json.loads(response.read(4096))
+                if (healthy.get("status") == "ok" and
+                        healthy.get("service") == "truepanel-mission-control"):
+                    return
+            except (OSError, ValueError, TypeError):
+                pass
         time.sleep(.3)
     raise ActivationHold("Mission Control did not remain active after restart")
 
