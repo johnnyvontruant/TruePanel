@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from .cartridges import CartridgeDefinition
+from .os_housekeeping import ignored_os_name, ignored_os_path
 
 LOADMASTER_INVENTORY_SCHEMA_VERSION = 1
 LOADMASTER_INVENTORY_KIND = "truepanel.loadmaster_inventory"
@@ -136,8 +137,10 @@ def _fingerprints_match(
 def _ignored_name(
     name: str,
     ignored_names: frozenset[str],
+    *,
+    is_dir: bool = False,
 ) -> bool:
-    if name in ignored_names:
+    if name in ignored_names or ignored_os_name(name, is_dir=is_dir):
         return True
 
     if any(
@@ -199,6 +202,7 @@ def scan_tree(
             if _ignored_name(
                 name,
                 ignored_names,
+                is_dir=True,
             ):
                 continue
 
@@ -398,7 +402,9 @@ def build_sync_plan(
 
     nas = scan_tree(nas_root)
     usb = scan_tree(usb_root)
-    baseline = inventory or {}
+    # Previously recorded OS metadata must not become a missing-file action.
+    baseline = {path: fp for path, fp in (inventory or {}).items()
+                if not ignored_os_path(path)}
 
     actions: list[
         LoadmasterAction
@@ -853,6 +859,9 @@ def build_backlog_backup_plan(
             ) from error
 
         relative = relative_path.as_posix()
+        if ignored_os_path(relative):
+            # Housekeeping artifacts never become approved backlog work.
+            continue
 
         if relative in seen:
             raise LoadmasterPlanError(
@@ -1070,5 +1079,6 @@ def inventory_payload(
             path: asdict(fingerprint)
             for path, fingerprint
             in sorted(files.items())
+            if not ignored_os_path(path)
         },
     }

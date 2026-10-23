@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .backup_executor import BackupExecutionError
 from .backup_transaction import _safe_parts
+from .os_housekeeping import ignored_os_name
 
 @dataclass(frozen=True)
 class CargoDecision:
@@ -24,13 +25,15 @@ def _inventory(root: Path) -> dict[str, tuple[int, str]]:
         raise BackupExecutionError('invalid inventory root')
     result = {}
     for directory in root.iterdir():
-        if directory.name.startswith('.') or directory.name.startswith('LOADMASTER-'):
+        if ignored_os_name(directory.name, is_dir=True) or directory.name.startswith('.') or directory.name.startswith('LOADMASTER-'):
             continue
         if directory.is_symlink():
             raise BackupExecutionError('symlink folder rejected')
         if not directory.is_dir():
             continue
         for entry in directory.iterdir():
+            if ignored_os_name(entry.name):
+                continue
             if entry.is_symlink():
                 raise BackupExecutionError('symlink item rejected')
             if not entry.is_file():

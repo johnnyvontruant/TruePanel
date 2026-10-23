@@ -22,6 +22,7 @@ from .backup_executor import (
     DurableHostAuthorizationSession,
 )
 from .backup_transaction import _safe_parts
+from .os_housekeeping import ignored_os_path
 from .copy_button import LoadmasterPhysicalPreflight
 
 DIRECTIONS = frozenset({'NAS_TO_USB', 'USB_TO_NAS'})
@@ -80,6 +81,8 @@ def validate_scope(scope: CargoScope) -> None:
         if type(item) is not CargoAction or item.direction not in DIRECTIONS:
             raise BackupExecutionError('invalid cargo direction')
         _safe_parts(item.relative_path)  # existing descriptor-safe, two-level rule
+        if ignored_os_path(item.relative_path):
+            raise BackupExecutionError('OS housekeeping file not transferable')
         if item.relative_path in seen:
             raise BackupExecutionError('duplicate or cross-direction path')
         seen.add(item.relative_path)
@@ -150,6 +153,8 @@ def inspect_bidirectional(*, nas_root: Path, usb_root: Path,
         if direction not in DIRECTIONS:
             raise BackupExecutionError('unsupported transfer direction')
         _safe_parts(relative)
+        if ignored_os_path(relative):
+            raise BackupExecutionError('OS housekeeping file excluded from physical plan')
         if relative in seen:
             raise BackupExecutionError('duplicate or cross-direction destination')
         seen.add(relative)

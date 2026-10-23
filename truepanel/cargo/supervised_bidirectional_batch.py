@@ -22,6 +22,7 @@ from .bidirectional_host_scope import (CargoAction, CargoScope, _stat_and_hash,
 from .backup_evidence_commit import commit_verified_backup
 from .physical_backup_actuator import _writable_identity
 from .backup_transaction import _safe_parts
+from .os_housekeeping import ignored_os_path
 
 
 def _no_symlink_chain(path: Path) -> None:
@@ -79,6 +80,8 @@ def transfer_one_approved(*, nas_root: Path, usb_root: Path,
     ownership and action identity both before and after this operation.
     """
     _safe_parts(action.relative_path)
+    if ignored_os_path(action.relative_path):
+        raise BackupExecutionError('OS housekeeping file excluded from physical transfer')
     if action.direction not in ('NAS_TO_USB', 'USB_TO_NAS'):
         raise BackupExecutionError('invalid transfer direction')
     source_root, dest_root = ((nas_root, usb_root) if action.direction == 'NAS_TO_USB'
