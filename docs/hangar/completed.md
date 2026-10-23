@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.20.1 · refreshed 2026-10-20 · 31 experiment(s)
+Registry version 2026.10.20.1 · refreshed 2026-10-20 · 32 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -251,3 +251,11 @@ Ten deterministic paths produce one exact predeclared policy and nine HOLD resul
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Freeze one content-addressed blinded cohort manifest containing every authenticated intake-bound detector result before any outcome labels are revealed.
 - Revisit when: JT supplies enough governed field cases to freeze a blinded cohort; the detector contract changes; external statistical review recommends a new policy version; installation or deployment is proposed
+
+## TP-EXP-0038 · AEGIS two-phase blinded cohort manifest
+
+Twelve deterministic paths produce two equivalent order-independent frozen manifests and ten HOLD results. All 440 planned cases join exactly once, with zero omissions, extras, duplicates, labels, scores, writes, or unsafe authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Define a one-shot authenticated label-join receipt that can score this exact frozen manifest once without permitting exclusions threshold tuning or operational promotion.
+- Revisit when: JT supplies a governed blinded intake inventory; authenticated outcome labels become available; the detector or statistical contract changes; distributed corpus storage is proposed; installation or deployment is proposed

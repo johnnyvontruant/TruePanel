@@ -603,6 +603,25 @@
       "revisit_conditions": ["JT supplies enough governed field cases to freeze a blinded cohort", "the detector contract changes", "external statistical review recommends a new policy version", "installation or deployment is proposed"],
       "strongest_follow_up": "Freeze one content-addressed blinded cohort manifest containing every authenticated intake-bound detector result before any outcome labels are revealed.",
       "freshness": {"reviewed_at": "2026-10-22", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0038", "title": "AEGIS two-phase blinded cohort manifest", "state": "COMPLETED",
+      "hypothesis": "Freezing the complete intake inventory before detector results exist, then requiring exactly one verified label-blind result per planned case, can prevent post-prediction selection and post-freeze mutation without exposing outcomes or granting authority.",
+      "value": "Closes the selection-bias gap between a predeclared statistical policy and a future authenticated label join while preserving deterministic, content-addressed lineage.",
+      "prior_art": ["MLCommons Croissant FileObject checksums", "in-toto Statement subjects and digest sets", "OpenLineage dataset version facets", "DVC content-addressed datasets"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-blinded-cohort-manifest", "pr": null, "commits": []},
+      "protocol": ["validate the exact predeclared statistical contract", "freeze 440 unique intake identities before predictions or labels", "bind one detector contract and declared non-outcome strata", "join exactly one independently digest-verified result to every planned case", "canonicalize order before content addressing", "retain only label-blind result descriptors", "deny scoring validation acceptance installation deployment and hardware authority"],
+      "fixtures": ["aegis-two-phase-blinded-cohort-manifest", "tests/test_aegis_temperature_blinded_cohort_manifest.py"],
+      "success_criteria": ["440 planned intakes across two profiles and four workloads freeze before predictions", "all 440 verified results join one-for-one", "input ordering does not change manifest identity", "missing extra duplicate drifted relabeled and post-freeze edited paths hold", "accepted labels and scores remain zero", "accepted matrix remains 8/8", "production and hardware authority remain false"],
+      "abort_criteria": ["the plan contains predictions or outcomes", "a result is accepted without recomputing its digest", "a planned case may be omitted", "an unplanned or duplicate result may enter", "post-freeze mutation retains readiness", "manifest membership is called field validation", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-blinded-cohort-manifest-v1.json", "sha256": "d3b0f561d09edb87f3f00b1b55fce8fac32c98d446743bee9f1188aeefdf10c7"}],
+      "outcome": {"conclusion": "Twelve deterministic paths produce two equivalent order-independent frozen manifests and ten HOLD results. All 440 planned cases join exactly once, with zero omissions, extras, duplicates, labels, scores, writes, or unsafe authority."},
+      "invalidated_assumptions": ["freezing results alone prevents selection bias", "list order should define cohort identity", "a stored result digest need not be independently recomputed", "minimum total cases guarantees outcome balance", "manifest membership constitutes validation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_blinded_cohort_manifest.py tests/test_aegis_temperature_statistical_calibration_contract.py tests/test_aegis_temperature_intake_bound_detector_result.py", "python -c \"from truepanel.holodeck.aegis_temperature_blinded_cohort_manifest import run_temperature_blinded_cohort_manifest_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a governed blinded intake inventory", "authenticated outcome labels become available", "the detector or statistical contract changes", "distributed corpus storage is proposed", "installation or deployment is proposed"],
+      "strongest_follow_up": "Define a one-shot authenticated label-join receipt that can score this exact frozen manifest once without permitting exclusions threshold tuning or operational promotion.",
+      "freshness": {"reviewed_at": "2026-10-23", "review_after": "2027-04-30"}
     }
   ]
 }

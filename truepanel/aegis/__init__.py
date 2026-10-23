@@ -103,6 +103,13 @@ from .temperature_authenticated_acceptance import (
     build_temperature_acceptance_statement,
     evaluate_authenticated_temperature_acceptance,
 )
+from .temperature_blinded_cohort_manifest import (
+    build_temperature_blinded_cohort_plan,
+    freeze_temperature_blinded_cohort_manifest,
+    pending_temperature_blinded_cohort_manifest,
+    validate_temperature_blinded_cohort_manifest,
+    validate_temperature_blinded_cohort_plan,
+)
 from .temperature_calibration_admission import (
     evaluate_temperature_calibration_admission,
     export_temperature_calibration_admission_statement,
@@ -181,6 +188,7 @@ __all__ = [
     "ACCEPTANCE_SCHEMA",
     "AegisReliabilityEngine",
     "build_temperature_acceptance_statement",
+    "build_temperature_blinded_cohort_plan",
     "evaluate_authenticated_temperature_acceptance",
     "evaluate_temperature_development_acceptance",
     "evaluate_temperature_field_checkride",
@@ -188,10 +196,12 @@ __all__ = [
     "evaluate_temperature_calibration_admission",
     "evaluate_temperature_recording_intake",
     "evaluate_temperature_long_window_intake",
+    "freeze_temperature_blinded_cohort_manifest",
     "build_temperature_intake_bound_detector_result",
     "export_temperature_intake_bound_detector_result",
     "export_temperature_long_window_intake_receipt",
     "pending_temperature_intake_bound_detector_result",
+    "pending_temperature_blinded_cohort_manifest",
     "build_temperature_field_review_statement",
     "export_temperature_field_review_kit",
     "pending_temperature_field_checkride",
@@ -215,6 +225,8 @@ __all__ = [
     "build_temperature_statistical_calibration_contract",
     "pending_temperature_statistical_calibration_contract",
     "validate_temperature_statistical_calibration_contract",
+    "validate_temperature_blinded_cohort_manifest",
+    "validate_temperature_blinded_cohort_plan",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",

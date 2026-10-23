@@ -67,6 +67,21 @@ const payload = {
       next_action: "Provide one protected sanitized long-window Black Box recording.",
       record_sha256: "b".repeat(64),
     },
+    coverage_blinded_cohort_manifest: {
+      status: "ACTION_REQUIRED_BLINDED_COHORT_PLAN",
+      statistical_contract_ready: true,
+      plan_present: false,
+      manifest_present: false,
+      planned_case_count: 0,
+      result_count: 0,
+      labels_present: false,
+      scores_present: false,
+      ready_for_authenticated_label_join: false,
+      eligible_for_independent_scoring: false,
+      deployment_authority: false,
+      hardware_authority: false,
+      next_action: "Freeze the complete label-blind intake inventory before creating detector results.",
+    },
     correlation_policy: { policy_id: "aegis-declarative-correlation-v1", semantics: "evidence grouping" },
     flight_director: {
       scenario: "storage-smart-recovery-v1",
@@ -118,6 +133,7 @@ for (const width of widths) {
     const ground = document.querySelector(".fd-attestations")?.getBoundingClientRect();
     const detector = document.querySelector(".ag-detector-result")?.getBoundingClientRect();
     const longWindow = document.querySelector(".ag-long-window-intake")?.getBoundingClientRect();
+    const blindedCohort = document.querySelector(".ag-blinded-cohort")?.getBoundingClientRect();
     return {
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
@@ -130,6 +146,8 @@ for (const width of widths) {
       detectorBoundaryDisclosed: document.querySelector(".ag-detector-result")?.textContent.includes("Prediction first · labels second") || false,
       longWindowInsideViewport: Boolean(longWindow && longWindow.left >= 0 && longWindow.right <= window.innerWidth),
       longWindowBoundaryDisclosed: document.querySelector(".ag-long-window-intake")?.textContent.includes("no tailing · labels forbidden") || false,
+      blindedCohortInsideViewport: Boolean(blindedCohort && blindedCohort.left >= 0 && blindedCohort.right <= window.innerWidth),
+      blindedCohortBoundaryDisclosed: document.querySelector(".ag-blinded-cohort")?.textContent.includes("Inventory first · predictions second · labels last") || false,
       groundTruthDisclosure: document.querySelector(".fd-attestations")?.textContent.includes("digest authenticates provider: NO") || false,
     };
   });
@@ -140,6 +158,8 @@ for (const width of widths) {
   if (!measure.detectorBoundaryDisclosed) throw new Error(`${width}: detector-binding boundary missing`);
   if (!measure.longWindowInsideViewport) throw new Error(`${width}: long-window panel overflow`);
   if (!measure.longWindowBoundaryDisclosed) throw new Error(`${width}: long-window boundary missing`);
+  if (!measure.blindedCohortInsideViewport) throw new Error(`${width}: blinded-cohort panel overflow`);
+  if (!measure.blindedCohortBoundaryDisclosed) throw new Error(`${width}: blinded-cohort boundary missing`);
   if (measure.minimumAnnunciatorHeight < 44) throw new Error(`${width}: touch target under 44px`);
   if (!measure.visibleStates.every(Boolean)) throw new Error(`${width}: color-only state`);
   if (measure.annunciatorOrder[0] !== "storage") throw new Error(`${width}: critical state is not first`);
