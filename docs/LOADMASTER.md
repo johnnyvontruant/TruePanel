@@ -100,6 +100,41 @@ for that exact plan digest, refreshing the plan every `replan_seconds`. The
 gate debounces the active-low GPIO75 line and issues at most one confirmation
 per digest. Presses while idle, held, clear, or already finished do nothing.
 
+### 3a. Finishing at the NAS or remotely
+
+**At the NAS.** While a cartridge needs attention the front LCD switches to
+Loadmaster pages instead of its normal rotation:
+
+| State | LCD shows |
+| --- | --- |
+| READY | `MOVIES E-I READY` / `Press COPY`, then how much moves each way |
+| EXECUTING | percent and progress bar, file *n* of *m*, current file, `Do not unplug` |
+| COMPLETE | `MOVIES E-I DONE` / `Safe to remove` (only after the unmount succeeded) |
+| HOLD | a short reason (`Not commissioned`, `Conflicts found`, …) |
+| UNREGISTERED | `New drive found` and the drive's UUID for the registry |
+
+SELECT (▼) pages through the screens, ENTER (▲) ejects a docked cartridge that
+is READY, CLEAR, or on HOLD, and Copy starts a READY transfer. CLEAR shows for
+one minute after docking, then the normal rotation resumes.
+
+**Remotely.** The Cargo Bay card in Mission Control has a live **Loadmaster
+dock** panel showing the same state, what moves each way, conflicts, copy
+progress, and the last result, with three buttons:
+
+* **Start transfer** — asks for confirmation, then starts the exact plan you
+  were shown (if the plan changed in the meantime it is refused). Only
+  available when `execution.remote_confirmation: true`.
+* **Eject** — unmounts the cartridge without transferring.
+* **Rescan** — re-plans now. This also re-arms a cartridge that already ran,
+  so a drive left plugged in can pick up new imports without a replug.
+
+The virtual LCD in Mission Control mirrors the front panel too, so its ▲/▼
+buttons work exactly like standing at the NAS.
+
+Both surfaces read `/run/truepanel/loadmaster-status.json` and send commands
+over `/run/truepanel/loadmaster-command.sock`; neither touches hardware
+directly.
+
 ### 4. Execution
 
 The executor (`truepanel/cargo/executor.py`):
@@ -183,6 +218,7 @@ requires unplugging and replugging before another run.
 | `inventory_dir` | — | Commissioned baselines, one `<id>.json` per cartridge. |
 | `receipts_dir` | — | Run receipts (the transfer log). |
 | `verify` | `sha256` | `sha256` read-back verification, or `size` only. |
+| `remote_confirmation` | `false` (reference config: `true`) | Allow Start from Mission Control. Eject and Rescan are always available. |
 | `ingest_owner` | NAS folder owner | `uid:gid` for ingested files and folders. |
 | `poll_seconds` | `3` | Dock scan interval. |
 | `replan_seconds` | `20` | Plan/arm refresh interval (must stay below the 30 s confirmation window). |
@@ -218,21 +254,20 @@ requires unplugging and replugging before another run.
 | Resumable partial copies and `RENAME_NOREPLACE` publish (ideas from the rsync resume lab, checkpoint 3) | Done (this branch) |
 | TV cartridges in example registry | Done (placeholders) |
 | On-NAS validation of mount/umount, `RENAME_NOREPLACE` and directory fsync on exFAT, using the spare drive | **Next** |
-| Operator feedback on LCD / LEDs (READY, copying %, safe to remove) | **Next** |
-| Mission Control card for live Loadmaster status and receipts | Planned |
+| LCD Loadmaster screens with SELECT paging and ENTER eject | Done (this branch) |
+| Mission Control live dock panel with Start / Eject / Rescan | Done (this branch) |
+| Unregistered-drive detection (label matches, UUID missing) | Done (this branch) |
+| Bay LED / buzzer cues for READY and DONE | Planned |
 | Retire backlog rows whose source vanished | Planned |
 
 ## Open decisions
 
-* **Servarr rescan after ingest.** Ingested files land in the NAS library but
-  Sonarr/Radarr only notice them on their next scheduled refresh, and Radarr
-  will not adopt a brand-new movie folder it has never heard of. Triggering a
-  rescan would need Servarr write (POST) access, which Cargo Bay's contract
-  forbids without a separate authority review.
-* **Operator feedback.** Status is exposed through
-  `HostAgentRuntime.loadmaster_status()` but nothing displays it yet. The front
-  LCD is the natural place for "READY: press Copy", progress, and "safe to
-  remove".
+* **Servarr after ingest.** Plex is the player and rescans nightly, so
+  Radarr not adopting ingested movies is acceptable. Sonarr's own Series
+  Refresh runs on a fixed 12-hour schedule that is not adjustable in its
+  settings. If Sonarr needs to know about ingested episodes sooner, the option
+  is a targeted `RescanSeries` call for just the affected series after a
+  run — a narrow Servarr write that needs an explicit decision.
 * **Single manifest writer.** The executor merges evidence into
   `backup.manifest_path` under a lock. The standalone backup producer rewrites
   that file wholesale, so it must not target the same path.

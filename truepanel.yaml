@@ -254,6 +254,7 @@ mission_control:
         inventory_dir: /var/lib/truepanel/loadmaster/inventory
         receipts_dir: /var/lib/truepanel/loadmaster/receipts
         verify: sha256                # sha256 read-back, or size
+        remote_confirmation: true     # allow Start from Mission Control
         ingest_owner: ""              # "uid:gid"; empty = NAS folder owner
         poll_seconds: 3
         replan_seconds: 20

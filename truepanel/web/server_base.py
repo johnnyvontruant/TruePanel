@@ -32,6 +32,14 @@ from truepanel.hardware.fan_command import (
     FanCommandClient,
     FanCommandError,
 )
+from truepanel.cargo.loadmaster_link import (
+    DEFAULT_LOADMASTER_STATUS_PATH,
+    LoadmasterCommandClient,
+    LoadmasterLinkError,
+)
+from truepanel.cargo.loadmaster_link import (
+    read_status as read_loadmaster_status,
+)
 from truepanel.hardware.lcd_command import (
     LCDCommandClient,
     LCDCommandError,
@@ -63,6 +71,7 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
                 self._preflight_support_bundle
             ),
             "/api/v1/lcd": self._lcd_status,
+            "/api/v1/loadmaster": self._loadmaster_status,
             "/api/v1/history": self._history,
             "/api/v1/fans/history": (
                 self._fan_history
@@ -104,6 +113,10 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/v1/lcd/button":
             self._lcd_button(parsed)
+            return
+
+        if parsed.path == "/api/v1/loadmaster/command":
+            self._loadmaster_command(parsed)
             return
 
         self._write_blocked()
@@ -192,6 +205,100 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
                 ),
             },
         )
+
+    def _loadmaster_status(self, parsed):
+        del parsed
+        path = getattr(
+            self.server,
+            "loadmaster_status_path",
+            DEFAULT_LOADMASTER_STATUS_PATH,
+        )
+        self._json(read_loadmaster_status(path))
+
+    def _loadmaster_command(self, parsed):
+        """Relay start / eject / refresh to the Loadmaster controller."""
+
+        del parsed
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except (TypeError, ValueError):
+            length = 0
+
+        if length < 1 or length > 2048:
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": "Loadmaster command body must be 1-2048 bytes.",
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self._json(
+                {"error": "invalid_json", "message": "Body must be valid JSON."},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if not isinstance(payload, dict) or set(payload) - {
+            "action",
+            "plan_digest",
+            "confirmation",
+        }:
+            self._json(
+                {
+                    "error": "invalid_request",
+                    "message": (
+                        "Body must be an object with action, "
+                        "plan_digest, and confirmation only."
+                    ),
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        action = payload.get("action")
+        fields = {
+            key: payload[key]
+            for key in ("plan_digest", "confirmation")
+            if key in payload
+        }
+        client = (
+            getattr(self.server, "loadmaster_command_client", None)
+            or LoadmasterCommandClient()
+        )
+
+        try:
+            response = client.request(
+                str(action or ""),
+                source="web",
+                **fields,
+            )
+        except LoadmasterLinkError as error:
+            self._json(
+                {"error": "loadmaster_unavailable", "message": str(error)},
+                status=HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+            return
+
+        if response.get("ok") is True:
+            self._json(response, status=HTTPStatus.OK)
+            return
+
+        status_code = {
+            "invalid_request": HTTPStatus.BAD_REQUEST,
+            "invalid_json": HTTPStatus.BAD_REQUEST,
+            "unknown_action": HTTPStatus.UNPROCESSABLE_ENTITY,
+            "invalid_source": HTTPStatus.UNPROCESSABLE_ENTITY,
+            "execution_failed": HTTPStatus.INTERNAL_SERVER_ERROR,
+            "eject_failed": HTTPStatus.INTERNAL_SERVER_ERROR,
+        }.get(str(response.get("status")), HTTPStatus.CONFLICT)
+
+        self._json(response, status=status_code)
 
     def _lcd_status(self, parsed):
         del parsed

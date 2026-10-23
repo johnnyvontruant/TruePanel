@@ -613,6 +613,47 @@ button.danger .profile-target{color:var(--bad)}
   color:var(--warn)
 }
 
+.loadmaster-dock{
+  margin-top:.9rem;
+  padding:.85rem .9rem;
+  border:1px solid color-mix(in srgb,var(--accent) 30%,var(--edge));
+  border-radius:var(--radius-sm);
+  background:color-mix(in srgb,var(--accent) 5%,transparent)
+}
+.loadmaster-dock[hidden]{display:none}
+.loadmaster-dock-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:.8rem
+}
+.loadmaster-dock-head strong{display:block;font-size:1.05rem;margin-top:.15rem}
+.loadmaster-counts{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.6rem;
+  margin-top:.7rem
+}
+.loadmaster-counts>div{
+  padding:.55rem .65rem;
+  border:1px solid var(--edge);
+  border-radius:var(--radius-sm)
+}
+.loadmaster-counts strong{display:block;font-size:.95rem}
+.loadmaster-counts[hidden],.loadmaster-issues[hidden],.loadmaster-dock .cargo-progress[hidden]{display:none}
+.loadmaster-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+  margin-top:.8rem
+}
+.loadmaster-actions button[hidden]{display:none}
+.loadmaster-issues{margin:.6rem 0 0;padding-left:1.1rem;font-size:.78rem;color:var(--warn)}
+.loadmaster-issues li{overflow-wrap:anywhere}
+@media (max-width:640px){
+  .loadmaster-counts{grid-template-columns:1fr}
+  .loadmaster-actions button{flex:1 1 100%}
+}
 .cargo-placeholder{
   padding:.35rem 0 .9rem;
   color:var(--muted);
@@ -867,6 +908,29 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
     <strong id="cargoGlanceTertiary">--</strong>
   </div>
 </div>
+
+<section class="loadmaster-dock" id="loadmasterDock" hidden aria-live="polite" aria-labelledby="loadmasterDockTitle">
+  <div class="loadmaster-dock-head">
+    <div>
+      <span class="cargo-glance-label">Loadmaster dock</span>
+      <strong id="loadmasterDockTitle">No cartridge docked</strong>
+    </div>
+    <span id="loadmasterDockState" class="cargo-state">IDLE</span>
+  </div>
+  <div id="loadmasterDockDetail" class="cargo-detail"></div>
+  <div class="cargo-progress" id="loadmasterDockProgress" hidden><span></span></div>
+  <div class="loadmaster-counts" id="loadmasterDockCounts" hidden>
+    <div><span class="cargo-glance-label">NAS → USB</span><strong id="loadmasterToUsb">--</strong></div>
+    <div><span class="cargo-glance-label">USB → NAS</span><strong id="loadmasterToNas">--</strong></div>
+  </div>
+  <ul class="loadmaster-issues" id="loadmasterDockIssues" hidden></ul>
+  <div class="loadmaster-actions">
+    <button id="loadmasterStart" class="primary" type="button" hidden>Start transfer</button>
+    <button id="loadmasterEject" type="button" hidden>Eject</button>
+    <button id="loadmasterRescan" type="button" hidden>Rescan</button>
+  </div>
+  <div id="loadmasterDockNotice" class="cargo-meta"></div>
+</section>
 
 <div class="cargo-drawers">
   <details class="cargo-drawer" id="cargoTvDrawer">
@@ -3985,6 +4049,178 @@ function renderCargoBay(cargo){
     );
 }
 
+
+let loadmasterDockStatus=null;
+let loadmasterBusy=false;
+let loadmasterLastState=null;
+
+function loadmasterCount(files,bytes){
+    const count=Number(files)||0;
+    return count?`${count} file${count===1?"":"s"} · ${cargoBytes(bytes)}`:"Nothing";
+}
+
+function loadmasterStateClass(state){
+    if(["READY","COMPLETE","EJECTED","CLEAR"].includes(state)){return "good";}
+    if(["EXECUTING"].includes(state)){return "";}
+    if(["HOLD","PARTIAL","UNREGISTERED","CANCELLED"].includes(state)){return "warn";}
+    if(["FAILED","UNAVAILABLE"].includes(state)){return "bad";}
+    return "";
+}
+
+function renderLoadmasterDock(status){
+    const root=q("loadmasterDock");
+    if(!root){return;}
+    const payload=(status&&typeof status==="object")?status:{};
+    loadmasterDockStatus=payload;
+
+    if(!payload.available&&!payload.stale){
+        root.hidden=true;
+        return;
+    }
+    root.hidden=false;
+
+    const state=String(payload.stale?"STALE":(payload.state||"IDLE")).toUpperCase();
+    if(loadmasterLastState!==null&&state!==loadmasterLastState&&!loadmasterBusy){
+        q("loadmasterDockNotice").textContent="";
+    }
+    loadmasterLastState=state;
+    const cartridge=payload.cartridge||null;
+    const plan=payload.plan||null;
+    const summary=(plan&&plan.summary)||{};
+    const progress=payload.progress||null;
+    const receipt=payload.last_receipt||null;
+    const docked=!!cartridge;
+
+    q("loadmasterDockTitle").textContent=cartridge
+        ?val(cartridge.label,"Cartridge")
+        :(state==="UNREGISTERED"?"Unregistered drive":"No cartridge docked");
+    const badge=q("loadmasterDockState");
+    badge.textContent=state;
+    badge.className=`cargo-state ${loadmasterStateClass(state)}`.trim();
+
+    let detail=val(payload.reason,"");
+    if(state==="IDLE"){detail="Plug in a cartridge to plan a transfer.";}
+    if(state==="READY"){
+        detail=payload.remote_start_enabled
+            ?"Ready. Press Copy on the NAS, or start it from here."
+            :"Ready. Press Copy on the NAS to start (remote start is disabled).";
+    }
+    if(state==="UNREGISTERED"){
+        const drive=(payload.unregistered||[])[0]||{};
+        detail=`Drive “${val(drive.label)}” is not in the cartridge registry. UUID ${val(drive.uuid)}, serial ${val(drive.serial)}.`;
+    }
+    if(receipt&&["COMPLETE","PARTIAL","FAILED","CANCELLED"].includes(state)){
+        const r=receipt.summary||{};
+        detail+=` — copied ${Number(r.copied_files)||0} file(s), ${cargoBytes(r.copied_bytes)}`
+            +(Number(r.failed_files)?`, ${r.failed_files} failed`:"")+".";
+    }
+    q("loadmasterDockDetail").textContent=detail?detail.charAt(0).toUpperCase()+detail.slice(1):"";
+
+    const bar=q("loadmasterDockProgress");
+    if(state==="EXECUTING"&&progress){
+        const total=Number(progress.total_bytes)||0;
+        const done=Number(progress.done_bytes)||0;
+        const pct=total?Math.min(100,Math.round(done*100/total)):0;
+        bar.hidden=false;
+        bar.firstElementChild.style.width=`${pct}%`;
+        q("loadmasterDockDetail").textContent=
+            `Copying ${Math.min(Number(progress.total_files)||0,(Number(progress.done_files)||0)+1)} of ${Number(progress.total_files)||0} · ${pct}% · ${cargoBytes(done)} of ${cargoBytes(total)}`
+            +(progress.current?` · ${progress.current}`:"");
+    }else{
+        bar.hidden=true;
+    }
+
+    const counts=q("loadmasterDockCounts");
+    counts.hidden=!plan||state==="EXECUTING";
+    if(plan){
+        q("loadmasterToUsb").textContent=loadmasterCount(summary.backup_files,summary.backup_bytes);
+        q("loadmasterToNas").textContent=loadmasterCount(summary.ingest_files,summary.ingest_bytes);
+    }
+
+    const issues=q("loadmasterDockIssues");
+    issues.replaceChildren();
+    const conflicts=(plan&&plan.conflicts)||[];
+    conflicts.slice(0,8).forEach(item=>{
+        issues.append(cargoElement("li","",`${val(item.reason)} — ${val(item.relative_path)}`));
+    });
+    issues.hidden=!conflicts.length;
+
+    const start=q("loadmasterStart");
+    const eject=q("loadmasterEject");
+    const rescan=q("loadmasterRescan");
+    start.hidden=state!=="READY";
+    start.disabled=loadmasterBusy||!payload.remote_start_enabled;
+    start.title=payload.remote_start_enabled?"":"Remote start is disabled in truepanel.yaml";
+    eject.hidden=!(docked&&["READY","CLEAR","HOLD"].includes(state));
+    eject.disabled=loadmasterBusy;
+    rescan.hidden=!(docked&&state!=="EXECUTING");
+    rescan.disabled=loadmasterBusy;
+}
+
+async function refreshLoadmasterDock(){
+    try{
+        const response=await fetch("/api/v1/loadmaster",{cache:"no-store"});
+        renderLoadmasterDock(await response.json());
+    }catch(error){
+        renderLoadmasterDock({available:false,stale:true,state:"UNAVAILABLE",reason:"Mission Control could not reach Loadmaster status."});
+    }
+}
+
+async function sendLoadmasterCommand(body){
+    loadmasterBusy=true;
+    renderLoadmasterDock(loadmasterDockStatus);
+    q("loadmasterDockNotice").textContent="Sending…";
+    try{
+        const response=await fetch("/api/v1/loadmaster/command",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(body)
+        });
+        const data=await response.json();
+        q("loadmasterDockNotice").textContent=val(data.message,response.ok?"Done":"Refused");
+    }catch(error){
+        q("loadmasterDockNotice").textContent="Loadmaster did not respond.";
+    }finally{
+        loadmasterBusy=false;
+        await refreshLoadmasterDock();
+    }
+}
+
+function startLoadmasterTransfer(){
+    const status=loadmasterDockStatus||{};
+    const plan=status.plan||{};
+    const summary=plan.summary||{};
+    const label=val(status.cartridge&&status.cartridge.label,"cartridge");
+    const message=[
+        `Start the Loadmaster transfer for ${label}?`,
+        "",
+        `NAS → USB: ${loadmasterCount(summary.backup_files,summary.backup_bytes)}`,
+        `USB → NAS: ${loadmasterCount(summary.ingest_files,summary.ingest_bytes)}`,
+        "",
+        "Nothing will be deleted. Leave the drive plugged in until it says safe to remove."
+    ].join("\n");
+    if(!confirm(message)){return;}
+    sendLoadmasterCommand({
+        action:"start",
+        plan_digest:plan.digest,
+        confirmation:"START_LOADMASTER_TRANSFER"
+    });
+}
+
+function bindLoadmasterDock(){
+    const start=q("loadmasterStart");
+    if(!start){return;}
+    start.addEventListener("click",startLoadmasterTransfer);
+    q("loadmasterEject").addEventListener("click",()=>{
+        if(confirm("Unmount this cartridge without transferring?")){
+            sendLoadmasterCommand({action:"eject"});
+        }
+    });
+    q("loadmasterRescan").addEventListener("click",()=>sendLoadmasterCommand({action:"refresh"}));
+    refreshLoadmasterDock();
+    setInterval(refreshLoadmasterDock,2000);
+}
+
 async function refresh(){
     try{
         const response=await fetch(
@@ -4203,6 +4439,7 @@ loadPolicy().catch(
     )
 );
 setInterval(refresh,5000);
+bindLoadmasterDock();
 setInterval(refreshVirtualLcd,1000);
 </script>
 <script>
