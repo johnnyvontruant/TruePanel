@@ -11,6 +11,11 @@ import time
 
 import qnaplcd
 from collector import TruePanelCollector
+from truepanel.cargo.loadmaster_link import (
+    LoadmasterCommandClient,
+    LoadmasterLinkError,
+    read_status as read_loadmaster_status,
+)
 from truepanel.config.loader import load_config
 from truepanel.display.widgets import progress_bar
 from truepanel.flightdeck.autopilot import AutoPilot
@@ -62,6 +67,11 @@ from truepanel.pages.fans import (
     fan_pwm_page,
     fan_rpm_page,
 )
+from truepanel.pages.loadmaster import (
+    loadmaster_enter_action,
+    loadmaster_pages,
+    loadmaster_takeover,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -108,6 +118,14 @@ bay_led_startup_animation = (
     )
 )
 shutdown_requested = False
+
+# Loadmaster takes over the LCD while a cartridge needs attention.
+loadmaster_client = LoadmasterCommandClient(timeout=15.0)
+loadmaster_active = False
+loadmaster_page = 0
+loadmaster_last_state = None
+loadmaster_last_frame = None
+loadmaster_notice = None
 
 mission.register(pool_watcher)
 mission.register(thermal_watcher)
@@ -640,6 +658,107 @@ def next_alert_history():
 def show_alert_transition(frame):
     lcd.clear()
     lcd.write(0, frame.lines)
+def current_loadmaster_status():
+    try:
+        return read_loadmaster_status()
+    except Exception:
+        LOGGER.exception("Could not read Loadmaster status")
+        return None
+
+
+def render_loadmaster(status, *, force=False):
+    """Render the current Loadmaster page; returns False if nothing to show."""
+
+    global loadmaster_page, loadmaster_last_frame
+
+    pages = loadmaster_pages(status)
+
+    if not pages:
+        return False
+
+    loadmaster_page %= len(pages)
+    lines = list(pages[loadmaster_page])
+
+    if loadmaster_notice is not None:
+        lines = list(loadmaster_notice)
+
+    frame = tuple(lines)
+
+    if force or frame != loadmaster_last_frame:
+        loadmaster_last_frame = frame
+        render_lcd_frame(lines, page="show_loadmaster")
+
+    return True
+
+
+def loadmaster_refresh(*, force=False):
+    """Show Loadmaster when it needs attention; True while it owns the LCD."""
+
+    global loadmaster_active, loadmaster_page
+    global loadmaster_last_state, loadmaster_last_frame, loadmaster_notice
+
+    status = current_loadmaster_status()
+    active = loadmaster_takeover(status, time.time())
+
+    if not active:
+        if loadmaster_active:
+            loadmaster_last_frame = None
+        loadmaster_active = False
+        loadmaster_last_state = None
+        loadmaster_notice = None
+        return False
+
+    state = status.get("state")
+
+    if state != loadmaster_last_state:
+        # A new situation wakes the display and starts at its first page.
+        loadmaster_last_state = state
+        loadmaster_page = 0
+        loadmaster_notice = None
+        force = True
+        lcd_on()
+
+    loadmaster_active = render_loadmaster(status, force=force)
+    return loadmaster_active
+
+
+def loadmaster_eject():
+    """Send ENTER's eject without blocking the LCD button thread."""
+
+    global loadmaster_notice
+
+    def worker():
+        global loadmaster_notice
+        try:
+            reply = loadmaster_client.request("eject", source="lcd")
+            if not reply.get("ok"):
+                loadmaster_notice = ("Eject refused", str(reply.get("status"))[:16])
+        except LoadmasterLinkError:
+            loadmaster_notice = ("Eject failed", "No Loadmaster")
+        loadmaster_refresh(force=True)
+
+    loadmaster_notice = ("Ejecting...", "Please wait")
+    render_loadmaster(current_loadmaster_status(), force=True)
+    threading.Thread(target=worker, name="truepanel-lcd-eject", daemon=True).start()
+
+
+def loadmaster_button(data):
+    """Handle a button while Loadmaster owns the LCD."""
+
+    global loadmaster_page, loadmaster_notice
+
+    status = current_loadmaster_status()
+
+    if data == 0x02:
+        loadmaster_notice = None
+        loadmaster_page += 1
+        render_loadmaster(status, force=True)
+        return
+
+    if data == 0x01 and loadmaster_enter_action(status) == "eject":
+        loadmaster_eject()
+
+
 def request_shutdown(signum=None, frame=None):
     global shutdown_requested
     shutdown_requested = True
@@ -695,6 +814,12 @@ def response_handler(command, data):
             return
 
         lcd_on()
+
+        if loadmaster_active:
+            page_name = "show_loadmaster"
+            loadmaster_button(data)
+            return
+
         prev_menu = menu_item
 
         if menu[menu_item] == show_mission_home:
@@ -824,17 +949,23 @@ def main():
             add_ips_to_menu()
 
             maybe_show_alert()
-            menu[menu_item]()
+
+            if not loadmaster_refresh(force=True):
+                menu[menu_item]()
 
             delay = 5
 
-            for _ in range(delay * 10):
+            for tick in range(delay * 10):
                 if shutdown_requested:
                     break
 
                 time.sleep(0.1)
 
-            if not shutdown_requested:
+                # Keep copy progress and state changes live on the panel.
+                if tick % 10 == 9:
+                    loadmaster_refresh()
+
+            if not shutdown_requested and not loadmaster_active:
                 menu_item = (
                     menu_item + 1
                 ) % len(menu)
