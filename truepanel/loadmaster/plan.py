@@ -1,0 +1,256 @@
+"""Decide what has to happen to bring one USB drive and its NAS folder in sync.
+
+Every path is judged three ways: what is on the NAS (N), what is on the USB
+drive (U), and what both held at the last verified sync (R, the drive record).
+
+Policy (see docs/LOADMASTER.md):
+
+* The USB drive **mirrors the NAS**. Files new or changed on the NAS are copied
+  to USB; files removed from the NAS are removed from USB.
+* Files new on the USB drive are **brought to the NAS**.
+* When both sides hold different versions, the side that changed since the
+  last sync wins; if both changed (or there is no record yet), the **newest**
+  modification time wins. Equal times with different sizes are a conflict.
+* A video removed from the USB drive whose folder gained a new, unknown video
+  is treated as **replaced on the laptop**: the new file comes to the NAS and
+  the old NAS file is retired. Any other file missing from USB is restored.
+* Loadmaster **never destroys NAS data**. Anything it would overwrite or
+  retire on the NAS is moved to ``.loadmaster-replaced`` inside that folder.
+* Unusually large removals need confirmation in TruePanel, and a NAS folder
+  that suddenly looks empty stops everything.
+
+The plan is a pure function of the three listings, so it is fully testable,
+and its digest lets a later run prove nothing changed since it was approved.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from dataclasses import asdict, dataclass
+from pathlib import PurePosixPath
+from typing import Any
+
+from .scan import MTIME_TOLERANCE_NS, Fingerprint
+
+TO_USB = "to_usb"
+TO_NAS = "to_nas"
+DELETE_USB = "delete_usb"
+RETIRE_NAS = "retire_nas"
+
+# Order of execution: free USB space first, copy, then retire NAS originals.
+OP_ORDER = {DELETE_USB: 0, TO_USB: 1, TO_NAS: 2, RETIRE_NAS: 3}
+
+VIDEO_SUFFIXES = frozenset(
+    {".mkv", ".mp4", ".m4v", ".avi", ".mov", ".ts", ".m2ts", ".wmv", ".mpg", ".webm"}
+)
+# Characters exFAT, FAT and NTFS cannot store in a filename.
+WINDOWS_ILLEGAL = frozenset('<>:"|?*\\')
+WINDOWS_FILESYSTEMS = frozenset({"exfat", "vfat", "ntfs", "ntfs3", "fuseblk"})
+
+
+@dataclass(frozen=True)
+class Action:
+    op: str
+    path: str
+    size: int
+    mtime_ns: int
+    reason: str
+
+
+_EPISODE = re.compile(r"[Ss](\d{1,2})[Ee](\d{1,3})")
+
+
+def _episode(path: str) -> tuple[int, int] | None:
+    match = _EPISODE.search(PurePosixPath(path).name)
+    return (int(match.group(1)), int(match.group(2))) if match else None
+
+
+def _video(path: str) -> bool:
+    return PurePosixPath(path).suffix.lower() in VIDEO_SUFFIXES
+
+
+def _folder(path: str) -> str:
+    return str(PurePosixPath(path).parent)
+
+
+def _storable(path: str, fstype: str | None) -> bool:
+    if (fstype or "").lower() not in WINDOWS_FILESYSTEMS:
+        return True
+    return not any(ch in WINDOWS_ILLEGAL for ch in path.replace("/", ""))
+
+
+def digest(drive_name: str, actions: list[Action]) -> str:
+    material = json.dumps(
+        {"drive": drive_name, "actions": [asdict(a) for a in actions]},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(material.encode()).hexdigest()
+
+
+def build_plan(
+    *,
+    drive_name: str,
+    nas: dict[str, Fingerprint],
+    usb: dict[str, Fingerprint],
+    record: dict[str, Fingerprint] | None,
+    usb_fstype: str | None = None,
+    large_delete_files: int = 100,
+) -> dict[str, Any]:
+    """Return the sync plan for one drive.
+
+    ``record`` is ``None`` before the first completed sync. Without it nothing
+    is ever deleted: every file is simply copied to whichever side lacks it.
+    """
+
+    known = record is not None
+    record = record or {}
+    actions: list[Action] = []
+    conflicts: list[dict[str, Any]] = []
+    notices: list[dict[str, Any]] = []
+    in_sync: dict[str, Fingerprint] = {}
+    forget: list[str] = []
+
+    def add(op: str, path: str, fp: Fingerprint, reason: str) -> None:
+        if op == TO_USB and not _storable(path, usb_fstype):
+            notices.append({"path": path, "reason": "NAME_NOT_STORABLE_ON_USB"})
+            return
+        actions.append(Action(op, path, fp.size, fp.mtime_ns, reason))
+
+    # Videos on USB that nobody has seen before, by folder and episode. A video
+    # deleted from USB with a new counterpart here (same episode for TV, any
+    # video for a movie folder) was upgraded on the laptop.
+    new_usb_videos = {
+        (_folder(path), _episode(path))
+        for path in usb
+        if _video(path) and path not in nas and path not in record
+    }
+
+    def replaced_on_usb(path: str) -> bool:
+        return _video(path) and (_folder(path), _episode(path)) in new_usb_videos
+
+    for path in sorted(set(nas) | set(usb) | set(record)):
+        n, u, r = nas.get(path), usb.get(path), record.get(path)
+
+        if n and u:
+            if n.same_as(u):
+                in_sync[path] = n
+                continue
+            nas_changed = not n.same_as(r)
+            usb_changed = not u.same_as(r)
+            if nas_changed and not usb_changed:
+                add(TO_USB, path, n, "UPDATED_ON_NAS")
+            elif usb_changed and not nas_changed:
+                add(TO_NAS, path, u, "UPDATED_ON_USB")
+            elif abs(n.mtime_ns - u.mtime_ns) <= MTIME_TOLERANCE_NS:
+                conflicts.append(
+                    {
+                        "path": path,
+                        "reason": "SAME_AGE_DIFFERENT_SIZE",
+                        "nas": asdict(n),
+                        "usb": asdict(u),
+                    }
+                )
+            elif n.mtime_ns > u.mtime_ns:
+                add(TO_USB, path, n, "NEWER_ON_NAS")
+            else:
+                add(TO_NAS, path, u, "NEWER_ON_USB")
+
+        elif n:
+            if r is None:
+                add(TO_USB, path, n, "NEW_ON_NAS")
+            elif not n.same_as(r):
+                add(TO_USB, path, n, "UPDATED_ON_NAS")
+            elif replaced_on_usb(path):
+                actions.append(
+                    Action(RETIRE_NAS, path, n.size, n.mtime_ns, "REPLACED_ON_USB")
+                )
+            else:
+                add(TO_USB, path, n, "MISSING_ON_USB")
+
+        elif u:
+            if r is None:
+                add(TO_NAS, path, u, "NEW_ON_USB")
+            elif u.same_as(r):
+                actions.append(
+                    Action(DELETE_USB, path, u.size, u.mtime_ns, "REMOVED_FROM_NAS")
+                )
+            else:
+                add(TO_NAS, path, u, "UPDATED_ON_USB_AFTER_NAS_REMOVAL")
+
+        else:
+            forget.append(path)  # gone from both sides
+
+    actions.sort(key=lambda a: (OP_ORDER[a.op], a.path))
+
+    removals = [a for a in actions if a.op in {DELETE_USB, RETIRE_NAS}]
+    needs_confirmation = len(removals) > large_delete_files
+    hold_reason = None
+
+    if conflicts:
+        hold_reason = f"{len(conflicts)} conflict(s) need a decision"
+    elif known and record and not nas:
+        # The NAS folder looks empty but files were synced before: almost
+        # certainly an unmounted dataset, never a real mass deletion.
+        hold_reason = "NAS folder is empty; is the pool mounted?"
+        actions = []
+
+    state = "HOLD" if hold_reason else "READY" if actions else "CLEAR"
+
+    def total(op: str) -> tuple[int, int]:
+        chosen = [a for a in actions if a.op == op]
+        return len(chosen), sum(a.size for a in chosen)
+
+    to_usb, to_usb_bytes = total(TO_USB)
+    to_nas, to_nas_bytes = total(TO_NAS)
+    deletes, delete_bytes = total(DELETE_USB)
+    retires, _ = total(RETIRE_NAS)
+
+    return {
+        "drive": drive_name,
+        "state": state,
+        "reason": hold_reason,
+        "first_sync": not known,
+        "needs_confirmation": needs_confirmation and state == "READY",
+        "summary": {
+            "to_usb_files": to_usb,
+            "to_usb_bytes": to_usb_bytes,
+            "to_nas_files": to_nas,
+            "to_nas_bytes": to_nas_bytes,
+            "delete_usb_files": deletes,
+            "delete_usb_bytes": delete_bytes,
+            "retire_nas_files": retires,
+            "in_sync_files": len(in_sync),
+            "conflicts": len(conflicts),
+            "notices": len(notices),
+        },
+        "actions": [asdict(a) for a in actions],
+        "conflicts": conflicts,
+        "notices": notices,
+        "in_sync": {path: fp.to_list() for path, fp in in_sync.items()},
+        "forget": forget,
+        "digest": digest(drive_name, actions),
+    }
+
+
+def pending_to_usb(
+    nas: dict[str, Fingerprint], record: dict[str, Fingerprint]
+) -> tuple[int, int]:
+    """What would go NAS -> USB next time, judged without the drive present."""
+
+    files = [fp for path, fp in nas.items() if not fp.same_as(record.get(path))]
+    return len(files), sum(fp.size for fp in files)
+
+
+__all__ = [
+    "Action",
+    "DELETE_USB",
+    "RETIRE_NAS",
+    "TO_NAS",
+    "TO_USB",
+    "build_plan",
+    "digest",
+    "pending_to_usb",
+]
