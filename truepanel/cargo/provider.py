@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .backup_manifest import validate_backup_manifest
+from .flightdeck import read_flightdeck
 from .backup_state import correlate_backup_manifest
 from .backlog import (
     LoadmasterBacklogError,
@@ -41,6 +42,7 @@ class CachedCargoProvider:
         loadmaster_enabled: bool = False,
         cartridge_registry_path: Path | None = None,
         loadmaster_backlog_path: Path | None = None,
+        loadmaster_flightdeck_path: Path | None = None,
         sdr_rescue_receipts_path: Path | None = None,
     ) -> None:
         self.resolver = resolver
@@ -50,6 +52,7 @@ class CachedCargoProvider:
         self.loadmaster_enabled = bool(loadmaster_enabled)
         self.cartridge_registry_path = cartridge_registry_path
         self.loadmaster_backlog_path = loadmaster_backlog_path
+        self.loadmaster_flightdeck_path = loadmaster_flightdeck_path
         self.sdr_rescue_receipts_path = sdr_rescue_receipts_path
         self._cached_at: float | None = None
         self._cached_payload: dict[str, Any] | None = None
@@ -198,6 +201,10 @@ class CachedCargoProvider:
 
         payload = dict(payload)
         payload["backup"] = backup
+        if self.loadmaster_enabled:
+            loadmaster["flight_deck"] = read_flightdeck(
+                self.loadmaster_flightdeck_path
+            )
         payload["loadmaster"] = loadmaster
 
         self._cached_at = now
@@ -289,6 +296,9 @@ def provider_from_config(
     loadmaster_backlog_path_text = _text(
         loadmaster.get("backlog_path")
     )
+    loadmaster_flightdeck_path_text = _text(
+        loadmaster.get("flight_deck_snapshot_path")
+    )
     sdr_rescue_receipts_path_text = _text(
         loadmaster.get("sdr_rescue_receipts_path")
     )
@@ -315,6 +325,11 @@ def provider_from_config(
         loadmaster_backlog_path=(
             Path(loadmaster_backlog_path_text)
             if loadmaster_backlog_path_text
+            else None
+        ),
+        loadmaster_flightdeck_path=(
+            Path(loadmaster_flightdeck_path_text)
+            if loadmaster_flightdeck_path_text
             else None
         ),
         sdr_rescue_receipts_path=(

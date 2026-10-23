@@ -613,6 +613,36 @@ button.danger .profile-target{color:var(--bad)}
   color:var(--warn)
 }
 
+/* Loadmaster v1 is visibility-only; not a physical control interface. */
+.loadmaster-flight-deck{
+  padding:.8rem;
+  border:1px solid var(--edge);
+  border-radius:.6rem;
+  margin:.45rem 0 .9rem;
+}
+.loadmaster-flight-head{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:.5rem;flex-wrap:wrap;
+}
+.loadmaster-flight-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:.5rem;margin:.65rem 0;
+}
+.loadmaster-flight-stat{
+  padding:.55rem;border:1px solid var(--edge);border-radius:.45rem;
+  display:flex;flex-direction:column;gap:.25rem;
+}
+.loadmaster-flight-stat strong{font-size:1.1rem}
+.loadmaster-flight-action{
+  display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;
+  border-top:1px solid var(--edge);padding:.45rem 0;font-size:.78rem;
+}
+.loadmaster-flight-action span{overflow-wrap:anywhere;flex:1;min-width:9rem}
+.loadmaster-flight-action small{color:var(--muted)}
+@media(max-width:640px){
+  .loadmaster-flight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
 .cargo-placeholder{
   padding:.35rem 0 .9rem;
   color:var(--muted);
@@ -3475,6 +3505,70 @@ function renderCargoDownloads(downloads){
     });
 }
 
+function renderCargoFlightDeck(flightDeck,root){
+    const flight=(flightDeck&&typeof flightDeck==="object")
+        ?flightDeck:{};
+    if(flight.enabled!==true){return;}
+    const status=String(flight.state||"INVALID").toUpperCase();
+    const panel=cargoElement("div","loadmaster-flight-deck");
+    const header=cargoElement("div","loadmaster-flight-head");
+    header.append(
+        cargoElement("strong","","BIDIRECTIONAL FLIGHT DECK"),
+        cargoElement("span","cargo-backup-state awaiting","PREVIEW ONLY")
+    );
+    panel.append(header);
+    // Never present the report as an executable or physical authorization.
+    panel.append(cargoElement("div","cargo-meta",
+        "Read-only telemetry. No web transfer or Copy-button arming."));
+    if(status!=="READY"){
+        panel.append(cargoElement("div","cargo-detail",
+            status==="REVIEW"
+                ?"Cartridge requires operator review; no transfer approved."
+                :"Flight deck report unavailable or invalid."));
+        root.append(panel);
+        return;
+    }
+    const cartridge=flight.cartridge||{};
+    panel.append(cargoElement("div","cargo-detail",
+        `${String(cartridge.label||"Cartridge")} • ${String(cartridge.mount_mode||"unknown").toUpperCase()} • ${String(cartridge.uuid||"unknown")}`));
+    const counts=flight.summary||{};
+    const glance=cargoElement("div","loadmaster-flight-grid");
+    [
+        ["EXPORT",counts.export],
+        ["INGEST",counts.ingest],
+        ["VERIFIED",counts.verified],
+        ["CONFLICTS",counts.conflicts]
+    ].forEach(([label,count])=>{
+        const stat=cargoElement("div","loadmaster-flight-stat");
+        stat.append(
+            cargoElement("span","cargo-glance-label",label),
+            cargoElement("strong","",String(Number(count)||0))
+        );
+        glance.append(stat);
+    });
+    panel.append(glance);
+    const receipts=flight.receipts||{};
+    panel.append(cargoElement("div","cargo-meta",
+        `Receipts: ${Number(receipts.backup)||0} exports / ${Number(receipts.ingest)||0} ingests • Watchdog: ${String(receipts.guard||"UNKNOWN")}`));
+    const actions=Array.isArray(flight.actions)?flight.actions:[];
+    if(actions.length===0){
+        panel.append(cargoElement("div","cargo-placeholder","No items in this snapshot."));
+    }
+    actions.slice(0,25).forEach(item=>{
+        const direction=item.direction==="NAS_TO_USB"?"NAS → USB":"USB → NAS";
+        const line=cargoElement("div","loadmaster-flight-action");
+        line.append(
+            cargoElement("strong","",direction+" · "+String(item.status||"REVIEW")),
+            cargoElement("span","",String(item.relative_path||"Unknown file")),
+            cargoElement("small","",cargoBytes(item.size_bytes))
+        );
+        panel.append(line);
+    });
+    panel.append(cargoElement("div","cargo-meta",
+        `Snapshot: ${String(flight.generated_at||"unknown")}`));
+    root.append(panel);
+}
+
 function renderCargoLoadmaster(loadmaster){
     const payload=(
         loadmaster&&typeof loadmaster==="object"
@@ -3517,6 +3611,7 @@ function renderCargoLoadmaster(loadmaster){
     }
 
     root.replaceChildren();
+    renderCargoFlightDeck(payload.flight_deck,root);
 
     if(!enabled){
         root.append(
