@@ -139,6 +139,9 @@ class DockScan:
 
     docked: tuple[DockedCartridge, ...]
     unknown_usb_filesystems: int
+    # USB filesystems whose label names a registered cartridge but whose UUID
+    # is not registered: almost always a cartridge awaiting registry setup.
+    unregistered_labeled: tuple[BlockDevice, ...] = ()
 
     @property
     def state(self) -> str:
@@ -264,7 +267,9 @@ class CartridgeDock:
         devices = parse_lsblk(self.runner(["lsblk", "-J", "-b", "-o", LSBLK_COLUMNS]))
 
         docked: list[DockedCartridge] = []
+        unregistered: list[BlockDevice] = []
         unknown = 0
+        labels = {cartridge.label.casefold() for cartridge in self.cartridges}
 
         for device in devices:
             usb = device.transport == "usb"
@@ -273,6 +278,8 @@ class CartridgeDock:
             if cartridge is None:
                 if usb:
                     unknown += 1
+                    if device.label.casefold() in labels:
+                        unregistered.append(device)
                 continue
 
             if self.require_usb_transport and not usb:
@@ -281,7 +288,11 @@ class CartridgeDock:
 
             docked.append(self._identify(cartridge, device))
 
-        return DockScan(docked=tuple(docked), unknown_usb_filesystems=unknown)
+        return DockScan(
+            docked=tuple(docked),
+            unknown_usb_filesystems=unknown,
+            unregistered_labeled=tuple(unregistered),
+        )
 
     def _identify(
         self,

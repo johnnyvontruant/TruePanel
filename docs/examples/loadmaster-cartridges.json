@@ -4,7 +4,7 @@
   "cartridges": [
     {
       "id": "movies-num-d",
-      "label": "Movies #-D",
+      "label": "Movies 1-D",
       "uuid": "SET-FILESYSTEM-UUID",
       "role": "movies",
       "source_prefix": "/mnt/HDDs/Movies/Movies 1-D",

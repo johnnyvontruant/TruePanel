@@ -233,3 +233,17 @@ def test_mountpoint_with_stray_files_is_refused(tmp_path):
 
     with pytest.raises(LoadmasterDockError, match="not empty"):
         dock.mount_read_only(dock.scan().docked[0])
+
+
+def test_labeled_but_unregistered_drive_is_reported(tmp_path):
+    dock = CartridgeDock(
+        cartridges=[cartridge()],
+        mount_root=tmp_path,
+        runner=Runner(lsblk(usb_disk(uuid="FFFF-0000", label="Movies E-I"))),
+        mountinfo_reader=lambda: "",
+    )
+
+    scan = dock.scan()
+
+    assert scan.state == "EMPTY"
+    assert [device.uuid for device in scan.unregistered_labeled] == ["FFFF-0000"]
