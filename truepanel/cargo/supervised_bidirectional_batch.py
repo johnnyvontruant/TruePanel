@@ -61,19 +61,22 @@ def _match_file(path: Path, action: CargoAction) -> None:
         raise BackupExecutionError('source/destination no longer matches exact approval')
 
 
-def _run_rsync(source: Path, stage: Path) -> None:
+def _run_rsync(source: Path, stage: Path, *, timeout_seconds: int = 3600) -> None:
+    if type(timeout_seconds) is not int or not 5 <= timeout_seconds <= 3600:
+        raise BackupExecutionError('unqualified rsync timeout')
     cmd = ['rsync', '-t', '--no-whole-file', '--partial',
            '--partial-dir=.partials', '--no-perms', '--no-owner',
            '--no-group', '--', str(source), str(stage)]
     try:
-        subprocess.run(cmd, check=True, timeout=3600, capture_output=True, text=True)
+        subprocess.run(cmd, check=True, timeout=timeout_seconds, capture_output=True, text=True)
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         # Never publish a partial. Preserve partials for *new* physical approval.
         raise BackupExecutionError('rsync interrupted or failed; staged partial retained') from exc
 
 
 def transfer_one_approved(*, nas_root: Path, usb_root: Path,
-                          action: CargoAction, device_serial: str) -> dict:
+                          action: CargoAction, device_serial: str,
+                          rsync_timeout_seconds: int = 3600) -> dict:
     """Pure transport after trusted per-file reattestation and consumed GPIO.
 
     No mount operations or approval creation. The caller rechecks hardware
@@ -110,7 +113,7 @@ def transfer_one_approved(*, nas_root: Path, usb_root: Path,
     _no_symlink_chain(staged)
     if staged.exists() and not stat.S_ISREG(staged.stat().st_mode):
         raise BackupExecutionError('invalid stage payload')
-    _run_rsync(source, staged)
+    _run_rsync(source, staged, timeout_seconds=rsync_timeout_seconds)
     _match_file(source, action)
     _match_file(staged, action)
     _no_symlink_chain(dest.parent)
