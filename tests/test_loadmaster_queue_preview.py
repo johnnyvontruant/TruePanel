@@ -4,7 +4,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from truepanel.cargo.backlog import empty_backlog
+from truepanel.cargo.backlog import empty_backlog, LoadmasterBacklogError
 from truepanel.cargo.cartridges import CartridgeDefinition
 from truepanel.cargo.queue_preview import (
     preview_cartridge_queue, QueuePreviewError,
@@ -125,7 +125,7 @@ class TestQueuePreview(unittest.TestCase):
 
     def test_malformed_backlog_refused(self):
         self.backlog["items"].append({"current_path": "relative"})
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LoadmasterBacklogError):
             self.preview()
 
     def test_source_still_not_inspected_even_when_path_absent(self):
