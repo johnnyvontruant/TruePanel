@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+from truepanel.cargo import production_flightdeck_activate as activation
 from truepanel.cargo.production_flightdeck_activate import (
     patched_config, ActivationHold, SNAPSHOT,
 )
@@ -70,6 +74,52 @@ class TestMissionControlActivationPatch(unittest.TestCase):
         with self.assertRaises(ActivationHold):
             patched_config("!untrusted-object\n")
 
+
+
+class TestActivationAtomicity(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="loadmaster-activation-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.config = self.root / "truepanel.yaml"
+        self.source = (
+            "mission_control:\\n  cargo_bay:\\n    enabled: true\\n"
+            "    loadmaster:\\n      enabled: true\\n"
+            "      backlog_path: /var/lib/truepanel/loadmaster/pending-cargo.json\\n"
+        )
+        self.config.write_text(self.source)
+        self.backups = self.root / "backups"
+        self.backups.mkdir()
+
+    def activation_context(self):
+        from contextlib import ExitStack
+        stack = ExitStack()
+        stack.enter_context(patch.object(activation, "CONFIG", self.config))
+        stack.enter_context(patch.object(activation, "BACKUPS", self.backups))
+        stack.enter_context(patch.object(activation, "STATE", self.root))
+        stack.enter_context(patch.object(activation, "_private"))
+        stack.enter_context(patch.object(activation, "_installed_path_valid"))
+        stack.enter_context(patch.object(activation, "read_flightdeck",
+                                         return_value={"state": "READY"}))
+        stack.enter_context(patch.object(activation.os, "geteuid", return_value=0))
+        return stack
+
+    def test_config_activation_preserves_backup_and_original_settings(self):
+        with self.activation_context(), patch.object(activation, "_restart_healthy"):
+            result = activation.activate(apply=True)
+        self.assertEqual(result["state"], "LOADMASTER_UI_CONNECTED")
+        self.assertEqual(len(list(self.backups.glob("*.yaml"))), 1)
+        self.assertEqual(next(self.backups.glob("*.yaml")).read_text(), self.source)
+        self.assertIn("flight_deck_snapshot_path", self.config.read_text())
+
+    def test_failed_restart_rolls_back_exact_original_yaml(self):
+        with self.activation_context(), patch.object(
+                activation, "_restart_healthy", side_effect=[
+                    RuntimeError("restart refused"), None]) as restart:
+            with self.assertRaisesRegex(activation.ActivationHold, "restored"):
+                activation.activate(apply=True)
+        self.assertEqual(self.config.read_text(), self.source)
+        self.assertEqual(restart.call_count, 2)
 
 if __name__ == "__main__":
     unittest.main()
