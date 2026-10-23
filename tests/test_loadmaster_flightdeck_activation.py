@@ -83,9 +83,9 @@ class TestActivationAtomicity(unittest.TestCase):
         self.root = Path(self.temp.name).resolve()
         self.config = self.root / "truepanel.yaml"
         self.source = (
-            "mission_control:\\n  cargo_bay:\\n    enabled: true\\n"
-            "    loadmaster:\\n      enabled: true\\n"
-            "      backlog_path: /var/lib/truepanel/loadmaster/pending-cargo.json\\n"
+            "mission_control:\n  cargo_bay:\n    enabled: true\n"
+            "    loadmaster:\n      enabled: true\n"
+            "      backlog_path: /var/lib/truepanel/loadmaster/pending-cargo.json\n"
         )
         self.config.write_text(self.source)
         self.backups = self.root / "backups"
