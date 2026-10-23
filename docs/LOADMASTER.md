@@ -52,7 +52,7 @@ the first sync creates it.
 | Changed on the drive since the last sync, unchanged on the NAS | Copy to the NAS |
 | Changed on both sides, or different with no record | The **newest** file wins |
 | Same modification time but different size | Conflict: nothing happens until resolved |
-| Video removed from the drive and a new video for the same episode (or movie folder) added | Upgraded on the laptop: the new file comes to the NAS and the old NAS file is retired |
+| Video removed from the drive and a new video added for the same episode (`S01E05`), or in the same folder when names have no episode number (movies) | Upgraded on the laptop: the new file comes to the NAS and the old NAS file is retired (moved, not deleted) |
 | Removed from the drive for any other reason | Copied back to the drive |
 | First sync of a drive | Copy whatever each side lacks. **Nothing is ever removed on a first sync.** |
 
@@ -92,6 +92,9 @@ store (`< > : " | ? * \`) are skipped and listed rather than failing the sync.
   somewhere else is left alone.
 * Drives are mounted read-only while being checked, and read-write only while
   copying. They are synced and unmounted when the sync finishes.
+* Mission Control has no login, like the rest of the dashboard: anyone who can
+  open it on your network can start a sync. Set `remote_start: false` to allow
+  starting only from the Copy button.
 
 ## At the NAS: front panel
 
