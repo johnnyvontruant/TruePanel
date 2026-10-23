@@ -38,7 +38,7 @@ RSYNC_TIMEOUT_SECONDS = 60
 
 def _root_only(folder: Path) -> None:
     if (not folder.is_absolute() or not folder.is_relative_to(STATE)
-            or folder == STATE or folder.is_symlink() or
+            or folder.is_symlink() or
             not folder.is_dir()):
         raise BackupExecutionError("TV N-Z production evidence directory not qualified")
     meta = folder.stat()
