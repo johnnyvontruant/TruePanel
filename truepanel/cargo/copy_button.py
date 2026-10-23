@@ -42,6 +42,14 @@ class LoadmasterPhysicalPreflight:
     backlog_verified: bool
     plan_digest: str
     generated_at_monotonic: float
+    ingest_files: int = 0
+    ingest_bytes: int = 0
+
+    @property
+    def has_work(self) -> bool:
+        backup = self.backup_files > 0 and self.backup_bytes > 0
+        ingest = self.ingest_files > 0 and self.ingest_bytes > 0
+        return backup or ingest
 
     @property
     def ready(self) -> bool:
@@ -50,8 +58,7 @@ class LoadmasterPhysicalPreflight:
             and bool(self.cartridge_uuid)
             and bool(self.device_serial)
             and self.plan_state == "READY"
-            and self.backup_files > 0
-            and self.backup_bytes > 0
+            and self.has_work
             and self.baseline_verified
             and self.identity_verified
             and self.backlog_verified
@@ -156,6 +163,8 @@ class LoadmasterCopyButtonGate:
             "plan_digest": preflight.plan_digest,
             "backup_files": preflight.backup_files,
             "backup_bytes": preflight.backup_bytes,
+            "ingest_files": preflight.ingest_files,
+            "ingest_bytes": preflight.ingest_bytes,
         }
 
     def poll(self) -> CopyButtonConfirmation | None:

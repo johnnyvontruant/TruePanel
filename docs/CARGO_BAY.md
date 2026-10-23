@@ -90,6 +90,10 @@ A normal workflow is:
 
 This separation is intentional: **TruePanel observes protection; it does not become the protection mechanism.**
 
+## Loadmaster
+
+Loadmaster builds on Cargo Bay to move media between the NAS and removable USB cartridges when the operator plugs one in and presses the front-panel Copy button. It is the only Cargo component with write authority, that authority is gated behind a physical press and explicit configuration, and it never deletes media. See [Loadmaster](LOADMASTER.md).
+
 ## Development contract
 
 Cargo Bay changes should preserve these invariants:

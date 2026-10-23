@@ -45,6 +45,28 @@
       "allow_ingest": true,
       "allow_backup": true,
       "delete_policy": "never"
+    },
+    {
+      "id": "tv-a-m",
+      "label": "TV A-M",
+      "uuid": "SET-FILESYSTEM-UUID-A-M",
+      "role": "tv",
+      "source_prefix": "/mnt/HDDs/Shows/TV A-M",
+      "usb_relative_path": "TV A-M",
+      "allow_ingest": true,
+      "allow_backup": true,
+      "delete_policy": "never"
+    },
+    {
+      "id": "tv-n-z",
+      "label": "TV N-Z",
+      "uuid": "SET-FILESYSTEM-UUID-N-Z",
+      "role": "tv",
+      "source_prefix": "/mnt/HDDs/Shows/TV N-Z",
+      "usb_relative_path": "TV N-Z",
+      "allow_ingest": true,
+      "allow_backup": true,
+      "delete_policy": "never"
     }
   ]
 }

@@ -40,6 +40,8 @@ SDR_RESCUE_IGNORED_SUFFIXES = (
     ".sdr-rescue-partial",
     ".failed-sdr-rescue",
 )
+# In-flight executor copies are never media; a crash can leave one behind.
+LOADMASTER_PARTIAL_SUFFIX = ".loadmaster-partial"
 
 
 class LoadmasterPlanError(RuntimeError):
@@ -148,6 +150,7 @@ def _ignored_name(
 
     return name.endswith(
         SDR_RESCUE_IGNORED_SUFFIXES
+        + (LOADMASTER_PARTIAL_SUFFIX,)
     )
 
 

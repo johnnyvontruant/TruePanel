@@ -29,6 +29,7 @@ class HostAgentRuntime:
         fan_reconciliation: Any | None = None,
         thermal_lifecycle: Any | None = None,
         loadmaster_copy_button_service: Any | None = None,
+        loadmaster_controller: Any | None = None,
     ):
         self._fan_runtime = fan_runtime
         self._safety = safety
@@ -40,6 +41,7 @@ class HostAgentRuntime:
         self._loadmaster_copy_button_service = (
             loadmaster_copy_button_service
         )
+        self._loadmaster_controller = loadmaster_controller
         self._fan_server_factory = fan_server_factory
 
         self._fan_server = None
@@ -243,6 +245,15 @@ class HostAgentRuntime:
         )
 
     @property
+    def loadmaster_controller(self) -> Any | None:
+        return self._loadmaster_controller
+
+    def loadmaster_status(self) -> dict[str, object] | None:
+        if self._loadmaster_controller is None:
+            return None
+        return self._loadmaster_controller.snapshot()
+
+    @property
     def started(self) -> bool:
         return self._started
 
@@ -281,6 +292,9 @@ class HostAgentRuntime:
             if self._loadmaster_copy_button_service is not None:
                 self._loadmaster_copy_button_service.start()
 
+            if self._loadmaster_controller is not None:
+                self._loadmaster_controller.start()
+
             self._started = True
         except Exception:
             LOGGER.exception(
@@ -312,6 +326,14 @@ class HostAgentRuntime:
                 )
             finally:
                 self._fan_server = None
+
+        if self._loadmaster_controller is not None:
+            try:
+                self._loadmaster_controller.stop()
+            except Exception:
+                LOGGER.exception(
+                    "Loadmaster controller shutdown failed"
+                )
 
         if self._loadmaster_copy_button_service is not None:
             try:

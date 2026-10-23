@@ -243,3 +243,17 @@ mission_control:
         debounce_ms: 75
         rearm_ms: 750
         confirmation_window_seconds: 30
+
+      # Plug-in-and-press transfer execution (see docs/LOADMASTER.md).
+      # Requires physical_confirmation.enabled and a commissioned inventory
+      # for every cartridge. Nothing is ever deleted.
+      execution:
+        enabled: false
+        ingest_enabled: true          # USB -> NAS for new cartridge files
+        mount_root: /mnt/loadmaster
+        inventory_dir: /var/lib/truepanel/loadmaster/inventory
+        receipts_dir: /var/lib/truepanel/loadmaster/receipts
+        verify: sha256                # sha256 read-back, or size
+        ingest_owner: ""              # "uid:gid"; empty = NAS folder owner
+        poll_seconds: 3
+        replan_seconds: 20

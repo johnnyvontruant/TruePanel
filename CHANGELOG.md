@@ -6,6 +6,23 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+### Added
+
+- Loadmaster plug-in-and-press transfers: USB cartridge dock (identity,
+  read-only planning mount, read-write run mount, unmount), combined
+  backlog-backup and cartridge-ingest run plans sealed by a digest, a
+  verified executor (partial-file copies, SHA-256 read-back, no deletes,
+  receipts, backup evidence, inventory baseline advance), and a Host Agent
+  controller that arms the GPIO75 Copy button for READY plans.
+- Example cartridge registry now includes TV A-M and TV N-Z cartridges.
+- `docs/LOADMASTER.md` covering workflow, safety rules, setup, and progress.
+
+### Safety
+
+- Execution is disabled by default and requires both
+  `loadmaster.execution.enabled` and physical Copy confirmation.
+- A run is refused unless a fresh re-plan matches the confirmed digest.
+
 ## [1.3.1-rc1] - 2026-10-03
 
 TruePanel 1.3.1-rc1 is a focused maintenance candidate for the 1.3 line.

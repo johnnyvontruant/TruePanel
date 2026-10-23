@@ -23,6 +23,10 @@ from truepanel.hardware.fintek_gpio import (
 )
 
 from .hooks import HostAgentSafetyServices
+from .loadmaster_controller import (
+    LoadmasterController,
+    settings_from_config,
+)
 from .loadmaster_copy_button import (
     LoadmasterCopyButtonService,
 )
@@ -148,6 +152,37 @@ def build_loadmaster_copy_button_service(
         event_recorder=event_recorder,
     )
 
+def build_loadmaster_controller(
+    *,
+    config: Mapping[str, Any],
+    copy_button_service: LoadmasterCopyButtonService | None,
+    **controller_kwargs: Any,
+) -> LoadmasterController | None:
+    """Build the actuating Loadmaster controller when explicitly enabled.
+
+    Execution requires both ``loadmaster.execution.enabled: true`` and an
+    enabled physical Copy confirmation; without the button there is no
+    authority to transfer, so the controller is not built.
+    """
+
+    settings = settings_from_config(dict(config))
+    if settings is None:
+        return None
+
+    if copy_button_service is None:
+        raise ValueError(
+            "Loadmaster execution requires physical_confirmation.enabled"
+        )
+
+    controller = LoadmasterController(
+        settings=settings,
+        button=copy_button_service,
+        **controller_kwargs,
+    )
+    copy_button_service.on_confirmation = controller.on_confirmation
+    return controller
+
+
 def build_host_agent_runtime(
     *,
     fan_runtime: Any,
@@ -155,6 +190,7 @@ def build_host_agent_runtime(
     ownership_guard: Any | None = None,
     fan_server_factory: Callable[[], Any | None] | None = None,
     loadmaster_copy_button_service: Any | None = None,
+    loadmaster_controller: Any | None = None,
 ) -> HostAgentRuntime:
     """Assemble the current privileged TruePanel Host Agent runtime."""
 
@@ -241,6 +277,7 @@ def build_host_agent_runtime(
         loadmaster_copy_button_service=(
             loadmaster_copy_button_service
         ),
+        loadmaster_controller=loadmaster_controller,
     )
 
 
@@ -252,10 +289,17 @@ def build_host_agent_runtime_from_bootstrap(
 ) -> HostAgentRuntime:
     """Assemble Host runtime behind one cross-process ownership lease."""
 
+    config = getattr(bootstrap, "config", {}) or {}
+
     loadmaster_copy_button_service = (
         build_loadmaster_copy_button_service(
-            config=getattr(bootstrap, "config", {}) or {},
+            config=config,
         )
+    )
+
+    loadmaster_controller = build_loadmaster_controller(
+        config=config,
+        copy_button_service=loadmaster_copy_button_service,
     )
 
     return build_host_agent_runtime(
@@ -268,11 +312,13 @@ def build_host_agent_runtime_from_bootstrap(
         loadmaster_copy_button_service=(
             loadmaster_copy_button_service
         ),
+        loadmaster_controller=loadmaster_controller,
     )
 
 
 __all__ = [
     "build_fan_command_server",
+    "build_loadmaster_controller",
     "build_loadmaster_copy_button_service",
     "build_host_agent_runtime",
     "build_host_agent_runtime_from_bootstrap",
