@@ -32,6 +32,7 @@ from truepanel.hardware.fan_command import (
     FanCommandClient,
     FanCommandError,
 )
+from truepanel.loadmaster import link as loadmaster_link
 from truepanel.hardware.lcd_command import (
     LCDCommandClient,
     LCDCommandError,
@@ -63,6 +64,7 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
                 self._preflight_support_bundle
             ),
             "/api/v1/lcd": self._lcd_status,
+            "/api/v1/loadmaster": self._loadmaster_status,
             "/api/v1/history": self._history,
             "/api/v1/fans/history": (
                 self._fan_history
@@ -104,6 +106,10 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/v1/lcd/button":
             self._lcd_button(parsed)
+            return
+
+        if parsed.path == "/api/v1/loadmaster/command":
+            self._loadmaster_command(parsed)
             return
 
         self._write_blocked()
@@ -192,6 +198,51 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
                 ),
             },
         )
+
+    def _loadmaster_status(self, parsed):
+        del parsed
+        path = getattr(self.server, "loadmaster_status_path", None)
+        self._json(loadmaster_link.read_status(path or loadmaster_link.STATUS_PATH))
+
+    def _loadmaster_command(self, parsed):
+        """Relay start / stop / eject / rescan / adopt to the Loadmaster service."""
+
+        del parsed
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except (TypeError, ValueError):
+            length = 0
+        if not 0 < length <= 4096:
+            self._json({"ok": False, "status": "invalid",
+                        "message": "Body must be 1-4096 bytes."},
+                       status=HTTPStatus.BAD_REQUEST)
+            return
+        try:
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            body = None
+        if isinstance(body, dict):
+            body = {**body, "source": "web"}
+        request, error = loadmaster_link.validate(body)
+        if error is not None:
+            code = (HTTPStatus.CONFLICT if error["status"] == "confirmation_required"
+                    else HTTPStatus.BAD_REQUEST)
+            self._json(error, status=code)
+            return
+        sender = getattr(self.server, "loadmaster_sender", None)
+        try:
+            if sender is not None:
+                answer = sender(request)
+            else:
+                answer = loadmaster_link.send_command(
+                    loadmaster_link.COMMAND_SOCKET, request
+                )
+        except loadmaster_link.LinkError as exc:
+            self._json({"ok": False, "status": "unavailable", "message": str(exc)},
+                       status=HTTPStatus.SERVICE_UNAVAILABLE)
+            return
+        self._json(answer, status=HTTPStatus.OK if answer.get("ok")
+                   else HTTPStatus.CONFLICT)
 
     def _lcd_status(self, parsed):
         del parsed

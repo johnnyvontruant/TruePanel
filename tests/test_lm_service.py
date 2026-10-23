@@ -222,7 +222,7 @@ def test_missing_usb_folder_holds(svc):
     svc.usb.rmdir()
     plug(svc)
     assert svc.state == "HOLD"
-    assert "not found" in svc.message
+    assert "is not on the drive" in svc.message
 
 
 def test_pending_summary_without_drive(svc):
@@ -251,6 +251,8 @@ def test_stale_status_is_unavailable(tmp_path):
 
 def test_validate_requests():
     assert validate({"action": "eject", "source": "web"})[0]
+    start = {"action": "start", "source": "web", "digest": "a" * 64, "confirm": True}
+    assert validate(start) == (start, None)
     assert validate({"action": "delete", "source": "web"})[1]["status"] == "invalid"
     assert validate({"action": "eject", "source": "gpio"})[1]
     assert validate({"action": "eject", "source": "web", "x": 1})[1]

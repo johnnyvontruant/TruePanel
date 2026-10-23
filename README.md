@@ -211,6 +211,7 @@ See the [CLI Reference](docs/CLI.md), [Upgrade and Rollback Guide](docs/UPGRADIN
 - [Documentation map](docs/README.md)
 - [Mission Control and reliability](docs/MISSION_CONTROL.md)
 - [Cargo Bay](docs/CARGO_BAY.md)
+- [Loadmaster](docs/LOADMASTER.md)
 - [Installation](docs/INSTALLATION.md)
 - [Upgrade and rollback](docs/UPGRADING.md)
 - [Architecture](docs/ARCHITECTURE.md)
