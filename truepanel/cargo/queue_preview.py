@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .backlog import validate_backlog_payload
+from .backup_executor import BackupExecutionError
 from .cartridges import CartridgeDefinition, assign_cartridge
 from .backup_transaction import _safe_parts
 from .os_housekeeping import ignored_os_path
@@ -89,7 +90,7 @@ def preview_cartridge_queue(
             continue
         try:
             _safe_parts(relative)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, BackupExecutionError):
             group["unsupported_paths"] += 1
             continue
         group["pending_items"] += 1
