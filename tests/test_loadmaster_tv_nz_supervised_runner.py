@@ -43,7 +43,7 @@ class TestTvNzProductionRunner(unittest.TestCase):
         physical.assert_not_called()
 
     def test_live_flags_both_required(self):
-        with patch.object(runner, "_scope", return_value=fixture_scope()), \
+        with patch.object(runner, "_scope", return_value=fixture_scope()), patch.object(runner, "STAGE", Path("/")), \
              patch.object(runner, "HostOwnershipGuard") as owner, \
              redirect_stdout(io.StringIO()):
             for kwargs in (
@@ -58,7 +58,7 @@ class TestTvNzProductionRunner(unittest.TestCase):
             owner.assert_not_called()
 
     def test_production_gpio_owner_blocks_even_with_flags(self):
-        with patch.object(runner, "_scope", return_value=fixture_scope()), \
+        with patch.object(runner, "_scope", return_value=fixture_scope()), patch.object(runner, "STAGE", Path("/")), \
              patch.object(runner.os, "geteuid", return_value=0), \
              patch.object(runner, "_service_active", return_value=True), \
              patch.object(runner, "HostOwnershipGuard") as owner, \
@@ -71,7 +71,7 @@ class TestTvNzProductionRunner(unittest.TestCase):
     def test_mission_control_loss_blocks_physical_runner(self):
         def active(service):
             return service == "truepanel.service"
-        with patch.object(runner, "_scope", return_value=fixture_scope()), \
+        with patch.object(runner, "_scope", return_value=fixture_scope()), patch.object(runner, "STAGE", Path("/")), \
              patch.object(runner.os, "geteuid", return_value=0), \
              patch.object(runner, "_service_active", return_value=False), \
              patch.object(runner, "HostOwnershipGuard") as owner, \
@@ -137,7 +137,7 @@ class TestTvNzProductionRunner(unittest.TestCase):
 
     def test_operator_confirmation_is_not_auto_generated(self):
         # Synthetic preview does not construct a session or press GPIO.
-        with patch.object(runner, "_scope", return_value=fixture_scope()), \
+        with patch.object(runner, "_scope", return_value=fixture_scope()), patch.object(runner, "STAGE", Path("/")), \
              patch.object(runner, "LoadmasterHostSessionBridge") as bridge, \
              patch.object(runner, "LoadmasterCopyButtonService") as button, \
              redirect_stdout(io.StringIO()):
