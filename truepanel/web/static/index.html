@@ -1415,7 +1415,7 @@ function render(data){renderHealth(data.health||{});const s=data.system||{},f=da
         </div>
         <div class="row">
             <span class="label">${val(n.name||n.interface,"Interface")}</span>
-            <span class="value">${val(n.address||n.ip,"No IPv4 address")}</span>
+            <span class="value">${val(n.address||n.ip,n.master?"Bridge member of "+n.master:"No IPv4 address")}</span>
         </div>
         <div class="row">
             <span class="label">Traffic</span>
