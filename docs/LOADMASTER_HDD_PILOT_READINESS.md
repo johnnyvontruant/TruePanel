@@ -19,7 +19,7 @@ This checkpoint is deliberately a **read-only inventory survey**:
 - Excludes Daria in every path (protected fan restoration).
 - Rejects symlinked, missing, changed-size, unregistered, or deeper-than-
   two-component candidates.
-- Reports the exact cartridge UUID and whether a trusted serial is registered.
+- Reports the exact cartridge UUID, registered serial status, and whether backup permission is currently enabled (a disabled permission does not prevent a read-only survey).
 - Reads pool status using `zpool list` but does not block the survey on
   `DEGRADED`. The output always reports degraded risk.
 - Does not touch USB and does not calculate file hashes; hashes and device

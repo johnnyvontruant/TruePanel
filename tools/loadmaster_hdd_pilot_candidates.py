@@ -76,8 +76,7 @@ def select_hdd_candidates(*, registry: Path, backlog: Path,
             counts["out_of_scope"] += 1
             continue
         cartridge = assign_cartridge(source, cartridges)
-        if (cartridge is None or not cartridge.allow_backup
-                or not cartridge.source_prefix.is_relative_to(library_root)):
+        if (cartridge is None or not cartridge.source_prefix.is_relative_to(library_root)):
             counts["unregistered"] += 1
             continue
         relative = source.relative_to(cartridge.source_prefix)
@@ -102,6 +101,7 @@ def select_hdd_candidates(*, registry: Path, backlog: Path,
             "cartridge_label": cartridge.label,
             "cartridge_uuid": cartridge.uuid,
             "trusted_device_serial_registered": bool(cartridge.device_serial),
+            "backup_permission_enabled": cartridge.allow_backup,
             "source": str(source),
             "relative_path": relative.as_posix(),
             "size_bytes": size,

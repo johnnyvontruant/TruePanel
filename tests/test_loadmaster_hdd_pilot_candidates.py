@@ -65,6 +65,16 @@ class PilotReadinessTests(unittest.TestCase):
             library_root=self.library, pool_health=health,
             max_bytes=100_000)
 
+    def test_disabled_registry_backup_still_surveys_but_never_arms(self):
+        self.add(self.show, "Regular Show/episode.mkv")
+        data = json.loads(self.registry.read_text())
+        data["cartridges"][0]["allow_backup"] = False
+        self.registry.write_text(json.dumps(data))
+        report = self.plan()
+        self.assertEqual(report["eligible_total"], 1)
+        self.assertFalse(report["candidates"][0]["backup_permission_enabled"])
+        self.assertFalse(report["physical_authorized"])
+
     def test_degraded_pool_can_preview_without_write_authority(self):
         self.add(self.show, "Ordinary Show/episode.mkv", b"abcd")
         report = self.plan()
