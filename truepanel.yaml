@@ -243,3 +243,28 @@ mission_control:
         debounce_ms: 75
         rearm_ms: 750
         confirmation_window_seconds: 30
+# Loadmaster: plug in a USB drive, press Copy, unplug (docs/LOADMASTER.md).
+# Each drive's filesystem label must match its name. Sonarr/Radarr settings
+# are shared with mission_control.cargo_bay above.
+loadmaster:
+  enabled: false
+  state_dir: /var/lib/truepanel/loadmaster
+  mount_root: /mnt/loadmaster
+  remote_start: true          # allow Start sync from Mission Control
+  copy_button: true           # front-panel Copy button (GPIO75)
+  verify: sha256              # read every copy back and compare
+  large_delete_files: 100     # more removals than this need confirming in TruePanel
+  ingest_owner: ""            # uid:gid for files brought to the NAS; empty = folder owner
+  drives:
+    - name: Movies 1-D
+      nas_path: /mnt/HDDs/Movies/Movies 1-D
+    - name: Movies E-I
+      nas_path: /mnt/HDDs/Movies/Movies E-I
+    - name: Movies J-S
+      nas_path: /mnt/HDDs/Movies/Movies J-S
+    - name: Movies T-Z
+      nas_path: /mnt/HDDs/Movies/Movies T-Z
+    - name: TV A-M
+      nas_path: /mnt/HDDs/Shows/TV A-M
+    - name: TV N-Z
+      nas_path: /mnt/HDDs/Shows/TV N-Z

@@ -6,6 +6,16 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+### Added
+
+- Loadmaster (`truepanel/loadmaster/`): plug in a USB drive, press Copy (or
+  Start sync in Mission Control), unplug. USB drives mirror their NAS
+  folders, new drive files come to the NAS, newest wins on conflicts, and
+  replaced NAS files are moved to `.loadmaster-replaced` rather than deleted.
+  Verified, resumable copies; front-panel screens; a Mission Control card
+  with per-drive status and activity; Sonarr/Radarr activity log. Disabled
+  by default. See `docs/LOADMASTER.md`.
+
 ## [1.3.1-rc1] - 2026-10-03
 
 TruePanel 1.3.1-rc1 is a focused maintenance candidate for the 1.3 line.

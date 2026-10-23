@@ -27,6 +27,8 @@ from .state import write_json_atomic
 
 LOGGER = logging.getLogger(__name__)
 
+STATUS_PATH = Path("/run/truepanel/loadmaster-status.json")
+COMMAND_SOCKET = Path("/run/truepanel/loadmaster-command.sock")
 ACTIONS = frozenset({"start", "stop", "eject", "rescan", "adopt"})
 SOURCES = frozenset({"web", "lcd"})
 STALE_AFTER = 30.0
@@ -95,6 +97,7 @@ def validate(request: Any) -> tuple[dict[str, Any] | None, dict[str, Any] | None
                 False, "confirmation_required", "start must be confirmed"
             )
         clean["digest"] = digest
+        clean["confirm"] = True
     return clean, None
 
 

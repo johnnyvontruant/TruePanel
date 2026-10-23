@@ -27,6 +27,8 @@ from typing import Any
 
 from truepanel.cargo.resolver import ServarrConfig
 
+from .link import COMMAND_SOCKET, STATUS_PATH
+
 DEFAULT_STATE_DIR = Path("/var/lib/truepanel/loadmaster")
 DEFAULT_MOUNT_ROOT = Path("/mnt/loadmaster")
 REPLACED_FOLDER = ".loadmaster-replaced"
@@ -85,8 +87,8 @@ class Settings:
     pending_scan_seconds: float = 600.0
     sonarr: ServarrConfig | None = None
     radarr: ServarrConfig | None = None
-    status_path: Path = Path("/run/truepanel/loadmaster-status.json")
-    command_socket: Path = Path("/run/truepanel/loadmaster-command.sock")
+    status_path: Path = STATUS_PATH
+    command_socket: Path = COMMAND_SOCKET
     extra: dict[str, Any] = field(default_factory=dict)
 
     def drive_named(self, name: str) -> Drive | None:

@@ -1,10 +1,10 @@
 """Command line for Loadmaster.
 
-  python3 -m truepanel.loadmaster run                 run the service on its own
-  python3 -m truepanel.loadmaster status              print the live status
-  python3 -m truepanel.loadmaster preview NAME PATH   dry run against a folder
-                                                      (e.g. a manually mounted
-                                                      spare drive); changes nothing
+python3 -m truepanel.loadmaster run                 run the service on its own
+python3 -m truepanel.loadmaster status              print the live status
+python3 -m truepanel.loadmaster preview NAME PATH   dry run against a folder
+                                                    (e.g. a manually mounted
+                                                    spare drive); changes nothing
 """
 
 from __future__ import annotations
@@ -45,6 +45,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     config = load_config(args.config)
+    if args.command == "preview" and isinstance(config.get("loadmaster"), dict):
+        # A dry run is allowed before Loadmaster is switched on.
+        config = {**config, "loadmaster": {**config["loadmaster"], "enabled": True}}
     settings = load_settings(config)
     if settings is None:
         print("Loadmaster is not enabled (loadmaster.enabled in truepanel.yaml).")
@@ -68,9 +71,11 @@ def main(argv: list[str] | None = None) -> int:
             large_delete_files=settings.large_delete_files,
         )
         s = plan["summary"]
-        print(f"{drive.name}: {plan['state']}"
-              + (f" ({plan['reason']})" if plan["reason"] else "")
-              + (" — first sync, nothing will be deleted" if plan["first_sync"] else ""))
+        print(
+            f"{drive.name}: {plan['state']}"
+            + (f" ({plan['reason']})" if plan["reason"] else "")
+            + (" — first sync, nothing will be deleted" if plan["first_sync"] else "")
+        )
         print(f"  NAS -> USB   {s['to_usb_files']:6} files  {_size(s['to_usb_bytes'])}")
         print(f"  USB -> NAS   {s['to_nas_files']:6} files  {_size(s['to_nas_bytes'])}")
         print(f"  remove (USB) {s['delete_usb_files']:6} files")

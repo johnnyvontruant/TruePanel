@@ -289,7 +289,10 @@ class LoadmasterService:
         mount = self.dock.mount_ro(docked)
         usb_root = drive.usb_root(mount)
         if not usb_root.is_dir():
-            raise ScanError(f'folder "{drive.usb_folder}" was not found on the drive')
+            raise ScanError(
+                f'Folder "{drive.usb_folder}" is not on the drive. If the files sit '
+                'at the top of the drive, set usb_folder: "" for it in truepanel.yaml.'
+            )
         nas = scan(drive.nas_path)
         usb = scan(usb_root)
         plan = build_plan(

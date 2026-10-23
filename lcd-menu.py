@@ -39,6 +39,10 @@ from truepanel.host.mode import (
     HostRuntimeMode,
     resolve_host_runtime_mode,
 )
+from truepanel.loadmaster import build_service as build_loadmaster
+from truepanel.loadmaster import lcd as loadmaster_lcd
+from truepanel.loadmaster import load_settings as load_loadmaster_settings
+from truepanel.loadmaster.link import LinkError, read_status, send_command
 from truepanel.mission_control import MissionControl
 from truepanel.network_labels import (
     friendly_network_label,
@@ -108,6 +112,15 @@ bay_led_startup_animation = (
     )
 )
 shutdown_requested = False
+
+# Loadmaster: USB drive sync. It owns the LCD while a drive needs attention.
+loadmaster_service = None
+loadmaster_settings = None
+loadmaster_active = False
+loadmaster_page = 0
+loadmaster_last_state = None
+loadmaster_last_frame = None
+loadmaster_notice = None
 
 mission.register(pool_watcher)
 mission.register(thermal_watcher)
@@ -640,6 +653,93 @@ def next_alert_history():
 def show_alert_transition(frame):
     lcd.clear()
     lcd.write(0, frame.lines)
+def loadmaster_status():
+    if loadmaster_settings is None:
+        return None
+    try:
+        return read_status(loadmaster_settings.status_path)
+    except Exception:
+        LOGGER.exception("Could not read Loadmaster status")
+        return None
+
+
+def render_loadmaster(status, *, force=False):
+    global loadmaster_page, loadmaster_last_frame
+
+    screens = loadmaster_lcd.pages(status)
+    if not screens:
+        return False
+    loadmaster_page %= len(screens)
+    lines = list(loadmaster_notice or screens[loadmaster_page])
+    if force or tuple(lines) != loadmaster_last_frame:
+        loadmaster_last_frame = tuple(lines)
+        render_lcd_frame(lines, page="show_loadmaster")
+    return True
+
+
+def loadmaster_refresh(*, force=False):
+    """Show Loadmaster while it needs attention. True while it owns the LCD."""
+
+    global loadmaster_active, loadmaster_page, loadmaster_last_state
+    global loadmaster_last_frame, loadmaster_notice
+
+    status = loadmaster_status()
+    if not loadmaster_lcd.takeover(status, time.time()):
+        if loadmaster_active:
+            loadmaster_last_frame = None
+        loadmaster_active = False
+        loadmaster_last_state = None
+        loadmaster_notice = None
+        return False
+
+    if status.get("state") != loadmaster_last_state:
+        loadmaster_last_state = status.get("state")
+        loadmaster_page = 0
+        loadmaster_notice = None
+        force = True
+        lcd_on()
+
+    loadmaster_active = render_loadmaster(status, force=force)
+    return loadmaster_active
+
+
+def loadmaster_button(data):
+    """SELECT pages through Loadmaster screens; ENTER ejects the drive."""
+
+    global loadmaster_page, loadmaster_notice
+
+    status = loadmaster_status()
+    if data == 0x02:
+        loadmaster_notice = None
+        loadmaster_page += 1
+        render_loadmaster(status, force=True)
+        return
+    if data != 0x01 or not loadmaster_lcd.enter_ejects(status):
+        return
+
+    def eject():
+        global loadmaster_notice
+        try:
+            answer = send_command(
+                loadmaster_settings.command_socket,
+                {"action": "eject", "source": "lcd"},
+            )
+            loadmaster_notice = None if answer.get("ok") else (
+                "Eject refused", str(answer.get("message"))[:16])
+        except LinkError:
+            loadmaster_notice = ("Eject failed", "Not reachable")
+        loadmaster_refresh(force=True)
+
+    loadmaster_notice = ("Ejecting...", "Please wait")
+    render_loadmaster(status, force=True)
+    threading.Thread(target=eject, name="loadmaster-lcd-eject", daemon=True).start()
+
+
+def show_loadmaster_next():
+    lcd.clear()
+    lcd.write(0, loadmaster_lcd.idle_page(loadmaster_status()))
+
+
 def request_shutdown(signum=None, frame=None):
     global shutdown_requested
     shutdown_requested = True
@@ -674,6 +774,15 @@ menu = [
     show_fan_pwm,
 ]
 
+try:
+    loadmaster_settings = load_loadmaster_settings(config)
+except Exception:
+    LOGGER.exception("Loadmaster configuration is invalid; Loadmaster disabled")
+    loadmaster_settings = None
+
+if loadmaster_settings is not None:
+    menu.append(show_loadmaster_next)
+
 
 def response_handler(command, data):
     global menu_item
@@ -695,6 +804,12 @@ def response_handler(command, data):
             return
 
         lcd_on()
+
+        if loadmaster_active:
+            page_name = "show_loadmaster"
+            loadmaster_button(data)
+            return
+
         prev_menu = menu_item
 
         if menu[menu_item] == show_mission_home:
@@ -747,6 +862,7 @@ def main():
     global lcd, menu_item
     global host_agent_runtime
     global lcd_command_server
+    global loadmaster_service
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
@@ -809,6 +925,14 @@ def main():
         if lcd_command_server is not None:
             lcd_command_server.start()
 
+        if loadmaster_settings is not None:
+            try:
+                loadmaster_service = build_loadmaster(config)
+                loadmaster_service.start_service()
+            except Exception:
+                LOGGER.exception("Loadmaster failed to start")
+                loadmaster_service = None
+
         if bay_led_startup_animation is not None:
             bay_led_startup_animation.run()
 
@@ -824,21 +948,35 @@ def main():
             add_ips_to_menu()
 
             maybe_show_alert()
-            menu[menu_item]()
+
+            if not loadmaster_refresh(force=True):
+                menu[menu_item]()
 
             delay = 5
 
-            for _ in range(delay * 10):
+            for tick in range(delay * 10):
                 if shutdown_requested:
                     break
 
                 time.sleep(0.1)
 
-            if not shutdown_requested:
+                # Keep Loadmaster progress and state changes live.
+                if loadmaster_settings is not None and tick % 10 == 9:
+                    loadmaster_refresh()
+
+            if not shutdown_requested and not loadmaster_active:
                 menu_item = (
                     menu_item + 1
                 ) % len(menu)
     finally:
+        if loadmaster_service is not None:
+            try:
+                loadmaster_service.stop_service()
+            except Exception:
+                LOGGER.exception("Loadmaster shutdown failed")
+            finally:
+                loadmaster_service = None
+
         if lcd_command_server is not None:
             try:
                 lcd_command_server.stop()
