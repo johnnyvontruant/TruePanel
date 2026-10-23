@@ -30,6 +30,7 @@ class HostAgentRuntime:
         thermal_lifecycle: Any | None = None,
         loadmaster_copy_button_service: Any | None = None,
         loadmaster_controller: Any | None = None,
+        loadmaster_command_server: Any | None = None,
     ):
         self._fan_runtime = fan_runtime
         self._safety = safety
@@ -42,6 +43,7 @@ class HostAgentRuntime:
             loadmaster_copy_button_service
         )
         self._loadmaster_controller = loadmaster_controller
+        self._loadmaster_command_server = loadmaster_command_server
         self._fan_server_factory = fan_server_factory
 
         self._fan_server = None
@@ -295,6 +297,9 @@ class HostAgentRuntime:
             if self._loadmaster_controller is not None:
                 self._loadmaster_controller.start()
 
+            if self._loadmaster_command_server is not None:
+                self._loadmaster_command_server.start()
+
             self._started = True
         except Exception:
             LOGGER.exception(
@@ -326,6 +331,14 @@ class HostAgentRuntime:
                 )
             finally:
                 self._fan_server = None
+
+        if self._loadmaster_command_server is not None:
+            try:
+                self._loadmaster_command_server.stop()
+            except Exception:
+                LOGGER.exception(
+                    "Loadmaster command server shutdown failed"
+                )
 
         if self._loadmaster_controller is not None:
             try:

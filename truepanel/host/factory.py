@@ -14,6 +14,11 @@ from typing import Any
 from truepanel.cargo.copy_button import (
     LoadmasterCopyButtonGate,
 )
+from truepanel.cargo.loadmaster_link import (
+    LoadmasterCommandProcessor,
+    LoadmasterCommandServer,
+    publish_status,
+)
 from truepanel.hardware.fan_command import (
     FanCommandProcessor,
     FanCommandServer,
@@ -174,6 +179,7 @@ def build_loadmaster_controller(
             "Loadmaster execution requires physical_confirmation.enabled"
         )
 
+    controller_kwargs.setdefault("status_publisher", publish_status)
     controller = LoadmasterController(
         settings=settings,
         button=copy_button_service,
@@ -191,6 +197,7 @@ def build_host_agent_runtime(
     fan_server_factory: Callable[[], Any | None] | None = None,
     loadmaster_copy_button_service: Any | None = None,
     loadmaster_controller: Any | None = None,
+    loadmaster_command_server: Any | None = None,
 ) -> HostAgentRuntime:
     """Assemble the current privileged TruePanel Host Agent runtime."""
 
@@ -278,6 +285,7 @@ def build_host_agent_runtime(
             loadmaster_copy_button_service
         ),
         loadmaster_controller=loadmaster_controller,
+        loadmaster_command_server=loadmaster_command_server,
     )
 
 
@@ -302,6 +310,12 @@ def build_host_agent_runtime_from_bootstrap(
         copy_button_service=loadmaster_copy_button_service,
     )
 
+    loadmaster_command_server = (
+        LoadmasterCommandServer(LoadmasterCommandProcessor(loadmaster_controller))
+        if loadmaster_controller is not None
+        else None
+    )
+
     return build_host_agent_runtime(
         fan_runtime=bootstrap.fan_runtime,
         safety_services=bootstrap.safety_services(),
@@ -313,6 +327,7 @@ def build_host_agent_runtime_from_bootstrap(
             loadmaster_copy_button_service
         ),
         loadmaster_controller=loadmaster_controller,
+        loadmaster_command_server=loadmaster_command_server,
     )
 
 
