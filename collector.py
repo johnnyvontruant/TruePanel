@@ -3,7 +3,6 @@ import json
 import os
 import subprocess
 import time
-
 from pathlib import Path
 
 from truepanel.hardware.drive_temperatures import (
@@ -181,13 +180,13 @@ class TruePanelCollector:
                     download_bytes_per_second
                     / 1024
                     / 1024,
-                    1,
+                    4,
                 ),
                 "upload_mb": round(
                     upload_bytes_per_second
                     / 1024
                     / 1024,
-                    1,
+                    4,
                 ),
                 # Explicit wire-rate fields for new API consumers.
                 "download_mbps": round(
@@ -287,16 +286,23 @@ class TruePanelCollector:
             if not name or name == "lo":
                 continue
 
-            is_tailscale = (
-                name.startswith(
-                    "tailscale"
+            is_tailscale = name.startswith("tailscale")
+            # Linux bridges can own host IPv4 and the default route while
+            # their physical ports have no IPv4 address of their own.
+            is_primary = name == default_interface
+            linkinfo = item.get("linkinfo")
+            is_bridge = (
+                (
+                    isinstance(linkinfo, dict)
+                    and linkinfo.get("info_kind") == "bridge"
                 )
+                or (Path("/sys/class/net") / name / "bridge").is_dir()
             )
 
             if (
-                name
-                not in physical_interfaces
+                name not in physical_interfaces
                 and not is_tailscale
+                and not is_primary
             ):
                 continue
 
@@ -352,9 +358,10 @@ class TruePanelCollector:
 
             telemetry[name] = {
                 "position": position,
-                "label": friendly_network_label(
-                    name,
-                    physical_positions,
+                "label": (
+                    f"Bridge ({name})"
+                    if is_bridge
+                    else friendly_network_label(name, physical_positions)
                 ),
                 "address": ipv4,
                 "download_mb": (
@@ -394,16 +401,17 @@ class TruePanelCollector:
                     operstate
                     or "UNKNOWN"
                 ),
-                "primary": (
-                    name
-                    == default_interface
-                ),
+                "primary": is_primary,
                 "kind": (
                     "tailscale"
                     if is_tailscale
+                    else "bridge"
+                    if is_bridge
                     else "lan"
                 ),
             }
+            if item.get("master"):
+                telemetry[name]["master"] = str(item["master"])
 
         return telemetry
 
