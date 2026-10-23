@@ -442,6 +442,8 @@ button.danger .profile-target{color:var(--bad)}
   gap:.7rem;
   margin-top:1rem
 }
+/* Loadmaster's full-width review must not waste the right Cargo Bay column. */
+#cargoLoadmasterDrawer{grid-column:1 / -1}
 .cargo-drawer{
   min-width:0;
   padding:0 .9rem;
@@ -613,6 +615,35 @@ button.danger .profile-target{color:var(--bad)}
   color:var(--warn)
 }
 
+/* Separate historical approval evidence from unapproved cartridge inventory. */
+.loadmaster-planning{
+  margin-top:1.05rem;
+  padding-top:.85rem;
+  border-top:1px solid var(--edge);
+}
+.loadmaster-planning-heading{
+  font-weight:800;
+  font-size:.77rem;
+  letter-spacing:.045em;
+}
+.loadmaster-planning-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,225px),1fr));
+  gap:.65rem;
+  margin-top:.7rem;
+}
+.loadmaster-planning-grid>.cargo-item{
+  padding:.8rem;
+  border:1px solid var(--edge);
+  border-radius:var(--radius-sm);
+  min-width:0;
+}
+.loadmaster-planning-grid .cargo-path{overflow-wrap:anywhere;word-break:break-word}
+.loadmaster-planning-grid .cargo-title{font-size:.8rem}
+.loadmaster-planning-grid .cargo-detail{line-height:1.5}
+@media(max-width:640px){
+  .loadmaster-planning-grid{grid-template-columns:1fr}
+}
 /* Loadmaster v1 is visibility-only; not a physical control interface. */
 .loadmaster-flight-deck{
   padding:.8rem;
@@ -3513,13 +3544,13 @@ function renderCargoFlightDeck(flightDeck,root){
     const panel=cargoElement("div","loadmaster-flight-deck");
     const header=cargoElement("div","loadmaster-flight-head");
     header.append(
-        cargoElement("strong","","BIDIRECTIONAL FLIGHT DECK"),
+        cargoElement("strong","","BIDIRECTIONAL FLIGHT DECK · ACCEPTANCE HISTORY"),
         cargoElement("span","cargo-backup-state awaiting","PREVIEW ONLY")
     );
     panel.append(header);
     // Never present the report as an executable or physical authorization.
     panel.append(cargoElement("div","cargo-meta",
-        "Read-only telemetry. No web transfer or Copy-button arming."));
+        "Historical synthetic-cartridge acceptance. Read-only telemetry; no web transfer or Copy-button arming."));
     if(status!=="READY"){
         panel.append(cargoElement("div","cargo-detail",
             status==="REVIEW"
@@ -3530,7 +3561,7 @@ function renderCargoFlightDeck(flightDeck,root){
     }
     const cartridge=flight.cartridge||{};
     panel.append(cargoElement("div","cargo-detail",
-        `${String(cartridge.label||"Cartridge")} • ${String(cartridge.mount_mode||"unknown").toUpperCase()} • ${String(cartridge.uuid||"unknown")}`));
+        `${String(cartridge.label||"Cartridge")} • Reported mount: ${String(cartridge.mount_mode||"unknown").toUpperCase()} • ${String(cartridge.uuid||"unknown")}`));
     const counts=flight.summary||{};
     const glance=cargoElement("div","loadmaster-flight-grid");
     [
@@ -3638,6 +3669,17 @@ function renderCargoLoadmaster(loadmaster){
         return;
     }
 
+    const planning=cargoElement("section","loadmaster-planning");
+    planning.append(
+        cargoElement("div","loadmaster-planning-heading",
+            "REGISTERED CARTRIDGE BACKLOG · PLANNING ONLY"),
+        cargoElement("div","cargo-meta",
+            "Awaiting items are not approved transfers. Production storage health and physical authorization are separate gates.")
+    );
+    const planGrid=cargoElement("div","loadmaster-planning-grid");
+    planning.append(planGrid);
+    root.append(planning);
+
     const next=(
         payload.next_cartridge
         &&typeof payload.next_cartridge==="object"
@@ -3685,13 +3727,13 @@ function renderCargoLoadmaster(loadmaster){
             cargoElement(
                 "div",
                 "cargo-meta",
-                "Dock this cartridge for the next Loadmaster run."
+                "Registered planning target only; no transfer is authorized."
             )
         );
 
-        root.append(card);
+        planGrid.append(card);
     }else{
-        root.append(
+        planGrid.append(
             cargoElement(
                 "div",
                 "detail",
@@ -3780,7 +3822,7 @@ function renderCargoLoadmaster(loadmaster){
             );
         }
 
-        root.append(card);
+        planGrid.append(card);
     });
 }
 

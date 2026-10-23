@@ -199,6 +199,16 @@ class RendererContracts(unittest.TestCase):
         self.assertIn("PREVIEW ONLY", html)
         self.assertNotIn("onClickLoadmasterTransfer", html)
 
+    def test_full_width_layout_separates_acceptance_and_unapproved_backlog(self):
+        html = (Path(__file__).resolve().parents[1] /
+                "truepanel/web/static/index.html").read_text()
+        self.assertIn("#cargoLoadmasterDrawer{grid-column:1 / -1}", html)
+        self.assertIn("BIDIRECTIONAL FLIGHT DECK · ACCEPTANCE HISTORY", html)
+        self.assertIn("REGISTERED CARTRIDGE BACKLOG · PLANNING ONLY", html)
+        self.assertIn('planGrid.append(card)', html)
+        self.assertIn("Reported mount:", html)
+        self.assertIn("no transfer is authorized", html)
+
 
 if __name__ == "__main__":
     unittest.main()

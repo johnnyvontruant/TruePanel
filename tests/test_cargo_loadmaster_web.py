@@ -43,4 +43,4 @@ def test_loadmaster_surfaces_next_cartridge():
 
     assert "NEXT CARTRIDGE" in text
     assert "Next backup:" in text
-    assert "Dock this cartridge" in text
+    assert "Registered planning target only" in text
