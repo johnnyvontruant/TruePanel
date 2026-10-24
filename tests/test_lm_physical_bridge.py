@@ -43,7 +43,7 @@ def test_matching_confirmation_dispatches_once():
         sender=lambda req: (sent.append(req) or {"ok": True, "status": "started"}),
     )
     assert bridge.accept(confirmation())
-    assert sent == [{"action": "start", "source": "lcd", "digest": "a" * 64, "confirm": True}]
+    assert sent == [{"action": "start", "source": "host", "digest": "a" * 64, "confirm": True}]
     assert not bridge.accept(confirmation())
     assert len(sent) == 1
 
