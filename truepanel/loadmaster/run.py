@@ -13,6 +13,7 @@ next plan reaches the same decision again.
 from __future__ import annotations
 
 import os
+import subprocess
 import threading
 import time
 from collections.abc import Callable
@@ -79,6 +80,20 @@ def execute(ctx: RunContext) -> dict[str, Any]:
         "results": [],
     }
 
+    # Fail closed before any transfer when the production HDD pool is unhealthy.
+    if nas_root == Path("/mnt/HDDs") or Path("/mnt/HDDs") in nas_root.parents:
+        try:
+            check = subprocess.run(
+                ["zpool", "list", "-H", "-o", "health", "HDDs"],
+                capture_output=True, text=True, timeout=10, check=True,
+            )
+            health = check.stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            health = "UNKNOWN"
+        if health != "ONLINE":
+            receipt.update(state="FAILED", reason=f"HDD pool not healthy: {health}")
+            return _finish(ctx, receipt, started)
+
     actions = plan["actions"]
     summary = plan["summary"]
     usb_need = max(0, summary["to_usb_bytes"] - summary["delete_usb_bytes"])
@@ -133,9 +148,9 @@ def execute(ctx: RunContext) -> dict[str, Any]:
         receipt["results"].append(result)
         if fatal:
             continue
-        if raw["op"] == RETIRE_NAS and copy_failed:
+        if raw["op"] in {RETIRE_NAS, DELETE_USB} and copy_failed:
             result["outcome"] = "SKIPPED"
-            result["error"] = "a copy failed, so the NAS original was kept"
+            result["error"] = "a copy failed, so destructive operations were skipped"
             continue
 
         progress["current"] = raw["path"]
