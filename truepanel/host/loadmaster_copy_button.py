@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -59,6 +60,33 @@ class LoadmasterCopyButtonService:
         self._started = False
         self._last_confirmation: CopyButtonConfirmation | None = None
         self._last_error: str | None = None
+        self._signal_samples = 0
+        self._signal_edges = 0
+        self._signal_last_level: int | None = None
+        self._signal_last_edge_at: float | None = None
+        self._signal_low_samples = 0
+        self._signal_high_samples = 0
+
+        # Observe the SAME read used by the gate; never read GPIO a second time.
+        original_read_level = self.gate._read_level
+
+        def observed_read_level():
+            value = original_read_level()
+            if isinstance(value, (int, bool)) and int(value) in (0, 1):
+                level = int(value)
+                with self._lock:
+                    self._signal_samples += 1
+                    if level == 0:
+                        self._signal_low_samples += 1
+                    else:
+                        self._signal_high_samples += 1
+                    if self._signal_last_level is not None and level != self._signal_last_level:
+                        self._signal_edges += 1
+                        self._signal_last_edge_at = time.time()
+                    self._signal_last_level = level
+            return value
+
+        self.gate._read_level = observed_read_level
 
     @property
     def started(self) -> bool:
@@ -99,6 +127,14 @@ class LoadmasterCopyButtonService:
                 "service_started": self._started,
                 "poll_seconds": self.poll_seconds,
                 "last_error": self._last_error,
+                "signal": {
+                    "samples": self._signal_samples,
+                    "edges": self._signal_edges,
+                    "low_samples": self._signal_low_samples,
+                    "high_samples": self._signal_high_samples,
+                    "last_level": self._signal_last_level,
+                    "last_edge_at": self._signal_last_edge_at,
+                },
                 "last_confirmation": (
                     self._last_confirmation.public_dict()
                     if self._last_confirmation is not None
