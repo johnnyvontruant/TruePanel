@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "experiment_id": "TP-EXP-0035",
+  "scenario": "aegis-governed-long-window-intake",
+  "simulation": true,
+  "hardware_isolated": true,
+  "production_mutation": false,
+  "control_authority": false,
+  "scenarios": [
+    {"scenario": "bounded-label-blind-window", "status": "LONG_WINDOW_RECORDING_ACCEPTED_FOR_LABEL_BLIND_REPLAY", "frame_count": 52, "error_count": 0},
+    {"scenario": "insufficient-window", "status": "HOLD", "frame_count": 0, "error_count": 1},
+    {"scenario": "symlink-substitution", "status": "HOLD", "frame_count": 0, "error_count": 1},
+    {"scenario": "unsafe-permissions", "status": "HOLD", "frame_count": 0, "error_count": 1},
+    {"scenario": "malformed-json", "status": "HOLD", "frame_count": 0, "error_count": 1},
+    {"scenario": "label-leakage", "status": "HOLD", "frame_count": 51, "error_count": 1},
+    {"scenario": "missing-required-metric", "status": "HOLD", "frame_count": 52, "error_count": 1},
+    {"scenario": "sequence-reordering", "status": "HOLD", "frame_count": 52, "error_count": 1},
+    {"scenario": "timestamp-reordering", "status": "HOLD", "frame_count": 52, "error_count": 1},
+    {"scenario": "unstable-baseline", "status": "HOLD", "frame_count": 52, "error_count": 1}
+  ],
+  "measurements": {
+    "scenario_count": 10,
+    "accepted_count": 1,
+    "hold_count": 9,
+    "unsafe_ready_count": 0,
+    "accepted_frame_count": 52,
+    "accepted_baseline_frames": 12,
+    "labels_accepted": 0,
+    "capture_operations": 0,
+    "tail_operations": 0,
+    "checkpoint_writes": 0,
+    "field_validations": 0,
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "deployments": 0,
+    "hardware_actions": 0,
+    "runtime_writes": 0
+  },
+  "invalidated_assumption": "A minimum frame count alone proves a useful calibration window; the intake must also prove exact ordering, required signal shape, a stable baseline, and absence of outcome labels.",
+  "temporary_fixture_removed": true,
+  "evidence_sha256": "ddf817f09ddadef79e8772f13e2c2add0feee29a81b7d76063059710c42ee78d"
+}
