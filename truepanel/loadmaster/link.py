@@ -75,7 +75,7 @@ def validate(request: Any) -> tuple[dict[str, Any] | None, dict[str, Any] | None
 
     if not isinstance(request, dict):
         return None, reply(False, "invalid", "request must be a JSON object")
-    extra = set(request) - {"action", "source", "digest", "confirm"}
+    extra = set(request) - {"action", "source", "digest", "confirm", "token"}
     if extra:
         return None, reply(
             False, "invalid", f"unknown fields: {', '.join(sorted(extra))}"
@@ -97,6 +97,11 @@ def validate(request: Any) -> tuple[dict[str, Any] | None, dict[str, Any] | None
             return None, reply(
                 False, "confirmation_required", "start must be confirmed"
             )
+        if source == "host":
+            token = request.get("token")
+            if not isinstance(token, dict) or set(token) != {"issued", "nonce", "mac"}:
+                return None, reply(False, "invalid", "host start needs one-time token")
+            clean["token"] = token
         clean["digest"] = digest
         clean["confirm"] = True
     return clean, None
