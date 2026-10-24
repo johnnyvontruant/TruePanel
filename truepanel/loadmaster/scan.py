@@ -66,7 +66,7 @@ class Tree:
 
 
 def ignored(name: str) -> bool:
-    return name.startswith(".") or name in CLUTTER or name.casefold() == "daria"
+    return name.startswith(".") or name in CLUTTER or (name.casefold() == "daria" or name.casefold().startswith("daria ("))
 
 
 def scan(root: Path) -> Tree:
