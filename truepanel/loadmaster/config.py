@@ -77,7 +77,7 @@ class Settings:
     drives: tuple[Drive, ...]
     state_dir: Path = DEFAULT_STATE_DIR
     mount_root: Path = DEFAULT_MOUNT_ROOT
-    remote_start: bool = True
+    remote_start: bool = False
     copy_button: bool = True
     verify: str = "sha256"
     ingest_owner: tuple[int, int] | None = None
@@ -202,7 +202,7 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         mount_root=_abs_path(
             section.get("mount_root") or DEFAULT_MOUNT_ROOT, "mount_root"
         ),
-        remote_start=section.get("remote_start", True) is not False,
+        remote_start=section.get("remote_start", False) is True,
         copy_button=section.get("copy_button", True) is not False,
         verify=verify,
         ingest_owner=_owner(section.get("ingest_owner")),
