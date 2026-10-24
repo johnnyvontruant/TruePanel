@@ -295,7 +295,11 @@ def build_host_agent_runtime_from_bootstrap(
                     baseline_verified=baseline_check,
                 )
 
-            callback = ConfirmationBridge(enabled=True).accept
+            key_name = v2.get("physical_token_key")
+            if isinstance(key_name, str) and key_name.startswith("/"):
+                callback = ConfirmationBridge(
+                    enabled=True, token_key_path=Path(key_name)
+                ).accept
 
     loadmaster_copy_button_service = (
         build_loadmaster_copy_button_service(
