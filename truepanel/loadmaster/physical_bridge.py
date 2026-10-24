@@ -10,6 +10,8 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from typing import Any
+from pathlib import Path
+from .host_token import issue, read_secret
 
 from truepanel.cargo.copy_button import CopyButtonConfirmation
 from .link import COMMAND_SOCKET, STATUS_PATH, LinkError, read_status, send_command
@@ -24,10 +26,14 @@ class ConfirmationBridge:
         self,
         *,
         enabled: bool = False,
+        token_key_path: Path | None = None,
+        token_issuer: Callable[[str, str, str], dict[str, object]] | None = None,
         status_reader: Callable[[], dict[str, Any]] | None = None,
         sender: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
     ) -> None:
         self.enabled = enabled
+        self.token_key_path = token_key_path
+        self.token_issuer = token_issuer
         self.status_reader = status_reader or (lambda: read_status(STATUS_PATH))
         self.sender = sender or (lambda request: send_command(COMMAND_SOCKET, request, timeout=5))
         self._used: set[tuple[str, str, str]] = set()
@@ -71,11 +77,25 @@ class ConfirmationBridge:
             # Mark consumed before IPC: a transport failure must not permit a
             # second press to silently replay a potentially accepted command.
             self._used.add(identity)
+            if self.token_issuer is not None:
+                token = self.token_issuer(
+                    confirmation.plan_digest, confirmation.cartridge_uuid,
+                    confirmation.device_serial
+                )
+            elif self.token_key_path is not None:
+                token = issue(
+                    read_secret(self.token_key_path),
+                    confirmation.plan_digest, confirmation.cartridge_uuid,
+                    confirmation.device_serial
+                )
+            else:
+                return False
             result = self.sender({
                 "action": "start",
                 "source": "host",
                 "digest": confirmation.plan_digest,
                 "confirm": True,
+                "token": token,
             })
             return result.get("ok") is True and result.get("status") == "started"
         except (LinkError, OSError, ValueError, TypeError, KeyError) as error:
