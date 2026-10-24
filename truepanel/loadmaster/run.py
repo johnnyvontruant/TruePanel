@@ -143,8 +143,10 @@ def execute(ctx: RunContext) -> dict[str, Any]:
         fp = Fingerprint(raw["size"], raw["mtime_ns"])
         try:
             rel = safe_relative(raw["path"])
+            # The drive may spell the same name with different case.
+            usb_rel = safe_relative(raw.get("usb_path") or raw["path"])
             if raw["op"] == DELETE_USB:
-                delete_file(ctx.usb_root, rel, fp)
+                delete_file(ctx.usb_root, usb_rel, fp)
                 new_files.pop(raw["path"], None)
             elif raw["op"] == RETIRE_NAS:
                 retire_file(nas_root, rel, fp, replaced_root)
@@ -152,9 +154,9 @@ def execute(ctx: RunContext) -> dict[str, Any]:
             else:
                 to_usb = raw["op"] == TO_USB
                 copied = copy_file(
-                    source=(nas_root if to_usb else ctx.usb_root) / rel,
+                    source=nas_root / rel if to_usb else ctx.usb_root / usb_rel,
                     dest_root=ctx.usb_root if to_usb else nas_root,
-                    rel=rel,
+                    rel=usb_rel if to_usb else rel,
                     expected=fp,
                     replace=raw["reason"] in REPLACING_REASONS,
                     stop=ctx.stop,

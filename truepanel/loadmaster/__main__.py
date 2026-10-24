@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import signal
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -23,6 +24,22 @@ from .link import read_status
 from .plan import build_plan
 from .scan import scan
 from .state import StateStore
+
+
+def _fstype(path: Path) -> str | None:
+    """Filesystem type of the mount holding ``path`` (e.g. exfat), if known."""
+
+    try:
+        result = subprocess.run(
+            ["findmnt", "-no", "FSTYPE", "-T", str(path)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip().lower() or None
 
 
 def _size(value: int) -> str:
@@ -68,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
             nas=scan(drive.nas_path).files,
             usb=scan(args.usb_path).files,
             record=record.files if record.known else None,
+            usb_fstype=_fstype(args.usb_path),
             large_delete_files=settings.large_delete_files,
         )
         s = plan["summary"]

@@ -156,6 +156,55 @@ def test_names_illegal_on_exfat_are_skipped_with_notice():
     ]
 
 
+
+def test_case_only_rename_on_nas_is_in_sync_on_exfat():
+    nas = {"Modern Family (2009)/1x21 - Travels.mp4": fp(7)}
+    usb = {"Modern Family (2009)/1X21 - Travels.mp4": fp(7)}
+    for record in (None, dict(usb)):
+        result = plan(nas, usb, record, usb_fstype="exfat")
+        assert result["actions"] == []
+        assert result["state"] == "CLEAR"
+        assert list(result["in_sync"]) == ["Modern Family (2009)/1x21 - Travels.mp4"]
+        assert result["notices"] == [
+            {
+                "path": "Modern Family (2009)/1x21 - Travels.mp4",
+                "reason": "CASE_DIFFERS_ON_USB",
+                "usb_path": "Modern Family (2009)/1X21 - Travels.mp4",
+            }
+        ]
+    # The record keeps the old spelling only until this sync rewrites it.
+    result = plan(nas, usb, dict(usb), usb_fstype="exfat")
+    assert result["forget"] == ["Modern Family (2009)/1X21 - Travels.mp4"]
+
+
+def test_case_is_significant_on_case_sensitive_drives():
+    result = plan({"a/1x01.mkv": fp(1)}, {"a/1X01.mkv": fp(1)}, None, usb_fstype="ext4")
+    assert ops(result) == [
+        ("to_usb", "a/1x01.mkv", "NEW_ON_NAS"),
+        ("to_nas", "a/1X01.mkv", "NEW_ON_USB"),
+    ]
+
+
+def test_case_twin_actions_carry_the_drive_spelling():
+    record = {"a/1X01.mkv": fp(1), "a/1X02.mkv": fp(2), "keep.mkv": fp(3)}
+    nas = {"a/1x01.mkv": fp(9, T + HOUR), "keep.mkv": fp(3)}
+    usb = {"A/1X01.mkv": fp(1), "A/1X02.mkv": fp(2), "keep.mkv": fp(3)}
+    result = plan(nas, usb, record, usb_fstype="exfat")
+    actions = {a["path"]: (a["op"], a["reason"], a["usb_path"]) for a in result["actions"]}
+    assert actions == {
+        "a/1X02.mkv": ("delete_usb", "REMOVED_FROM_NAS", "A/1X02.mkv"),
+        "a/1x01.mkv": ("to_usb", "UPDATED_ON_NAS", "A/1X01.mkv"),
+    }
+
+
+def test_two_nas_names_for_one_drive_name_copy_once():
+    nas = {"a/Pilot.mkv": fp(1), "a/pilot.mkv": fp(2)}
+    result = plan(nas, {}, None, usb_fstype="exfat")
+    assert ops(result) == [("to_usb", "a/Pilot.mkv", "NEW_ON_NAS")]
+    assert result["notices"] == [
+        {"path": "a/pilot.mkv", "reason": "NAME_DIFFERS_ONLY_BY_CASE_ON_NAS"}
+    ]
+
 def test_usb_changed_after_nas_removal_is_kept():
     record = {"x.mkv": fp(1), "y.mkv": fp(1)}
     nas = {"y.mkv": fp(1)}
