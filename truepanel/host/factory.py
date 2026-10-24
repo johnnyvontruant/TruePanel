@@ -295,6 +295,7 @@ def build_host_agent_runtime_from_bootstrap(
             and lab_root in Path(acceptance_status).parents
             and lab_root in Path(acceptance_socket).parents
             and v2.get("remote_start") is not True
+            and v2.get("external_daemon") is True
         )
         if isolated:
             from truepanel.loadmaster.synthetic_acceptance import accept_synthetic_preflight
