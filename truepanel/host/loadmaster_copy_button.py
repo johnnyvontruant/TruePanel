@@ -126,6 +126,7 @@ class LoadmasterCopyButtonService:
                 **self.gate.armed_snapshot(),
                 "service_started": self._started,
                 "poll_seconds": self.poll_seconds,
+                "lpt_gp_en": getattr(self.reader, "lpt_gp_en", None),
                 "last_error": self._last_error,
                 "signal": {
                     "samples": self._signal_samples,
