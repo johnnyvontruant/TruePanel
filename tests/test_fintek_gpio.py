@@ -19,6 +19,7 @@ class FakePortIO:
         base: int = 0x0600,
         direction: int = 0x0C,
         input_value: int = 0x7F,
+        lpt_gp_config: int = 0x80,
     ) -> None:
         self.values: dict[int, int] = {}
         self.closed = False
@@ -30,6 +31,7 @@ class FakePortIO:
             0x20: (chip >> 8) & 0xFF,
             0x21: chip & 0xFF,
             0x23: (manufacturer >> 8) & 0xFF,
+            0x2A: lpt_gp_config,
             0x24: manufacturer & 0xFF,
             0x30: enabled,
             0x60: (base >> 8) & 0xFF,
@@ -140,3 +142,11 @@ def test_closed_reader_fails_closed() -> None:
 
     with pytest.raises(RuntimeError, match="closed"):
         reader.read_level()
+
+def test_reader_observes_gpio_pin_mux_without_mutating_config() -> None:
+    for cr2a, expected in ((0x80, True), (0x00, False), (0xFF, True)):
+        io = FakePortIO(lpt_gp_config=cr2a)
+        reader = FintekCopyButtonReader(io=io)
+        assert reader.lpt_gp_en is expected
+        assert not any(port == 0x2F and value == cr2a for port, value in io.writes)
+        assert all(port != io.runtime_data_port for port, _ in io.writes)
