@@ -39,3 +39,25 @@ def test_host_request_requires_token():
                           "digest":"a"*64, "confirm":True})
     assert result["ok"] is False
     assert result["status"] == "invalid"
+
+
+def test_replay_rejected_after_verifier_restart(tmp_path):
+    key = b"k" * 32
+    db = tmp_path / "spent.sqlite3"
+    token = issue(key, "a" * 64, "6ADA-80D5", "serial", now=100)
+    assert TokenVerifier(key, replay_db=db).consume(
+        "a" * 64, "6ADA-80D5", "serial", token, now=101
+    )
+    assert not TokenVerifier(key, replay_db=db).consume(
+        "a" * 64, "6ADA-80D5", "serial", token, now=102
+    )
+
+
+def test_replay_store_failure_fails_closed(tmp_path):
+    key = b"k" * 32
+    blocker = tmp_path / "not-directory"
+    blocker.write_text("block")
+    token = issue(key, "a" * 64, "drive", "serial", now=100)
+    assert not TokenVerifier(key, replay_db=blocker / "spent.sqlite3").consume(
+        "a" * 64, "drive", "serial", token, now=101
+    )
