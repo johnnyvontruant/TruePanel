@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from truepanel.cargo.copy_button import CopyButtonConfirmation
-from .link import COMMAND_SOCKET, STATUS_PATH, read_status, send_command
+from .link import COMMAND_SOCKET, STATUS_PATH, LinkError, read_status, send_command
 
 LOGGER = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class ConfirmationBridge:
                 "confirm": True,
             })
             return result.get("ok") is True and result.get("status") == "started"
-        except (OSError, ValueError, TypeError, KeyError) as error:
+        except (LinkError, OSError, ValueError, TypeError, KeyError) as error:
             LOGGER.warning("Loadmaster physical confirmation refused: %s", error)
             return False
 
