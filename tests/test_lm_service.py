@@ -587,3 +587,36 @@ def test_usb_partition_discovery_by_label(tmp_path):
     found = dock.scan()
     assert len(found) == 1
     assert found[0].device.uuid == "6ADA-80D5"
+
+
+def test_truenas_flat_lsblk_partition_inherits_usb_parent(tmp_path):
+    # TrueNAS can list /dev/sda and /dev/sda2 as siblings.
+    layout = json.dumps({
+        "blockdevices": [
+            {"path": "/dev/sda", "pkname": None, "tran": "usb",
+             "serial": "2532EA8D421A", "children": None},
+            {"path": "/dev/sda2", "pkname": "sda", "tran": None,
+             "uuid": "6ADA-80D5", "fstype": "exfat", "label": "Untitled",
+             "size": 8001352105984,
+             "mountpoints": ["/mnt/loadmaster-spare-test"]},
+            {"path": "/dev/sdd", "tran": "usb",
+             "serial": "BOOT-MODULE"},
+            {"path": "/dev/sdd3", "pkname": "sdd", "fstype": "zfs_member",
+             "uuid": "boot-uuid", "label": "boot-pool"},
+        ]
+    })
+    parsed = parse_lsblk(layout)
+    spare = next(x for x in parsed if x.uuid == "6ADA-80D5")
+    assert spare.usb is True
+    assert spare.serial == "2532EA8D421A"
+    settings = load_settings({
+        "loadmaster": {
+            "enabled": True,
+            "drives": [{"name": "Untitled", "nas_path": str(tmp_path / "nas")}],
+        }
+    })
+    dock = Dock(settings.drives, tmp_path / "mount",
+                runner=lambda _: layout, mountinfo=lambda: "")
+    matched = dock.scan()
+    assert len(matched) == 1
+    assert matched[0].device.path == "/dev/sda2"
