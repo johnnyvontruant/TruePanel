@@ -524,3 +524,66 @@ def test_servarr_failure_is_reported_not_raised(tmp_path):
 
     status = poll(settings, StateStore(tmp_path), client_factory=lambda c: Down())
     assert status["radarr"].startswith("unreachable")
+
+
+def test_usb_parent_transport_survives_partition_transport_override():
+    # A TrueNAS lsblk variant reports the bus on the parent USB disk but
+    # can report a different TRAN on a child filesystem partition.
+    layout = {
+        "blockdevices": [
+            {
+                "path": "/dev/sda",
+                "tran": "usb",
+                "serial": "2532EA8D421A",
+                "size": 8001563222016,
+                "children": [
+                    {
+                        "path": "/dev/sda2",
+                        "tran": "scsi",
+                        "uuid": "6ADA-80D5",
+                        "fstype": "exfat",
+                        "label": "Untitled",
+                        "size": 8001352105984,
+                        "mountpoints": ["/mnt/loadmaster-spare-test"],
+                    }
+                ],
+            }
+        ]
+    }
+    devices = parse_lsblk(json.dumps(layout))
+    assert len(devices) == 1
+    assert devices[0].usb is True
+    assert devices[0].serial == "2532EA8D421A"
+    assert devices[0].uuid == "6ADA-80D5"
+
+
+def test_usb_partition_discovery_by_label(tmp_path):
+    layout = json.dumps({
+        "blockdevices": [{
+            "path": "/dev/sda",
+            "tran": "usb",
+            "children": [{
+                "path": "/dev/sda2",
+                "tran": "scsi",
+                "uuid": "6ADA-80D5",
+                "fstype": "exfat",
+                "label": "Untitled",
+                "mountpoints": ["/mnt/loadmaster-spare-test"],
+            }],
+        }]
+    })
+    drive_settings = load_settings({
+        "loadmaster": {
+            "enabled": True,
+            "drives": [{"name": "Untitled", "nas_path": str(tmp_path / "nas")}],
+        }
+    })
+    dock = Dock(
+        drive_settings.drives,
+        tmp_path / "mount",
+        runner=lambda _: layout,
+        mountinfo=lambda: "",
+    )
+    found = dock.scan()
+    assert len(found) == 1
+    assert found[0].device.uuid == "6ADA-80D5"
