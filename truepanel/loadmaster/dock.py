@@ -39,7 +39,7 @@ LSBLK = [
     "-J",
     "-b",
     "-o",
-    "PATH,UUID,FSTYPE,LABEL,SERIAL,TRAN,SIZE,MOUNTPOINTS",
+    "PATH,PKNAME,UUID,FSTYPE,LABEL,SERIAL,TRAN,SIZE,MOUNTPOINTS",
 ]
 
 Runner = Callable[[Sequence[str]], str]
@@ -128,8 +128,40 @@ def parse_lsblk(text: str) -> list[Device]:
         for child in node.get("children") or []:
             walk(child, serial, tran)
 
+    # Flat lsblk output on TrueNAS requires resolving parent disks by PKNAME.
+    by_path = {}
+    def index(node):
+        if node.get("path"):
+            by_path[node["path"]] = node
+        for child in node.get("children") or []:
+            index(child)
+
     for root in roots or []:
-        walk(root, "", "")
+        index(root)
+
+    def ancestry(node):
+        serial, transport = "", ""
+        seen = set()
+        while node:
+            path = node.get("path")
+            if path in seen:
+                break
+            seen.add(path)
+            serial = serial or str(node.get("serial") or "").strip()
+            child_transport = str(node.get("tran") or "").strip().lower()
+            if child_transport == "usb":
+                transport = "usb"
+            elif not transport:
+                transport = child_transport
+            parent = str(node.get("pkname") or "").strip()
+            if not parent:
+                break
+            node = by_path.get(parent if parent.startswith("/dev/") else "/dev/" + parent)
+        return serial, transport
+
+    for root in roots or []:
+        serial, transport = ancestry(root)
+        walk(root, serial, transport)
     return devices
 
 
