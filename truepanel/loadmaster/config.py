@@ -194,6 +194,20 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
     if verify not in {"sha256", "size"}:
         raise LoadmasterConfigError("loadmaster verify must be sha256 or size")
 
+    receipt = section.get("physical_acceptance_receipt")
+    lab_root = Path("/mnt/SSDs/Applications/Loadmaster-V2-Lab")
+    if receipt is not None:
+        paths = [section.get(k) for k in (
+            "state_dir", "status_path", "command_socket", "physical_token_key"
+        )]
+        if (
+            receipt != str(lab_root / "physical-commissioning" / "synthetic-baseline.json")
+            or any(not isinstance(p, str) or lab_root not in Path(p).parents
+                   for p in paths)
+            or section.get("remote_start") is True
+        ):
+            raise LoadmasterConfigError("synthetic acceptance requires isolated lab paths")
+
     cargo = (config.get("mission_control") or {}).get("cargo_bay") or {}
 
     return Settings(
@@ -212,6 +226,8 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         pending_scan_seconds=float(section.get("pending_scan_seconds") or 600.0),
         sonarr=_servarr(cargo.get("sonarr"), "sonarr"),
         radarr=_servarr(cargo.get("radarr"), "radarr"),
+        status_path=_abs_path(section.get("status_path") or STATUS_PATH, "status_path"),
+        command_socket=_abs_path(section.get("command_socket") or COMMAND_SOCKET, "command_socket"),
         extra={"physical_bridge_enabled": section.get("physical_bridge_enabled") is True,
                "physical_token_key": str(section.get("physical_token_key") or "")},
     )
