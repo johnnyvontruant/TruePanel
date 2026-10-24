@@ -294,3 +294,23 @@ def test_unsafe_paths_rejected():
     for bad in ("", "/etc/passwd", "../x", "a/../b", "a//b"):
         with pytest.raises(transfer.ItemError):
             transfer.safe_relative(bad)
+
+
+def test_scan_skips_mac_and_windows_clutter(tmp_path):
+    keep = "Show/S01E01.mkv"
+    clutter = [
+        ".DS_Store",
+        "Show/._S01E01.mkv",
+        ".Spotlight-V100/Store-V2/index",
+        ".Trashes/501/old.mkv",
+        ".fseventsd/0000",
+        "$RECYCLE.BIN/S-1-5/$R1.mkv",
+        "System Volume Information/IndexerVolumeGuid",
+        "Show/Thumbs.db",
+        "Show/DESKTOP.INI",
+        "Show/Icon\r",
+        "__MACOSX/Show/._S01E01.mkv",
+    ]
+    for rel in [keep, *clutter]:
+        Rig.put(tmp_path, rel, b"x")
+    assert list(scan(tmp_path).files) == [keep]

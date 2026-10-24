@@ -56,9 +56,12 @@ the first sync creates it.
 | Removed from the drive for any other reason | Copied back to the drive |
 | First sync of a drive | Copy whatever each side lacks. **Nothing is ever removed on a first sync.** |
 
-Files whose names start with `.`, and `$RECYCLE.BIN`, `System Volume
-Information`, `Thumbs.db`, `desktop.ini` and `lost+found`, are ignored on both
-sides. Sonarr, Radarr and Plex ignore them too. Names that exFAT/NTFS cannot
+Files and folders whose names start with `.` (macOS `.DS_Store`, `._*`,
+`.Spotlight-V100`, `.Trashes`, `.fseventsd`), and, in any letter case,
+`$RECYCLE.BIN`, `RECYCLER`, `System Volume Information`, `FOUND.000`,
+`Thumbs.db`, `ehthumbs.db`, `desktop.ini`, `lost+found`, `__MACOSX` and the
+macOS folder-icon file `Icon\r` are ignored on both sides: never scanned,
+copied or removed. Sonarr, Radarr and Plex ignore them too. Names that exFAT/NTFS cannot
 store (`< > : " | ? * \`) are skipped and listed rather than failing the sync.
 
 ## Safety rules
