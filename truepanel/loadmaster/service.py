@@ -368,9 +368,31 @@ class LoadmasterService:
                     return reply(False, "unauthorized", "Host token is not configured.")
                 if self._host_token_verifier is None:
                     try:
-                        self._host_token_verifier = TokenVerifier(read_secret(Path(key_path)))
+                        self._host_token_verifier = TokenVerifier(
+                            read_secret(Path(key_path)),
+                            replay_db=self.settings.state_dir / "host-spent-tokens.sqlite3",
+                        )
                     except (OSError, ValueError):
                         return reply(False, "unauthorized", "Invalid host token key.")
+                # Revalidate the dock and digest before spending authority.
+                # A previous status snapshot is not sufficient.
+                with self._lock:
+                    if self._planning or self.state != "READY" or not self.plan:
+                        return reply(False, "not_ready", "Plan is no longer ready.")
+                    if request["digest"] != self.plan["digest"]:
+                        return reply(False, "plan_changed", "Plan digest changed.")
+                    current = self.dock.scan()
+                    if (
+                        self.docked is None
+                        or not any(
+                            candidate.drive.key == self.docked.drive.key
+                            and candidate.device.uuid == self.docked.device.uuid
+                            and candidate.device.serial == self.docked.device.serial
+                            and candidate.insertion == self.docked.insertion
+                            for candidate in current
+                        )
+                    ):
+                        return reply(False, "drive_changed", "Cartridge has changed.")
                 token = request.get("token")
                 if not isinstance(token, dict) or not self._host_token_verifier.consume(
                     request["digest"], self.docked.device.uuid,
