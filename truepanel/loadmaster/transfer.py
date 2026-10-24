@@ -149,10 +149,8 @@ def _noreplace_rename(source: Path, target: Path) -> None:
         if err not in {errno.EINVAL, errno.ENOSYS, errno.EOPNOTSUPP}:
             raise OSError(err, os.strerror(err), str(target))
 
-    # Filesystem without RENAME_NOREPLACE: check, then rename.
-    if os.path.lexists(target):
-        raise ItemError("DESTINATION_APPEARED", str(target))
-    os.rename(source, target)
+    # A check followed by os.rename is racy and can overwrite other data.
+    raise ItemError("ATOMIC_NOREPLACE_UNSUPPORTED", str(target))
 
 
 def partial_path(parent: Path, rel: PurePosixPath, fp: Fingerprint) -> Path:
