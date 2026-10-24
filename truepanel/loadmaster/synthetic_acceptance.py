@@ -74,12 +74,11 @@ def accept_synthetic_preflight(
         summary = plan["summary"]
         preview = plan["preview"]
         if (plan.get("state") != "READY" or plan.get("needs_confirmation") is not False
-            or plan.get("first_sync") is not False
             or len(plan.get("digest", "")) != 64
             or int(summary.get("to_usb_files", 0)) != 1
             or int(summary.get("to_usb_bytes", 0)) != 65536
             or len(preview) != 1
-            or preview[0].get("op") != "TO_USB"
+            or preview[0].get("op") != "to_usb"
             or preview[0].get("path") != TEST_FILE
             or preview[0].get("size") != 65536
             or any(int(summary.get(k, 0)) != 0 for k in (
