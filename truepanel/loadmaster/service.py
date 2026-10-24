@@ -423,6 +423,8 @@ class LoadmasterService:
         return self.adopt()
 
     def press(self) -> None:
+        if self.settings.extra.get("physical_acceptance_mode") is True:
+            return  # Only the host-owned signed confirmation may start.
         with self._lock:
             if self.state == "READY" and self.plan:
                 self.start(self.plan["digest"], source="copy_button", confirmed=False)
