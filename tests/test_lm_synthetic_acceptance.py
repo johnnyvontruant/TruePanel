@@ -30,7 +30,7 @@ def fixture(tmp_path):
               "plan": {"state": "READY", "first_sync": False,
                        "needs_confirmation": False, "digest": "a" * 64,
                        "summary": {"to_usb_files": 1, "to_usb_bytes": 65536},
-                       "preview": [{"op": "TO_USB", "path": TEST_FILE,
+                       "preview": [{"op": "to_usb", "path": TEST_FILE,
                                     "size": 65536}]}}
     return receipt, status
 
