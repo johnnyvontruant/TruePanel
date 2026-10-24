@@ -108,7 +108,10 @@ def parse_lsblk(text: str) -> list[Device]:
 
     def walk(node: dict[str, Any], serial: str, tran: str) -> None:
         serial = str(node.get("serial") or "").strip() or serial
-        # An lsblk child may report a different transport for its partition.\n        # Physical USB ancestry takes precedence: a partition cannot cease\n        # being USB-attached merely because its own TRAN differs.\n        tran = "usb" if tran == "usb" else (str(node.get("tran") or "").strip().lower() or tran)
+        # Keep USB ancestry even when a child has a different TRAN.
+        tran = "usb" if tran == "usb" else (
+            str(node.get("tran") or "").strip().lower() or tran
+        )
         uuid = str(node.get("uuid") or "").strip()
         fstype = str(node.get("fstype") or "").strip().lower()
         if uuid and fstype and node.get("path"):
