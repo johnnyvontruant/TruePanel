@@ -15,12 +15,6 @@ from .config import LoadmasterConfigError, Settings, load_settings
 LOGGER = logging.getLogger(__name__)
 
 
-def _old_copy_button_enabled(config: dict[str, Any]) -> bool:
-    cargo = (config.get("mission_control") or {}).get("cargo_bay") or {}
-    physical = (cargo.get("loadmaster") or {}).get("physical_confirmation") or {}
-    return physical.get("enabled") is True
-
-
 def build_service(config: dict[str, Any], *, button_reader_factory=None):
     """Return a ready-to-start LoadmasterService, or None when disabled."""
 
@@ -36,8 +30,6 @@ def build_service(config: dict[str, Any], *, button_reader_factory=None):
     reader, note = None, None
     if not settings.copy_button:
         note = "off in settings"
-    elif _old_copy_button_enabled(config):
-        note = "owned by the older Cargo Bay Copy service; disable that to use it here"
     else:
         try:
             if button_reader_factory is None:

@@ -319,12 +319,39 @@ def test_build_service_without_button_hardware(tmp_path):
     service = build_service(config, button_reader_factory=no_hardware)
     assert service.snapshot()["button"].startswith("unavailable")
 
-    config["mission_control"] = {
-        "cargo_bay": {"loadmaster": {"physical_confirmation": {"enabled": True}}}
-    }
-    service = build_service(config, button_reader_factory=no_hardware)
-    assert "older" in service.snapshot()["button"]
     assert build_service({"loadmaster": {"enabled": False}}) is None
+
+
+def test_button_reader_is_closed_on_shutdown(tmp_path):
+    class Reader:
+        closed = False
+
+        def read_level(self):
+            return 1
+
+        def close(self):
+            Reader.closed = True
+
+    config = {
+        "loadmaster": {
+            "enabled": True,
+            "state_dir": str(tmp_path),
+            "drives": [{"name": "TV A-M", "nas_path": "/x/TV A-M"}],
+        }
+    }
+    service = build_service(config, button_reader_factory=Reader)
+    service.settings = Settings(
+        **{
+            **service.settings.__dict__,
+            "status_path": tmp_path / "s.json",
+            "command_socket": tmp_path / "s.sock",
+        }
+    )
+    service.dock = FakeDock(tmp_path)
+    service.start_service()
+    assert service.snapshot()["button"] == "ready"
+    service.stop_service()
+    assert Reader.closed
 
 
 # --------------------------------------------------------------- config

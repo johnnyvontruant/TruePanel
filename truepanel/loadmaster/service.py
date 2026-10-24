@@ -141,6 +141,7 @@ class LoadmasterService:
         self._planning = False
 
         self.button: ButtonWatcher | None = None
+        self.button_reader = button_reader
         self.button_note = button_note
         if button_reader is not None and button_note is None:
             self.button = ButtonWatcher(button_reader.read_level, self.press)
@@ -615,6 +616,12 @@ class LoadmasterService:
         self._run_stop.set()
         if self.button is not None:
             self.button.stop()
+        close = getattr(self.button_reader, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:  # noqa: BLE001
+                LOGGER.exception("Could not close the Copy button reader")
         if self._server is not None:
             self._server.stop()
         for thread in self._threads:

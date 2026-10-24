@@ -10,10 +10,10 @@ New Sonarr/Radarr downloads go to the drive, files you added to the drive
 elsewhere (for example upgrades from your laptop) come to the NAS, and the
 drive is kept as a mirror of the NAS.
 
-The code is the self-contained `truepanel/loadmaster/` package. It replaces
-the earlier Cargo Bay Loadmaster work (`truepanel/cargo/loadmaster*`,
-`backlog*`, `commission.py`, `copy_button.py`), which is left in place for
-now and is not used by it.
+The code is the self-contained `truepanel/loadmaster/` package. It uses two
+existing pieces of TruePanel: the read-only Sonarr/Radarr client from Cargo
+Bay, and the Copy-button reader `truepanel/hardware/fintek_gpio.py`
+(characterised on the TVS-671 as Fintek GPIO75, bank 7 bit 5, active-low).
 
 ## Drives
 
@@ -200,6 +200,7 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `dock.py` | Finds drives by label over USB; mounts and unmounts. |
 | `servarr.py` | Sonarr/Radarr history to the activity log. |
 | `service.py` | The state machine, Copy button, worker threads. |
+| `../hardware/fintek_gpio.py` | Reads the Copy button (GPIO75) through `/dev/port`. |
 | `link.py` | Status file and command socket. |
 | `lcd.py` | Front-panel screens. |
 | `__main__.py` | `run`, `status`, `preview`. |
