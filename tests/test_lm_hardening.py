@@ -58,3 +58,29 @@ def test_no_replace_unsupported_never_uses_racy_rename(tmp_path, monkeypatch):
         transfer._noreplace_rename(source, dest)
     assert source.read_bytes() == b"source"
     assert dest.read_bytes() == b"existing"
+
+
+def test_degraded_hdd_pool_blocks_copy_before_writes(tmp_path, monkeypatch):
+    from truepanel.loadmaster import run as lm_run
+    from truepanel.loadmaster.config import Drive
+    from truepanel.loadmaster.state import DriveRecord, StateStore
+    from truepanel.loadmaster.run import RunContext
+
+    drive = Drive("TV N-Z", Path("/mnt/HDDs/Shows/TV N-Z"), "TV N-Z")
+    usb = tmp_path / "usb"
+    usb.mkdir()
+    record = DriveRecord(name=drive.name)
+    fp = Fingerprint(3, 1_700_000_000_000_000_000)
+    plan = build_plan(drive_name=drive.name, nas={"test.mkv": fp}, usb={}, record=None)
+
+    class Result:
+        stdout = "DEGRADED\\n"
+
+    monkeypatch.setattr(lm_run.subprocess, "run", lambda *a, **k: Result())
+    receipt = lm_run.execute(
+        RunContext(drive, usb, plan, record, StateStore(tmp_path / "state"))
+    )
+    assert receipt["state"] == "FAILED"
+    assert "DEGRADED" in receipt["reason"]
+    assert not (usb / "test.mkv").exists()
+    assert not record.known
