@@ -39,6 +39,7 @@ class LoadmasterCopyButtonService:
             None,
         ] | None = None,
         poll_seconds: float = DEFAULT_COPY_BUTTON_POLL_SECONDS,
+        preflight_provider: Callable[[], LoadmasterPhysicalPreflight | None] | None = None,
     ) -> None:
         if poll_seconds <= 0:
             raise ValueError("poll_seconds must be positive")
@@ -50,6 +51,7 @@ class LoadmasterCopyButtonService:
         self.on_confirmation = on_confirmation
         self.event_recorder = event_recorder
         self.poll_seconds = float(poll_seconds)
+        self.preflight_provider = preflight_provider
 
         self._lock = threading.RLock()
         self._stop = threading.Event()
@@ -152,6 +154,28 @@ class LoadmasterCopyButtonService:
     def _run(self) -> None:
         while not self._stop.wait(self.poll_seconds):
             try:
+                # Only an independently verified source may arm the gate.
+                if self.preflight_provider is not None:
+                    preflight = self.preflight_provider()
+                    with self._lock:
+                        armed = self.gate.armed_snapshot()
+                        if preflight is None or not preflight.ready:
+                            self.gate.disarm()
+                        elif not armed["armed"]:
+                            try:
+                                self.gate.arm(preflight)
+                            except ValueError:
+                                self.gate.disarm()
+                        elif (
+                            armed["plan_digest"] != preflight.plan_digest
+                            or armed["cartridge_uuid"] != preflight.cartridge_uuid
+                            or armed["cartridge_id"] != preflight.cartridge_id
+                        ):
+                            self.gate.disarm()
+                            try:
+                                self.gate.arm(preflight)
+                            except ValueError:
+                                pass
                 confirmation = self.gate.poll()
             except Exception as error:
                 LOGGER.exception(
