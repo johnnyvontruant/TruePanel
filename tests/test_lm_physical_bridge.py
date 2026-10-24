@@ -39,11 +39,11 @@ def test_bridge_off_by_default():
 def test_matching_confirmation_dispatches_once():
     sent = []
     bridge = ConfirmationBridge(
-        enabled=True, status_reader=status,
+        enabled=True, token_issuer=lambda d,u,s: {"issued":1,"nonce":"a"*48,"mac":"b"*64}, status_reader=status,
         sender=lambda req: (sent.append(req) or {"ok": True, "status": "started"}),
     )
     assert bridge.accept(confirmation())
-    assert sent == [{"action": "start", "source": "host", "digest": "a" * 64, "confirm": True}]
+    assert sent == [{"action": "start", "source": "host", "digest": "a" * 64, "confirm": True, "token": {"issued":1,"nonce":"a"*48,"mac":"b"*64}}]
     assert not bridge.accept(confirmation())
     assert len(sent) == 1
 
@@ -57,7 +57,7 @@ def test_refuses_changed_cartridge_and_plan():
     ]:
         sent = []
         bridge = ConfirmationBridge(
-            enabled=True, status_reader=status,
+            enabled=True, token_issuer=lambda d,u,s: {"issued":1,"nonce":"a"*48,"mac":"b"*64}, status_reader=status,
             sender=lambda req: sent.append(req),
         )
         assert not bridge.accept(changed)
@@ -72,7 +72,7 @@ def test_refuses_stale_and_nonready():
     ]:
         sent = []
         bridge = ConfirmationBridge(
-            enabled=True, status_reader=lambda: status(**changes),
+            enabled=True, token_issuer=lambda d,u,s: {"issued":1,"nonce":"a"*48,"mac":"b"*64}, status_reader=lambda: status(**changes),
             sender=lambda req: sent.append(req),
         )
         assert not bridge.accept(confirmation())
@@ -85,7 +85,7 @@ def test_refuses_ingest_deletions_and_conflicts():
         data["plan"]["summary"][key] = 1
         sent = []
         bridge = ConfirmationBridge(
-            enabled=True, status_reader=lambda: data,
+            enabled=True, token_issuer=lambda d,u,s: {"issued":1,"nonce":"a"*48,"mac":"b"*64}, status_reader=lambda: data,
             sender=lambda req: sent.append(req),
         )
         assert not bridge.accept(confirmation())
@@ -97,7 +97,7 @@ def test_transport_failure_consumes_event():
     def fail(req):
         calls.append(req)
         raise OSError("socket unavailable")
-    bridge = ConfirmationBridge(enabled=True, status_reader=status, sender=fail)
+    bridge = ConfirmationBridge(enabled=True, token_issuer=lambda d,u,s: {"issued":1,"nonce":"a"*48,"mac":"b"*64}, status_reader=status, sender=fail)
     assert not bridge.accept(confirmation())
     assert not bridge.accept(confirmation())
     assert len(calls) == 1
