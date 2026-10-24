@@ -139,6 +139,7 @@ class LoadmasterService:
         self.activity: list[dict[str, Any]] = self.store.recent_activity(30)
         self._last_publish = 0.0
         self._planning = False
+        self._host_token_verifier = None
 
         self.button: ButtonWatcher | None = None
         self.button_note = button_note
@@ -357,6 +358,25 @@ class LoadmasterService:
                         "to_nas_files", "delete_usb_files", "retire_nas_files", "conflicts"
                     ))):
                     return reply(False, "unsafe_plan", "Physical Copy requires outbound-only READY work.")
+                # Require a single-use, short-lived credential tied to the
+                # current cartridge and exact plan. Root peer UID alone does
+                # not constitute proof of a physical confirmation.
+                from pathlib import Path
+                from .host_token import TokenVerifier, read_secret
+                key_path = self.settings.extra.get("physical_token_key")
+                if not key_path or self.docked is None:
+                    return reply(False, "unauthorized", "Host token is not configured.")
+                if self._host_token_verifier is None:
+                    try:
+                        self._host_token_verifier = TokenVerifier(read_secret(Path(key_path)))
+                    except (OSError, ValueError):
+                        return reply(False, "unauthorized", "Invalid host token key.")
+                token = request.get("token")
+                if not isinstance(token, dict) or not self._host_token_verifier.consume(
+                    request["digest"], self.docked.device.uuid,
+                    self.docked.device.serial, token
+                ):
+                    return reply(False, "unauthorized", "Invalid or consumed host token.")
                 return self.start(request["digest"], source="host", confirmed=False)
             if source != "lcd" and not self.settings.remote_start:
                 return reply(
