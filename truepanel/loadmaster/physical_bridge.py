@@ -73,7 +73,7 @@ class ConfirmationBridge:
             self._used.add(identity)
             result = self.sender({
                 "action": "start",
-                "source": "lcd",
+                "source": "host",
                 "digest": confirmation.plan_digest,
                 "confirm": True,
             })
