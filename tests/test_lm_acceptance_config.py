@@ -11,6 +11,7 @@ def config():
     return {"loadmaster": {
         "enabled": True,
         "physical_bridge_enabled": True,
+        "external_daemon": True,
         "physical_acceptance_receipt": LAB + "/physical-commissioning/synthetic-baseline.json",
         "state_dir": LAB + "/isolated-service/state",
         "mount_root": LAB + "/isolated-service/mount",
@@ -39,6 +40,7 @@ def test_exact_lab_config():
     ("remote_start", True),
     ("verify", "size"),
     ("physical_bridge_enabled", False),
+    ("external_daemon", False),
 ])
 def test_escape_or_weaken_rejected(field, value):
     value_config = config()
