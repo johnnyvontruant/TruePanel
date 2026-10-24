@@ -784,6 +784,50 @@ if loadmaster_settings is not None:
     menu.append(show_loadmaster_next)
 
 
+def publish_loadmaster_gate_diagnostic():
+    """Read-only snapshot of the *existing* host-owned physical gate.
+
+    Acceptance-only. This never constructs a reader or arms a confirmation.
+    """
+    from pathlib import Path
+
+    section = config.get("loadmaster") or {}
+    root = Path("/mnt/SSDs/Applications/Loadmaster-V2-Lab")
+    if not (
+        section.get("enabled") is True
+        and section.get("physical_bridge_enabled") is True
+        and section.get("external_daemon") is True
+        and section.get("physical_acceptance_receipt")
+        == str(root / "physical-commissioning/synthetic-baseline.json")
+    ):
+        return
+    status_path = section.get("status_path")
+    if not isinstance(status_path, str):
+        return
+    status = Path(status_path)
+    if root not in status.parents:
+        return
+    if host_agent_runtime is None:
+        return
+    snapshot = host_agent_runtime.loadmaster_copy_button_status()
+    if snapshot is None:
+        return
+    output = status.with_name("host-gate-diagnostic.json")
+    payload = {
+        "schema_version": 1,
+        "pid": os.getpid(),
+        "timestamp": time.time(),
+        "gate": snapshot,
+    }
+    temp = output.with_name(output.name + ".tmp")
+    with temp.open("w") as handle:
+        json.dump(payload, handle, sort_keys=True)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.chmod(temp, 0o600)
+    os.replace(temp, output)
+
+
 def response_handler(command, data):
     global menu_item
 
@@ -944,6 +988,10 @@ def main():
         while not shutdown_requested:
             if host_agent_runtime is not None:
                 host_agent_runtime.service_cycle()
+            try:
+                publish_loadmaster_gate_diagnostic()
+            except Exception:
+                LOGGER.exception("Loadmaster gate diagnostic publish failed")
 
             publish_lcd_reader_status()
             add_ips_to_menu()
