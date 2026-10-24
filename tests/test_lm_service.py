@@ -63,6 +63,7 @@ def svc(tmp_path):
             "enabled": True,
             "state_dir": str(tmp_path / "state"),
             "copy_button": False,
+            "remote_start": True,  # explicitly enabled only in fake service tests
             "drives": [{"name": "TV A-M", "nas_path": str(tmp_path / "nas/TV A-M")}],
         }
     }
@@ -333,6 +334,7 @@ def test_build_service_without_button_hardware(tmp_path):
 def test_config_validation():
     good = {"name": "TV A-M", "nas_path": "/mnt/HDDs/Shows/TV A-M"}
     settings = load_settings({"loadmaster": {"enabled": True, "drives": [good]}})
+    assert settings.remote_start is False
     assert settings.drives[0].usb_folder == "TV A-M"
     assert settings.drives[0].key == "tv-a-m"
     for bad in (
