@@ -925,7 +925,8 @@ def main():
         if lcd_command_server is not None:
             lcd_command_server.start()
 
-        if loadmaster_settings is not None:
+        if (loadmaster_settings is not None
+                and not loadmaster_settings.extra.get("external_daemon", False)):
             try:
                 loadmaster_service = build_loadmaster(config)
                 loadmaster_service.start_service()
