@@ -81,7 +81,6 @@ def test_first_sync_then_clear(rig):
     assert reloaded.files == rig.record.files
 
 
-
 def test_case_renamed_episode_updates_in_place_on_both_sides(rig):
     rig.put(rig.nas, "Show/1x01.mkv", b"old")
     rig.put(rig.usb, "Show/1X01.mkv", b"old")
@@ -97,10 +96,13 @@ def test_case_renamed_episode_updates_in_place_on_both_sides(rig):
     # Updated on the drive: the NAS file keeps the NAS name.
     rig.put(rig.usb, "Show/1X01.mkv", b"new on usb!", T + 2 * HOUR)
     assert rig.sync(rig.plan("exfat"))["state"] == "COMPLETE"
-    nas_names = {p.name for p in (rig.nas / "Show").iterdir() if not p.name.startswith(".")}
+    nas_names = {
+        p.name for p in (rig.nas / "Show").iterdir() if not p.name.startswith(".")
+    }
     assert nas_names == {"1x01.mkv"}
     assert (rig.nas / "Show/1x01.mkv").read_bytes() == b"new on usb!"
     assert rig.plan("exfat")["state"] == "CLEAR"
+
 
 def test_radarr_upgrade_mirrors_and_prunes_empty_folder(rig):
     rig.put(rig.nas, "Heat (1995)/Heat 720p.mkv", b"old")

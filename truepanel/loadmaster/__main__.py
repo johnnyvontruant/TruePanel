@@ -86,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
             usb=scan(args.usb_path).files,
             record=record.files if record.known else None,
             usb_fstype=_fstype(args.usb_path),
+            protected=drive.protected,
             large_delete_files=settings.large_delete_files,
         )
         s = plan["summary"]
@@ -101,8 +102,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  in sync      {s['in_sync_files']:6} files")
         for action in plan["actions"][:200]:
             print(f"  {action['op']:<10} {action['reason']:<34} {action['path']}")
-        for item in plan["conflicts"] + plan["notices"]:
+        for item in plan["conflicts"]:
             print(f"  !! {item['reason']:<32} {item['path']}")
+        by_reason: dict[str, list[dict]] = {}
+        for item in plan["notices"]:
+            by_reason.setdefault(item["reason"], []).append(item)
+        for reason, items in sorted(by_reason.items()):
+            print(f"  !! {reason}: {len(items)} file(s)")
+            for item in items[:20]:
+                detail = item.get("would") or item.get("usb_path") or ""
+                print(f"       {item['path']}" + (f"  ({detail})" if detail else ""))
         return 0
 
     service = build_service(config)

@@ -64,6 +64,31 @@ macOS folder-icon file `Icon\r` are ignored on both sides: never scanned,
 copied or removed. Sonarr, Radarr and Plex ignore them too. Names that exFAT/NTFS cannot
 store (`< > : " | ? * \`) are skipped and listed rather than failing the sync.
 
+### Protected folders
+
+A drive can list folders that must never change, for example a series whose
+files are irreplaceable:
+
+```yaml
+    - name: TV A-M
+      nas_path: /mnt/HDDs/Shows/TV A-M
+      protected: ["Daria (1997)"]
+```
+
+Paths are relative to the drive's folder and matched ignoring case. Inside a
+protected folder Loadmaster only copies a file to a side that lacks it (a new
+or missing drive copy). It never overwrites, retires or deletes a file there,
+and never brings new files into it on the NAS; anything it would otherwise do
+is listed as a **PROTECTED** notice so you can decide by hand.
+
+### Letter case
+
+exFAT and NTFS drives treat `1x05.mkv` and `1X05.mkv` as the same name. On
+those drives Loadmaster matches paths ignoring case, so a Sonarr rename that
+only changes case is not a new file on either side (it is listed as
+`CASE_DIFFERS_ON_USB`), and a changed file is replaced under the drive's own
+spelling rather than copied a second time.
+
 ## Safety rules
 
 * **The NAS never loses data.** When Loadmaster has to replace or retire a NAS
@@ -171,7 +196,7 @@ own schedule (every 12 hours, not adjustable in its settings).
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `enabled` | `false` | Turn Loadmaster on. |
-| `drives` | — | `name`, `nas_path`, optional `usb_folder`. |
+| `drives` | — | `name`, `nas_path`, optional `usb_folder` and `protected`. |
 | `state_dir` | `/var/lib/truepanel/loadmaster` | Drive records, activity log, receipts. |
 | `mount_root` | `/mnt/loadmaster` | Where drives are mounted. |
 | `remote_start` | `true` | Allow Start sync from Mission Control. |

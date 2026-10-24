@@ -22,6 +22,9 @@ Policy (see docs/LOADMASTER.md):
   On those drives paths are matched ignoring case and judged under the NAS
   spelling; actions carry the drive's own spelling in ``usb_path``. A NAS
   rename that only changes case is not a new file.
+* **Protected folders** (per drive) are never changed on either side: a file
+  is only copied to a side that lacks it. Anything else Loadmaster would do
+  there is reported as a PROTECTED notice instead.
 
 The plan is a pure function of the three listings, so it is fully testable,
 and its digest lets a later run prove nothing changed since it was approved.
@@ -42,6 +45,9 @@ TO_USB = "to_usb"
 TO_NAS = "to_nas"
 DELETE_USB = "delete_usb"
 RETIRE_NAS = "retire_nas"
+
+# The only actions allowed inside a protected folder: fill a gap on the drive.
+PROTECTED_ALLOWED = frozenset({(TO_USB, "NEW_ON_NAS"), (TO_USB, "MISSING_ON_USB")})
 
 # Order of execution: free USB space first, copy, then retire NAS originals.
 OP_ORDER = {DELETE_USB: 0, TO_USB: 1, TO_NAS: 2, RETIRE_NAS: 3}
@@ -129,6 +135,7 @@ def build_plan(
     record: dict[str, Fingerprint] | None,
     usb_fstype: str | None = None,
     large_delete_files: int = 100,
+    protected: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Return the sync plan for one drive.
 
@@ -161,7 +168,14 @@ def build_plan(
         record, record_spelling = _respell(record, spelling)
         forget.extend(record_spelling.values())  # stored again under the new name
 
+    guarded = tuple(folder.lower().rstrip("/") + "/" for folder in protected)
+
     def add(op: str, path: str, fp: Fingerprint, reason: str) -> None:
+        if (op, reason) not in PROTECTED_ALLOWED and path.lower().startswith(guarded):
+            notices.append(
+                {"path": path, "reason": "PROTECTED", "would": f"{op} {reason}"}
+            )
+            return
         if op == TO_USB and not _storable(path, usb_fstype):
             notices.append({"path": path, "reason": "NAME_NOT_STORABLE_ON_USB"})
             return
@@ -225,9 +239,7 @@ def build_plan(
             elif not n.same_as(r):
                 add(TO_USB, path, n, "UPDATED_ON_NAS")
             elif replaced_on_usb(path):
-                actions.append(
-                    Action(RETIRE_NAS, path, n.size, n.mtime_ns, "REPLACED_ON_USB")
-                )
+                add(RETIRE_NAS, path, n, "REPLACED_ON_USB")
             else:
                 add(TO_USB, path, n, "MISSING_ON_USB")
 
@@ -235,16 +247,7 @@ def build_plan(
             if r is None:
                 add(TO_NAS, path, u, "NEW_ON_USB")
             elif u.same_as(r):
-                actions.append(
-                    Action(
-                        DELETE_USB,
-                        path,
-                        u.size,
-                        u.mtime_ns,
-                        "REMOVED_FROM_NAS",
-                        usb_spelling.get(path),
-                    )
-                )
+                add(DELETE_USB, path, u, "REMOVED_FROM_NAS")
             else:
                 add(TO_NAS, path, u, "UPDATED_ON_USB_AFTER_NAS_REMOVAL")
 

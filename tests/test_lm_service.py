@@ -362,6 +362,16 @@ def test_config_validation():
     settings = load_settings({"loadmaster": {"enabled": True, "drives": [good]}})
     assert settings.drives[0].usb_folder == "TV A-M"
     assert settings.drives[0].key == "tv-a-m"
+    assert settings.drives[0].protected == ()
+    guarded = load_settings(
+        {
+            "loadmaster": {
+                "enabled": True,
+                "drives": [{**good, "protected": ["Daria (1997)/"]}],
+            }
+        }
+    )
+    assert guarded.drives[0].protected == ("Daria (1997)",)
     for bad in (
         [],
         [{"name": "", "nas_path": "/x"}],
@@ -369,6 +379,9 @@ def test_config_validation():
         [good, dict(good)],
         [good, {"name": "Inner", "nas_path": "/mnt/HDDs/Shows/TV A-M/x"}],
         [{**good, "usb_folder": "../escape"}],
+        [{**good, "protected": "Daria (1997)"}],
+        [{**good, "protected": ["../Daria"]}],
+        [{**good, "protected": [""]}],
     ):
         with pytest.raises(LoadmasterConfigError):
             load_settings({"loadmaster": {"enabled": True, "drives": bad}})
