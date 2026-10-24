@@ -10,6 +10,8 @@ import hmac
 import os
 import secrets
 import time
+import threading
+import sqlite3
 from pathlib import Path
 
 
@@ -39,12 +41,14 @@ def issue(key: bytes, digest: str, uuid: str, serial: str,
 
 
 class TokenVerifier:
-    def __init__(self, key: bytes, *, ttl: int = 10):
+    def __init__(self, key: bytes, *, ttl: int = 10, replay_db: Path | None = None):
         if len(key) < 32:
             raise ValueError("Authorization key too short")
         self.key = key
         self.ttl = ttl
         self.used: set[str] = set()
+        self.replay_db = replay_db
+        self._lock = threading.Lock()
 
     def consume(self, digest: str, uuid: str, serial: str,
                 token: dict, *, now: int | None = None) -> bool:
@@ -62,9 +66,26 @@ class TokenVerifier:
                                 hashlib.sha256).hexdigest()
             if not hmac.compare_digest(mac, expected):
                 return False
-            self.used.add(nonce)
-            return True
-        except (KeyError, TypeError, ValueError):
+            with self._lock:
+                if self.replay_db is not None:
+                    # Persist before acknowledging. SQLite's unique key also
+                    # prevents concurrent consumers and survives restarts.
+                    path = self.replay_db
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    if path.is_symlink() or path.parent.is_symlink():
+                        return False
+                    with sqlite3.connect(path, timeout=5) as db:
+                        db.execute("CREATE TABLE IF NOT EXISTS spent (nonce TEXT PRIMARY KEY, issued INTEGER NOT NULL)")
+                        try:
+                            db.execute("INSERT INTO spent(nonce, issued) VALUES (?, ?)", (nonce, issued))
+                            db.commit()
+                        except sqlite3.IntegrityError:
+                            return False
+                elif nonce in self.used:
+                    return False
+                self.used.add(nonce)
+                return True
+        except (KeyError, TypeError, ValueError, OSError, sqlite3.Error):
             return False
 
 
