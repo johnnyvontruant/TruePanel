@@ -343,6 +343,19 @@ class LoadmasterService:
     def handle(self, request: dict[str, Any]) -> dict[str, Any]:
         action, source = request["action"], request["source"]
         if action == "start":
+            if source == "host":
+                if request.get("_host_authenticated") is not True:
+                    return reply(False, "unauthorized", "Host authentication required.")
+                if self.settings.extra.get("physical_bridge_enabled") is not True:
+                    return reply(False, "bridge_disabled", "Physical bridge is not commissioned.")
+                if (self.state != "READY" or not self.plan
+                    or self.plan.get("needs_confirmation")
+                    or self.plan["summary"].get("to_usb_files", 0) < 1
+                    or any(self.plan["summary"].get(k, 0) for k in (
+                        "to_nas_files", "delete_usb_files", "retire_nas_files", "conflicts"
+                    ))):
+                    return reply(False, "unsafe_plan", "Physical Copy requires outbound-only READY work.")
+                return self.start(request["digest"], source="host", confirmed=False)
             if source != "lcd" and not self.settings.remote_start:
                 return reply(
                     False,
