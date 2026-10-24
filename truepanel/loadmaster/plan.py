@@ -107,7 +107,7 @@ def build_plan(
 
     # Protect the Daria restoration even with externally supplied inventories.
     def protected(path: str) -> bool:
-        return any(part.casefold() == "daria" for part in PurePosixPath(path).parts)
+        return any((part.casefold() == "daria" or part.casefold().startswith("daria (")) for part in PurePosixPath(path).parts)
 
     nas = {p: f for p, f in nas.items() if not protected(p)}
     usb = {p: f for p, f in usb.items() if not protected(p)}
