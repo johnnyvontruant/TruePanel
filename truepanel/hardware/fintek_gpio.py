@@ -78,6 +78,7 @@ class FintekCopyButtonReader:
         self._closed = False
         self._runtime_index = 0
         self._runtime_data = 0
+        self._lpt_gp_en: bool | None = None
 
         try:
             self._initialize()
@@ -106,6 +107,8 @@ class FintekCopyButtonReader:
             try:
                 chip = self._sio_word(0x20)
                 manufacturer = self._sio_word(0x23)
+                # Read-only pin-mux observation, global configuration CR2A bit 7.
+                lpt_gp_config = self._sio_reg(0x2A)
 
                 if chip != FINTEK_CHIP_ID:
                     raise RuntimeError(
@@ -139,6 +142,7 @@ class FintekCopyButtonReader:
             if base in (0, 0xFFFF):
                 raise RuntimeError("Fintek GPIO runtime base is invalid")
 
+            self._lpt_gp_en = bool(lpt_gp_config & 0x80)
             runtime_base = base & 0xFFFC
             self._runtime_index = runtime_base + 5
             self._runtime_data = runtime_base + 6
@@ -150,6 +154,11 @@ class FintekCopyButtonReader:
                 raise RuntimeError(
                     "GPIO75 is not configured as an input"
                 )
+
+    @property
+    def lpt_gp_en(self) -> bool | None:
+        """Observed GPIO6/7 pin mux selection; never modifies configuration."""
+        return self._lpt_gp_en
 
     @property
     def runtime_index_port(self) -> int:
