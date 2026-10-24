@@ -912,6 +912,145 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
   </details>
 </div>
 </article>
+<article class="card wide lm-card" id="cardLoadmaster" aria-labelledby="lmTitle" hidden>
+<style>
+.lm-card[hidden],#cardLoadmaster [hidden]{display:none!important}
+.lm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.lm-head h2{margin-bottom:.2rem}
+.lm-drive{font-size:1.15rem;font-weight:700}
+.lm-msg{color:var(--muted);font-size:.88rem;margin-top:.2rem}
+.lm-badge{padding:.28rem .6rem;border:1px solid var(--edge);border-radius:999px;font-size:.68rem;font-weight:800;letter-spacing:.08em;white-space:nowrap}
+.lm-badge.good{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,var(--edge))}
+.lm-badge.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--edge))}
+.lm-badge.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--edge))}
+.lm-badge.busy{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--edge))}
+.lm-bar{height:.45rem;margin-top:.8rem;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--edge) 75%,transparent)}
+.lm-bar>span{display:block;height:100%;width:0;background:var(--accent);transition:width .6s ease}
+.lm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin-top:.9rem}
+.lm-grid>div{min-width:0;padding:.6rem .7rem;border:1px solid var(--edge);border-radius:var(--radius-sm)}
+.lm-label{display:block;color:var(--muted);font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.lm-grid strong{display:block;font-size:.98rem;margin-top:.15rem}
+.lm-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.9rem}
+.lm-note{min-height:1.1rem;margin-top:.45rem;color:var(--muted);font-size:.8rem}
+.lm-section{margin-top:1rem}
+.lm-section>summary{cursor:pointer;font-weight:600;font-size:.9rem}
+.lm-list{margin:.5rem 0 0;padding:0;list-style:none;font-size:.8rem}
+.lm-list li{display:flex;gap:.6rem;padding:.35rem 0;border-top:1px solid var(--edge);min-width:0}
+.lm-list li:first-child{border-top:0}
+.lm-list .lm-tag{flex:0 0 auto;min-width:5.5rem;color:var(--muted);font-weight:600}
+.lm-list .lm-path{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.lm-list .lm-when{flex:0 0 auto;color:var(--muted)}
+.lm-list .warn{color:var(--warn)}
+.lm-drives{width:100%;margin-top:.5rem;border-collapse:collapse;font-size:.82rem}
+.lm-drives td,.lm-drives th{padding:.4rem .3rem;border-top:1px solid var(--edge);text-align:left}
+.lm-drives th{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-top:0}
+.lm-drives td:last-child,.lm-drives th:last-child{text-align:right}
+.lm-foot{margin-top:.9rem;color:var(--muted);font-size:.74rem}
+@media (max-width:640px){
+  .lm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lm-actions button{flex:1 1 calc(50% - .5rem)}
+  .lm-list .lm-when{display:none}
+}
+</style>
+<div class="lm-head">
+  <div>
+    <h2 id="lmTitle">Loadmaster</h2>
+    <div class="lm-drive" id="lmDrive">No drive plugged in</div>
+    <div class="lm-msg" id="lmMessage">Plug in a Loadmaster drive.</div>
+  </div>
+  <span class="lm-badge" id="lmBadge">IDLE</span>
+</div>
+<div class="lm-bar" id="lmBar" hidden><span></span></div>
+<div class="lm-grid" id="lmGrid" hidden>
+  <div><span class="lm-label">NAS → USB</span><strong id="lmToUsb">–</strong></div>
+  <div><span class="lm-label">USB → NAS</span><strong id="lmToNas">–</strong></div>
+  <div><span class="lm-label">Remove from USB</span><strong id="lmRemove">–</strong></div>
+  <div><span class="lm-label">Retire on NAS</span><strong id="lmRetire">–</strong></div>
+</div>
+<div class="lm-actions">
+  <button class="primary" id="lmStart" type="button" hidden>Start sync</button>
+  <button class="danger" id="lmStop" type="button" hidden>Stop</button>
+  <button id="lmEject" type="button" hidden>Eject</button>
+  <button id="lmRescan" type="button" hidden>Rescan</button>
+  <button id="lmAdopt" type="button" hidden>Adopt this drive</button>
+</div>
+<div class="lm-note" id="lmNote" aria-live="polite"></div>
+<details class="lm-section" id="lmPreviewBox" hidden>
+  <summary id="lmPreviewTitle">What will happen</summary>
+  <ul class="lm-list" id="lmPreview"></ul>
+</details>
+<details class="lm-section" open>
+  <summary>Drives</summary>
+  <table class="lm-drives"><thead><tr><th>Drive</th><th>Last sync</th><th>Waiting</th></tr></thead>
+  <tbody id="lmDrives"></tbody></table>
+</details>
+<details class="lm-section">
+  <summary>Activity</summary>
+  <ul class="lm-list" id="lmActivity"></ul>
+</details>
+<div class="lm-foot" id="lmFoot"></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const OPS={to_usb:"→ USB",to_nas:"→ NAS",delete_usb:"Remove USB",retire_nas:"Retire NAS"};
+const KIND={imported:"Imported",deleted:"Deleted",renamed:"Renamed",moved:"Moved",run:"Sync",
+  plugged_in:"Plugged in",unplugged:"Unplugged",ejected:"Ejected",adopted:"Adopted",service_started:"Started"};
+let status=null,busy=false,lastState=null;
+const bytes=v=>{let n=Number(v)||0;for(const u of["B","KB","MB","GB","TB"]){if(n<1000||u==="TB")return(u==="B"?n.toFixed(0):n.toFixed(1))+" "+u;n/=1000}};
+const files=(n,b)=>Number(n)?`${n} file${n==1?"":"s"}${b!==undefined?" · "+bytes(b):""}`:"Nothing";
+const ago=t=>{if(!t)return"Never";const s=Date.now()/1000-t;if(s<90)return"Just now";if(s<5400)return Math.round(s/60)+" min ago";if(s<129600)return Math.round(s/3600)+" h ago";return Math.round(s/86400)+" days ago"};
+const li=(tag,text,when,cls)=>{const e=document.createElement("li");const a=document.createElement("span");a.className="lm-tag"+(cls?" "+cls:"");a.textContent=tag;const b=document.createElement("span");b.className="lm-path";b.textContent=text;e.append(a,b);if(when){const c=document.createElement("span");c.className="lm-when";c.textContent=when;e.append(c)}return e};
+const tone=s=>({READY:"good",CLEAR:"good",DONE:"good",EJECTED:"good",CHECKING:"busy",COPYING:"busy",CONFIRM:"warn",HOLD:"warn",NEW_DRIVE:"warn",PARTIAL:"warn",STOPPED:"warn",FAILED:"bad",OFF:"bad"}[s]||"");
+function show(id,on){$(id).hidden=!on}
+function render(s){
+  status=s;const card=$("cardLoadmaster");
+  card.hidden=!s||(s.state==="OFF"&&String(s.message||"").includes("not running"));
+  if(card.hidden)return;
+  const state=s.available?s.state:"OFF";
+  if(state!==lastState&&!busy){$("lmNote").textContent=""}lastState=state;
+  $("lmBadge").textContent=state.replace("_"," ");$("lmBadge").className="lm-badge "+tone(state);
+  $("lmDrive").textContent=s.drive?s.drive.name:"No drive plugged in";
+  $("lmMessage").textContent=s.message||"";
+  const plan=s.plan,sum=plan&&plan.summary;
+  show("lmGrid",!!sum&&state!=="COPYING");
+  if(sum){$("lmToUsb").textContent=files(sum.to_usb_files,sum.to_usb_bytes);$("lmToNas").textContent=files(sum.to_nas_files,sum.to_nas_bytes);$("lmRemove").textContent=files(sum.delete_usb_files);$("lmRetire").textContent=files(sum.retire_nas_files)}
+  const p=s.progress;show("lmBar",state==="COPYING"&&!!p);
+  if(state==="COPYING"&&p){const pct=p.total_bytes?Math.min(100,Math.round(p.done_bytes*100/p.total_bytes)):0;$("lmBar").firstElementChild.style.width=pct+"%";$("lmMessage").textContent=`${Math.min(p.total_files,p.done_files+1)} of ${p.total_files} · ${pct}% · ${bytes(p.done_bytes)} of ${bytes(p.total_bytes)}`+(p.current?` · ${p.current}`:"")}
+  if(s.last_run&&["DONE","PARTIAL","FAILED","STOPPED"].includes(state)){const r=s.last_run.summary||{};$("lmMessage").textContent=`${s.message} Moved ${(r.to_usb_files||0)+(r.to_nas_files||0)} files (${bytes(r.copied_bytes)}), removed ${r.deleted_usb_files||0}, retired ${r.retired_nas_files||0}.`}
+  const ready=["READY","CONFIRM"].includes(state);
+  show("lmStart",ready);$("lmStart").disabled=busy||!s.remote_start;$("lmStart").title=s.remote_start?"":"Remote start is off in truepanel.yaml";
+  show("lmStop",state==="COPYING");show("lmAdopt",state==="NEW_DRIVE");
+  show("lmEject",!!s.drive&&["READY","CONFIRM","CLEAR","HOLD","NEW_DRIVE"].includes(state));
+  show("lmRescan",!!s.drive&&!["COPYING","CHECKING"].includes(state));
+  for(const id of["lmStop","lmEject","lmRescan","lmAdopt"])$(id).disabled=busy;
+  const list=$("lmPreview");list.replaceChildren();
+  if(plan){for(const c of plan.conflicts||[])list.append(li("Conflict",c.path,"","warn"));for(const n of plan.notices||[])list.append(li("Skipped",`${n.path} (${n.reason.replaceAll("_"," ").toLowerCase()})`,"","warn"));for(const a of plan.preview||[])list.append(li(OPS[a.op]||a.op,a.path,bytes(a.size)));
+    const total=(sum.to_usb_files+sum.to_nas_files+sum.delete_usb_files+sum.retire_nas_files);$("lmPreviewTitle").textContent=`What will happen (${total} change${total==1?"":"s"}${total>(plan.preview||[]).length?", first "+(plan.preview||[]).length+" shown":""})`}
+  show("lmPreviewBox",!!plan&&list.children.length>0);
+  const rows=$("lmDrives");rows.replaceChildren();
+  for(const d of s.drives||[]){const tr=document.createElement("tr");for(const v of[d.name+(s.drive&&s.drive.name===d.name?" (plugged in)":""),ago(d.last_sync),d.error?d.error:(d.last_sync?files(d.pending_files,d.pending_bytes):"First sync pending")]){const td=document.createElement("td");td.textContent=v;tr.append(td)}rows.append(tr)}
+  const act=$("lmActivity");act.replaceChildren();
+  for(const e of(s.activity||[]).slice(0,25)){const when=new Date(e.time*1000).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+    const text=e.kind==="run"?`${e.drive}: ${String(e.state).toLowerCase()}${e.reason?" — "+e.reason:""}`:e.kind==="moved"?`${e.drive}: ${OPS[e.op]||e.op} ${e.path}`:[e.title||e.path||"",e.drive?`(${e.drive})`:"",e.detail?`— ${e.detail}`:""].join(" ").trim()||e.drive||"";
+    act.append(li(KIND[e.kind]||e.kind,text,when))}
+  const svc=Object.entries(s.servarr||{}).map(([k,v])=>`${k[0].toUpperCase()+k.slice(1)}: ${v}`);
+  $("lmFoot").textContent=[`Copy button: ${s.button||"off"}`,...svc].join(" · ");
+}
+async function refresh(){try{const r=await fetch("/api/v1/loadmaster",{cache:"no-store"});render(await r.json())}catch(e){render({available:false,state:"OFF",message:"Mission Control could not read Loadmaster status."})}}
+async function send(body){busy=true;render(status);$("lmNote").textContent="Sending…";
+  try{const r=await fetch("/api/v1/loadmaster/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();$("lmNote").textContent=d.message||(r.ok?"Done":"Refused")}
+  catch(e){$("lmNote").textContent="Loadmaster did not respond."}finally{busy=false;await refresh()}}
+$("lmStart").onclick=()=>{const p=status.plan,s=p.summary;const lines=[`Sync ${status.drive.name} now?`,"",`NAS → USB: ${files(s.to_usb_files,s.to_usb_bytes)}`,`USB → NAS: ${files(s.to_nas_files,s.to_nas_bytes)}`];
+  if(s.delete_usb_files)lines.push(`Remove from USB (gone from NAS): ${s.delete_usb_files}`);if(s.retire_nas_files)lines.push(`Move old NAS versions to .loadmaster-replaced: ${s.retire_nas_files}`);
+  lines.push("","Leave the drive plugged in until it says Safe to remove.");if(confirm(lines.join("\n")))send({action:"start",digest:p.digest,confirm:true})};
+$("lmStop").onclick=()=>{if(confirm("Stop the sync? Finished files are kept; an unfinished file resumes next time."))send({action:"stop"})};
+$("lmEject").onclick=()=>{if(confirm("Unmount this drive without syncing?"))send({action:"eject"})};
+$("lmRescan").onclick=()=>send({action:"rescan"});
+$("lmAdopt").onclick=()=>{if(confirm("Treat this drive as a fresh copy? Nothing will be deleted on the first sync."))send({action:"adopt"})};
+refresh();setInterval(refresh,2000);
+})();
+</script>
+</article>
 </section></main>
 <footer>TruePanel v1.1 Mission Control</footer>
 <script>

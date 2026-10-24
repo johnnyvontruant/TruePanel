@@ -186,9 +186,13 @@ def test_lcd_loop_resumes_after_interrupt():
         encoding="utf-8",
     )
 
+    # After an alert the normal page renders, unless Loadmaster currently
+    # owns the panel because a drive needs attention.
     expected = (
         "            maybe_show_alert()\n"
-        "            menu[menu_item]()"
+        "\n"
+        "            if not loadmaster_refresh(force=True):\n"
+        "                menu[menu_item]()"
     )
 
     assert expected in source
@@ -339,9 +343,13 @@ def test_interrupt_timeout_is_followed_by_normal_page_render():
         encoding="utf-8",
     )
 
+    # After an alert the normal page renders, unless Loadmaster currently
+    # owns the panel because a drive needs attention.
     expected = (
         "            maybe_show_alert()\n"
-        "            menu[menu_item]()"
+        "\n"
+        "            if not loadmaster_refresh(force=True):\n"
+        "                menu[menu_item]()"
     )
 
     assert expected in source
@@ -420,3 +428,13 @@ def test_abnormal_button_latency_warning_is_retained():
     assert "total_ms >= 750.0" in source
     assert "Abnormal LCD button latency:" in source
     assert "duration_ms=%.3f" in source
+
+
+def test_loadmaster_owns_panel_and_buttons_while_active():
+    source = Path("lcd-menu.py").read_text(
+        encoding="utf-8",
+    )
+
+    assert "if not shutdown_requested and not loadmaster_active:" in source
+    assert "loadmaster_button(data)" in source
+    assert "loadmaster_service.stop_service()" in source
