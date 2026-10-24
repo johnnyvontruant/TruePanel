@@ -393,13 +393,13 @@ class LoadmasterService:
                         )
                     ):
                         return reply(False, "drive_changed", "Cartridge has changed.")
-                token = request.get("token")
-                if not isinstance(token, dict) or not self._host_token_verifier.consume(
-                    request["digest"], self.docked.device.uuid,
-                    self.docked.device.serial, token
-                ):
-                    return reply(False, "unauthorized", "Invalid or consumed host token.")
-                return self.start(request["digest"], source="host", confirmed=False)
+                    token = request.get("token")
+                    if not isinstance(token, dict) or not self._host_token_verifier.consume(
+                        request["digest"], self.docked.device.uuid,
+                        self.docked.device.serial, token
+                    ):
+                        return reply(False, "unauthorized", "Invalid or consumed host token.")
+                    return self.start(request["digest"], source="host", confirmed=False)
             if source != "lcd" and not self.settings.remote_start:
                 return reply(
                     False,
