@@ -104,3 +104,23 @@ def test_host_start_rejects_changed_cartridge_before_spending_token(tmp_path):
     assert result["status"] == "drive_changed"
     assert subject.state == "READY"
     assert not subject._host_token_verifier.used
+
+
+def test_acceptance_refuses_lcd_and_web_source_even_when_ready(tmp_path):
+    subject = service(tmp_path, commissioned=True)
+    subject.settings.extra["physical_acceptance_mode"] = True
+    for source in ("lcd", "web"):
+        result = subject.handle({
+            "action": "start", "source": source, "digest": "a" * 64,
+            "confirm": True,
+        })
+        assert result["status"] == "physical_only"
+        assert subject.state == "READY"
+
+
+def test_acceptance_direct_press_cannot_start(tmp_path):
+    subject = service(tmp_path, commissioned=True)
+    subject.settings.extra["physical_acceptance_mode"] = True
+    subject.press()
+    assert subject.state == "READY"
+    assert subject._jobs.empty()
