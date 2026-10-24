@@ -51,8 +51,8 @@ def test_radarr_upgrade_mirrors_to_usb_and_removes_old():
     nas = {"Heat (1995)/Heat 2160p.mkv": fp(50)}
     result = plan(nas, dict(record), record)
     assert ops(result) == [
-        ("delete_usb", "Heat (1995)/Heat 720p.mkv", "REMOVED_FROM_NAS"),
         ("to_usb", "Heat (1995)/Heat 2160p.mkv", "NEW_ON_NAS"),
+        ("delete_usb", "Heat (1995)/Heat 720p.mkv", "REMOVED_FROM_NAS"),
     ]
 
 
