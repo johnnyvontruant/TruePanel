@@ -84,6 +84,7 @@ def build_loadmaster_copy_button_service(
     reader_factory: Callable[[], Any] = FintekCopyButtonReader,
     on_confirmation: Callable[[Any], None] | None = None,
     event_recorder: Callable[[dict[str, object]], None] | None = None,
+    preflight_provider: Callable[[], Any] | None = None,
 ) -> LoadmasterCopyButtonService | None:
     """Build the non-actuating physical Copy confirmation service."""
 
@@ -146,6 +147,7 @@ def build_loadmaster_copy_button_service(
         gate=gate,
         on_confirmation=on_confirmation,
         event_recorder=event_recorder,
+        preflight_provider=preflight_provider,
     )
 
 def build_host_agent_runtime(
@@ -262,14 +264,44 @@ def build_host_agent_runtime_from_bootstrap(
         and v2.get("physical_bridge_enabled") is True
     )
     callback = None
+    preflight_provider = None
     if bridge_enabled:
+        from pathlib import Path
+
+        from truepanel.loadmaster.evidence import qualified_preflight
+        from truepanel.loadmaster.link import STATUS_PATH, read_status
         from truepanel.loadmaster.physical_bridge import ConfirmationBridge
 
-        callback = ConfirmationBridge(enabled=True).accept
+        # Commissioning requires an independent verifier supplied by the host.
+        # None is deliberately not evidence, even if all JSON files are valid.
+        baseline_check = getattr(bootstrap, "loadmaster_baseline_verified", None)
+        cargo = (config.get("mission_control") or {}).get("cargo_bay") or {}
+        older = cargo.get("loadmaster") or {}
+        registry = older.get("cartridge_registry_path")
+        backlog = older.get("backlog_path")
+        manifest = (cargo.get("backup") or {}).get("manifest_path")
+        if (
+            callable(baseline_check)
+            and all(isinstance(p, str) and p.startswith("/") for p in (
+                registry, backlog, manifest
+            ))
+        ):
+            def preflight_provider():
+                return qualified_preflight(
+                    registry_path=Path(registry),
+                    backlog_path=Path(backlog),
+                    manifest_path=Path(manifest),
+                    status=read_status(STATUS_PATH),
+                    baseline_verified=baseline_check,
+                )
+
+            callback = ConfirmationBridge(enabled=True).accept
+
     loadmaster_copy_button_service = (
         build_loadmaster_copy_button_service(
             config=config,
             on_confirmation=callback,
+            preflight_provider=preflight_provider,
         )
     )
 
