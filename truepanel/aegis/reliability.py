@@ -23,6 +23,9 @@ from .requalification import renewal_guidance
 from .temperature_authenticated_acceptance import (
     evaluate_authenticated_temperature_acceptance,
 )
+from .temperature_authenticated_label_join import (
+    pending_temperature_authenticated_label_join,
+)
 from .temperature_blinded_cohort_manifest import (
     pending_temperature_blinded_cohort_manifest,
 )
@@ -175,6 +178,11 @@ class AegisReliabilityEngine:
         self.temperature_blinded_cohort_manifest = (
             pending_temperature_blinded_cohort_manifest(
                 self.temperature_statistical_calibration_contract
+            )
+        )
+        self.temperature_authenticated_label_join = (
+            pending_temperature_authenticated_label_join(
+                self.temperature_blinded_cohort_manifest
             )
         )
         self.temperature_detector_result_binding = (
@@ -456,6 +464,7 @@ class AegisReliabilityEngine:
             "coverage_intake_bound_detector_result": self.temperature_intake_bound_detector_result,
             "coverage_statistical_calibration_contract": self.temperature_statistical_calibration_contract,
             "coverage_blinded_cohort_manifest": self.temperature_blinded_cohort_manifest,
+            "coverage_authenticated_label_join": self.temperature_authenticated_label_join,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {

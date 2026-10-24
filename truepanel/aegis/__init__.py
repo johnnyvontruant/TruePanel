@@ -103,6 +103,12 @@ from .temperature_authenticated_acceptance import (
     build_temperature_acceptance_statement,
     evaluate_authenticated_temperature_acceptance,
 )
+from .temperature_authenticated_label_join import (
+    build_temperature_authenticated_label_join_statement,
+    evaluate_temperature_authenticated_label_join,
+    export_temperature_authenticated_label_join_statement,
+    pending_temperature_authenticated_label_join,
+)
 from .temperature_blinded_cohort_manifest import (
     build_temperature_blinded_cohort_plan,
     freeze_temperature_blinded_cohort_manifest,
@@ -188,8 +194,10 @@ __all__ = [
     "ACCEPTANCE_SCHEMA",
     "AegisReliabilityEngine",
     "build_temperature_acceptance_statement",
+    "build_temperature_authenticated_label_join_statement",
     "build_temperature_blinded_cohort_plan",
     "evaluate_authenticated_temperature_acceptance",
+    "evaluate_temperature_authenticated_label_join",
     "evaluate_temperature_development_acceptance",
     "evaluate_temperature_field_checkride",
     "evaluate_temperature_field_review_receipt",
@@ -199,8 +207,10 @@ __all__ = [
     "freeze_temperature_blinded_cohort_manifest",
     "build_temperature_intake_bound_detector_result",
     "export_temperature_intake_bound_detector_result",
+    "export_temperature_authenticated_label_join_statement",
     "export_temperature_long_window_intake_receipt",
     "pending_temperature_intake_bound_detector_result",
+    "pending_temperature_authenticated_label_join",
     "pending_temperature_blinded_cohort_manifest",
     "build_temperature_field_review_statement",
     "export_temperature_field_review_kit",

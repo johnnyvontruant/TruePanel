@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.20.1 · refreshed 2026-10-20 · 32 experiment(s)
+Registry version 2026.10.20.1 · refreshed 2026-10-20 · 33 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -259,3 +259,11 @@ Twelve deterministic paths produce two equivalent order-independent frozen manif
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Define a one-shot authenticated label-join receipt that can score this exact frozen manifest once without permitting exclusions threshold tuning or operational promotion.
 - Revisit when: JT supplies a governed blinded intake inventory; authenticated outcome labels become available; the detector or statistical contract changes; distributed corpus storage is proposed; installation or deployment is proposed
+
+## TP-EXP-0039 · AEGIS authenticated one-shot label join
+
+Thirteen deterministic paths produce two public statements ready for offline signature, one passing immutable score, one failing immutable score, and nine HOLD results. The 440-case passing fixture satisfies every locked Wilson and lead-time gate while repeated scoring, exclusions, tuning, validation, deployment, and hardware authority remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Create an independent score-review receipt that reconstructs the exact committed passing or failing score without changing it and still cannot validate install deploy or actuate hardware.
+- Revisit when: JT supplies a governed complete label set and detached signature; an independent score reviewer is designed; distributed score registries are proposed; the statistical or detector contract changes; field validation installation or deployment is proposed
