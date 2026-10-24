@@ -199,6 +199,8 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
     if receipt is not None:
         if section.get("physical_bridge_enabled") is not True:
             raise LoadmasterConfigError("synthetic acceptance requires physical bridge")
+        if section.get("external_daemon") is not True:
+            raise LoadmasterConfigError("synthetic acceptance requires external daemon ownership")
         paths = [section.get(k) for k in (
             "state_dir", "mount_root", "status_path", "command_socket", "physical_token_key"
         )]
@@ -235,7 +237,8 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         radarr=_servarr(cargo.get("radarr"), "radarr"),
         status_path=_abs_path(section.get("status_path") or STATUS_PATH, "status_path"),
         command_socket=_abs_path(section.get("command_socket") or COMMAND_SOCKET, "command_socket"),
-        extra={"physical_acceptance_mode": receipt is not None,
+        extra={"external_daemon": section.get("external_daemon") is True,
+               "physical_acceptance_mode": receipt is not None,
                "physical_bridge_enabled": section.get("physical_bridge_enabled") is True,
                "physical_token_key": str(section.get("physical_token_key") or "")},
     )
