@@ -252,9 +252,24 @@ def build_host_agent_runtime_from_bootstrap(
 ) -> HostAgentRuntime:
     """Assemble Host runtime behind one cross-process ownership lease."""
 
+    config = getattr(bootstrap, "config", {}) or {}
+    # The existing host agent retains exclusive GPIO75 ownership.
+    # The v2 bridge is inert unless separately commissioned.
+    v2 = config.get("loadmaster") or {}
+    bridge_enabled = (
+        isinstance(v2, Mapping)
+        and v2.get("enabled") is True
+        and v2.get("physical_bridge_enabled") is True
+    )
+    callback = None
+    if bridge_enabled:
+        from truepanel.loadmaster.physical_bridge import ConfirmationBridge
+
+        callback = ConfirmationBridge(enabled=True).accept
     loadmaster_copy_button_service = (
         build_loadmaster_copy_button_service(
-            config=getattr(bootstrap, "config", {}) or {},
+            config=config,
+            on_confirmation=callback,
         )
     )
 
