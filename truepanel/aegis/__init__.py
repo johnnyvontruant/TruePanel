@@ -99,10 +99,122 @@ from .ssh_verifier import (
     validate_allowed_signers_roster,
 )
 from .stage_witness import witness_validated_stage
+from .temperature_authenticated_acceptance import (
+    build_temperature_acceptance_statement,
+    evaluate_authenticated_temperature_acceptance,
+)
+from .temperature_calibration_admission import (
+    evaluate_temperature_calibration_admission,
+    export_temperature_calibration_admission_statement,
+    pending_temperature_calibration_admission,
+)
+from .temperature_calibration_assessment import (
+    assess_temperature_calibration_corpus,
+    pending_temperature_calibration_assessment,
+)
+from .temperature_calibration_corpus import (
+    import_temperature_calibration_case,
+    pending_temperature_calibration_corpus_import,
+)
+from .temperature_coverage import (
+    build_temperature_coverage_candidate,
+    rehearse_temperature_coverage,
+    temperature_guidance_for_snapshot,
+    validate_temperature_coverage_candidate,
+    verify_temperature_coverage,
+)
+from .temperature_coverage_appraisal import (
+    PINNED_SUBJECTS as TEMPERATURE_COVERAGE_APPRAISAL_SUBJECTS,
+)
+from .temperature_coverage_appraisal import (
+    appraise_temperature_coverage,
+    temperature_coverage_implementation_sha256,
+)
+from .temperature_detector_result import (
+    build_temperature_detector_result,
+    export_temperature_detector_result,
+)
+from .temperature_detector_result_binding import (
+    evaluate_temperature_detector_result_binding,
+    export_temperature_detector_result_binding_statement,
+    pending_temperature_detector_result_binding,
+)
+from .temperature_development_acceptance import (
+    evaluate_temperature_development_acceptance,
+    prepare_temperature_development_acceptance,
+)
+from .temperature_field_checkride import (
+    evaluate_temperature_field_checkride,
+    pending_temperature_field_checkride,
+)
+from .temperature_field_review_receipt import (
+    build_temperature_field_review_statement,
+    evaluate_temperature_field_review_receipt,
+    export_temperature_field_review_kit,
+    pending_temperature_field_review_receipt,
+)
+from .temperature_intake_bound_detector_result import (
+    build_temperature_intake_bound_detector_result,
+    export_temperature_intake_bound_detector_result,
+    export_temperature_long_window_intake_receipt,
+    pending_temperature_intake_bound_detector_result,
+)
+from .temperature_long_window_intake import (
+    evaluate_temperature_long_window_intake,
+    pending_temperature_long_window_intake,
+)
+from .temperature_recording_intake import (
+    evaluate_temperature_recording_intake,
+    pending_temperature_recording_intake,
+)
+from .temperature_signing_kit import (
+    export_temperature_signing_kit,
+    verify_temperature_signing_return,
+)
+from .temperature_statistical_calibration_contract import (
+    build_temperature_statistical_calibration_contract,
+    pending_temperature_statistical_calibration_contract,
+    validate_temperature_statistical_calibration_contract,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
     "AegisReliabilityEngine",
+    "build_temperature_acceptance_statement",
+    "evaluate_authenticated_temperature_acceptance",
+    "evaluate_temperature_development_acceptance",
+    "evaluate_temperature_field_checkride",
+    "evaluate_temperature_field_review_receipt",
+    "evaluate_temperature_calibration_admission",
+    "evaluate_temperature_recording_intake",
+    "evaluate_temperature_long_window_intake",
+    "build_temperature_intake_bound_detector_result",
+    "export_temperature_intake_bound_detector_result",
+    "export_temperature_long_window_intake_receipt",
+    "pending_temperature_intake_bound_detector_result",
+    "build_temperature_field_review_statement",
+    "export_temperature_field_review_kit",
+    "pending_temperature_field_checkride",
+    "pending_temperature_field_review_receipt",
+    "export_temperature_calibration_admission_statement",
+    "pending_temperature_calibration_admission",
+    "import_temperature_calibration_case",
+    "pending_temperature_calibration_corpus_import",
+    "assess_temperature_calibration_corpus",
+    "pending_temperature_calibration_assessment",
+    "build_temperature_detector_result",
+    "export_temperature_detector_result",
+    "evaluate_temperature_detector_result_binding",
+    "export_temperature_detector_result_binding_statement",
+    "pending_temperature_detector_result_binding",
+    "pending_temperature_long_window_intake",
+    "pending_temperature_recording_intake",
+    "prepare_temperature_development_acceptance",
+    "export_temperature_signing_kit",
+    "verify_temperature_signing_return",
+    "build_temperature_statistical_calibration_contract",
+    "pending_temperature_statistical_calibration_contract",
+    "validate_temperature_statistical_calibration_contract",
     "BoundedTrueNASQueryCache",
     "CorrelationPolicy",
     "DEFAULT_CORRELATION_POLICY",
@@ -167,4 +279,12 @@ __all__ = [
     "validate_allowed_signers_roster",
     "validate_review_bundle",
     "wilson_interval",
+    "build_temperature_coverage_candidate",
+    "rehearse_temperature_coverage",
+    "temperature_guidance_for_snapshot",
+    "validate_temperature_coverage_candidate",
+    "verify_temperature_coverage",
+    "TEMPERATURE_COVERAGE_APPRAISAL_SUBJECTS",
+    "appraise_temperature_coverage",
+    "temperature_coverage_implementation_sha256",
 ]

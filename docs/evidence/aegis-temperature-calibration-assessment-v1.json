@@ -1,0 +1,46 @@
+{
+  "comparison": {
+    "after": "every immutable case preserves and re-verifies the exact signed admission before diversity gates are computed",
+    "before": "a corpus receipt could be inspected without preserving or replaying its detached admission signature",
+    "result": "small imbalanced non-diverse or tampered corpora remain HOLD and no assessment becomes validation"
+  },
+  "control_authority": false,
+  "evidence_sha256": "50637702b12b93dda173270b787b3e99d5922da033a38541206dc74b970cddd1",
+  "experiment_id": "TP-EXP-0033",
+  "hardware_isolated": true,
+  "measurements": {
+    "authenticated_cases_in_ready_corpus": 4,
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "corpus_writes": 0,
+    "deployments": 0,
+    "field_validations": 0,
+    "hardware_actions": 0,
+    "hold_count": 8,
+    "negative_cases": 2,
+    "positive_cases": 2,
+    "private_key_inputs": 0,
+    "review_ready_count": 1,
+    "runtime_writes": 0,
+    "scenario_count": 9,
+    "signer_invocations_by_truepanel": 0,
+    "system_profiles": 2,
+    "workload_classes": 2
+  },
+  "production_mutation": false,
+  "scenario": "aegis-read-only-authenticated-calibration-corpus-assessment",
+  "scenarios": [
+    {"case_count": 4, "errors": [], "scenario": "balanced-authenticated-corpus", "status": "CALIBRATION_CORPUS_CHARACTERIZED_FOR_INDEPENDENT_REVIEW"},
+    {"case_count": 3, "errors": ["authenticated_case_floor", "negative_outcome_floor"], "scenario": "insufficient-case-floor", "status": "HOLD"},
+    {"case_count": 4, "errors": ["negative_outcome_floor"], "scenario": "outcome-imbalance", "status": "HOLD"},
+    {"case_count": 4, "errors": ["system_profile_diversity"], "scenario": "profile-collapse", "status": "HOLD"},
+    {"case_count": 0, "errors": ["CalibrationAssessmentSignatureNotAuthenticated"], "scenario": "signature-tampering", "status": "HOLD"},
+    {"case_count": 0, "errors": ["CalibrationAssessmentLineageMismatch"], "scenario": "lineage-substitution", "status": "HOLD"},
+    {"case_count": 0, "errors": ["CalibrationAssessmentAuthorityEscalation"], "scenario": "signed-authority-escalation", "status": "HOLD"},
+    {"case_count": 0, "errors": ["CalibrationCorpusCaseArtifactMismatch"], "scenario": "recording-drift", "status": "HOLD"},
+    {"case_count": 0, "errors": ["CalibrationAssessmentVerifierPolicyMismatch"], "scenario": "verifier-policy-drift", "status": "HOLD"}
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "temporary_fixture_removed": true
+}
