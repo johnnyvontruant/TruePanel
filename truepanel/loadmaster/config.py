@@ -212,6 +212,7 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         pending_scan_seconds=float(section.get("pending_scan_seconds") or 600.0),
         sonarr=_servarr(cargo.get("sonarr"), "sonarr"),
         radarr=_servarr(cargo.get("radarr"), "radarr"),
+        extra={"physical_bridge_enabled": section.get("physical_bridge_enabled") is True},
     )
 
 
