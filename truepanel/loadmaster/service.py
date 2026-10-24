@@ -346,6 +346,11 @@ class LoadmasterService:
     def handle(self, request: dict[str, Any]) -> dict[str, Any]:
         action, source = request["action"], request["source"]
         if action == "start":
+            # In acceptance mode only a verified host confirmation may start.
+            # A socket caller can freely claim source="lcd" or "web".
+            if (self.settings.extra.get("physical_acceptance_mode") is True
+                    and source != "host"):
+                return reply(False, "physical_only", "Acceptance requires physical host authorization.")
             if source == "host":
                 if request.get("_host_authenticated") is not True:
                     return reply(False, "unauthorized", "Host authentication required.")
