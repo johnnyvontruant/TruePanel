@@ -36,6 +36,8 @@ def build_service(config: dict[str, Any], *, button_reader_factory=None):
     reader, note = None, None
     if not settings.copy_button:
         note = "off in settings"
+    elif settings.extra.get("physical_bridge_enabled") is True:
+        note = "physical button reserved for the host-owned confirmation bridge"
     elif _old_copy_button_enabled(config):
         note = "owned by the older Cargo Bay Copy service; disable that to use it here"
     else:
