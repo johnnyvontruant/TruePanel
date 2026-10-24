@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import socket
+import struct
 import threading
 import time
 from collections.abc import Callable
@@ -30,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 STATUS_PATH = Path("/run/truepanel/loadmaster-status.json")
 COMMAND_SOCKET = Path("/run/truepanel/loadmaster-command.sock")
 ACTIONS = frozenset({"start", "stop", "eject", "rescan", "adopt"})
-SOURCES = frozenset({"web", "lcd"})
+SOURCES = frozenset({"web", "lcd", "host"})
 STALE_AFTER = 30.0
 MAX_REQUEST = 4096
 
@@ -146,7 +147,18 @@ class CommandServer:
                     data += chunk
                 request = json.loads(data.split(b"\n", 1)[0] or b"null")
                 clean, error = validate(request)
-                answer = error or self.handler(clean)
+                if error is not None:
+                    answer = error
+                elif clean["action"] == "start" and clean["source"] == "host":
+                    raw = conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12)
+                    _pid, uid, _gid = struct.unpack("3i", raw)
+                    if uid != 0:
+                        answer = reply(False, "unauthorized", "Host authorization required.")
+                    else:
+                        clean["_host_authenticated"] = True
+                        answer = self.handler(clean)
+                else:
+                    answer = self.handler(clean)
             except (OSError, ValueError) as exc:
                 answer = reply(False, "invalid", str(exc))
             except Exception as exc:  # noqa: BLE001
