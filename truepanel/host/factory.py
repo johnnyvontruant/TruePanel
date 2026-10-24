@@ -280,7 +280,48 @@ def build_host_agent_runtime_from_bootstrap(
         registry = older.get("cartridge_registry_path")
         backlog = older.get("backlog_path")
         manifest = (cargo.get("backup") or {}).get("manifest_path")
-        if (
+        acceptance_receipt = v2.get("physical_acceptance_receipt")
+        lab_root = Path("/mnt/SSDs/Applications/Loadmaster-V2-Lab")
+        acceptance_state = Path(str(v2.get("state_dir") or "/var/lib/truepanel/loadmaster"))
+        acceptance_status = v2.get("status_path")
+        acceptance_socket = v2.get("command_socket")
+        isolated = (
+            acceptance_receipt == str(
+                lab_root / "physical-commissioning" / "synthetic-baseline.json"
+            )
+            and lab_root in acceptance_state.parents
+            and isinstance(acceptance_status, str)
+            and isinstance(acceptance_socket, str)
+            and lab_root in Path(acceptance_status).parents
+            and lab_root in Path(acceptance_socket).parents
+            and v2.get("remote_start") is not True
+        )
+        if isolated:
+            from truepanel.loadmaster.synthetic_acceptance import accept_synthetic_preflight
+            from truepanel.loadmaster.link import send_command
+
+            def preflight_provider():
+                return accept_synthetic_preflight(
+                    Path(acceptance_receipt), read_status(Path(acceptance_status))
+                )
+
+            key_name = v2.get("physical_token_key")
+            if (
+                isinstance(key_name, str)
+                and lab_root in Path(key_name).parents
+            ):
+                callback = ConfirmationBridge(
+                    enabled=True,
+                    token_key_path=Path(key_name),
+                    status_reader=lambda: read_status(Path(acceptance_status)),
+                    sender=lambda request: send_command(
+                        Path(acceptance_socket), request, timeout=5
+                    ),
+                ).accept
+        elif acceptance_receipt is not None:
+            # Bad commissioning configuration never falls through to production.
+            pass
+        elif (
             callable(baseline_check)
             and all(isinstance(p, str) and p.startswith("/") for p in (
                 registry, backlog, manifest
