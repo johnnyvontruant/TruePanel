@@ -200,7 +200,7 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         if section.get("physical_bridge_enabled") is not True:
             raise LoadmasterConfigError("synthetic acceptance requires physical bridge")
         paths = [section.get(k) for k in (
-            "state_dir", "status_path", "command_socket", "physical_token_key"
+            "state_dir", "mount_root", "status_path", "command_socket", "physical_token_key"
         )]
         if (
             receipt != str(lab_root / "physical-commissioning" / "synthetic-baseline.json")
