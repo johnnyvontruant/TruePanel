@@ -92,9 +92,9 @@ store (`< > : " | ? * \`) are skipped and listed rather than failing the sync.
   somewhere else is left alone.
 * Drives are mounted read-only while being checked, and read-write only while
   copying. They are synced and unmounted when the sync finishes.
-* Mission Control has no login, like the rest of the dashboard: anyone who can
-  open it on your network can start a sync. Set `remote_start: false` to allow
-  starting only from the Copy button.
+* Mission Control has no login, like the rest of the dashboard. Remote Start
+  is disabled by default; retain `remote_start: false` until authenticated
+  control access is available. Use the physical Copy button meanwhile.
 
 ## At the NAS: front panel
 
@@ -171,7 +171,7 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `drives` | — | `name`, `nas_path`, optional `usb_folder`. |
 | `state_dir` | `/var/lib/truepanel/loadmaster` | Drive records, activity log, receipts. |
 | `mount_root` | `/mnt/loadmaster` | Where drives are mounted. |
-| `remote_start` | `true` | Allow Start sync from Mission Control. |
+| `remote_start` | `false` | Remote Start is off until access is secured. |
 | `copy_button` | `true` | Use the front-panel Copy button. |
 | `verify` | `sha256` | `sha256` reads every copy back; `size` only checks the size. |
 | `large_delete_files` | `100` | Above this many removals, confirm in Mission Control. |
@@ -216,3 +216,11 @@ but not yet on the NAS itself. Before relying on it, check with the spare drive:
   method was used);
 * that the Copy button reads correctly from the LCD process;
 * that the drive's folder layout matches `usb_folder`.
+
+## Release hardening gates
+
+* The Daria restoration tree (including `Daria (year)` folders) is excluded from scans and synchronization plans; do not replace, rename, move, delete or upgrade it.
+* A copy cannot publish using a check-then-rename fallback. If the filesystem lacks atomic no-replace publishing, sync stops for that item.
+* Copies run before USB deletion and NAS retirement. If any copy fails, destructive follow-on actions are skipped.
+* Operations targeting `/mnt/HDDs` fail closed while the HDDs ZFS pool is not ONLINE or health cannot be checked. On this host it remains DEGRADED, so do not enable physical syncing yet.
+* The physical Copy button, exFAT rename behavior, real mount/remount/eject lifecycle and full regression suite still require qualification before activation.
