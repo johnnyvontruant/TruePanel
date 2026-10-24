@@ -250,7 +250,7 @@ loadmaster:
   enabled: false
   state_dir: /var/lib/truepanel/loadmaster
   mount_root: /mnt/loadmaster
-  remote_start: true          # allow Start sync from Mission Control
+  remote_start: false         # disabled until authenticated controls are verified
   copy_button: true           # front-panel Copy button (GPIO75)
   verify: sha256              # read every copy back and compare
   large_delete_files: 100     # more removals than this need confirming in TruePanel
