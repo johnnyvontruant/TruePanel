@@ -197,6 +197,8 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
     receipt = section.get("physical_acceptance_receipt")
     lab_root = Path("/mnt/SSDs/Applications/Loadmaster-V2-Lab")
     if receipt is not None:
+        if section.get("physical_bridge_enabled") is not True:
+            raise LoadmasterConfigError("synthetic acceptance requires physical bridge")
         paths = [section.get(k) for k in (
             "state_dir", "status_path", "command_socket", "physical_token_key"
         )]
@@ -205,6 +207,11 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
             or any(not isinstance(p, str) or lab_root not in Path(p).parents
                    for p in paths)
             or section.get("remote_start") is True
+            or section.get("verify", "sha256") != "sha256"
+            or len(raw_drives) != 1
+            or raw_drives[0].get("name") != "Untitled"
+            or raw_drives[0].get("nas_path") != str(lab_root / "LOADMASTER-V2-ACCEPTANCE-20261023-175315")
+            or raw_drives[0].get("usb_folder") != "LOADMASTER-V2-ACCEPTANCE-20261023-175315"
         ):
             raise LoadmasterConfigError("synthetic acceptance requires isolated lab paths")
 
@@ -228,7 +235,8 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         radarr=_servarr(cargo.get("radarr"), "radarr"),
         status_path=_abs_path(section.get("status_path") or STATUS_PATH, "status_path"),
         command_socket=_abs_path(section.get("command_socket") or COMMAND_SOCKET, "command_socket"),
-        extra={"physical_bridge_enabled": section.get("physical_bridge_enabled") is True,
+        extra={"physical_acceptance_mode": receipt is not None,
+               "physical_bridge_enabled": section.get("physical_bridge_enabled") is True,
                "physical_token_key": str(section.get("physical_token_key") or "")},
     )
 
