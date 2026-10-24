@@ -88,3 +88,19 @@ def test_host_start_rejects_missing_token_before_plan_check(tmp_path):
     })
     assert result["status"] == "unauthorized"
     assert subject.state == "READY"
+
+
+def test_host_start_rejects_changed_cartridge_before_spending_token(tmp_path):
+    subject = service(tmp_path, commissioned=True)
+    key = b"test-only-key-material" * 2
+    subject.settings.extra["physical_token_key"] = "/test/key"
+    subject._host_token_verifier = TokenVerifier(key)
+    subject.dock.scan = lambda: []
+    result = subject.handle({
+        "action": "start", "source": "host", "digest": "a" * 64,
+        "_host_authenticated": True,
+        "token": issue(key, "a" * 64, "6ADA-80D5", "2532EA8D421A"),
+    })
+    assert result["status"] == "drive_changed"
+    assert subject.state == "READY"
+    assert not subject._host_token_verifier.used
