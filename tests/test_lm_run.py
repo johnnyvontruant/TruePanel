@@ -36,12 +36,13 @@ class Rig:
         os.utime(path, ns=(mtime, mtime))
         return path
 
-    def plan(self):
+    def plan(self, usb_fstype=None):
         return build_plan(
             drive_name=self.drive.name,
             nas=scan(self.nas).files,
             usb=scan(self.usb).files,
             record=self.record.files if self.record.known else None,
+            usb_fstype=usb_fstype,
         )
 
     def sync(self, plan=None, **kwargs):
@@ -78,6 +79,29 @@ def test_first_sync_then_clear(rig):
     # Record survives a restart.
     reloaded = rig.store.load_record(rig.drive.key, rig.drive.name)
     assert reloaded.files == rig.record.files
+
+
+def test_case_renamed_episode_updates_in_place_on_both_sides(rig):
+    rig.put(rig.nas, "Show/1x01.mkv", b"old")
+    rig.put(rig.usb, "Show/1X01.mkv", b"old")
+    assert rig.sync(rig.plan("exfat"))["state"] == "COMPLETE"
+    assert set(rig.record.files) == {"Show/1x01.mkv"}
+
+    # Updated on the NAS: the drive's own file is replaced, never doubled.
+    rig.put(rig.nas, "Show/1x01.mkv", b"new on nas", T + HOUR)
+    assert rig.sync(rig.plan("exfat"))["state"] == "COMPLETE"
+    assert {p.name for p in (rig.usb / "Show").iterdir()} == {"1X01.mkv"}
+    assert (rig.usb / "Show/1X01.mkv").read_bytes() == b"new on nas"
+
+    # Updated on the drive: the NAS file keeps the NAS name.
+    rig.put(rig.usb, "Show/1X01.mkv", b"new on usb!", T + 2 * HOUR)
+    assert rig.sync(rig.plan("exfat"))["state"] == "COMPLETE"
+    nas_names = {
+        p.name for p in (rig.nas / "Show").iterdir() if not p.name.startswith(".")
+    }
+    assert nas_names == {"1x01.mkv"}
+    assert (rig.nas / "Show/1x01.mkv").read_bytes() == b"new on usb!"
+    assert rig.plan("exfat")["state"] == "CLEAR"
 
 
 def test_radarr_upgrade_mirrors_and_prunes_empty_folder(rig):
@@ -272,3 +296,23 @@ def test_unsafe_paths_rejected():
     for bad in ("", "/etc/passwd", "../x", "a/../b", "a//b"):
         with pytest.raises(transfer.ItemError):
             transfer.safe_relative(bad)
+
+
+def test_scan_skips_mac_and_windows_clutter(tmp_path):
+    keep = "Show/S01E01.mkv"
+    clutter = [
+        ".DS_Store",
+        "Show/._S01E01.mkv",
+        ".Spotlight-V100/Store-V2/index",
+        ".Trashes/501/old.mkv",
+        ".fseventsd/0000",
+        "$RECYCLE.BIN/S-1-5/$R1.mkv",
+        "System Volume Information/IndexerVolumeGuid",
+        "Show/Thumbs.db",
+        "Show/DESKTOP.INI",
+        "Show/Icon\r",
+        "__MACOSX/Show/._S01E01.mkv",
+    ]
+    for rel in [keep, *clutter]:
+        Rig.put(tmp_path, rel, b"x")
+    assert list(scan(tmp_path).files) == [keep]

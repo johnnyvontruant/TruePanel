@@ -303,6 +303,7 @@ class LoadmasterService:
             record=record.files if record.known else None,
             usb_fstype=docked.device.fstype,
             large_delete_files=self.settings.large_delete_files,
+            protected=drive.protected,
         )
         with self._lock:
             self.record = record

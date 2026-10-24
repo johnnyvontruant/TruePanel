@@ -17,13 +17,23 @@ from pathlib import Path
 # FAT-family drives store times at 2 s resolution.
 MTIME_TOLERANCE_NS = 2_000_000_000
 
+# Operating-system clutter, compared ignoring case (Windows writes "Desktop.ini"
+# as readily as "desktop.ini"). macOS clutter (.DS_Store, ._*, .Spotlight-V100,
+# .Trashes, .fseventsd) is already hidden by its leading dot.
 CLUTTER = frozenset(
     {
-        "$RECYCLE.BIN",
-        "System Volume Information",
-        "Thumbs.db",
+        "$recycle.bin",
+        "recycler",
+        "recycled",
+        "system volume information",
+        "found.000",
+        "thumbs.db",
+        "ehthumbs.db",
+        "ehthumbs_vista.db",
         "desktop.ini",
         "lost+found",
+        "__macosx",
+        "icon\r",
     }
 )
 
@@ -66,7 +76,7 @@ class Tree:
 
 
 def ignored(name: str) -> bool:
-    return name.startswith(".") or name in CLUTTER
+    return name.startswith(".") or name.lower() in CLUTTER
 
 
 def scan(root: Path) -> Tree:

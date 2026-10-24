@@ -15,6 +15,14 @@ A drive is recognised by its filesystem **label**, which must equal its
 ``name``. Its files live in a folder of the same name on the drive
 (``usb_folder``; set it to ``""`` if they sit at the drive root).
 
+``protected`` lists folders (relative to the drive's folder) that Loadmaster
+must never change: it only copies a file to a side that lacks it, and reports
+anything else instead of doing it::
+
+        - name: TV A-M
+          nas_path: /mnt/HDDs/Shows/TV A-M
+          protected: ["Daria (1997)"]
+
 Sonarr and Radarr connection details are shared with Cargo Bay
 (``mission_control.cargo_bay.sonarr`` / ``radarr``) so they are configured once.
 """
@@ -45,6 +53,7 @@ class Drive:
     name: str
     nas_path: Path
     usb_folder: str
+    protected: tuple[str, ...] = ()
 
     @property
     def key(self) -> str:
@@ -69,6 +78,7 @@ class Drive:
             "key": self.key,
             "nas_path": str(self.nas_path),
             "usb_folder": self.usb_folder,
+            "protected": list(self.protected),
         }
 
 
@@ -144,6 +154,26 @@ def _owner(value: Any) -> tuple[int, int] | None:
         ) from error
 
 
+def _relative_folder(value: Any, field_name: str) -> str:
+    folder = "" if value is None else str(value).strip().strip("/")
+    if folder and any(part in {"", ".", ".."} for part in folder.split("/")):
+        raise LoadmasterConfigError(f"loadmaster {field_name} is invalid: {folder}")
+    return str(PurePosixPath(folder)) if folder else ""
+
+
+def _protected(value: Any, name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise LoadmasterConfigError(f"loadmaster {name} protected must be a list")
+    folders = tuple(_relative_folder(item, f"{name} protected") for item in value)
+    if "" in folders:
+        raise LoadmasterConfigError(
+            f"loadmaster {name} protected entries must be folders"
+        )
+    return folders
+
+
 def load_settings(config: dict[str, Any]) -> Settings | None:
     """Return settings when Loadmaster is enabled, else ``None``."""
 
@@ -162,15 +192,12 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         name = str(raw.get("name") or "").strip()
         if not name:
             raise LoadmasterConfigError("loadmaster drive name is required")
-        folder = raw.get("usb_folder", name)
-        folder = "" if folder is None else str(folder).strip().strip("/")
-        if folder and any(part in {"", ".", ".."} for part in folder.split("/")):
-            raise LoadmasterConfigError(f"loadmaster usb_folder is invalid: {folder}")
         drives.append(
             Drive(
                 name=name,
                 nas_path=_abs_path(raw.get("nas_path"), f"{name} nas_path"),
-                usb_folder=str(PurePosixPath(folder)) if folder else "",
+                usb_folder=_relative_folder(raw.get("usb_folder", name), "usb_folder"),
+                protected=_protected(raw.get("protected"), name),
             )
         )
 

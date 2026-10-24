@@ -18,6 +18,13 @@ Policy (see docs/LOADMASTER.md):
   retire on the NAS is moved to ``.loadmaster-replaced`` inside that folder.
 * Unusually large removals need confirmation in TruePanel, and a NAS folder
   that suddenly looks empty stops everything.
+* exFAT, FAT and NTFS drives treat ``1x05.mkv`` and ``1X05.mkv`` as one name.
+  On those drives paths are matched ignoring case and judged under the NAS
+  spelling; actions carry the drive's own spelling in ``usb_path``. A NAS
+  rename that only changes case is not a new file.
+* **Protected folders** (per drive) are never changed on either side: a file
+  is only copied to a side that lacks it. Anything else Loadmaster would do
+  there is reported as a PROTECTED notice instead.
 
 The plan is a pure function of the three listings, so it is fully testable,
 and its digest lets a later run prove nothing changed since it was approved.
@@ -39,6 +46,9 @@ TO_NAS = "to_nas"
 DELETE_USB = "delete_usb"
 RETIRE_NAS = "retire_nas"
 
+# The only actions allowed inside a protected folder: fill a gap on the drive.
+PROTECTED_ALLOWED = frozenset({(TO_USB, "NEW_ON_NAS"), (TO_USB, "MISSING_ON_USB")})
+
 # Order of execution: free USB space first, copy, then retire NAS originals.
 OP_ORDER = {DELETE_USB: 0, TO_USB: 1, TO_NAS: 2, RETIRE_NAS: 3}
 
@@ -57,6 +67,8 @@ class Action:
     size: int
     mtime_ns: int
     reason: str
+    # The drive's spelling when it differs from ``path`` only in case.
+    usb_path: str | None = None
 
 
 _EPISODE = re.compile(r"[Ss](\d{1,2})[Ee](\d{1,3})")
@@ -75,10 +87,35 @@ def _folder(path: str) -> str:
     return str(PurePosixPath(path).parent)
 
 
+def _windows(fstype: str | None) -> bool:
+    return (fstype or "").lower() in WINDOWS_FILESYSTEMS
+
+
 def _storable(path: str, fstype: str | None) -> bool:
-    if (fstype or "").lower() not in WINDOWS_FILESYSTEMS:
+    if not _windows(fstype):
         return True
     return not any(ch in WINDOWS_ILLEGAL for ch in path.replace("/", ""))
+
+
+def _respell(
+    files: dict[str, Fingerprint], spelling: dict[str, str]
+) -> tuple[dict[str, Fingerprint], dict[str, str]]:
+    """Key ``files`` by ``spelling`` (lower-cased path -> preferred path).
+
+    Returns the re-keyed listing and {preferred: original} for every path
+    whose spelling changed.
+    """
+
+    out: dict[str, Fingerprint] = {}
+    changed: dict[str, str] = {}
+    for path, fp in files.items():
+        preferred = spelling.get(path.lower(), path)
+        if preferred in out:
+            preferred = path  # a case-sensitive listing with both; leave as is
+        out[preferred] = fp
+        if preferred != path:
+            changed[preferred] = path
+    return out, changed
 
 
 def digest(drive_name: str, actions: list[Action]) -> str:
@@ -98,6 +135,7 @@ def build_plan(
     record: dict[str, Fingerprint] | None,
     usb_fstype: str | None = None,
     large_delete_files: int = 100,
+    protected: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Return the sync plan for one drive.
 
@@ -113,11 +151,40 @@ def build_plan(
     in_sync: dict[str, Fingerprint] = {}
     forget: list[str] = []
 
+    # On a drive that ignores case, judge every path under one spelling: the
+    # NAS's, else the record's. usb_spelling maps it back to the drive's name.
+    usb_spelling: dict[str, str] = {}
+    collides: set[str] = set()
+    if _windows(usb_fstype):
+        spelling: dict[str, str] = {}
+        for path in sorted(nas):
+            if path.lower() in spelling:
+                collides.add(path)  # a second NAS name for one drive name
+            else:
+                spelling[path.lower()] = path
+        for path in sorted(record):
+            spelling.setdefault(path.lower(), path)
+        usb, usb_spelling = _respell(usb, spelling)
+        record, record_spelling = _respell(record, spelling)
+        forget.extend(record_spelling.values())  # stored again under the new name
+
+    guarded = tuple(folder.lower().rstrip("/") + "/" for folder in protected)
+
     def add(op: str, path: str, fp: Fingerprint, reason: str) -> None:
+        if (op, reason) not in PROTECTED_ALLOWED and path.lower().startswith(guarded):
+            notices.append(
+                {"path": path, "reason": "PROTECTED", "would": f"{op} {reason}"}
+            )
+            return
         if op == TO_USB and not _storable(path, usb_fstype):
             notices.append({"path": path, "reason": "NAME_NOT_STORABLE_ON_USB"})
             return
-        actions.append(Action(op, path, fp.size, fp.mtime_ns, reason))
+        if op == TO_USB and path in collides:
+            notices.append({"path": path, "reason": "NAME_DIFFERS_ONLY_BY_CASE_ON_NAS"})
+            return
+        actions.append(
+            Action(op, path, fp.size, fp.mtime_ns, reason, usb_spelling.get(path))
+        )
 
     # Videos on USB that nobody has seen before, by folder and episode. A video
     # deleted from USB with a new counterpart here (same episode for TV, any
@@ -137,6 +204,14 @@ def build_plan(
         if n and u:
             if n.same_as(u):
                 in_sync[path] = n
+                if path in usb_spelling:
+                    notices.append(
+                        {
+                            "path": path,
+                            "reason": "CASE_DIFFERS_ON_USB",
+                            "usb_path": usb_spelling[path],
+                        }
+                    )
                 continue
             nas_changed = not n.same_as(r)
             usb_changed = not u.same_as(r)
@@ -164,9 +239,7 @@ def build_plan(
             elif not n.same_as(r):
                 add(TO_USB, path, n, "UPDATED_ON_NAS")
             elif replaced_on_usb(path):
-                actions.append(
-                    Action(RETIRE_NAS, path, n.size, n.mtime_ns, "REPLACED_ON_USB")
-                )
+                add(RETIRE_NAS, path, n, "REPLACED_ON_USB")
             else:
                 add(TO_USB, path, n, "MISSING_ON_USB")
 
@@ -174,9 +247,7 @@ def build_plan(
             if r is None:
                 add(TO_NAS, path, u, "NEW_ON_USB")
             elif u.same_as(r):
-                actions.append(
-                    Action(DELETE_USB, path, u.size, u.mtime_ns, "REMOVED_FROM_NAS")
-                )
+                add(DELETE_USB, path, u, "REMOVED_FROM_NAS")
             else:
                 add(TO_NAS, path, u, "UPDATED_ON_USB_AFTER_NAS_REMOVAL")
 
