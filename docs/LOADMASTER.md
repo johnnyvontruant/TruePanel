@@ -52,9 +52,10 @@ the first sync creates it.
 | Changed on the drive since the last sync, unchanged on the NAS | Copy to the NAS |
 | Changed on both sides, or different with no record | The **newest** file wins |
 | Same modification time but different size | Conflict: nothing happens until resolved |
-| Video removed from the drive and a new video added for the same episode (`S01E05`), or in the same folder when names have no episode number (movies) | Upgraded on the laptop: the new file comes to the NAS and the old NAS file is retired (moved, not deleted) |
+| Video removed from the drive and a new video added for the same episode (`S01E05` or `1x05`), or in the same folder when names have no episode number (movies) | Upgraded on the laptop: the new file comes to the NAS and the old NAS file is retired (moved, not deleted) |
 | Removed from the drive for any other reason | Copied back to the drive |
 | First sync of a drive | Copy whatever each side lacks. **Nothing is ever removed on a first sync.** |
+| A different video on each side for the same movie folder or episode, and neither has been synced before (a Radarr upgrade or rename the drive never saw, or the other way round) | Nothing is copied; both are listed as **TWO_VERSIONS** so you can keep one. Copying both ways would leave two versions on each side. |
 
 Files and folders whose names start with `.` (macOS `.DS_Store`, `._*`,
 `.Spotlight-V100`, `.Trashes`, `.fseventsd`), and, in any letter case,

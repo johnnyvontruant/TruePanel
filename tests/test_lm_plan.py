@@ -177,10 +177,10 @@ def test_case_only_rename_on_nas_is_in_sync_on_exfat():
 
 
 def test_case_is_significant_on_case_sensitive_drives():
-    result = plan({"a/1x01.mkv": fp(1)}, {"a/1X01.mkv": fp(1)}, None, usb_fstype="ext4")
+    result = plan({"a/1x01.srt": fp(1)}, {"a/1X01.srt": fp(1)}, None, usb_fstype="ext4")
     assert ops(result) == [
-        ("to_usb", "a/1x01.mkv", "NEW_ON_NAS"),
-        ("to_nas", "a/1X01.mkv", "NEW_ON_USB"),
+        ("to_usb", "a/1x01.srt", "NEW_ON_NAS"),
+        ("to_nas", "a/1X01.srt", "NEW_ON_USB"),
     ]
 
 
@@ -264,6 +264,68 @@ def test_protected_folder_restores_a_missing_drive_copy():
     record = {"Daria (1997)/S01E01.mkv": fp(1)}
     result = plan(dict(record), {}, record, protected=DARIA)
     assert ops(result) == [("to_usb", "Daria (1997)/S01E01.mkv", "MISSING_ON_USB")]
+
+
+def test_radarr_upgrade_the_drive_never_saw_is_not_doubled():
+    # Torn Curtain on Movies T-Z: Radarr replaced the AVI on the NAS before the
+    # drive's first sync. Copying both ways would put both on both sides.
+    nas = {"Torn Curtain (1966)/Torn Curtain (1966).mp4": fp(8, T + HOUR)}
+    usb = {"Torn Curtain (1966)/Torn Curtain (1966).avi": fp(1)}
+    result = plan(nas, usb, None, usb_fstype="exfat")
+    assert result["actions"] == []
+    assert sorted((n["reason"], n["path"], n["other"]) for n in result["notices"]) == [
+        (
+            "TWO_VERSIONS_NAS",
+            "Torn Curtain (1966)/Torn Curtain (1966).mp4",
+            ["Torn Curtain (1966)/Torn Curtain (1966).avi"],
+        ),
+        (
+            "TWO_VERSIONS_USB",
+            "Torn Curtain (1966)/Torn Curtain (1966).avi",
+            ["Torn Curtain (1966)/Torn Curtain (1966).mp4"],
+        ),
+    ]
+
+
+def test_two_versions_is_per_episode_and_ignores_other_files():
+    nas = {"Show/S01E01.mkv": fp(1), "Show/S01E02.mkv": fp(2), "Show/S01E02.nfo": fp(3)}
+    usb = {"Show/S01E01 Remux.mkv": fp(9), "Show/S01E03.mkv": fp(4)}
+    result = plan(nas, usb, None)
+    assert ops(result) == [
+        ("to_usb", "Show/S01E02.mkv", "NEW_ON_NAS"),
+        ("to_usb", "Show/S01E02.nfo", "NEW_ON_NAS"),
+        ("to_nas", "Show/S01E03.mkv", "NEW_ON_USB"),
+    ]
+    assert {n["reason"] for n in result["notices"]} == {
+        "TWO_VERSIONS_NAS",
+        "TWO_VERSIONS_USB",
+    }
+
+
+def test_two_versions_only_for_files_neither_side_has_synced():
+    # A known NAS file replaced on the laptop is still the laptop-upgrade rule.
+    record = {"Heat (1995)/Heat.mkv": fp(5)}
+    result = plan(dict(record), {"Heat (1995)/Heat Remux.mkv": fp(50)}, record)
+    assert ops(result) == [
+        ("to_nas", "Heat (1995)/Heat Remux.mkv", "NEW_ON_USB"),
+        ("retire_nas", "Heat (1995)/Heat.mkv", "REPLACED_ON_USB"),
+    ]
+
+
+def test_1x05_names_are_episodes():
+    # Sonarr's "1x05" style: a laptop upgrade of one episode retires only that
+    # episode, not every episode in the folder.
+    record = {"Show/1x05 - A.mkv": fp(5), "Show/1x06 - B.mkv": fp(6)}
+    nas = dict(record)
+    usb = {"Show/1x05 - A Remux.mkv": fp(50)}
+    result = plan(nas, usb, record)
+    assert ops(result) == [
+        ("to_usb", "Show/1x06 - B.mkv", "MISSING_ON_USB"),
+        ("to_nas", "Show/1x05 - A Remux.mkv", "NEW_ON_USB"),
+        ("retire_nas", "Show/1x05 - A.mkv", "REPLACED_ON_USB"),
+    ]
+    # A title that only looks like NxN is not an episode.
+    assert plan({"4x4 (2019)/4x4 (2019).mkv": fp(1)}, {}, None)["actions"]
 
 
 def test_usb_changed_after_nas_removal_is_kept():
