@@ -164,6 +164,8 @@ class LoadmasterService:
             docked = None
             if self.docked is not None:
                 docked = self.docked.public()
+                docked["nas_path"] = str(self.docked.drive.nas_path)
+                docked["usb_folder"] = self.docked.drive.usb_folder
                 if self.record is not None:
                     docked["last_sync"] = self.record.last_sync
                     docked["first_sync"] = not self.record.known
