@@ -40,7 +40,7 @@ DELETE_USB = "delete_usb"
 RETIRE_NAS = "retire_nas"
 
 # Order of execution: free USB space first, copy, then retire NAS originals.
-OP_ORDER = {DELETE_USB: 0, TO_USB: 1, TO_NAS: 2, RETIRE_NAS: 3}
+OP_ORDER = {TO_USB: 0, TO_NAS: 1, RETIRE_NAS: 2, DELETE_USB: 3}
 
 VIDEO_SUFFIXES = frozenset(
     {".mkv", ".mp4", ".m4v", ".avi", ".mov", ".ts", ".m2ts", ".wmv", ".mpg", ".webm"}
@@ -104,6 +104,15 @@ def build_plan(
     ``record`` is ``None`` before the first completed sync. Without it nothing
     is ever deleted: every file is simply copied to whichever side lacks it.
     """
+
+    # Protect the Daria restoration even with externally supplied inventories.
+    def protected(path: str) -> bool:
+        return any(part.casefold() == "daria" for part in PurePosixPath(path).parts)
+
+    nas = {p: f for p, f in nas.items() if not protected(p)}
+    usb = {p: f for p, f in usb.items() if not protected(p)}
+    if record is not None:
+        record = {p: f for p, f in record.items() if not protected(p)}
 
     known = record is not None
     record = record or {}
