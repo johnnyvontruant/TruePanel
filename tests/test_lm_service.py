@@ -458,6 +458,72 @@ def test_dock_matches_usb_label_only(tmp_path):
     assert parse_lsblk(LSBLK)[0].serial == "S1"
 
 
+# util-linux 2.38 on TrueNAS 25.10 prints a flat list even with --tree; only
+# the disk carries TRAN/SERIAL. Shape copied from BattleStation.
+LSBLK_FLAT = json.dumps(
+    {
+        "blockdevices": [
+            {
+                "path": "/dev/sda",
+                "pkname": None,
+                "serial": "2532EA8D3E2B",
+                "tran": "usb",
+            },
+            {"path": "/dev/sda1", "pkname": "sda", "serial": None, "tran": None},
+            {
+                "path": "/dev/sda2",
+                "pkname": "sda",
+                "uuid": "6988-AEDE",
+                "fstype": "exfat",
+                "label": "TV A-M",
+                "serial": None,
+                "tran": None,
+                "size": 8001546092544,
+                "mountpoints": [None],
+            },
+            {"path": "/dev/sdb", "pkname": None, "serial": "WKD3MW7K", "tran": "sata"},
+            {
+                "path": "/dev/sdb1",
+                "pkname": "sdb",
+                "uuid": "5997857175939697463",
+                "fstype": "zfs_member",
+                "label": "TV N-Z",
+                "tran": None,
+                "mountpoints": [None],
+            },
+        ]
+    }
+)
+
+
+def test_dock_finds_usb_drive_in_flat_lsblk_output(tmp_path):
+    devices = {d.path: d for d in parse_lsblk(LSBLK_FLAT)}
+    assert devices["/dev/sda2"].usb is True
+    assert devices["/dev/sda2"].serial == "2532EA8D3E2B"
+    assert devices["/dev/sdb1"].usb is False
+
+    settings = load_settings(
+        {
+            "loadmaster": {
+                "enabled": True,
+                "drives": [
+                    {"name": "TV A-M", "nas_path": "/n/a"},
+                    {"name": "TV N-Z", "nas_path": "/n/b"},
+                ],
+            }
+        }
+    )
+    dock = Dock(
+        settings.drives,
+        tmp_path / "mnt",
+        runner=lambda argv: LSBLK_FLAT,
+        mountinfo=lambda: "",
+    )
+    assert [(d.drive.name, d.device.uuid) for d in dock.scan()] == [
+        ("TV A-M", "6988-AEDE")
+    ]
+
+
 def test_dock_mounts_read_only_then_read_write(tmp_path):
     dock, calls = _dock(tmp_path)
     docked = dock.scan()[0]
