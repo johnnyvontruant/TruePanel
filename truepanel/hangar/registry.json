@@ -641,6 +641,25 @@
       "revisit_conditions": ["JT supplies a governed complete label set and detached signature", "an independent score reviewer is designed", "distributed score registries are proposed", "the statistical or detector contract changes", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Create an independent score-review receipt that reconstructs the exact committed passing or failing score without changing it and still cannot validate install deploy or actuate hardware.",
       "freshness": {"reviewed_at": "2026-10-24", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0040", "title": "AEGIS independent authenticated score review", "state": "COMPLETED",
+      "hypothesis": "A separate read-only implementation can independently reconstruct both passing and failing authenticated calibration scores from the exact frozen subjects without consuming another score slot or gaining operational authority.",
+      "value": "Closes the score-review gap by re-verifying the signed labels and independently rebuilding every denominator uncertainty bound lead statistic gate and receipt digest.",
+      "prior_art": ["in-toto Test Result predicate", "in-toto eval-result proposal", "SLSA Verification Summary Attestation", "TUF consistent snapshots", "Reproducible Builds independent verification"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-independent-score-review", "pr": null, "commits": []},
+      "protocol": ["load only protected canonical score materials", "validate the exact predeclared contract and frozen manifest", "reverify the operator label SSHSIG", "account for every frozen case", "independently reconstruct the confusion matrix Wilson bounds and lead distribution", "compare every metric gate subject digest and negative authority claim", "emit one public review receipt outside the score registry", "review passing and failing scores identically", "deny rescore validation acceptance installation deployment and hardware authority"],
+      "fixtures": ["aegis-independent-authenticated-score-review", "tests/test_aegis_temperature_score_review.py"],
+      "success_criteria": ["one passing and one failing immutable score independently reconstruct", "all 440 cases and the 40 positive 400 negative balance match", "all Wilson and lead metrics match the producer receipt", "tampered drifted substituted noncanonical missing and unsafe paths hold", "score registry remains byte-for-byte unchanged", "accepted matrix remains 8/8", "validation deployment and hardware authority remain false"],
+      "abort_criteria": ["the reviewer calls the producer private score helper", "a score metric or verdict can drift", "a failing score is rejected from review or rerun", "the review writes or replaces the score registry", "labels thresholds or exclusions can change", "review is called field validation", "candidate is accepted or installed", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-independent-score-review-v1.json", "sha256": "970ece0a65be54f162a10dd65fd43b6d0b674729a44ee56369c04c93836ec724"}],
+      "outcome": {"conclusion": "Twelve deterministic paths independently reconstruct one passing and one failing score while ten adversarial paths HOLD. The 440-case metrics match exactly and score registry writes re-evaluations unsafe authority and production mutations remain zero."},
+      "invalidated_assumptions": ["a valid receipt digest proves the score calculation", "calling the original scoring helper constitutes independent review", "only passing scores require review", "review may safely rewrite the score registry", "a reconstructed score is field validation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_score_review.py tests/test_aegis_temperature_authenticated_label_join.py tests/test_aegis_temperature_blinded_cohort_manifest.py tests/test_aegis_temperature_statistical_calibration_contract.py", "python -c \"from truepanel.holodeck.aegis_temperature_score_review import run_temperature_score_review_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a governed signed score", "a standalone verifier executable is proposed", "distributed score storage is proposed", "the statistical or detector contract changes", "calibration acceptance installation or deployment is proposed"],
+      "strongest_follow_up": "Create a separately scoped operator-authenticated calibration decision receipt that references this independent review and can record accept or hold without installing deploying or actuating hardware.",
+      "freshness": {"reviewed_at": "2026-10-25", "review_after": "2027-04-30"}
     }
   ]
 }

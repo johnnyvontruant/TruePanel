@@ -180,6 +180,10 @@ from .temperature_recording_intake import (
     evaluate_temperature_recording_intake,
     pending_temperature_recording_intake,
 )
+from .temperature_score_review import (
+    pending_temperature_score_review,
+    review_temperature_authenticated_score,
+)
 from .temperature_signing_kit import (
     export_temperature_signing_kit,
     verify_temperature_signing_return,
@@ -309,4 +313,6 @@ __all__ = [
     "TEMPERATURE_COVERAGE_APPRAISAL_SUBJECTS",
     "appraise_temperature_coverage",
     "temperature_coverage_implementation_sha256",
+    "pending_temperature_score_review",
+    "review_temperature_authenticated_score",
 ]
