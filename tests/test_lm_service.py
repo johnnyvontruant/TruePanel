@@ -126,6 +126,30 @@ def test_plug_press_sync_unplug(svc):
     assert svc.state == "CLEAR"
 
 
+def test_first_sync_with_nothing_to_copy_records_the_baseline(svc):
+    # Movies T-Z came up CLEAR on its first sync and stayed "never synced",
+    # so a later Radarr upgrade was held as TWO_VERSIONS instead of mirrored.
+    put(svc.nas, "Heat (1995)/Heat 720p.mkv", b"old")
+    put(svc.usb, "Heat (1995)/Heat 720p.mkv", b"old")
+    plug(svc)
+    assert svc.state == "CLEAR"
+    record = svc.store.load_record("tv-a-m", "TV A-M")
+    assert record.known
+    assert set(record.files) == {"Heat (1995)/Heat 720p.mkv"}
+
+    svc.fake.present = []
+    svc.tick()
+    (svc.nas / "Heat (1995)/Heat 720p.mkv").unlink()  # Radarr upgrade
+    put(svc.nas, "Heat (1995)/Heat 2160p.mkv", b"new and better")
+    plug(svc)
+    assert svc.state == "READY"
+    ops = sorted((a["op"], a["path"]) for a in svc.plan["actions"])
+    assert ops == [
+        ("delete_usb", "Heat (1995)/Heat 720p.mkv"),
+        ("to_usb", "Heat (1995)/Heat 2160p.mkv"),
+    ]
+
+
 def test_plan_changed_after_press_is_refused(svc):
     put(svc.nas, "a.mkv", b"a")
     plug(svc)

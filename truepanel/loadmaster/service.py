@@ -31,7 +31,7 @@ from .dock import Dock, Docked, DockError
 from .link import CommandServer, publish_status, reply
 from .plan import build_plan, pending_to_usb
 from .run import RunContext, execute
-from .scan import ScanError, scan
+from .scan import Fingerprint, ScanError, scan
 from .state import DriveRecord, StateStore
 
 LOGGER = logging.getLogger(__name__)
@@ -330,6 +330,8 @@ class LoadmasterService:
         if plan["state"] == "HOLD":
             self._set("HOLD", plan["reason"])
         elif plan["state"] == "CLEAR":
+            if plan["first_sync"]:
+                self._record_baseline(docked, plan)
             self._set("CLEAR", note or f"{docked.drive.name} is up to date.")
         elif plan["needs_confirmation"]:
             removals = summary["delete_usb_files"] + summary["retire_nas_files"]
@@ -339,6 +341,24 @@ class LoadmasterService:
             )
         else:
             self._set("READY", note or "Press Copy to sync.")
+
+    def _record_baseline(self, docked: Docked, plan: dict[str, Any]) -> None:
+        """A first sync with nothing to copy still records what is in sync.
+
+        Without it the drive would stay "never synced": later Radarr upgrades
+        would be held as TWO_VERSIONS instead of mirrored.
+        """
+
+        record = self.record
+        if record is None or record.known:
+            return
+        record.files = {
+            path: Fingerprint.from_list(value)
+            for path, value in plan["in_sync"].items()
+        }
+        record.last_sync = self.clock()
+        self.store.save_record(docked.drive.key, record)
+        self.store.log("baseline", drive=docked.drive.name, files=len(record.files))
 
     # ------------------------------------------------------------ commands
 
