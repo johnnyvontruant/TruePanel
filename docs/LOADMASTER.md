@@ -61,7 +61,7 @@ Files and folders whose names start with `.` (macOS `.DS_Store`, `._*`,
 `.Spotlight-V100`, `.Trashes`, `.fseventsd`), and, in any letter case,
 `$RECYCLE.BIN`, `RECYCLER`, `System Volume Information`, `FOUND.000`,
 `Thumbs.db`, `ehthumbs.db`, `desktop.ini`, `lost+found`, `__MACOSX` and the
-macOS folder-icon file `Icon\r` are ignored on both sides: never scanned,
+macOS folder-icon file `Icon\r` (stored on exFAT/NTFS as `Icon` + U+F00D) are ignored on both sides: never scanned,
 copied or removed. Sonarr, Radarr and Plex ignore them too. Names that exFAT/NTFS cannot
 store (`< > : " | ? * \`) are skipped and listed rather than failing the sync.
 
