@@ -14,6 +14,11 @@ Policy (see docs/LOADMASTER.md):
 * A video removed from the USB drive whose folder gained a new, unknown video
   is treated as **replaced on the laptop**: the new file comes to the NAS and
   the old NAS file is retired. Any other file missing from USB is restored.
+* When each side holds a *different* video that neither side has synced
+  before, for the same movie folder or episode (a Radarr upgrade or rename the
+  drive never saw, or a laptop upgrade the NAS never saw), Loadmaster cannot
+  tell which one is wanted. Copying both ways would leave two versions on each
+  side, so neither is copied and both are listed as TWO_VERSIONS.
 * Loadmaster **never destroys NAS data**. Anything it would overwrite or
   retire on the NAS is moved to ``.loadmaster-replaced`` inside that folder.
 * Unusually large removals need confirmation in TruePanel, and a NAS folder
@@ -71,12 +76,19 @@ class Action:
     usb_path: str | None = None
 
 
-_EPISODE = re.compile(r"[Ss](\d{1,2})[Ee](\d{1,3})")
+# S01E05, or 1x05 (Sonarr's other common style; two-digit episode so a title
+# like "4x4" is not mistaken for one).
+_EPISODE = re.compile(
+    r"[Ss](\d{1,2})[Ee](\d{1,3})|(?<![0-9A-Za-z])(\d{1,2})[xX](\d{2,3})(?![0-9])"
+)
 
 
 def _episode(path: str) -> tuple[int, int] | None:
     match = _EPISODE.search(PurePosixPath(path).name)
-    return (int(match.group(1)), int(match.group(2))) if match else None
+    if not match:
+        return None
+    season, episode = match.group(1, 2) if match.group(1) else match.group(3, 4)
+    return (int(season), int(episode))
 
 
 def _video(path: str) -> bool:
@@ -198,6 +210,35 @@ def build_plan(
     def replaced_on_usb(path: str) -> bool:
         return _video(path) and (_folder(path), _episode(path)) in new_usb_videos
 
+    # The same movie folder or episode with a different, never-synced video on
+    # each side: which one is wanted is unknowable, so neither is copied.
+    def item(path: str) -> tuple[str, tuple[int, int] | None]:
+        return (_folder(path).lower(), _episode(path))
+
+    unsynced: dict[str, dict[tuple[str, tuple[int, int] | None], list[str]]] = {
+        "nas": {},
+        "usb": {},
+    }
+    for side, files, other in (("nas", nas, usb), ("usb", usb, nas)):
+        for path in files:
+            if _video(path) and path not in other and path not in record:
+                unsynced[side].setdefault(item(path), []).append(path)
+
+    def two_versions(path: str, side: str) -> bool:
+        if not _video(path):
+            return False
+        other = unsynced["usb" if side == "nas" else "nas"].get(item(path))
+        if not other:
+            return False
+        notices.append(
+            {
+                "path": path,
+                "reason": f"TWO_VERSIONS_{side.upper()}",
+                "other": sorted(other),
+            }
+        )
+        return True
+
     for path in sorted(set(nas) | set(usb) | set(record)):
         n, u, r = nas.get(path), usb.get(path), record.get(path)
 
@@ -235,7 +276,8 @@ def build_plan(
 
         elif n:
             if r is None:
-                add(TO_USB, path, n, "NEW_ON_NAS")
+                if not two_versions(path, "nas"):
+                    add(TO_USB, path, n, "NEW_ON_NAS")
             elif not n.same_as(r):
                 add(TO_USB, path, n, "UPDATED_ON_NAS")
             elif replaced_on_usb(path):
@@ -245,7 +287,8 @@ def build_plan(
 
         elif u:
             if r is None:
-                add(TO_NAS, path, u, "NEW_ON_USB")
+                if not two_versions(path, "usb"):
+                    add(TO_NAS, path, u, "NEW_ON_USB")
             elif u.same_as(r):
                 add(DELETE_USB, path, u, "REMOVED_FROM_NAS")
             else:

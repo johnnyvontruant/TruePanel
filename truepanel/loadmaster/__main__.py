@@ -110,7 +110,15 @@ def main(argv: list[str] | None = None) -> int:
         for reason, items in sorted(by_reason.items()):
             print(f"  !! {reason}: {len(items)} file(s)")
             for item in items[:20]:
-                detail = item.get("would") or item.get("usb_path") or ""
+                detail = (
+                    item.get("would")
+                    or item.get("usb_path")
+                    or (
+                        "other side: " + ", ".join(item["other"])
+                        if item.get("other")
+                        else ""
+                    )
+                )
                 print(f"       {item['path']}" + (f"  ({detail})" if detail else ""))
         return 0
 
