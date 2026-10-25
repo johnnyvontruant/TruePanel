@@ -34,6 +34,9 @@ CLUTTER = frozenset(
         "lost+found",
         "__macosx",
         "icon\r",
+        # macOS writes Icon\r to exFAT/FAT/NTFS as Icon + U+F00D (its mapping
+        # for characters those filesystems cannot store); Linux shows it as is.
+        "icon\uf00d",
     }
 )
 

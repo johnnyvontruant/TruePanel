@@ -311,6 +311,7 @@ def test_scan_skips_mac_and_windows_clutter(tmp_path):
         "Show/Thumbs.db",
         "Show/DESKTOP.INI",
         "Show/Icon\r",
+        "Icon\uf00d",  # Icon\r as macOS stores it on exFAT (seen on TV N-Z)
         "__MACOSX/Show/._S01E01.mkv",
     ]
     for rel in [keep, *clutter]:
