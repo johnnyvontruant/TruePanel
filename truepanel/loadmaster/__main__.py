@@ -20,6 +20,7 @@ from pathlib import Path
 from truepanel.config.loader import load_config
 
 from . import build_service, load_settings
+from .identity import folder_keys, library_index
 from .link import read_status
 from .plan import build_plan
 from .scan import scan
@@ -88,6 +89,8 @@ def main(argv: list[str] | None = None) -> int:
             usb_fstype=_fstype(args.usb_path),
             protected=drive.protected,
             large_delete_files=settings.large_delete_files,
+            library=library_index((d.name, d.nas_path) for d in settings.drives),
+            usb_folders=folder_keys(args.usb_path),
         )
         s = plan["summary"]
         print(
@@ -114,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
                     item.get("would")
                     or item.get("usb_path")
                     or (
-                        "other side: " + ", ".join(item["other"])
+                        "already: " + ", ".join(item["other"])
                         if item.get("other")
                         else ""
                     )

@@ -65,6 +65,7 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
             ),
             "/api/v1/lcd": self._lcd_status,
             "/api/v1/loadmaster": self._loadmaster_status,
+            "/api/v1/loadmaster/plan": self._loadmaster_plan,
             "/api/v1/history": self._history,
             "/api/v1/fans/history": (
                 self._fan_history
@@ -203,6 +204,14 @@ class MissionControlRequestHandler(BaseHTTPRequestHandler):
         del parsed
         path = getattr(self.server, "loadmaster_status_path", None)
         self._json(loadmaster_link.read_status(path or loadmaster_link.STATUS_PATH))
+
+    def _loadmaster_plan(self, parsed):
+        """The whole current plan, so a sync can be reviewed before it starts."""
+
+        del parsed
+        path = getattr(self.server, "loadmaster_status_path", None)
+        self._json(loadmaster_link.read_plan(
+            loadmaster_link.plan_path_for(path or loadmaster_link.STATUS_PATH)))
 
     def _loadmaster_command(self, parsed):
         """Relay start / stop / eject / rescan / adopt to the Loadmaster service."""

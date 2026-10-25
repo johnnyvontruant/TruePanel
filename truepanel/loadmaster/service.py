@@ -28,7 +28,8 @@ from typing import Any
 
 from .config import Settings
 from .dock import Dock, Docked, DockError
-from .link import CommandServer, publish_status, reply
+from .identity import folder_keys, library_index
+from .link import CommandServer, plan_path_for, publish_plan, publish_status, reply
 from .plan import build_plan, pending_to_usb
 from .run import RunContext, execute
 from .scan import Fingerprint, ScanError, scan
@@ -138,6 +139,7 @@ class LoadmasterService:
         self.servarr_status: dict[str, str] = {}
         self.activity: list[dict[str, Any]] = self.store.recent_activity(30)
         self._last_publish = 0.0
+        self._published_plan: str | None = "unset"
         self._planning = False
 
         self.button: ButtonWatcher | None = None
@@ -208,6 +210,41 @@ class LoadmasterService:
             publish_status(self.settings.status_path, self.snapshot())
         except OSError:
             LOGGER.exception("Could not publish Loadmaster status")
+        self._publish_plan()
+
+    def _publish_plan(self) -> None:
+        """Write the whole plan for review, only when it changes."""
+
+        with self._lock:
+            plan, docked = self.plan, self.docked
+            digest = plan["digest"] if plan else None
+            if digest == self._published_plan:
+                return
+            full = None
+            if plan is not None:
+                full = {
+                    "drive": docked.drive.name if docked else None,
+                    **{
+                        key: plan[key]
+                        for key in (
+                            "digest",
+                            "state",
+                            "first_sync",
+                            "needs_confirmation",
+                            "summary",
+                            "actions",
+                            "conflicts",
+                            "notices",
+                        )
+                    },
+                }
+        try:
+            publish_plan(plan_path_for(self.settings.status_path), full)
+        except OSError:
+            LOGGER.exception("Could not publish the Loadmaster plan")
+            return
+        with self._lock:
+            self._published_plan = digest
 
     # -------------------------------------------------------------- dock
 
@@ -304,6 +341,8 @@ class LoadmasterService:
             usb_fstype=docked.device.fstype,
             large_delete_files=self.settings.large_delete_files,
             protected=drive.protected,
+            library=library_index((d.name, d.nas_path) for d in self.settings.drives),
+            usb_folders=folder_keys(usb_root),
         )
         with self._lock:
             self.record = record

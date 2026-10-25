@@ -11,7 +11,14 @@ import pytest
 from truepanel.loadmaster import build_service, load_settings
 from truepanel.loadmaster.config import LoadmasterConfigError, Settings
 from truepanel.loadmaster.dock import Device, Dock, Docked, parse_lsblk
-from truepanel.loadmaster.link import CommandServer, read_status, send_command, validate
+from truepanel.loadmaster.link import (
+    CommandServer,
+    plan_path_for,
+    read_plan,
+    read_status,
+    send_command,
+    validate,
+)
 from truepanel.loadmaster.servarr import host_path, poll
 from truepanel.loadmaster.service import ButtonWatcher, LoadmasterService
 from truepanel.loadmaster.state import StateStore
@@ -148,6 +155,22 @@ def test_first_sync_with_nothing_to_copy_records_the_baseline(svc):
         ("delete_usb", "Heat (1995)/Heat 720p.mkv"),
         ("to_usb", "Heat (1995)/Heat 2160p.mkv"),
     ]
+
+
+def test_whole_plan_is_published_for_review_and_cleared_on_unplug(svc):
+    for i in range(60):
+        put(svc.nas, f"Show/S01E{i:02}.mkv", bytes([i]))
+    plug(svc)
+    status = read_status(svc.settings.status_path)
+    assert len(status["plan"]["preview"]) == 40  # the status keeps a preview
+    full = read_plan(plan_path_for(svc.settings.status_path))["plan"]
+    assert full["digest"] == status["plan"]["digest"]
+    assert full["drive"] == "TV A-M" and len(full["actions"]) == 60
+    assert "in_sync" not in full
+
+    svc.fake.present = []
+    svc.tick()
+    assert read_plan(plan_path_for(svc.settings.status_path))["plan"] is None
 
 
 def test_plan_changed_after_press_is_refused(svc):

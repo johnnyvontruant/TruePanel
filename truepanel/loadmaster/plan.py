@@ -30,6 +30,13 @@ Policy (see docs/LOADMASTER.md):
 * **Protected folders** (per drive) are never changed on either side: a file
   is only copied to a side that lacks it. Anything else Loadmaster would do
   there is reported as a PROTECTED notice instead.
+* A video new on the drive is **held** rather than brought to the NAS when it
+  would duplicate something the library already has: its folder is not on
+  this drive's NAS folder but the same title is elsewhere in the library
+  (SAME_TITLE_ON_NAS, matched by TMDB id or by title words and year; see
+  ``identity.py``), or the same movie or episode already has a video in sync
+  on both sides (EXTRA_VERSION; files tagged ``{edition-...}`` are deliberate
+  and pass). The NAS is the master library, so only that direction is held.
 
 The plan is a pure function of the three listings, so it is fully testable,
 and its digest lets a later run prove nothing changed since it was approved.
@@ -44,6 +51,7 @@ from dataclasses import asdict, dataclass
 from pathlib import PurePosixPath
 from typing import Any
 
+from .identity import Library
 from .scan import MTIME_TOLERANCE_NS, Fingerprint
 
 TO_USB = "to_usb"
@@ -148,6 +156,8 @@ def build_plan(
     usb_fstype: str | None = None,
     large_delete_files: int = 100,
     protected: tuple[str, ...] = (),
+    library: Library | None = None,
+    usb_folders: dict[str, set[str]] | None = None,
 ) -> dict[str, Any]:
     """Return the sync plan for one drive.
 
@@ -239,6 +249,48 @@ def build_plan(
         )
         return True
 
+    # Movies/episodes with a video already in sync on both sides: another
+    # video for the same item arriving from the drive is a second version.
+    synced_videos: dict[tuple[str, tuple[int, int] | None], list[str]] = {}
+    for path in nas:
+        if _video(path) and path in usb:
+            synced_videos.setdefault(item(path), []).append(path)
+
+    def extra_version(path: str) -> bool:
+        if not _video(path) or "{edition-" in PurePosixPath(path).name.lower():
+            return False
+        other = synced_videos.get(item(path))
+        if not other:
+            return False
+        notices.append(
+            {"path": path, "reason": "EXTRA_VERSION", "other": sorted(other)}
+        )
+        return True
+
+    # Top-level folders new on the drive whose title the library already has
+    # under another folder name or on another drive.
+    nas_tops = {path.split("/", 1)[0].lower() for path in nas if "/" in path}
+    drive_keys = {name.lower(): keys for name, keys in (usb_folders or {}).items()}
+
+    def elsewhere(path: str) -> bool:
+        if not library or "/" not in path:
+            return False
+        top = path.split("/", 1)[0]
+        if top.lower() in nas_tops:
+            return False
+        found = {
+            f"{drive}/{folder}"
+            for key in drive_keys.get(top.lower(), ())
+            for drive, folder in library.get(key, ())
+            if not (drive == drive_name and folder.lower() == top.lower())
+        }
+        if not found:
+            return False
+        notices.append(
+            {"path": path, "reason": "SAME_TITLE_ON_NAS", "other": sorted(found)}
+        )
+        return True
+
     for path in sorted(set(nas) | set(usb) | set(record)):
         n, u, r = nas.get(path), usb.get(path), record.get(path)
 
@@ -287,7 +339,9 @@ def build_plan(
 
         elif u:
             if r is None:
-                if not two_versions(path, "usb"):
+                if not (
+                    two_versions(path, "usb") or extra_version(path) or elsewhere(path)
+                ):
                     add(TO_NAS, path, u, "NEW_ON_USB")
             elif u.same_as(r):
                 add(DELETE_USB, path, u, "REMOVED_FROM_NAS")

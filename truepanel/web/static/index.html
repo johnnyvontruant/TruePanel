@@ -946,6 +946,18 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 .lm-drives th{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-top:0}
 .lm-drives td:last-child,.lm-drives th:last-child{text-align:right}
 .lm-foot{margin-top:.9rem;color:var(--muted);font-size:.74rem}
+.lm-review{width:min(860px,94vw);max-height:88vh;padding:0;border:1px solid var(--edge-strong);border-radius:var(--radius);background:var(--panel-solid);color:var(--text);box-shadow:var(--shadow-lg)}
+.lm-review::backdrop{background:rgba(0,0,0,.55)}
+.lm-review form{display:flex;flex-direction:column;max-height:88vh}
+.lm-review .lm-review-head,.lm-review .lm-review-foot{padding:1rem 1.2rem;border-bottom:1px solid var(--edge)}
+.lm-review .lm-review-foot{border-top:1px solid var(--edge);border-bottom:0;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:flex-end}
+.lm-review .lm-review-head h3{margin:0 0 .25rem}
+.lm-review .lm-body{overflow:auto;padding:.4rem 1.2rem 1rem}
+.lm-review .lm-held{margin-top:.8rem;padding:.7rem .8rem;border:1px solid color-mix(in srgb,var(--warn) 45%,var(--edge));border-radius:var(--radius-sm);background:var(--warn-soft)}
+.lm-review .lm-held h4,.lm-review .lm-group h4{margin:0 0 .3rem;font-size:.86rem}
+.lm-review .lm-group{margin-top:.9rem}
+.lm-review .lm-other{display:block;color:var(--muted);font-size:.74rem}
+.lm-review .lm-ack{margin-right:auto;font-size:.8rem;color:var(--muted)}
 @media (max-width:640px){
   .lm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .lm-actions button{flex:1 1 calc(50% - .5rem)}
@@ -975,6 +987,20 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
   <button id="lmAdopt" type="button" hidden>Adopt this drive</button>
 </div>
 <div class="lm-note" id="lmNote" aria-live="polite"></div>
+<dialog class="lm-review" id="lmReview" aria-labelledby="lmReviewTitle">
+  <form method="dialog">
+    <div class="lm-review-head">
+      <h3 id="lmReviewTitle">Review sync</h3>
+      <div class="lm-msg" id="lmReviewSummary"></div>
+    </div>
+    <div class="lm-body" id="lmReviewBody"></div>
+    <div class="lm-review-foot">
+      <label class="lm-ack" id="lmReviewAckBox" hidden><input type="checkbox" id="lmReviewAck"> I have checked the files that will be removed</label>
+      <button value="cancel" type="submit">Cancel</button>
+      <button class="primary" id="lmReviewStart" type="button">Start sync</button>
+    </div>
+  </form>
+</dialog>
 <details class="lm-section" id="lmPreviewBox" hidden>
   <summary id="lmPreviewTitle">What will happen</summary>
   <ul class="lm-list" id="lmPreview"></ul>
@@ -995,6 +1021,12 @@ const $=id=>document.getElementById(id);
 const OPS={to_usb:"→ USB",to_nas:"→ NAS",delete_usb:"Remove USB",retire_nas:"Retire NAS"};
 const KIND={imported:"Imported",deleted:"Deleted",renamed:"Renamed",moved:"Moved",run:"Sync",
   plugged_in:"Plugged in",unplugged:"Unplugged",ejected:"Ejected",adopted:"Adopted",service_started:"Started"};
+const HELD={TWO_VERSIONS_NAS:"Different version on each side",TWO_VERSIONS_USB:"Different version on each side",
+  SAME_TITLE_ON_NAS:"Already in the library",EXTRA_VERSION:"Second version of a synced file",PROTECTED:"Protected folder",
+  NAME_NOT_STORABLE_ON_USB:"Name not allowed on the drive",NAME_DIFFERS_ONLY_BY_CASE_ON_NAS:"Two NAS names differ only in case"};
+const INFO={CASE_DIFFERS_ON_USB:"Same file, different letter case on the drive"};
+const reason=n=>HELD[n.reason]||INFO[n.reason]||n.reason.replaceAll("_"," ").toLowerCase();
+const detail=n=>n.other?"Already: "+n.other.join(", "):n.would?"Would have: "+n.would.replaceAll("_"," ").toLowerCase():n.usb_path?"On the drive: "+n.usb_path:"";
 let status=null,busy=false,lastState=null;
 const bytes=v=>{let n=Number(v)||0;for(const u of["B","KB","MB","GB","TB"]){if(n<1000||u==="TB")return(u==="B"?n.toFixed(0):n.toFixed(1))+" "+u;n/=1000}};
 const files=(n,b)=>Number(n)?`${n} file${n==1?"":"s"}${b!==undefined?" · "+bytes(b):""}`:"Nothing";
@@ -1024,7 +1056,7 @@ function render(s){
   show("lmRescan",!!s.drive&&!["COPYING","CHECKING"].includes(state));
   for(const id of["lmStop","lmEject","lmRescan","lmAdopt"])$(id).disabled=busy;
   const list=$("lmPreview");list.replaceChildren();
-  if(plan){for(const c of plan.conflicts||[])list.append(li("Conflict",c.path,"","warn"));for(const n of plan.notices||[])list.append(li("Skipped",`${n.path} (${n.reason.replaceAll("_"," ").toLowerCase()})`,"","warn"));for(const a of plan.preview||[])list.append(li(OPS[a.op]||a.op,a.path,bytes(a.size)));
+  if(plan){for(const c of plan.conflicts||[])list.append(li("Conflict",c.path,"","warn"));for(const n of plan.notices||[])list.append(li(HELD[n.reason]?"Held":"Note",`${n.path} (${reason(n)})`,"",HELD[n.reason]?"warn":""));for(const a of plan.preview||[])list.append(li(OPS[a.op]||a.op,a.path,bytes(a.size)));
     const total=(sum.to_usb_files+sum.to_nas_files+sum.delete_usb_files+sum.retire_nas_files);$("lmPreviewTitle").textContent=`What will happen (${total} change${total==1?"":"s"}${total>(plan.preview||[]).length?", first "+(plan.preview||[]).length+" shown":""})`}
   show("lmPreviewBox",!!plan&&list.children.length>0);
   const rows=$("lmDrives");rows.replaceChildren();
@@ -1040,9 +1072,29 @@ async function refresh(){try{const r=await fetch("/api/v1/loadmaster",{cache:"no
 async function send(body){busy=true;render(status);$("lmNote").textContent="Sending…";
   try{const r=await fetch("/api/v1/loadmaster/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();$("lmNote").textContent=d.message||(r.ok?"Done":"Refused")}
   catch(e){$("lmNote").textContent="Loadmaster did not respond."}finally{busy=false;await refresh()}}
-$("lmStart").onclick=()=>{const p=status.plan,s=p.summary;const lines=[`Sync ${status.drive.name} now?`,"",`NAS → USB: ${files(s.to_usb_files,s.to_usb_bytes)}`,`USB → NAS: ${files(s.to_nas_files,s.to_nas_bytes)}`];
-  if(s.delete_usb_files)lines.push(`Remove from USB (gone from NAS): ${s.delete_usb_files}`);if(s.retire_nas_files)lines.push(`Move old NAS versions to .loadmaster-replaced: ${s.retire_nas_files}`);
-  lines.push("","Leave the drive plugged in until it says Safe to remove.");if(confirm(lines.join("\n")))send({action:"start",digest:p.digest,confirm:true})};
+const ROWS=400;let reviewed=null;
+function group(title,items,row){const box=document.createElement("section");box.className="lm-group";const h=document.createElement("h4");h.textContent=title;const ul=document.createElement("ul");ul.className="lm-list";
+  for(const x of items.slice(0,ROWS))ul.append(row(x));if(items.length>ROWS)ul.append(li("",`…and ${items.length-ROWS} more`,""));box.append(h,ul);return box}
+async function review(){const note=$("lmNote");let doc;
+  try{const r=await fetch("/api/v1/loadmaster/plan",{cache:"no-store"});doc=await r.json()}catch(e){note.textContent="Could not load the plan.";return}
+  const p=doc.plan;if(!p||!status.plan||p.digest!==status.plan.digest){note.textContent="The plan is changing; try again in a moment.";await refresh();return}
+  reviewed=p;const s=p.summary,body=$("lmReviewBody");body.replaceChildren();
+  $("lmReviewTitle").textContent=`Review ${p.drive||"drive"} sync`+(p.first_sync?" (first sync)":"");
+  $("lmReviewSummary").textContent=`NAS → USB ${files(s.to_usb_files,s.to_usb_bytes)} · USB → NAS ${files(s.to_nas_files,s.to_nas_bytes)} · remove ${s.delete_usb_files} · retire ${s.retire_nas_files}`+(p.first_sync?" · nothing is removed on a first sync":"");
+  const held=(p.notices||[]).filter(n=>HELD[n.reason]),info=(p.notices||[]).filter(n=>!HELD[n.reason]);
+  if(held.length||(p.conflicts||[]).length){const box=document.createElement("div");box.className="lm-held";const h=document.createElement("h4");h.textContent=`${held.length+(p.conflicts||[]).length} held: not copied, needs your decision`;box.append(h);
+    const ul=document.createElement("ul");ul.className="lm-list";for(const c of p.conflicts||[])ul.append(li("Conflict",c.path,"","warn"));
+    for(const n of held){const e=li(HELD[n.reason],n.path,"","warn");const d=detail(n);if(d){const o=document.createElement("span");o.className="lm-other";o.textContent=d;e.querySelector(".lm-path").append(o)}ul.append(e)}box.append(ul);body.append(box)}
+  const by=op=>(p.actions||[]).filter(a=>a.op===op);
+  for(const[op,title]of[["to_nas","USB → NAS"],["to_usb","NAS → USB"],["delete_usb","Remove from the drive (gone from the NAS)"],["retire_nas","Move old NAS versions to .loadmaster-replaced"]]){
+    const items=by(op);if(items.length)body.append(group(`${title}: ${files(items.length,items.reduce((t,a)=>t+a.size,0))}`,items,a=>li(a.reason.replaceAll("_"," ").toLowerCase(),a.usb_path&&a.usb_path!==a.path?`${a.path} (drive: ${a.usb_path})`:a.path,bytes(a.size))))}
+  if(info.length){const d=document.createElement("details");d.className="lm-group";const sm=document.createElement("summary");sm.textContent=`${info.length} note${info.length==1?"":"s"} (no action)`;d.append(sm,group("",info,n=>li("Note",`${n.path} (${reason(n)})`,"")));body.append(d)}
+  if(!(p.actions||[]).length)body.append(Object.assign(document.createElement("p"),{textContent:"Nothing will be copied or removed."}));
+  const removals=s.delete_usb_files+s.retire_nas_files;$("lmReviewAckBox").hidden=!removals;$("lmReviewAck").checked=false;
+  $("lmReviewStart").disabled=!!removals||!(p.actions||[]).length;$("lmReview").showModal()}
+$("lmReviewAck").onchange=e=>{$("lmReviewStart").disabled=!e.target.checked};
+$("lmReviewStart").onclick=()=>{const p=reviewed;$("lmReview").close();if(p)send({action:"start",digest:p.digest,confirm:true})};
+$("lmStart").onclick=review;
 $("lmStop").onclick=()=>{if(confirm("Stop the sync? Finished files are kept; an unfinished file resumes next time."))send({action:"stop"})};
 $("lmEject").onclick=()=>{if(confirm("Unmount this drive without syncing?"))send({action:"eject"})};
 $("lmRescan").onclick=()=>send({action:"rescan"});

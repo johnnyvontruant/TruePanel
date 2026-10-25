@@ -39,6 +39,29 @@ def publish_status(path: Path, status: dict[str, Any]) -> None:
     write_json_atomic(path, {"published": time.time(), "status": status})
 
 
+def plan_path_for(status_path: Path) -> Path:
+    """The full plan lives beside the status file (the status keeps a preview)."""
+
+    return status_path.with_name("loadmaster-plan.json")
+
+
+def publish_plan(path: Path, plan: dict[str, Any] | None) -> None:
+    write_json_atomic(path, {"published": time.time(), "plan": plan})
+
+
+def read_plan(path: Path) -> dict[str, Any]:
+    """The whole current plan, for review before starting a sync."""
+
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+        plan = document["plan"]
+    except FileNotFoundError:
+        return {"available": False, "plan": None}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {"available": False, "plan": None, "message": "Plan could not be read."}
+    return {"available": True, "plan": plan if isinstance(plan, dict) else None}
+
+
 def read_status(
     path: Path, *, clock: Callable[[], float] = time.time
 ) -> dict[str, Any]:
@@ -197,7 +220,10 @@ def send_command(path: Path, request: dict[str, Any], *, timeout: float = 30.0) 
 __all__ = [
     "CommandServer",
     "LinkError",
+    "plan_path_for",
+    "publish_plan",
     "publish_status",
+    "read_plan",
     "read_status",
     "reply",
     "send_command",
