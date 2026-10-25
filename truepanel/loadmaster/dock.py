@@ -34,12 +34,16 @@ MOUNT_TYPES = {
 }
 RO = "ro,nosuid,nodev,noexec,noatime"
 RW = "rw,nosuid,nodev,noexec,noatime"
+# --tree asks for partitions nested under their disk. Some lsblk builds (the
+# util-linux 2.38 on TrueNAS 25.10) still print a flat list, where only the
+# disk carries TRAN and SERIAL, so PKNAME links each partition to its disk.
 LSBLK = [
     "lsblk",
     "-J",
     "-b",
+    "--tree",
     "-o",
-    "PATH,UUID,FSTYPE,LABEL,SERIAL,TRAN,SIZE,MOUNTPOINTS",
+    "PATH,PKNAME,UUID,FSTYPE,LABEL,SERIAL,TRAN,SIZE,MOUNTPOINTS",
 ]
 
 Runner = Callable[[Sequence[str]], str]
@@ -104,11 +108,40 @@ def parse_lsblk(text: str) -> list[Device]:
     except (ValueError, KeyError, TypeError) as error:
         raise DockError("could not read lsblk output") from error
 
-    devices: list[Device] = []
+    # Every node with its tree parent (None in a flat listing).
+    nodes: list[tuple[dict[str, Any], dict[str, Any] | None]] = []
 
-    def walk(node: dict[str, Any], serial: str, tran: str) -> None:
-        serial = str(node.get("serial") or "").strip() or serial
-        tran = str(node.get("tran") or "").strip().lower() or tran
+    def collect(node: dict[str, Any], parent: dict[str, Any] | None) -> None:
+        nodes.append((node, parent))
+        for child in node.get("children") or []:
+            collect(child, node)
+
+    for root in roots or []:
+        collect(root, None)
+
+    by_name = {os.path.basename(str(n.get("path") or "")): n for n, _ in nodes}
+    tree_parent = {id(n): parent for n, parent in nodes}
+
+    def parent_of(node: dict[str, Any]) -> dict[str, Any] | None:
+        parent = tree_parent.get(id(node))
+        if parent is None and node.get("pkname"):
+            parent = by_name.get(str(node["pkname"]))
+        return parent
+
+    def inherited(node: dict[str, Any] | None, key: str) -> str:
+        """``key`` from the node, else from the disk it belongs to."""
+
+        seen: set[int] = set()
+        while node is not None and id(node) not in seen:
+            seen.add(id(node))
+            value = str(node.get(key) or "").strip()
+            if value:
+                return value
+            node = parent_of(node)
+        return ""
+
+    devices: list[Device] = []
+    for node, _ in nodes:
         uuid = str(node.get("uuid") or "").strip()
         fstype = str(node.get("fstype") or "").strip().lower()
         if uuid and fstype and node.get("path"):
@@ -119,17 +152,12 @@ def parse_lsblk(text: str) -> list[Device]:
                     uuid=uuid,
                     fstype=fstype,
                     label=str(node.get("label") or "").strip(),
-                    serial=serial,
-                    usb=tran == "usb",
+                    serial=inherited(node, "serial"),
+                    usb=inherited(node, "tran").lower() == "usb",
                     size=int(node.get("size") or 0),
                     mountpoints=tuple(str(p) for p in points if p),
                 )
             )
-        for child in node.get("children") or []:
-            walk(child, serial, tran)
-
-    for root in roots or []:
-        walk(root, "", "")
     return devices
 
 
