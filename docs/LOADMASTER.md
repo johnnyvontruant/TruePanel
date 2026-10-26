@@ -198,6 +198,7 @@ own schedule (every 12 hours, not adjustable in its settings).
 4. **Enable**: set `loadmaster.enabled: true` and restart TruePanel. The
    service runs inside the TruePanel LCD process. To run it on its own instead
    (for testing), use `python3 -m truepanel.loadmaster run`.
+5. **Check**: run `selftest` (see *Checking the setup* below).
 
 ### Settings (`loadmaster:`)
 
@@ -239,17 +240,33 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `../hardware/fintek_gpio.py` | Reads the Copy button (GPIO75) through `/dev/port`. |
 | `link.py` | Status file and command socket. |
 | `lcd.py` | Front-panel screens. |
-| `__main__.py` | `run`, `status`, `preview`. |
+| `identity.py` | Identity keys (TMDB id, title words and year) for duplicate holds. |
+| `selftest.py` | The `selftest` checks. |
+| `__main__.py` | `run`, `status`, `preview`, `selftest`. |
 
 Tests: `tests/test_lm_*.py`.
 
-## Not yet verified on the NAS
+## Checking the setup
 
-The package is tested against real files in temporary folders and in a browser,
-but not yet on the NAS itself. Before relying on it, check with the spare drive:
+```
+python3 -m truepanel.loadmaster --config truepanel.yaml selftest
+```
 
-* mounting and unmounting the drive's filesystem (exFAT or NTFS) on TrueNAS;
-* the atomic "no replace" rename on that filesystem (the receipt records which
-  method was used);
-* that the Copy button reads correctly from the LCD process;
-* that the drive's folder layout matches `usb_folder`.
+prints PASS / WARN / FAIL / SKIP for: the configuration, every drive's record,
+the library identity index (and how many titles sit in more than one NAS
+folder), USB drive detection (including USB drives whose label is not a drive
+name), the running service, the Copy button and Sonarr/Radarr as the service
+reports them, and, with a drive plugged in, whether an independent re-plan of
+that drive gives the same plan as the service. It only reads, so it is safe
+while TruePanel runs. Run it after every upgrade; it exits 1 if anything fails.
+
+With TruePanel stopped, `selftest --hardware` also mounts the plugged-in drive,
+remounts it read-write, writes and reads back 1 MB in a hidden
+`.loadmaster-selftest` folder (removed afterwards), checks that the no-replace
+rename refuses an existing name, and reads the Copy button (GPIO75). It refuses
+to run while the service owns the drive and the button.
+
+Verified on BattleStation (TVS-671, TrueNAS 25.10) in October 2026: exFAT
+mount, read-only and read-write; `renameat2(RENAME_NOREPLACE)` on exFAT; the
+Copy button from the LCD process; drive detection from TrueNAS's flat `lsblk`
+output; and first syncs of all six drives.
