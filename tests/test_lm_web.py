@@ -12,7 +12,12 @@ from test_web_lcd_control import (
     post_json,
 )
 
-from truepanel.loadmaster.link import LinkError, publish_status
+from truepanel.loadmaster.link import (
+    LinkError,
+    plan_path_for,
+    publish_plan,
+    publish_status,
+)
 from truepanel.web.server import MissionControlServer
 
 
@@ -43,6 +48,31 @@ def test_status_endpoint(tmp_path):
     with server(status_path=path) as base, urlopen(base + "/api/v1/loadmaster") as r:
         body = json.load(r)
     assert body["state"] == "READY" and body["available"] is True
+
+
+def test_plan_endpoint_serves_the_whole_plan(tmp_path):
+    status = tmp_path / "loadmaster-status.json"
+    actions = [
+        {"op": "to_usb", "path": f"Show/S01E{i:02}.mkv", "size": i} for i in range(60)
+    ]
+    publish_plan(
+        plan_path_for(status), {"digest": "d" * 64, "actions": actions, "notices": []}
+    )
+    with (
+        server(status_path=status) as base,
+        urlopen(base + "/api/v1/loadmaster/plan") as r,
+    ):
+        body = json.load(r)
+    assert body["available"] is True
+    assert body["plan"]["digest"] == "d" * 64 and len(body["plan"]["actions"]) == 60
+
+
+def test_plan_endpoint_without_a_plan(tmp_path):
+    with (
+        server(status_path=tmp_path / "s.json") as base,
+        urlopen(base + "/api/v1/loadmaster/plan") as r,
+    ):
+        assert json.load(r) == {"available": False, "plan": None}
 
 
 def test_command_is_relayed_as_web_even_if_body_claims_lcd():

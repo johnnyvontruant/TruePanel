@@ -54,6 +54,8 @@ the first sync creates it.
 | Same modification time but different size | Conflict: nothing happens until resolved |
 | Video removed from the drive and a new video added for the same episode (`S01E05` or `1x05`), or in the same folder when names have no episode number (movies) | Upgraded on the laptop: the new file comes to the NAS and the old NAS file is retired (moved, not deleted) |
 | Removed from the drive for any other reason | Copied back to the drive |
+| A video new on the drive whose folder is not on this drive's NAS folder, while the same title is elsewhere in the library (renamed by Radarr, words reordered, or filed on another drive) | **Held** as SAME_TITLE_ON_NAS, naming where the library has it. Matched by the TMDB id in `.media-identity.json`, else by the folder's words and year. |
+| A second video arriving from the drive for a movie or episode that already has a video in sync on both sides | **Held** as EXTRA_VERSION. Name it with a Plex edition tag (`Movie (2000) {edition-Director's Cut}.mkv`) to bring a deliberate second version across. |
 | First sync of a drive | Copy whatever each side lacks. **Nothing is ever removed on a first sync.** A drive that is already in sync is simply recorded (CLEAR), so later changes are judged against it. |
 | A different video on each side for the same movie folder or episode, and neither has been synced before (a Radarr upgrade or rename the drive never saw, or the other way round) | Nothing is copied; both are listed as **TWO_VERSIONS** so you can keep one. Copying both ways would leave two versions on each side. |
 
@@ -97,8 +99,12 @@ spelling rather than copied a second time.
   that drive's NAS folder. It is hidden, so Plex, Sonarr and Radarr normally
   skip it. Clear it out yourself when you're happy.
 * **Nothing moves without a decision.** Either the Copy button is pressed or
-  you confirm **Start sync** in Mission Control. Mission Control shows the exact
-  list first.
+  you confirm **Start sync** in Mission Control. **Start sync** opens a review
+  of the whole plan first: held files and why, then every file to be copied,
+  removed or retired. The sync that starts is exactly the plan you reviewed.
+* **Held files are never copied.** Held items (two versions, same title
+  elsewhere, an extra version, protected folders) only appear in the plan for
+  you to resolve by hand; everything else in the plan still syncs.
 * **No surprises between preview and copy.** Right before copying, Loadmaster
   re-checks both sides. If anything changed since the plan was shown, it stops
   and shows the new plan.
@@ -151,8 +157,9 @@ showing which drive to plug in next and how much is waiting for it.
 
 The **Loadmaster** card shows:
 
-* the plugged-in drive, its state and the exact list of changes;
-* **Start sync**, **Stop**, **Eject**, **Rescan** and **Adopt this drive**;
+* the plugged-in drive, its state and a preview of the changes;
+* **Start sync**, which first shows the full plan for review (also at
+  `GET /api/v1/loadmaster/plan`), **Stop**, **Eject**, **Rescan** and **Adopt this drive**;
 * every drive with when it was last synced and how much is waiting for it,
   worked out from the NAS even while the drive is in a drawer;
 * recent activity: Sonarr/Radarr imports and deletions, and each sync.
