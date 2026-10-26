@@ -17,7 +17,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 from truepanel import __version__
-from truepanel.build import describe, read_build
+from truepanel.build import describe, drift, read_build
 from truepanel.config.loader import load_config
 from truepanel.paths import installation_root
 
@@ -209,6 +209,30 @@ def check_build(
             "Not recorded (deployed before build stamps)",
         )
 
+    changes = drift(root, build)
+
+    if changes and any(changes.values()):
+        counts = ", ".join(
+            f"{len(paths)} {kind}"
+            for kind, paths in changes.items()
+            if paths
+        )
+        examples = ", ".join(
+            (
+                changes["changed"]
+                + changes["missing"]
+                + changes["extra"]
+            )[:3]
+        )
+        return warning(
+            "Build",
+            (
+                f"{describe(build)}; changed outside "
+                f"the upgrade since this build: {counts} "
+                f"(e.g. {examples})"
+            ),
+        )
+
     if build.get("dirty"):
         return warning(
             "Build",
@@ -217,7 +241,12 @@ def check_build(
 
     return passed(
         "Build",
-        describe(build),
+        describe(build)
+        + (
+            "; files match"
+            if changes is not None
+            else ""
+        ),
     )
 
 
