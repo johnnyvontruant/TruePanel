@@ -172,6 +172,7 @@ def execute(ctx: RunContext) -> dict[str, Any]:
                     on_bytes=moved,
                 )
                 result["sha256"] = copied.sha256
+                result["published"] = copied.method
                 if copied.resumed_bytes:
                     result["resumed_bytes"] = copied.resumed_bytes
                 new_files[raw["path"]] = fp

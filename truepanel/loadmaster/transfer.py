@@ -58,6 +58,9 @@ FATAL_ERRNOS = frozenset(
 class CopyResult:
     sha256: str | None
     resumed_bytes: int
+    # How the copy was put in place: renameat2 (atomic no-replace),
+    # checked-rename (filesystem without it) or replace (planned update).
+    method: str = ""
 
 
 # --------------------------------------------------------------- helpers
@@ -111,8 +114,8 @@ def _drop_cache(fd: int) -> None:
 _renameat2 = None
 
 
-def _noreplace_rename(source: Path, target: Path) -> None:
-    """Atomic rename that fails if ``target`` exists."""
+def _noreplace_rename(source: Path, target: Path) -> str:
+    """Rename that fails if ``target`` exists; returns the method used."""
 
     global _renameat2
     if _renameat2 is None:
@@ -142,7 +145,7 @@ def _noreplace_rename(source: Path, target: Path) -> None:
             )
             == 0
         ):
-            return
+            return "renameat2"
         err = ctypes.get_errno()
         if err == errno.EEXIST:
             raise ItemError("DESTINATION_APPEARED", str(target))
@@ -153,6 +156,7 @@ def _noreplace_rename(source: Path, target: Path) -> None:
     if os.path.lexists(target):
         raise ItemError("DESTINATION_APPEARED", str(target))
     os.rename(source, target)
+    return "checked-rename"
 
 
 def partial_path(parent: Path, rel: PurePosixPath, fp: Fingerprint) -> Path:
@@ -323,10 +327,11 @@ def copy_file(
 
         if replace and os.path.lexists(target):
             os.replace(partial, target)
+            method = "replace"
         else:
-            _noreplace_rename(partial, target)
+            method = _noreplace_rename(partial, target)
         _fsync_dir(parent)
-        return CopyResult(source_hash if verify == "sha256" else None, resumed)
+        return CopyResult(source_hash if verify == "sha256" else None, resumed, method)
     finally:
         os.close(src)
 
