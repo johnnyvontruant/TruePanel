@@ -121,6 +121,7 @@ def test_live_checks_agree_with_the_running_service(tmp_path):
         "copy button": "PASS",
         "sonarr/radarr": "PASS",
         "plan agreement": "PASS",
+        "capacity": "PASS",
     }
     assert not report.failed and dock.calls == []  # read-only: never mounted
 

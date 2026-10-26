@@ -153,6 +153,23 @@ normal rotation:
 When no drive is plugged in, the normal rotation includes a Loadmaster page
 showing which drive to plug in next and how much is waiting for it.
 
+### Drive space and health
+
+Each time a drive is plugged in, Loadmaster records its size and free space
+and reads its SMART health with `smartctl` (pass/fail, temperature, power-on
+hours, SSD wear; USB bridges are retried with `-d sat`, and a drive that
+cannot report SMART is shown as unavailable). A SMART failure is also written
+to the activity log.
+
+Because a drive mirrors its NAS folder, the folder's growth is the drive's
+growth: Loadmaster logs each NAS folder's size once a day and, after three
+days of history, forecasts when the drive will be full (a straight line over
+the last 60 days, against 98% of the drive's capacity). Mission Control's
+drive table shows **Space** ("79% of 8.0 TB · full in ~14 wk") and **Health**
+("SMART ok · 41°C · 3% worn"), highlighted when a drive will be full within
+60 days or SMART failed; `selftest` warns on the same. The history is kept in
+`state_dir/capacity.jsonl`.
+
 ### Sounds
 
 With the `buzzer:` section enabled, Loadmaster plays a short tone when its
@@ -268,6 +285,7 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `identity.py` | Identity keys (TMDB id, title words and year) for duplicate holds. |
 | `selftest.py` | The `selftest` checks. |
 | `sounds.py` | PC-speaker tones for state changes. |
+| `capacity.py` | Drive space, SMART health and the "full in N weeks" forecast. |
 | `__main__.py` | `run`, `status`, `preview`, `selftest`, `sound`. |
 
 Tests: `tests/test_lm_*.py`.

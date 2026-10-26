@@ -24,8 +24,10 @@ import queue
 import threading
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
+from .capacity import CapacityLog, disk_of, read_smart, space
 from .config import Settings
 from .dock import Dock, Docked, DockError
 from .identity import folder_keys, library_index
@@ -111,6 +113,7 @@ class LoadmasterService:
         button_reader: Any = None,
         button_note: str | None = None,
         sound: Callable[[str], None] | None = None,
+        smart_reader: Callable[[str], dict[str, Any]] | None = None,
         clock: Callable[[], float] = time.time,
     ) -> None:
         self.settings = settings
@@ -119,6 +122,8 @@ class LoadmasterService:
         self.servarr_poll = servarr_poll
         self.sound = sound
         self.clock = clock
+        self.capacity = CapacityLog(settings.state_dir, clock=clock)
+        self.smart_reader = smart_reader or (lambda part: read_smart(disk_of(part)))
 
         self._lock = threading.RLock()
         self._jobs: queue.Queue[tuple[str, Any]] = queue.Queue()
@@ -333,6 +338,7 @@ class LoadmasterService:
             self.store.save_record(drive.key, record)
 
         mount = self.dock.mount_ro(docked)
+        self._check_drive(docked, mount)
         usb_root = drive.usb_root(mount)
         if not usb_root.is_dir():
             raise ScanError(
@@ -355,6 +361,23 @@ class LoadmasterService:
         with self._lock:
             self.record = record
         return plan
+
+    def _check_drive(self, docked: Docked, mount: Path) -> None:
+        """Record the drive's size, free space and SMART health."""
+
+        try:
+            capacity, free = space(mount)
+            smart = self.smart_reader(docked.device.path)
+            self.capacity.record_drive(
+                docked.drive.name, capacity_bytes=capacity, free_bytes=free, smart=smart
+            )
+        except Exception:  # noqa: BLE001 - a health check never blocks a sync
+            LOGGER.exception("Could not check %s", docked.drive.name)
+            return
+        if smart.get("status") == "FAILED":
+            self.store.log(
+                "drive_health", drive=docked.drive.name, detail="SMART FAILED"
+            )
 
     def _job_plan(self, docked: Docked) -> None:
         try:
@@ -594,12 +617,17 @@ class LoadmasterService:
             entry["last_sync"] = record.last_sync
             if record.known:
                 try:
-                    files, size = pending_to_usb(
-                        scan(drive.nas_path).files, record.files
-                    )
+                    nas = scan(drive.nas_path).files
+                    files, size = pending_to_usb(nas, record.files)
                     entry.update(pending_files=files, pending_bytes=size)
+                    self.capacity.record_nas(
+                        drive.name, sum(fp.size for fp in nas.values())
+                    )
                 except ScanError as error:
                     entry["error"] = str(error)
+                except OSError:
+                    LOGGER.exception("Could not log %s capacity", drive.name)
+            entry.update(self.capacity.summary(drive.name))
             summaries.append(entry)
         summaries.sort(key=lambda d: -(d.get("pending_bytes") or 0))
         with self._lock:

@@ -943,6 +943,7 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 .lm-list .warn{color:var(--warn)}
 .lm-drives{width:100%;margin-top:.5rem;border-collapse:collapse;font-size:.82rem}
 .lm-drives td,.lm-drives th{padding:.4rem .3rem;border-top:1px solid var(--edge);text-align:left}
+.lm-drives tr.warn td{color:var(--warn)}
 .lm-drives th{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-top:0}
 .lm-drives td:last-child,.lm-drives th:last-child{text-align:right}
 .lm-foot{margin-top:.9rem;color:var(--muted);font-size:.74rem}
@@ -1007,7 +1008,7 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 </details>
 <details class="lm-section" open>
   <summary>Drives</summary>
-  <table class="lm-drives"><thead><tr><th>Drive</th><th>Last sync</th><th>Waiting</th></tr></thead>
+  <table class="lm-drives"><thead><tr><th>Drive</th><th>Last sync</th><th>Space</th><th>Health</th><th>Waiting</th></tr></thead>
   <tbody id="lmDrives"></tbody></table>
 </details>
 <details class="lm-section">
@@ -1060,7 +1061,13 @@ function render(s){
     const total=(sum.to_usb_files+sum.to_nas_files+sum.delete_usb_files+sum.retire_nas_files);$("lmPreviewTitle").textContent=`What will happen (${total} change${total==1?"":"s"}${total>(plan.preview||[]).length?", first "+(plan.preview||[]).length+" shown":""})`}
   show("lmPreviewBox",!!plan&&list.children.length>0);
   const rows=$("lmDrives");rows.replaceChildren();
-  for(const d of s.drives||[]){const tr=document.createElement("tr");for(const v of[d.name+(s.drive&&s.drive.name===d.name?" (plugged in)":""),ago(d.last_sync),d.error?d.error:(d.last_sync?files(d.pending_files,d.pending_bytes):"First sync pending")]){const td=document.createElement("td");td.textContent=v;tr.append(td)}rows.append(tr)}
+  for(const d of s.drives||[]){const tr=document.createElement("tr");const h=d.smart||{};
+    const full=d.full_in_days==null?"":d.full_in_days<14?` · full in ~${Math.round(d.full_in_days)} d`:` · full in ~${Math.round(d.full_in_days/7)} wk`;
+    const spaceText=d.capacity_bytes?`${Math.round((d.used_fraction||0)*100)}% of ${bytes(d.capacity_bytes)}${full}`:"–";
+    const healthText=h.status==="PASSED"?["SMART ok",h.temperature_c!=null?`${h.temperature_c}°C`:"",h.percent_used!=null?`${h.percent_used}% worn`:""].filter(Boolean).join(" · "):h.status==="FAILED"?"SMART FAILED":"–";
+    const warn=h.status==="FAILED"||(d.full_in_days!=null&&d.full_in_days<60);
+    for(const v of[d.name+(s.drive&&s.drive.name===d.name?" (plugged in)":""),ago(d.last_sync),spaceText,healthText,d.error?d.error:(d.last_sync?files(d.pending_files,d.pending_bytes):"First sync pending")]){const td=document.createElement("td");td.textContent=v;tr.append(td)}
+    if(warn)tr.classList.add("warn");rows.append(tr)}
   const act=$("lmActivity");act.replaceChildren();
   for(const e of(s.activity||[]).slice(0,25)){const when=new Date(e.time*1000).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
     const text=e.kind==="run"?`${e.drive}: ${String(e.state).toLowerCase()}${e.reason?" — "+e.reason:""}`:e.kind==="moved"?`${e.drive}: ${OPS[e.op]||e.op} ${e.path}`:[e.title||e.path||"",e.drive?`(${e.drive})`:"",e.detail?`— ${e.detail}`:""].join(" ").trim()||e.drive||"";
