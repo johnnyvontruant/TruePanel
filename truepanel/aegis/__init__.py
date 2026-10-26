@@ -129,6 +129,12 @@ from .temperature_calibration_corpus import (
     import_temperature_calibration_case,
     pending_temperature_calibration_corpus_import,
 )
+from .temperature_calibration_decision import (
+    build_temperature_calibration_decision_statement,
+    evaluate_temperature_calibration_decision,
+    export_temperature_calibration_decision_statement,
+    pending_temperature_calibration_decision,
+)
 from .temperature_coverage import (
     build_temperature_coverage_candidate,
     rehearse_temperature_coverage,
@@ -206,6 +212,7 @@ __all__ = [
     "evaluate_temperature_field_checkride",
     "evaluate_temperature_field_review_receipt",
     "evaluate_temperature_calibration_admission",
+    "evaluate_temperature_calibration_decision",
     "evaluate_temperature_recording_intake",
     "evaluate_temperature_long_window_intake",
     "freeze_temperature_blinded_cohort_manifest",
@@ -314,5 +321,8 @@ __all__ = [
     "appraise_temperature_coverage",
     "temperature_coverage_implementation_sha256",
     "pending_temperature_score_review",
+    "pending_temperature_calibration_decision",
+    "build_temperature_calibration_decision_statement",
+    "export_temperature_calibration_decision_statement",
     "review_temperature_authenticated_score",
 ]

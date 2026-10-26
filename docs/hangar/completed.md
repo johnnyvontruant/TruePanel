@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.20.1 · refreshed 2026-10-20 · 34 experiment(s)
+Registry version 2026.10.20.1 · refreshed 2026-10-20 · 35 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -275,3 +275,11 @@ Twelve deterministic paths independently reconstruct one passing and one failing
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Create a separately scoped operator-authenticated calibration decision receipt that references this independent review and can record accept or hold without installing deploying or actuating hardware.
 - Revisit when: JT supplies a governed signed score; a standalone verifier executable is proposed; distributed score storage is proposed; the statistical or detector contract changes; calibration acceptance installation or deployment is proposed
+
+## TP-EXP-0041 · AEGIS operator-authenticated calibration decision
+
+Seventeen deterministic paths produce three signing-ready statements, one semantic passing ACCEPT, one passing HOLD, one failing HOLD, zero failing ACCEPTs, and ten adversarial HOLDs while score-registry writes and unsafe authority remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Build a read-only candidate dossier that joins the accepted decision score review sealed score detector contract Recovery Coverage Matrix and HoloDeck evidence without installing deploying or promoting the candidate.
+- Revisit when: JT supplies a governed signed score and independent review; a remote transparency log is proposed; the decision policy or trust root changes; field validation installation or deployment is proposed

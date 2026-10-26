@@ -660,6 +660,25 @@
       "revisit_conditions": ["JT supplies a governed signed score", "a standalone verifier executable is proposed", "distributed score storage is proposed", "the statistical or detector contract changes", "calibration acceptance installation or deployment is proposed"],
       "strongest_follow_up": "Create a separately scoped operator-authenticated calibration decision receipt that references this independent review and can record accept or hold without installing deploying or actuating hardware.",
       "freshness": {"reviewed_at": "2026-10-25", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0041", "title": "AEGIS operator-authenticated calibration decision", "state": "COMPLETED",
+      "hypothesis": "A separately scoped operator SSHSIG can record ACCEPT or HOLD over one exact independent score review while making a failing score impossible to accept and granting no installation deployment promotion or hardware authority.",
+      "value": "Closes the evidence-to-human-decision boundary without confusing a passing deterministic score with field validation or operational approval.",
+      "prior_art": ["in-toto authenticated policy decisions", "SLSA Verification Summary Attestation", "Open Policy Agent decision logs", "Cedar authorization decisions", "OpenSSH SSHSIG"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-calibration-decision-receipt", "pr": null, "commits": []},
+      "protocol": ["load one protected canonical independent-review receipt", "bind review score contract manifest detector decision rationale expiry and negative authority claims", "require JT development public roster under a distinct SSHSIG namespace", "allow ACCEPT only when the independently reconstructed statistical gates passed", "allow a passing score to be held and require a failing score to remain held", "commit one owner-protected content-addressed decision receipt per review", "deny replacement replay validation candidate acceptance installation deployment automatic promotion and hardware authority"],
+      "fixtures": ["aegis-operator-authenticated-calibration-decision", "tests/test_aegis_temperature_calibration_decision.py"],
+      "success_criteria": ["one passing review records authenticated ACCEPT for candidate review only", "one passing review records operator HOLD", "one failing review records HOLD", "no failing review can record ACCEPT", "review decision signature trust root expiry schema authority and registry drift hold", "duplicate decision replay holds", "accepted matrix remains 8/8", "validation installation deployment automatic promotion and hardware authority remain false"],
+      "abort_criteria": ["a failing score can be accepted", "review or score drift retains readiness", "an older namespace signature can be replayed", "a decision receipt can be replaced", "candidate-review eligibility is called field validation or installation", "candidate is automatically promoted", "deployment or hardware authority is granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-calibration-decision-v1.json", "sha256": "ef73d547614a6bc6af8c7c0fcb38d05b85f6f1c2a928bf2698987ee8be1707a6"}],
+      "outcome": {"conclusion": "Seventeen deterministic paths produce three signing-ready statements, one semantic passing ACCEPT, one passing HOLD, one failing HOLD, zero failing ACCEPTs, and ten adversarial HOLDs while score-registry writes and unsafe authority remain zero."},
+      "invalidated_assumptions": ["a passing statistical score is an operator decision", "a signature may override a failing predeclared contract", "the label namespace may be reused safely", "a mutable current-decision file is auditable", "candidate-review eligibility implies installation readiness"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_calibration_decision.py tests/test_aegis_temperature_score_review.py tests/test_aegis_temperature_authenticated_label_join.py", "python -c \"from truepanel.holodeck.aegis_temperature_calibration_decision import run_temperature_calibration_decision_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a governed signed score and independent review", "a remote transparency log is proposed", "the decision policy or trust root changes", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Build a read-only candidate dossier that joins the accepted decision score review sealed score detector contract Recovery Coverage Matrix and HoloDeck evidence without installing deploying or promoting the candidate.",
+      "freshness": {"reviewed_at": "2026-10-26", "review_after": "2027-04-30"}
     }
   ]
 }
