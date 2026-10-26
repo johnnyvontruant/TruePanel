@@ -93,6 +93,7 @@ def run_selftest(
         _plan_agreement(report, settings, store, dock, docked, live, library)
     if speaker is not None:
         _speaker(report, settings, speaker)
+    _capacity(report, settings)
 
     if hardware:
         if running:
@@ -243,6 +244,31 @@ def _plan_agreement(report, settings, store, dock, docked, live, library) -> Non
             f"{drive.name}: plans differ (something changed since it was planned?); "
             "press Rescan and run the self-test again",
         )
+
+
+def _capacity(report: Report, settings: Settings) -> None:
+    from .capacity import CapacityLog
+
+    log = CapacityLog(settings.state_dir)
+    lines, warn, unknown = [], False, []
+    for drive in settings.drives:
+        info = log.summary(drive.name)
+        if "capacity_bytes" not in info:
+            unknown.append(drive.name)
+            continue
+        text = f"{drive.name} {round(info.get('used_fraction', 0) * 100)}%"
+        days = info.get("full_in_days")
+        if days is not None:
+            text += f" (full in ~{round(days)} d)"
+            warn = warn or days < 60
+        smart = (info.get("smart") or {}).get("status")
+        if smart == "FAILED":
+            text += " SMART FAILED"
+            warn = True
+        lines.append(text)
+    if unknown:
+        lines.append(f"not measured yet: {', '.join(unknown)} (next plug-in)")
+    report.add("capacity", "WARN" if warn else "PASS", "; ".join(lines))
 
 
 def _speaker(report: Report, settings: Settings, speaker) -> None:

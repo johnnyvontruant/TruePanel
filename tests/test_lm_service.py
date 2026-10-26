@@ -191,6 +191,30 @@ def test_state_changes_play_one_tone_each(svc):
     assert svc.state == "IDLE"
 
 
+def test_plug_in_records_drive_space_and_health(svc):
+    seen = []
+
+    def smart(partition):
+        seen.append(partition)
+        return {"status": "PASSED", "temperature_c": 40}
+
+    svc.smart_reader = smart
+    put(svc.nas, "Show/S01E01.mkv", b"one")
+    plug(svc)
+    assert seen == ["/dev/sdh1"]
+    info = svc.capacity.summary("TV A-M")
+    assert info["smart"]["temperature_c"] == 40 and info["capacity_bytes"] > 0
+
+    def broken(partition):
+        raise OSError("smartctl missing")
+
+    svc.smart_reader = broken  # never blocks planning
+    svc.fake.present = []
+    svc.tick()
+    plug(svc)
+    assert svc.state == "READY"
+
+
 def test_plan_changed_after_press_is_refused(svc):
     put(svc.nas, "a.mkv", b"a")
     plug(svc)
