@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from truepanel.build import write_build
 from truepanel.paths import installation_root
 
 STAGE_PREFIX = ".truepanel-stage-"
@@ -515,8 +516,14 @@ def prepare_stage(
             ),
         )
 
+    build = write_build(
+        stage_root,
+        Path(plan.source_root),
+    )
+
     manifest = {
         **asdict(plan),
+        "source_commit": build.get("commit", ""),
         "created_at": (
             datetime.now(
                 UTC
