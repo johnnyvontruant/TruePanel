@@ -20,6 +20,10 @@ from .platform_witness import bind_platform_witness
 from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 from .rehearsal import rehearse_recovery_paths
 from .requalification import renewal_guidance
+from .temperature_coverage import (
+    build_temperature_coverage_candidate,
+    rehearse_temperature_coverage,
+)
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -72,6 +76,10 @@ class AegisReliabilityEngine:
         self.sample_interval_seconds = interval
         self.rehearsals = rehearse_recovery_paths()
         self.matrix = coverage_matrix(self.rehearsals)
+        self.temperature_coverage_candidate = build_temperature_coverage_candidate(
+            self.matrix,
+            rehearse_temperature_coverage(),
+        )
         proof = run_flight_director_proof()
         self.flight_director = {
             "scenario": proof["scenario"],
@@ -333,6 +341,7 @@ class AegisReliabilityEngine:
                 "request_count": self._sequence,
             },
             "coverage_matrix": self.matrix,
+            "coverage_candidate": self.temperature_coverage_candidate,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],

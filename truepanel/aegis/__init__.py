@@ -99,6 +99,13 @@ from .ssh_verifier import (
     validate_allowed_signers_roster,
 )
 from .stage_witness import witness_validated_stage
+from .temperature_coverage import (
+    build_temperature_coverage_candidate,
+    rehearse_temperature_coverage,
+    temperature_guidance_for_snapshot,
+    validate_temperature_coverage_candidate,
+    verify_temperature_coverage,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -167,4 +174,9 @@ __all__ = [
     "validate_allowed_signers_roster",
     "validate_review_bundle",
     "wilson_interval",
+    "build_temperature_coverage_candidate",
+    "rehearse_temperature_coverage",
+    "temperature_guidance_for_snapshot",
+    "validate_temperature_coverage_candidate",
+    "verify_temperature_coverage",
 ]
