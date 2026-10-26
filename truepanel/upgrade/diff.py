@@ -3,6 +3,8 @@
 Runs the promotion's own rsync in dry-run mode with checksums (``-n -c``), so
 the listing is exactly what ``--promote`` would add, change and delete,
 ignoring timestamps that differ only because the tree was freshly checked out.
+The build stamp is left out: staging always writes a fresh one, and a source
+checkout never has one.
 """
 
 from __future__ import annotations
@@ -11,6 +13,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from truepanel.build import BUILD_FILE
 
 from .checks import command_detail, run_command
 
@@ -41,7 +45,7 @@ def diff_command(source: Path, deploy_root: Path) -> list[str]:
         "--itemize-changes",
         *(
             f"--exclude={item}"
-            for item in (*PROMOTION_EXCLUDES, *PROMOTION_DEPLOY_EXCLUDES)
+            for item in (*PROMOTION_EXCLUDES, *PROMOTION_DEPLOY_EXCLUDES, BUILD_FILE)
         ),
         f"{source}/",
         f"{deploy_root}/",

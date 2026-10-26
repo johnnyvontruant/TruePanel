@@ -30,6 +30,7 @@ def test_diff_uses_the_promotion_excludes_and_checksums():
     command = diff_command(Path("/stage"), Path("/deploy"))
     assert command[:6] == ["rsync", "-n", "-a", "-c", "--delete", "--itemize-changes"]
     assert "--exclude=truepanel.yaml" in command and "--exclude=bin/" in command
+    assert "--exclude=truepanel-build.json" in command  # staging writes a fresh one
     assert command[-2:] == ["/stage/", "/deploy/"]
 
 
