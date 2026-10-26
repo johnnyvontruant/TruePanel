@@ -383,6 +383,16 @@ def build_parser():
             "without touching services"
         ),
     )
+    upgrade.add_argument(
+        "--set-aside-unsafe",
+        dest="upgrade_set_aside_unsafe",
+        action="store_true",
+        help=(
+            "With --cleanup: move refused assets into a "
+            "TruePanel-Unmanaged-<time> folder instead of "
+            "refusing the whole cleanup"
+        ),
+    )
     upgrade_mode.add_argument(
         "--rollback",
         action="store_true",
@@ -592,6 +602,9 @@ def main():
                     deploy_root=upgrade_root,
                     confirmation=(
                         args.upgrade_confirmation
+                    ),
+                    set_aside_unsafe=(
+                        args.upgrade_set_aside_unsafe
                     ),
                 )
             )
