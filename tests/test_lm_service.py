@@ -215,6 +215,51 @@ def test_plug_in_records_drive_space_and_health(svc):
     assert svc.state == "READY"
 
 
+def test_copy_button_only_mode(svc):
+    svc.settings = Settings(
+        **{**svc.settings.__dict__, "remote_start": False, "large_delete_files": 2}
+    )
+    put(svc.nas, "a.mkv", b"a")
+    plug(svc)
+    assert svc.state == "READY"
+    refused = svc.handle(
+        {"action": "start", "source": "web", "digest": svc.plan["digest"]}
+    )
+    assert refused["status"] == "remote_disabled" and svc.state == "READY"
+    svc.press()  # the physical button still works
+    svc.drain()
+    assert svc.state == "DONE"
+
+    # A large removal: TruePanel can only confirm it; Copy then runs it.
+    svc.fake.present = []
+    svc.tick()
+    for i in range(5):
+        put(svc.nas, f"m{i}.mkv", b"x")
+    plug(svc)
+    svc.press()
+    svc.drain()
+    svc.fake.present = []
+    svc.tick()
+    for i in range(5):
+        (svc.nas / f"m{i}.mkv").unlink()
+    plug(svc)
+    assert svc.state == "CONFIRM"
+    svc.press()
+    assert svc.state == "CONFIRM"  # not confirmed yet
+    stale = svc.handle({"action": "start", "source": "web", "digest": "0" * 64})
+    assert stale["status"] == "plan_changed"
+    armed = svc.handle(
+        {"action": "start", "source": "web", "digest": svc.plan["digest"]}
+    )
+    assert armed["status"] == "armed" and svc.state == "CONFIRM"
+    assert read_status(svc.settings.status_path)["armed"] is True
+    svc.press()
+    svc.drain()
+    assert svc.state == "DONE"
+    assert not any((svc.usb / f"m{i}.mkv").exists() for i in range(5))
+    assert svc.armed_digest is None
+
+
 def test_plan_changed_after_press_is_refused(svc):
     put(svc.nas, "a.mkv", b"a")
     plug(svc)

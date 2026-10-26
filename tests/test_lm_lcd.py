@@ -109,3 +109,8 @@ def test_size():
         size(2_100_000_000_000),
         size(0),
     ] == ["950M", "12.4G", "2.1T", "0B"]
+
+
+def test_confirm_screen_asks_for_copy_once_confirmed_in_truepanel():
+    assert pages(status("CONFIRM"))[0][1] == "Confirm in TP"
+    assert pages(status("CONFIRM", armed=True))[0][1] == "Press COPY"
