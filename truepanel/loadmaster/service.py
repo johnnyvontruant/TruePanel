@@ -110,12 +110,14 @@ class LoadmasterService:
         servarr_poll: Callable[[], dict[str, str]] | None = None,
         button_reader: Any = None,
         button_note: str | None = None,
+        sound: Callable[[str], None] | None = None,
         clock: Callable[[], float] = time.time,
     ) -> None:
         self.settings = settings
         self.dock = dock or Dock(settings.drives, settings.mount_root)
         self.store = store or StateStore(settings.state_dir)
         self.servarr_poll = servarr_poll
+        self.sound = sound
         self.clock = clock
 
         self._lock = threading.RLock()
@@ -151,10 +153,16 @@ class LoadmasterService:
     # ------------------------------------------------------------ status
 
     def _set(self, state: str, message: str) -> None:
-        if state != self.state:
+        changed = state != self.state
+        if changed:
             self.state_since = self.clock()
         self.state, self.message = state, message
         self.publish()
+        if changed and self.sound is not None:
+            try:
+                self.sound(state)
+            except Exception:  # noqa: BLE001 - a tone must never stop the service
+                LOGGER.exception("Loadmaster tone failed")
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:

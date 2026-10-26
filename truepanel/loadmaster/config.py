@@ -36,6 +36,7 @@ from typing import Any
 from truepanel.cargo.resolver import ServarrConfig
 
 from .link import COMMAND_SOCKET, STATUS_PATH
+from .sounds import SoundsConfigError, parse_sounds
 
 DEFAULT_STATE_DIR = Path("/var/lib/truepanel/loadmaster")
 DEFAULT_MOUNT_ROOT = Path("/mnt/loadmaster")
@@ -99,6 +100,7 @@ class Settings:
     radarr: ServarrConfig | None = None
     status_path: Path = STATUS_PATH
     command_socket: Path = COMMAND_SOCKET
+    sounds: dict[str, Any] = field(default_factory=lambda: parse_sounds(True))
     extra: dict[str, Any] = field(default_factory=dict)
 
     def drive_named(self, name: str) -> Drive | None:
@@ -222,6 +224,10 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         raise LoadmasterConfigError("loadmaster verify must be sha256 or size")
 
     cargo = (config.get("mission_control") or {}).get("cargo_bay") or {}
+    try:
+        sounds = parse_sounds(section.get("sounds"))
+    except SoundsConfigError as error:
+        raise LoadmasterConfigError(str(error)) from error
 
     return Settings(
         drives=tuple(drives),
@@ -237,6 +243,7 @@ def load_settings(config: dict[str, Any]) -> Settings | None:
         dock_poll_seconds=float(section.get("dock_poll_seconds") or 3.0),
         servarr_poll_seconds=float(section.get("servarr_poll_seconds") or 300.0),
         pending_scan_seconds=float(section.get("pending_scan_seconds") or 600.0),
+        sounds=sounds,
         sonarr=_servarr(cargo.get("sonarr"), "sonarr"),
         radarr=_servarr(cargo.get("radarr"), "radarr"),
     )

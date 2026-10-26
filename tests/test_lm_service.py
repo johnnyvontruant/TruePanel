@@ -173,6 +173,24 @@ def test_whole_plan_is_published_for_review_and_cleared_on_unplug(svc):
     assert read_plan(plan_path_for(svc.settings.status_path))["plan"] is None
 
 
+def test_state_changes_play_one_tone_each(svc):
+    heard = []
+    svc.sound = heard.append
+    put(svc.nas, "Show/S01E01.mkv", b"one")
+    plug(svc)
+    svc.press()
+    svc.drain()
+    assert heard == ["CHECKING", "READY", "COPYING", "DONE"]
+
+    def broken(state):
+        raise OSError("no speaker")
+
+    svc.sound = broken  # a missing speaker never stops the service
+    svc.fake.present = []
+    svc.tick()
+    assert svc.state == "IDLE"
+
+
 def test_plan_changed_after_press_is_refused(svc):
     put(svc.nas, "a.mkv", b"a")
     plug(svc)

@@ -153,6 +153,30 @@ normal rotation:
 When no drive is plugged in, the normal rotation includes a Loadmaster page
 showing which drive to plug in next and how much is waiting for it.
 
+### Sounds
+
+With the `buzzer:` section enabled, Loadmaster plays a short tone when its
+state changes, so you can hear what the front panel says:
+
+| Tone | When | Sound |
+| --- | --- | --- |
+| ready | READY: work to do, press Copy | two rising notes |
+| start | COPYING: the Copy press was heard | one blip |
+| done | DONE: safe to remove | four-note chime |
+| clear | CLEAR / EJECTED: up to date or unmounted | one high chirp |
+| attention | HOLD, CONFIRM, NEW_DRIVE: needs a decision | two falling notes |
+| failed | PARTIAL, FAILED: see the receipt | three falling notes |
+
+`python3 -m truepanel.loadmaster --config truepanel.yaml sound done` plays one
+(leave out the name to hear them all). Set `sounds: false` to turn them off, or
+
+```yaml
+  sounds:
+    quiet_hours: "22:00-07:00"
+    tones:
+      done: [[1047, 0.10], [784, 0.09], [1175, 0.10], [988, 0.10]]
+```
+
 ## Remotely: Mission Control
 
 The **Loadmaster** card shows:
@@ -211,6 +235,7 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `remote_start` | `true` | Allow Start sync from Mission Control. |
 | `copy_button` | `true` | Use the front-panel Copy button. |
 | `verify` | `sha256` | `sha256` reads every copy back; `size` only checks the size. |
+| `sounds` | `true` | PC-speaker tones on state changes (see *Sounds*); `false` turns them off. Needs `buzzer.enabled`. |
 | `large_delete_files` | `100` | Above this many removals, confirm in Mission Control. |
 | `ingest_owner` | NAS folder owner | `uid:gid` for files and folders brought to the NAS. |
 
@@ -242,7 +267,8 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `lcd.py` | Front-panel screens. |
 | `identity.py` | Identity keys (TMDB id, title words and year) for duplicate holds. |
 | `selftest.py` | The `selftest` checks. |
-| `__main__.py` | `run`, `status`, `preview`, `selftest`. |
+| `sounds.py` | PC-speaker tones for state changes. |
+| `__main__.py` | `run`, `status`, `preview`, `selftest`, `sound`. |
 
 Tests: `tests/test_lm_*.py`.
 
