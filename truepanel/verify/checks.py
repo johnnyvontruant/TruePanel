@@ -17,6 +17,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 from truepanel import __version__
+from truepanel.build import describe, read_build
 from truepanel.config.loader import load_config
 from truepanel.paths import installation_root
 
@@ -194,6 +195,29 @@ def check_package_version(
     return passed(
         "Package version",
         __version__,
+    )
+
+
+def check_build(
+    root: Path,
+) -> dict[str, str]:
+    build = read_build(root)
+
+    if build is None:
+        return warning(
+            "Build",
+            "Not recorded (deployed before build stamps)",
+        )
+
+    if build.get("dirty"):
+        return warning(
+            "Build",
+            describe(build),
+        )
+
+    return passed(
+        "Build",
+        describe(build),
     )
 
 
@@ -654,6 +678,9 @@ def run_checks(
     )
     results.append(
         check_package_version(root)
+    )
+    results.append(
+        check_build(root)
     )
     results.append(
         check_configuration(root)
