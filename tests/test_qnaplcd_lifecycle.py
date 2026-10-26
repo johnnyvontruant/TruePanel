@@ -1,3 +1,4 @@
+import errno
 import threading
 import time
 from threading import current_thread
@@ -530,6 +531,31 @@ class CoordinatedSerial(RecordingSerial):
 
         return super().write(payload)
 
+
+
+def test_flush_interrupted_by_a_signal_is_retried(
+    monkeypatch,
+):
+    # truepanel.service exited 1 on restarts: SIGTERM interrupted pyserial's
+    # flush(), and termios.error (not an OSError) escaped the EINTR retry.
+    import termios
+
+    lcd, connection = build_recording_lcd(
+        monkeypatch
+    )
+    interruptions = [termios.error(errno.EINTR, "Interrupted system call")]
+
+    def flush():
+        connection.flush_count += 1
+        if interruptions:
+            raise interruptions.pop()
+
+    connection.flush = flush
+
+    assert lcd._write_parts(b"\x01", flush=True) is True
+    assert connection.flush_count == 2
+
+    lcd.close()
 
 def test_fragmented_display_write_is_atomic(
     monkeypatch,
