@@ -5,6 +5,10 @@ python3 -m truepanel.loadmaster status              print the live status
 python3 -m truepanel.loadmaster preview NAME PATH   dry run against a folder
                                                     (e.g. a manually mounted
                                                     spare drive); changes nothing
+python3 -m truepanel.loadmaster selftest            check the setup on this NAS
+                                                    (read-only; --hardware also
+                                                    tests the drive and button
+                                                    while TruePanel is stopped)
 """
 
 from __future__ import annotations
@@ -60,11 +64,20 @@ def main(argv: list[str] | None = None) -> int:
     preview = sub.add_parser("preview")
     preview.add_argument("drive")
     preview.add_argument("usb_path", type=Path)
+    selftest = sub.add_parser("selftest")
+    selftest.add_argument(
+        "--hardware",
+        action="store_true",
+        help="also mount and write-test the drive and read the Copy button "
+        "(only while TruePanel is stopped)",
+    )
     args = parser.parse_args(argv)
 
     config = load_config(args.config)
-    if args.command == "preview" and isinstance(config.get("loadmaster"), dict):
-        # A dry run is allowed before Loadmaster is switched on.
+    if args.command in {"preview", "selftest"} and isinstance(
+        config.get("loadmaster"), dict
+    ):
+        # A dry run or self-test is allowed before Loadmaster is switched on.
         config = {**config, "loadmaster": {**config["loadmaster"], "enabled": True}}
     settings = load_settings(config)
     if settings is None:
@@ -74,6 +87,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "status":
         print(json.dumps(read_status(settings.status_path), indent=2, default=str))
         return 0
+
+    if args.command == "selftest":
+        from .dock import LSBLK, parse_lsblk, run_command
+        from .selftest import run_selftest
+
+        report = run_selftest(
+            settings,
+            hardware=args.hardware,
+            usb_devices=lambda: parse_lsblk(run_command(LSBLK)),
+        )
+        print("\n".join(report.lines()))
+        print("\nSelf-test " + ("FAILED" if report.failed else "passed"))
+        return 1 if report.failed else 0
 
     if args.command == "preview":
         drive = settings.drive_named(args.drive)
