@@ -83,3 +83,65 @@ def test_verify_reports_the_deployed_build(tmp_path):
     (repo / "truepanel.py").write_text("print('changed')\n")
     write_build(root, repo)
     assert check_build(root)["status"] == "WARN"
+
+
+def make_tree(root):
+    for rel, text in {
+        "truepanel.py": "launcher\n",
+        "truepanel/__init__.py": "v\n",
+        "truepanel/loadmaster/plan.py": "plan\n",
+        # Never part of the fingerprint: same excludes as promotion.
+        "truepanel/__pycache__/x.cpython-311.pyc": "cache",
+        "truepanel/old.pyc": "cache",
+        "truepanel.yaml": "config\n",
+        ".venv/lib/site.py": "venv\n",
+        "bin/truepanel": "wrapper\n",
+        "development/logs/run.log": "log\n",
+        "truepanel.yaml.before-v2": "snapshot\n",
+    }.items():
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+
+def test_fingerprint_covers_what_promotion_installs(tmp_path):
+    from truepanel.build import tree_digest
+
+    make_tree(tmp_path)
+    assert sorted(tree_digest(tmp_path)) == [
+        "truepanel.py",
+        "truepanel/__init__.py",
+        "truepanel/loadmaster/plan.py",
+    ]
+
+
+def test_verify_reports_files_changed_outside_the_upgrade(tmp_path):
+    root = tmp_path / "deployed"
+    make_tree(root)
+    repo = make_repo(tmp_path)
+    write_build(root, repo)  # as staging + promotion would leave it
+
+    result = check_build(root)
+    assert result["status"] == "PASS" and result["detail"].endswith("files match")
+
+    # Config, caches and venv change all the time: not drift.
+    (root / "truepanel.yaml").write_text("edited config\n")
+    (root / "truepanel" / "__pycache__" / "y.pyc").write_text("new cache")
+    assert check_build(root)["status"] == "PASS"
+
+    # A hand deploy: one file edited, one removed, one added.
+    (root / "truepanel" / "loadmaster" / "plan.py").write_text("hot patch\n")
+    (root / "truepanel" / "__init__.py").unlink()
+    (root / "truepanel" / "loadmaster" / "extra.py").write_text("new\n")
+    result = check_build(root)
+    assert result["status"] == "WARN"
+    assert "1 changed, 1 missing, 1 extra" in result["detail"]
+    assert "truepanel/loadmaster/plan.py" in result["detail"]
+
+
+def test_stamp_without_fingerprint_still_passes(tmp_path):
+    root = tmp_path / "deployed"
+    root.mkdir()
+    (root / BUILD_FILE).write_text('{"commit": "0031e9de0ca6", "branch": "main"}')
+    result = check_build(root)
+    assert result["status"] == "PASS" and "files match" not in result["detail"]

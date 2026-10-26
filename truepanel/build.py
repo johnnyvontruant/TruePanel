@@ -5,11 +5,19 @@ cannot tell which code is deployed. Staging an upgrade writes
 ``truepanel-build.json`` (commit, branch, commit date, whether the source
 checkout had uncommitted changes) into the stage, promotion carries it into
 the deployment, and ``truepanel version`` / ``verify`` report it.
+
+The stamp also records a SHA-256 of every file promotion installs (the same
+files the promotion's excludes let through), so ``verify`` can tell when the
+deployment was changed outside the guarded upgrade: files changed, missing
+or added by hand since that build.
 """
 
 from __future__ import annotations
 
+import fnmatch
+import hashlib
 import json
+import os
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -47,10 +55,84 @@ def source_build(source: Path) -> dict[str, Any]:
     }
 
 
+def _patterns() -> tuple[str, ...]:
+    from truepanel.upgrade.promotion import (
+        PROMOTION_DEPLOY_EXCLUDES,
+        PROMOTION_EXCLUDES,
+    )
+
+    return (*PROMOTION_EXCLUDES, *PROMOTION_DEPLOY_EXCLUDES, BUILD_FILE)
+
+
+def _excluded(rel: str, is_dir: bool, patterns: tuple[str, ...]) -> bool:
+    """rsync-style match: a pattern with an inner "/" matches a path suffix,
+    otherwise the last component; a trailing "/" matches directories only."""
+
+    name = rel.rsplit("/", 1)[-1]
+    for pattern in patterns:
+        body = pattern.rstrip("/")
+        if pattern.endswith("/") and not is_dir:
+            continue
+        if "/" in body:
+            if rel == body or rel.endswith("/" + body):
+                return True
+        elif fnmatch.fnmatchcase(name, body):
+            return True
+    return False
+
+
+def tree_digest(root: Path) -> dict[str, str]:
+    """SHA-256 of every file promotion would install from ``root``."""
+
+    patterns = _patterns()
+    files: dict[str, str] = {}
+    for dirpath, dirnames, filenames in os.walk(root):
+        base = Path(dirpath).relative_to(root).as_posix()
+        prefix = "" if base == "." else base + "/"
+        kept = []
+        for name in sorted(dirnames):
+            rel, path = prefix + name, os.path.join(dirpath, name)
+            if _excluded(rel, True, patterns):
+                continue
+            if os.path.islink(path):
+                files[rel] = "symlink:" + os.readlink(path)
+            else:
+                kept.append(name)
+        dirnames[:] = kept
+        for name in sorted(filenames):
+            rel, path = prefix + name, os.path.join(dirpath, name)
+            if _excluded(rel, False, patterns):
+                continue
+            if os.path.islink(path):
+                files[rel] = "symlink:" + os.readlink(path)
+                continue
+            digest = hashlib.sha256()
+            with open(path, "rb") as handle:
+                for chunk in iter(lambda: handle.read(1 << 20), b""):
+                    digest.update(chunk)
+            files[rel] = digest.hexdigest()
+    return files
+
+
+def drift(root: Path, build: dict[str, Any] | None) -> dict[str, list[str]] | None:
+    """Files changed, missing or extra since ``build``; None if not recorded."""
+
+    recorded = (build or {}).get("files")
+    if not isinstance(recorded, dict):
+        return None
+    now = tree_digest(root)
+    return {
+        "changed": sorted(p for p in recorded if p in now and now[p] != recorded[p]),
+        "missing": sorted(p for p in recorded if p not in now),
+        "extra": sorted(p for p in now if p not in recorded),
+    }
+
+
 def write_build(root: Path, source: Path) -> dict[str, Any]:
     build = source_build(source)
     if build:
         build["staged_at"] = datetime.now(UTC).isoformat()
+        build["files"] = tree_digest(root)
         (root / BUILD_FILE).write_text(
             json.dumps(build, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
@@ -75,4 +157,12 @@ def describe(build: dict[str, Any] | None) -> str:
     return text + (" with uncommitted changes" if build.get("dirty") else "")
 
 
-__all__ = ["BUILD_FILE", "describe", "read_build", "source_build", "write_build"]
+__all__ = [
+    "BUILD_FILE",
+    "describe",
+    "drift",
+    "read_build",
+    "source_build",
+    "tree_digest",
+    "write_build",
+]
