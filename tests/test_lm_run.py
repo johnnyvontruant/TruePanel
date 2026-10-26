@@ -66,6 +66,11 @@ def test_first_sync_then_clear(rig):
     receipt = rig.sync()
 
     assert receipt["state"] == "COMPLETE"
+    # New files are published without replacing anything; the receipt says how.
+    assert {r["published"] for r in receipt["results"]} <= {
+        "renameat2",
+        "checked-rename",
+    }
     assert (rig.usb / "Show/S01E01.mkv").read_bytes() == b"one"
     assert (rig.nas / "Other/S01E01.mkv").read_bytes() == b"two"
     assert (rig.usb / "Show/S01E01.mkv").stat().st_mtime_ns == T
@@ -137,6 +142,18 @@ def test_laptop_upgrade_retires_nas_original_without_deleting(rig):
     kept = list(rig.drive.replaced_dir.rglob("Heat 720p.mkv"))
     assert len(kept) == 1 and kept[0].read_bytes() == b"old"
     assert rig.plan()["state"] == "CLEAR"
+
+
+def test_planned_update_on_the_drive_is_published_as_a_replace(rig):
+    rig.put(rig.nas, "Elf (2003)/Elf.mkv", b"old")
+    rig.sync()
+    rig.put(rig.nas, "Elf (2003)/Elf.mkv", b"upgraded", T + HOUR)
+
+    receipt = rig.sync()
+
+    assert [(r["reason"], r["published"]) for r in receipt["results"]] == [
+        ("UPDATED_ON_NAS", "replace")
+    ]
 
 
 def test_newer_same_name_on_usb_replaces_nas_and_keeps_old(rig):
