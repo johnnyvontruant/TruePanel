@@ -9,6 +9,8 @@ python3 -m truepanel.loadmaster selftest            check the setup on this NAS
                                                     (read-only; --hardware also
                                                     tests the drive and button
                                                     while TruePanel is stopped)
+python3 -m truepanel.loadmaster sound [TONE]        play one tone (or all) on the
+                                                    PC speaker, to try them out
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 from truepanel.config.loader import load_config
@@ -71,10 +74,14 @@ def main(argv: list[str] | None = None) -> int:
         help="also mount and write-test the drive and read the Copy button "
         "(only while TruePanel is stopped)",
     )
+    sound = sub.add_parser("sound")
+    sound.add_argument(
+        "tone", nargs="?", help="ready, start, done, clear, attention or failed"
+    )
     args = parser.parse_args(argv)
 
     config = load_config(args.config)
-    if args.command in {"preview", "selftest"} and isinstance(
+    if args.command in {"preview", "selftest", "sound"} and isinstance(
         config.get("loadmaster"), dict
     ):
         # A dry run or self-test is allowed before Loadmaster is switched on.
@@ -88,14 +95,40 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(read_status(settings.status_path), indent=2, default=str))
         return 0
 
+    if args.command == "sound":
+        from truepanel.hardware.buzzer import Buzzer
+
+        from .sounds import TONES, Sounds
+
+        buzzer = Buzzer({**(config.get("buzzer") or {}), "enabled": True})
+        if buzzer.find_device() is None:
+            print("No PC speaker found (buzzer.device in truepanel.yaml).")
+            return 1
+        tones = Sounds(
+            {**settings.sounds, "enabled": True, "quiet_hours": None}, buzzer
+        )
+        names = [args.tone] if args.tone else list(TONES)
+        for name in names:
+            if name not in TONES:
+                print(f"Unknown tone {name!r}; choose from {', '.join(TONES)}.")
+                return 2
+            print(name)
+            tones.play(name, wait=True)
+            time.sleep(0.6)
+        return 0
+
     if args.command == "selftest":
+        from truepanel.hardware.buzzer import Buzzer
+
         from .dock import LSBLK, parse_lsblk, run_command
         from .selftest import run_selftest
 
+        buzzer = Buzzer(config.get("buzzer") or {})
         report = run_selftest(
             settings,
             hardware=args.hardware,
             usb_devices=lambda: parse_lsblk(run_command(LSBLK)),
+            speaker=lambda: (buzzer.enabled, buzzer.find_device()),
         )
         print("\n".join(report.lines()))
         print("\nSelf-test " + ("FAILED" if report.failed else "passed"))

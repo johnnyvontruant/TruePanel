@@ -41,12 +41,15 @@ def build_service(config: dict[str, Any], *, button_reader_factory=None):
             LOGGER.warning("Loadmaster Copy button unavailable: %s", error)
             note = f"unavailable: {error}"
 
+    from .sounds import build_sounds
+
     return LoadmasterService(
         settings,
         store=store,
         servarr_poll=functools.partial(poll, settings, store),
         button_reader=reader,
         button_note=note,
+        sound=build_sounds(config, settings.sounds).for_state,
     )
 
 

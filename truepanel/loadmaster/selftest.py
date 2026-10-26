@@ -70,6 +70,7 @@ def run_selftest(
     status: Callable[[], dict[str, Any]] | None = None,
     usb_devices: Callable[[], list[Any]] | None = None,
     button_reader_factory: Callable[[], Any] | None = None,
+    speaker: Callable[[], tuple[bool, str | None]] | None = None,
 ) -> Report:
     report = Report()
     dock = dock or Dock(settings.drives, settings.mount_root)
@@ -90,6 +91,8 @@ def run_selftest(
     _service(report, live, running)
     if running:
         _plan_agreement(report, settings, store, dock, docked, live, library)
+    if speaker is not None:
+        _speaker(report, settings, speaker)
 
     if hardware:
         if running:
@@ -239,6 +242,32 @@ def _plan_agreement(report, settings, store, dock, docked, live, library) -> Non
             "WARN",
             f"{drive.name}: plans differ (something changed since it was planned?); "
             "press Rescan and run the self-test again",
+        )
+
+
+def _speaker(report: Report, settings: Settings, speaker) -> None:
+    enabled, device = speaker()
+    if not settings.sounds.get("enabled"):
+        report.add("speaker", "SKIP", "Loadmaster tones are off (loadmaster.sounds)")
+    elif not enabled:
+        report.add(
+            "speaker",
+            "WARN",
+            "tones are on but buzzer.enabled is false, so they are silent",
+        )
+    elif device is None:
+        report.add(
+            "speaker", "WARN", "no PC speaker device found; tones will be silent"
+        )
+    else:
+        quiet = settings.sounds.get("quiet_hours")
+        note = ""
+        if quiet:
+            note = f"; quiet {quiet[0] // 60:02}:{quiet[0] % 60:02}-{quiet[1] // 60:02}:{quiet[1] % 60:02}"
+        report.add(
+            "speaker",
+            "PASS",
+            f"{device}{note} (try: python3 -m truepanel.loadmaster sound done)",
         )
 
 
