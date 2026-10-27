@@ -239,7 +239,7 @@ TruePanel's reliability systems are designed to explain and verify recovery. The
 
 ## Release status
 
-TruePanel 1.3.1-rc1 is the maintenance candidate for the current 1.3 reliability and guided-recovery line. It includes Pathfinder, Lifeline, ORACLE, AEGIS, HANGAR, Flight Director, GLASS COCKPIT, supported TrueNAS `i2c-dev` boot persistence, and physical-bay localization for drive-temperature reliability evidence. The major post-1.2 capabilities have been deployed and live-validated on the reference BattleStation while preserving their documented safety boundaries.
+TruePanel 1.4.0-rc1 is the release candidate for the 1.4 line. It adds Loadmaster, which keeps a set of labelled USB drives mirrored with their NAS folders (plug in, press Copy, unplug), and makes guarded upgrades show what they will change and which commit is deployed. It carries forward the 1.3 reliability and guided-recovery line: Pathfinder, Lifeline, ORACLE, AEGIS, HANGAR, Flight Director, GLASS COCKPIT, supported TrueNAS `i2c-dev` boot persistence, and physical-bay localization for drive-temperature reliability evidence. The major post-1.2 capabilities have been deployed and live-validated on the reference BattleStation while preserving their documented safety boundaries.
 
 Every promoted change is expected to pass focused regression coverage, the complete GitHub Actions suite, installed-wheel smoke testing, and the applicable HoloDeck or physical-hardware validation gate.
 

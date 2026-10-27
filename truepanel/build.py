@@ -1,6 +1,6 @@
 """Which commit a TruePanel tree was built from.
 
-The package version (``1.3.1rc1``) stays the same across many upgrades, so it
+The package version (e.g. ``1.4.0rc1``) stays the same across many upgrades, so it
 cannot tell which code is deployed. Staging an upgrade writes
 ``truepanel-build.json`` (commit, branch, commit date, whether the source
 checkout had uncommitted changes) into the stage, promotion carries it into
