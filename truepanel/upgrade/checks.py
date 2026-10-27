@@ -495,6 +495,35 @@ def prepare_stage(
             ),
         )
 
+    from .smoke import command as smoke_command
+
+    smoke_response = runner(
+        smoke_command(
+            python_path,
+            stage_root,
+            staged_config,
+        ),
+        timeout=180.0,
+    )
+
+    if (
+        smoke_response.returncode
+        != 0
+    ):
+        shutil.rmtree(
+            stage_root,
+            ignore_errors=True,
+        )
+        return (
+            False,
+            (
+                "Staged smoke test failed: "
+                + command_detail(
+                    smoke_response
+                )
+            ),
+        )
+
     staged_version = read_version(
         stage_root
     )
