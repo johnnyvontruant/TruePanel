@@ -142,6 +142,9 @@ class LoadmasterService:
         self.progress: dict[str, Any] | None = None
         self.last_run: dict[str, Any] | None = None
         self.finished_insertion: tuple | None = None
+        # With remote start off, a CONFIRM plan confirmed in TruePanel waits
+        # here for the Copy button (the digest pins the exact plan).
+        self.armed_digest: str | None = None
         self.drive_summaries: list[dict[str, Any]] = []
         self.servarr_status: dict[str, str] = {}
         self.activity: list[dict[str, Any]] = self.store.recent_activity(30)
@@ -211,6 +214,9 @@ class LoadmasterService:
                 "servarr": self.servarr_status,
                 "button": button,
                 "remote_start": self.settings.remote_start,
+                "armed": bool(
+                    plan and self.armed_digest and self.armed_digest == plan["digest"]
+                ),
                 "activity": self.activity,
             }
 
@@ -436,11 +442,7 @@ class LoadmasterService:
         action, source = request["action"], request["source"]
         if action == "start":
             if source != "lcd" and not self.settings.remote_start:
-                return reply(
-                    False,
-                    "remote_disabled",
-                    "Remote start is off; press Copy on the NAS.",
-                )
+                return self._arm(request["digest"])
             return self.start(
                 request["digest"], source=source, confirmed=source == "web"
             )
@@ -452,13 +454,40 @@ class LoadmasterService:
             return self.rescan()
         return self.adopt()
 
+    def _arm(self, digest: str) -> dict[str, Any]:
+        """Remote start is off: TruePanel may only confirm removals, and the
+        Copy button then starts that exact plan."""
+
+        with self._lock:
+            if self.state != "CONFIRM" or not self.plan or self._planning:
+                return reply(
+                    False,
+                    "remote_disabled",
+                    "Remote start is off; press Copy on the NAS.",
+                )
+            if digest != self.plan["digest"]:
+                return reply(
+                    False, "plan_changed", "The plan changed; review it again."
+                )
+            self.armed_digest = digest
+            self.message = "Removals confirmed. Press Copy on the NAS to start."
+            self.publish()
+            return reply(
+                True, "armed", "Confirmed. Press Copy on the NAS to start the sync."
+            )
+
     def press(self) -> None:
         with self._lock:
             if self.state == "READY" and self.plan:
                 self.start(self.plan["digest"], source="copy_button", confirmed=False)
-            elif self.state == "CONFIRM":
-                self.message = "Many files would be removed; confirm in TruePanel."
-                self.publish()
+            elif self.state == "CONFIRM" and self.plan:
+                if self.armed_digest == self.plan["digest"]:
+                    self.start(
+                        self.plan["digest"], source="copy_button", confirmed=True
+                    )
+                else:
+                    self.message = "Many files would be removed; confirm in TruePanel."
+                    self.publish()
 
     def start(self, digest: str, *, source: str, confirmed: bool) -> dict[str, Any]:
         with self._lock:
@@ -474,6 +503,7 @@ class LoadmasterService:
                 )
             if self.state == "CONFIRM" and not confirmed:
                 return reply(False, "confirmation_required", "Confirm in TruePanel.")
+            self.armed_digest = None
             self._run_stop.clear()
             self.progress = {
                 "done_files": 0,

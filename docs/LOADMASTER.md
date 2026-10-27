@@ -129,7 +129,10 @@ spelling rather than copied a second time.
   copying. They are synced and unmounted when the sync finishes.
 * Mission Control has no login, like the rest of the dashboard: anyone who can
   open it on your network can start a sync. Set `remote_start: false` to allow
-  starting only from the Copy button.
+  starting only from the Copy button. Stop, Eject, Rescan and Adopt still work
+  from Mission Control, and a **CONFIRM** sync takes both: **Confirm removals**
+  in Mission Control (after reviewing the plan), then Copy on the NAS. The
+  confirmation is tied to that exact plan; if anything changes, it lapses.
 
 ## At the NAS: front panel
 
@@ -140,7 +143,7 @@ normal rotation:
 | --- | --- |
 | CHECKING | `TV A-M` / `Checking...` |
 | READY | `TV A-M READY` / `Press COPY`, then counts each way and removals |
-| CONFIRM | `Confirm in TP` and how many files would be removed |
+| CONFIRM | `Confirm in TP` and how many files would be removed (`Press COPY` once confirmed, with remote start off) |
 | COPYING | percent with a progress bar, file *n/m*, current file, `Do not unplug` |
 | DONE | `TV A-M DONE` / `Safe to remove`, then what was copied |
 | HOLD / NEW_DRIVE | the reason, wrapped over two screens |
@@ -249,7 +252,7 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `drives` | — | `name`, `nas_path`, optional `usb_folder` and `protected`. |
 | `state_dir` | `/var/lib/truepanel/loadmaster` | Drive records, activity log, receipts. |
 | `mount_root` | `/mnt/loadmaster` | Where drives are mounted. |
-| `remote_start` | `true` | Allow Start sync from Mission Control. |
+| `remote_start` | `true` | Allow Start sync from Mission Control. `false`: only the Copy button starts a sync; Mission Control can still confirm a CONFIRM sync for Copy to start. |
 | `copy_button` | `true` | Use the front-panel Copy button. |
 | `verify` | `sha256` | `sha256` reads every copy back; `size` only checks the size. |
 | `sounds` | `true` | PC-speaker tones on state changes (see *Sounds*); `false` turns them off. Needs `buzzer.enabled`. |

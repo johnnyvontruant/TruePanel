@@ -1051,7 +1051,9 @@ function render(s){
   if(state==="COPYING"&&p){const pct=p.total_bytes?Math.min(100,Math.round(p.done_bytes*100/p.total_bytes)):0;$("lmBar").firstElementChild.style.width=pct+"%";$("lmMessage").textContent=`${Math.min(p.total_files,p.done_files+1)} of ${p.total_files} · ${pct}% · ${bytes(p.done_bytes)} of ${bytes(p.total_bytes)}`+(p.current?` · ${p.current}`:"")}
   if(s.last_run&&["DONE","PARTIAL","FAILED","STOPPED"].includes(state)){const r=s.last_run.summary||{};$("lmMessage").textContent=`${s.message} Moved ${(r.to_usb_files||0)+(r.to_nas_files||0)} files (${bytes(r.copied_bytes)}), removed ${r.deleted_usb_files||0}, retired ${r.retired_nas_files||0}.`}
   const ready=["READY","CONFIRM"].includes(state);
-  show("lmStart",ready);$("lmStart").disabled=busy||!s.remote_start;$("lmStart").title=s.remote_start?"":"Remote start is off in truepanel.yaml";
+  const arming=!s.remote_start&&state==="CONFIRM";
+  show("lmStart",ready);$("lmStart").textContent=s.remote_start?"Start sync":arming?(s.armed?"Confirmed: press Copy":"Confirm removals"):"Press Copy on the NAS";
+  $("lmStart").disabled=busy||(!s.remote_start&&(!arming||!!s.armed));$("lmStart").title=s.remote_start?"":"Remote start is off: syncs start from the Copy button";
   show("lmStop",state==="COPYING");show("lmAdopt",state==="NEW_DRIVE");
   show("lmEject",!!s.drive&&["READY","CONFIRM","CLEAR","HOLD","NEW_DRIVE"].includes(state));
   show("lmRescan",!!s.drive&&!["COPYING","CHECKING"].includes(state));
@@ -1098,6 +1100,7 @@ async function review(){const note=$("lmNote");let doc;
   if(info.length){const d=document.createElement("details");d.className="lm-group";const sm=document.createElement("summary");sm.textContent=`${info.length} note${info.length==1?"":"s"} (no action)`;d.append(sm,group("",info,n=>li("Note",`${n.path} (${reason(n)})`,"")));body.append(d)}
   if(!(p.actions||[]).length)body.append(Object.assign(document.createElement("p"),{textContent:"Nothing will be copied or removed."}));
   const removals=s.delete_usb_files+s.retire_nas_files;$("lmReviewAckBox").hidden=!removals;$("lmReviewAck").checked=false;
+  $("lmReviewStart").textContent=status.remote_start?"Start sync":"Confirm removals";
   $("lmReviewStart").disabled=!!removals||!(p.actions||[]).length;$("lmReview").showModal()}
 $("lmReviewAck").onchange=e=>{$("lmReviewStart").disabled=!e.target.checked};
 $("lmReviewStart").onclick=()=>{const p=reviewed;$("lmReview").close();if(p)send({action:"start",digest:p.digest,confirm:true})};

@@ -110,7 +110,7 @@ def pages(status: dict[str, Any] | None) -> list[list[str]]:
         return result + [HINT]
     if state == "CONFIRM":
         return [
-            [_title(status), "Confirm in TP"],
+            [_title(status), "Press COPY" if status.get("armed") else "Confirm in TP"],
             [_fit(f"Removes {removals}"), "old files"],
             _counts(summary),
             HINT,
