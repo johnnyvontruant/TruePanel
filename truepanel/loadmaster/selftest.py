@@ -190,7 +190,8 @@ def _service(report: Report, live: dict[str, Any], running: bool) -> None:
         f"service reports {button}",
     )
     servarr = live.get("servarr") or {}
-    bad = {k: v for k, v in servarr.items() if v != "ok"}
+    # "ok", or "ok (3 new)" right after a poll that logged new history records
+    bad = {k: v for k, v in servarr.items() if v.split(" (")[0] != "ok"}
     if not servarr:
         report.add("sonarr/radarr", "WARN", "not configured")
     elif bad:

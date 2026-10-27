@@ -125,6 +125,14 @@ def test_live_checks_agree_with_the_running_service(tmp_path):
     }
     assert not report.failed and dock.calls == []  # read-only: never mounted
 
+    busy = running(plan)
+    status = {**busy(), "servarr": {"sonarr": "ok (1 new)", "radarr": "ok"}}
+    report = run_selftest(settings, dock=dock, status=lambda: status)
+    assert results(report)["sonarr/radarr"] == "PASS"  # new activity is not a failure
+    status["servarr"] = {"sonarr": "unreachable: refused", "radarr": "ok"}
+    report = run_selftest(settings, dock=dock, status=lambda: status)
+    assert results(report)["sonarr/radarr"] == "FAIL"
+
     put(nas, "Show (2020)/S01E02.mkv", b"two")  # Sonarr import since planning
     report = run_selftest(settings, dock=dock, status=running(plan))
     assert results(report)["plan agreement"] == "WARN"
