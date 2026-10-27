@@ -50,6 +50,8 @@ includes.
   and macOS `Icon\r` files. (#225, #228)
 - USB drives are found when `lsblk` prints a flat list. (#227)
 - A first sync that is already in step records its baseline. (#229)
+- The self-test no longer fails Sonarr/Radarr while they report new
+  activity ("ok (1 new)").
 - Receipts record how each file was published; TruePanel restarts cleanly
   when a restart interrupts an LCD write. (#235)
 - Mission Control network telemetry after the TrueNAS bridge migration.
