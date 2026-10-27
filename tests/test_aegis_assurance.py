@@ -65,7 +65,7 @@ def test_packaged_predecessor_holds_on_release_version_drift():
         now=NOW,
     )
 
-    assert truepanel.__version__ == "1.3.1rc1"
+    assert truepanel.__version__ == "1.4.0rc1"
     assert load_assurance_envelope()["truepanel_version"] == "1.3.0"
     assert result["status"] == "HOLD"
     assert result["reason"] == "VersionDrift"

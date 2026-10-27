@@ -6,6 +6,14 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+## [1.4.0-rc1] - 2026-10-27
+
+TruePanel 1.4.0-rc1 is the first candidate for the 1.4 line. Its headline is
+Loadmaster, rebuilt and proven on BattleStation across all six media drives,
+plus guarded-upgrade changes that make every deployment show what it will
+change and which commit is running. It supersedes 1.3.1-rc1, whose fixes it
+includes.
+
 ### Added
 
 - Loadmaster (`truepanel/loadmaster/`): plug in a USB drive, press Copy (or
@@ -14,7 +22,44 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
   replaced NAS files are moved to `.loadmaster-replaced` rather than deleted.
   Verified, resumable copies; front-panel screens; a Mission Control card
   with per-drive status and activity; Sonarr/Radarr activity log. Disabled
-  by default. See `docs/LOADMASTER.md`.
+  by default. See `docs/LOADMASTER.md`. (#223)
+- Loadmaster holds instead of guessing: two unsynced versions of a file,
+  a title already in another NAS folder, extra versions, and protected
+  folders (`protected:` per drive). Mission Control shows the full plan
+  for review before a sync. (#225, #226, #231)
+- `python3 -m truepanel.loadmaster selftest` checks the whole setup on the
+  NAS; `--hardware` adds a drive write test and a Copy button read. (#232)
+- PC-speaker tones for Loadmaster state changes, with quiet hours. (#233)
+- Drive health and space: each plug-in records size, free space and SMART
+  (read through USB bridges), and Mission Control forecasts when a drive
+  will fill. (#239, #243)
+- Copy-button-only mode (`loadmaster.remote_start: false`): Mission
+  Control can review and confirm, only the front-panel button starts a
+  sync. (#241)
+- Build stamp: staging records the commit and a fingerprint of every file;
+  `truepanel version` and `verify` report the deployed commit and warn
+  about files changed outside the guarded upgrade. (#236, #238)
+- Guarded upgrade: `--stage-only` lists exactly what promotion would
+  change and smoke-tests the stage with the deployment's own Python;
+  `cleanup --set-aside-unsafe` moves refused assets aside instead of
+  stopping. (#237, #240)
+
+### Fixed
+
+- Loadmaster on exFAT: case-insensitive paths, names exFAT cannot store,
+  and macOS `Icon\r` files. (#225, #228)
+- USB drives are found when `lsblk` prints a flat list. (#227)
+- A first sync that is already in step records its baseline. (#229)
+- Receipts record how each file was published; TruePanel restarts cleanly
+  when a restart interrupts an LCD write. (#235)
+- Mission Control network telemetry after the TrueNAS bridge migration.
+  (#220)
+
+### Removed
+
+- First-generation Loadmaster (Cargo Bay cartridge planning, backlog
+  observer and GPIO75 confirmation, #188-#198), replaced by Loadmaster v2.
+  (#222)
 
 ## [1.3.1-rc1] - 2026-10-03
 
