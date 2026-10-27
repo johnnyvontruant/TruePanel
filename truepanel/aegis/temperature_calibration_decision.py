@@ -503,6 +503,73 @@ def evaluate_temperature_calibration_decision(
     }
 
 
+def verify_recorded_temperature_calibration_decision(
+    review_receipt_path: str | Path,
+    verifier: Any,
+    statement_path: str | Path,
+    signature_path: str | Path,
+    receipt_path: str | Path,
+    *,
+    now_utc: str,
+) -> dict[str, Any]:
+    """Reverify a recorded decision without writing or consuming authority."""
+    review = _review(Path(review_receipt_path))
+    statement_bytes = _snapshot(Path(statement_path), MAX_PUBLIC_BYTES)
+    statement = json.loads(statement_bytes)
+    if not isinstance(statement, dict) or set(statement) != _STATEMENT_KEYS:
+        raise ValueError("CalibrationDecisionStatementFieldsInvalid")
+    expected = build_temperature_calibration_decision_statement(
+        review_receipt_path,
+        verifier,
+        decision=statement["decision"],
+        rationale=statement["rationale"],
+        prepared_at_utc=statement["prepared_at_utc"],
+        expires_at_utc=statement["expires_at_utc"],
+        now_utc=now_utc,
+    )
+    if statement_bytes != expected:
+        raise ValueError("CalibrationDecisionStatementMismatch")
+    signature = _snapshot(Path(signature_path), MAX_SIGNATURE_BYTES)
+    if verifier(KEY_ID, statement_bytes, signature.decode("ascii")) is not True:
+        raise ValueError("CalibrationDecisionSignatureNotAuthenticated")
+    receipt_bytes = _snapshot(Path(receipt_path), MAX_PUBLIC_BYTES)
+    receipt = json.loads(receipt_bytes)
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt) != _RECEIPT_KEYS
+        or receipt_bytes != _canonical(receipt) + b"\n"
+    ):
+        raise ValueError("CalibrationDecisionReceiptInvalid")
+    unsigned = dict(receipt)
+    claimed = unsigned.pop("receipt_sha256")
+    if claimed != _sha256(unsigned):
+        raise ValueError("CalibrationDecisionReceiptDigestMismatch")
+    eligible = statement["decision"] == DECISION_ACCEPT
+    expected_fields = {
+        "status": STATUS_ACCEPTED if eligible else STATUS_HELD,
+        "decision": statement["decision"],
+        "rationale": statement["rationale"],
+        "decision_statement_sha256": _sha256(statement_bytes),
+        "decision_signature_sha256": _sha256(signature),
+        "review_receipt_sha256": review["review_receipt_sha256"],
+        "score_receipt_sha256": review["score_receipt_sha256"],
+        "score_sha256": review["score_sha256"],
+        "statistical_contract_sha256": review["statistical_contract_sha256"],
+        "blinded_manifest_sha256": review["blinded_manifest_sha256"],
+        "detector_contract_sha256": review["detector_contract_sha256"],
+        "operator_key_fingerprint": statement["operator_key_fingerprint"],
+        "statistical_gates_passed": review["statistical_gates_passed"],
+        "independent_reconstruction_matched": True,
+        "candidate_review_eligible": eligible,
+        "candidate_accepted": False,
+    }
+    if any(receipt.get(key) != value for key, value in expected_fields.items()):
+        raise ValueError("CalibrationDecisionReceiptSubjectMismatch")
+    if any(receipt[key] is not False for key in _AUTHORITY_KEYS):
+        raise ValueError("CalibrationDecisionReceiptAuthorityInvalid")
+    return receipt
+
+
 def pending_temperature_calibration_decision(
     score_review: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -542,4 +609,5 @@ __all__ = [
     "evaluate_temperature_calibration_decision",
     "export_temperature_calibration_decision_statement",
     "pending_temperature_calibration_decision",
+    "verify_recorded_temperature_calibration_decision",
 ]

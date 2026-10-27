@@ -679,6 +679,25 @@
       "revisit_conditions": ["JT supplies a governed signed score and independent review", "a remote transparency log is proposed", "the decision policy or trust root changes", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Build a read-only candidate dossier that joins the accepted decision score review sealed score detector contract Recovery Coverage Matrix and HoloDeck evidence without installing deploying or promoting the candidate.",
       "freshness": {"reviewed_at": "2026-10-26", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0042", "title": "AEGIS content-bound calibration candidate dossier", "state": "COMPLETED",
+      "hypothesis": "One read-only dossier can independently reverify and join the authenticated operator decision independent review sealed score detector subject complete Recovery Coverage Matrix and HoloDeck proof without granting acceptance installation deployment promotion or hardware authority.",
+      "value": "Turns a chain of individually valid artifacts into one reviewable content-addressed subject while preserving every manual and operational boundary.",
+      "prior_art": ["in-toto Bundle specification", "Sigstore Bundle verification material", "SCITT transparent statements", "SLSA provenance subjects", "OpenSSH SSHSIG"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-calibration-candidate-dossier", "pr": null, "commits": []},
+      "protocol": ["reverify the exact operator SSHSIG and immutable decision receipt", "verify review score and detector subject digests", "require the accepted Recovery Coverage Matrix to remain 8/8 trusted with zero gaps", "require preserved deterministic HoloDeck evidence with the 27-sample lead and zero unsafe readiness", "write one owner-protected content-addressed public dossier", "stop at readiness for manual candidate review", "deny validation acceptance installation deployment automatic promotion and hardware authority"],
+      "fixtures": ["aegis-content-bound-calibration-candidate-dossier", "tests/test_aegis_temperature_calibration_candidate_dossier.py"],
+      "success_criteria": ["one complete dossier reaches manual-review readiness", "coverage detector score review decision and simulation identities are bound", "substitution gaps unsafe evidence noncanonical files missing inputs authority escalation and occupied output hold", "accepted matrix remains 8/8", "validation acceptance installation deployment promotion and hardware authority remain false"],
+      "abort_criteria": ["a HOLD decision can become ready", "a receipt or subject can be substituted", "a coverage gap can be hidden", "unsafe simulation evidence can be accepted", "readiness is called acceptance validation installation or deployment", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-calibration-candidate-dossier-v1.json", "sha256": "bdceb01a8c74dbd0bc513f74af09119c9c7283f395217de35fb5bf83aeb4663d"}],
+      "outcome": {"conclusion": "Eight deterministic paths produce one complete content-bound dossier ready for manual review and seven adversarial HOLDs. The accepted Recovery Coverage Matrix remains 8/8 trusted and unsafe authority remains zero."},
+      "invalidated_assumptions": ["a set of individually valid receipts is already a reviewable candidate", "a decision receipt alone proves its signature remains valid", "a passing score makes coverage and simulation evidence optional", "candidate-review readiness implies candidate acceptance"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_calibration_candidate_dossier.py tests/test_aegis_temperature_calibration_decision.py", "python -c \"from truepanel.holodeck.aegis_temperature_calibration_candidate_dossier import run_temperature_calibration_candidate_dossier_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a governed signed passing decision", "the detector statistical or coverage contract changes", "remote transparency or timestamp services are proposed", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Design an independent manual appraisal receipt over the exact dossier that can record approve-for-field-checkride or hold but still cannot install deploy or actuate hardware.",
+      "freshness": {"reviewed_at": "2026-10-27", "review_after": "2027-04-30"}
     }
   ]
 }

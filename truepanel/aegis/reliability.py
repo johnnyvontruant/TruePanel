@@ -35,6 +35,9 @@ from .temperature_calibration_admission import (
 from .temperature_calibration_assessment import (
     pending_temperature_calibration_assessment,
 )
+from .temperature_calibration_candidate_dossier import (
+    pending_temperature_calibration_candidate_dossier,
+)
 from .temperature_calibration_corpus import (
     pending_temperature_calibration_corpus_import,
 )
@@ -192,6 +195,11 @@ class AegisReliabilityEngine:
         )
         self.temperature_calibration_decision = pending_temperature_calibration_decision(
             self.temperature_score_review
+        )
+        self.temperature_calibration_candidate_dossier = (
+            pending_temperature_calibration_candidate_dossier(
+                self.temperature_calibration_decision
+            )
         )
         self.temperature_detector_result_binding = (
             pending_temperature_detector_result_binding(
@@ -475,6 +483,7 @@ class AegisReliabilityEngine:
             "coverage_authenticated_label_join": self.temperature_authenticated_label_join,
             "coverage_score_review": self.temperature_score_review,
             "coverage_calibration_decision": self.temperature_calibration_decision,
+            "coverage_calibration_candidate_dossier": self.temperature_calibration_candidate_dossier,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
