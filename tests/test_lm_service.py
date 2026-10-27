@@ -202,6 +202,13 @@ def test_plug_in_records_drive_space_and_health(svc):
     put(svc.nas, "Show/S01E01.mkv", b"one")
     plug(svc)
     assert seen == ["/dev/sdh1"]
+    svc.press()
+    svc.drain()
+    svc._queue_plan()  # re-planned after the sync (and by Rescan): not checked again
+    svc.drain()
+    assert seen == ["/dev/sdh1"]
+    rows = [e for e in svc.capacity._read() if e.get("kind") == "drive"]
+    assert len(rows) == 1
     info = svc.capacity.summary("TV A-M")
     assert info["smart"]["temperature_c"] == 40 and info["capacity_bytes"] > 0
 
@@ -211,7 +218,8 @@ def test_plug_in_records_drive_space_and_health(svc):
     svc.smart_reader = broken  # never blocks planning
     svc.fake.present = []
     svc.tick()
-    plug(svc)
+    put(svc.nas, "Show/S01E02.mkv", b"two")
+    plug(svc)  # a new plug-in is checked again
     assert svc.state == "READY"
 
 
