@@ -46,6 +46,20 @@ def _run(argv: Sequence[str]) -> str:
     return done.stdout
 
 
+def _model(payload: dict[str, Any]) -> str:
+    """ATA and NVMe report ``model_name``; drives behind a USB bridge that
+    answers as SCSI report vendor and product instead."""
+
+    for key in ("model_name", "scsi_model_name"):
+        if str(payload.get(key) or "").strip():
+            return str(payload[key]).strip()
+    parts = (str(payload.get(k) or "").strip() for k in ("scsi_vendor", "scsi_product"))
+    return (
+        " ".join(p for p in parts if p)
+        or str(payload.get("model_family") or "").strip()
+    )
+
+
 def parse_smart(payload: dict[str, Any]) -> dict[str, Any] | None:
     """The fields that matter from ``smartctl -j``, or None if it saw nothing."""
 
@@ -54,7 +68,7 @@ def parse_smart(payload: dict[str, Any]) -> dict[str, Any] | None:
         return None
     health: dict[str, Any] = {
         "status": "PASSED" if status["passed"] else "FAILED",
-        "model": payload.get("model_name") or "",
+        "model": _model(payload),
         "temperature_c": (payload.get("temperature") or {}).get("current"),
         "power_on_hours": (payload.get("power_on_time") or {}).get("hours"),
         "percent_used": None,
@@ -83,6 +97,21 @@ def read_smart(disk: str, runner: Runner = _run) -> dict[str, Any]:
         if health is not None:
             return health
     return {"status": "unavailable"}
+
+
+def check_disk(partition: str, runner: Runner = _run) -> dict[str, Any]:
+    """SMART health of the disk holding ``partition``, with lsblk's model when
+    smartctl gives none (some USB bridges hide it)."""
+
+    disk = disk_of(partition, runner)
+    health = read_smart(disk, runner)
+    if health.get("status") != "unavailable" and not health.get("model"):
+        try:
+            model = runner(["lsblk", "-dno", "MODEL", disk]).strip()
+        except (OSError, subprocess.SubprocessError):
+            model = ""
+        health["model"] = model.splitlines()[0].strip() if model else ""
+    return health
 
 
 def disk_of(partition: str, runner: Runner = _run) -> str:
@@ -224,6 +253,7 @@ def forecast(
 
 __all__ = [
     "CapacityLog",
+    "check_disk",
     "disk_of",
     "forecast",
     "parse_smart",

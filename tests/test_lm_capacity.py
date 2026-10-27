@@ -5,6 +5,7 @@ import json
 from truepanel.loadmaster.capacity import (
     DAY,
     CapacityLog,
+    check_disk,
     disk_of,
     forecast,
     parse_smart,
@@ -39,6 +40,38 @@ def test_parse_smart_reads_status_temperature_and_wear():
         parse_smart(ata)["status"] == "FAILED" and parse_smart(ata)["percent_used"] == 6
     )
     assert parse_smart({"device": {"name": "/dev/sda"}}) is None  # SMART not readable
+
+
+def test_model_from_scsi_fields_then_lsblk():
+    passed = {"smart_status": {"passed": True}}
+    assert (
+        parse_smart({**passed, "scsi_vendor": "Samsung", "scsi_product": "PSSD T7"})[
+            "model"
+        ]
+        == "Samsung PSSD T7"
+    )
+    assert (
+        parse_smart({**passed, "scsi_model_name": "WD Elements"})["model"]
+        == "WD Elements"
+    )
+
+    calls = []
+
+    def runner(argv):
+        calls.append(argv)
+        if argv[:3] == ["lsblk", "-no", "PKNAME"]:
+            return "sdh\n"
+        if argv[:3] == ["lsblk", "-dno", "MODEL"]:
+            return "Portable SSD T7  \n"
+        return json.dumps(passed)
+
+    health = check_disk("/dev/sdh1", runner)
+    assert health["model"] == "Portable SSD T7" and calls[-1][-1] == "/dev/sdh"
+
+    def unreadable(argv):
+        return "sdh" if argv[0] == "lsblk" else "{}"
+
+    assert check_disk("/dev/sdh1", unreadable) == {"status": "unavailable"}
 
 
 def test_read_smart_falls_back_to_sat_then_gives_up():

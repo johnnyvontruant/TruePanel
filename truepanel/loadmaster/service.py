@@ -27,7 +27,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .capacity import CapacityLog, disk_of, read_smart, space
+from .capacity import CapacityLog, check_disk, space
 from .config import Settings
 from .dock import Dock, Docked, DockError
 from .identity import folder_keys, library_index
@@ -123,7 +123,8 @@ class LoadmasterService:
         self.sound = sound
         self.clock = clock
         self.capacity = CapacityLog(settings.state_dir, clock=clock)
-        self.smart_reader = smart_reader or (lambda part: read_smart(disk_of(part)))
+        self.smart_reader = smart_reader or check_disk
+        self._checked: Docked | None = None  # the insertion already health-checked
 
         self._lock = threading.RLock()
         self._jobs: queue.Queue[tuple[str, Any]] = queue.Queue()
@@ -369,8 +370,12 @@ class LoadmasterService:
         return plan
 
     def _check_drive(self, docked: Docked, mount: Path) -> None:
-        """Record the drive's size, free space and SMART health."""
+        """Record the drive's size, free space and SMART health, once per
+        plug-in (the drive is re-planned after every sync and every few minutes)."""
 
+        if self._checked is docked:
+            return
+        self._checked = docked
         try:
             capacity, free = space(mount)
             smart = self.smart_reader(docked.device.path)
