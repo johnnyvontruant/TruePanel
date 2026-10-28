@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.09.14.1",
-  "updated_at": "2026-09-14",
+  "registry_version": "2026.10.10.1",
+  "updated_at": "2026-10-10",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -318,6 +318,63 @@
       "revisit_conditions": ["identity migration from serial-model to WWN or ZFS GUID is implemented", "Lifeline identity coverage becomes a Recovery Coverage Matrix condition", "TrueNAS exposes a supported leaf-vdev GUID"],
       "strongest_follow_up": "Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.",
       "freshness": {"reviewed_at": "2026-09-14", "review_after": "2026-12-31"}
+    },
+    {
+      "id": "TP-EXP-0022", "title": "AEGIS drive-temperature telemetry blind spot", "state": "COMPLETED",
+      "hypothesis": "A known present pool member that loses its temperature record can be detected and correlated with exact-identity SMART evidence without inventing a temperature or claiming overheating.",
+      "value": "Turns an isolated-threshold false negative into one evidence-backed observability incident with a machine-verifiable restoration path.",
+      "prior_art": ["Prometheus absent_over_time", "Zabbix nodata", "smartmontools JSON output", "Prometheus Alertmanager grouping"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-telemetry-blind-spot", "pr": null, "commits": []},
+      "protocol": ["reconcile present members to finite temperature records", "preserve unknown thermal state", "join SMART evidence only by exact device or bay identity", "consolidate presentation while retaining raw alerts", "require three complete recovery observations", "record sanitized Black Box frames"],
+      "fixtures": ["aegis-drive-temperature-blind-spot", "tests/test_aegis_temperature_blind_spot.py"],
+      "success_criteria": ["missing Bay 3 detected on first incomplete sample", "isolated temperature threshold remains silent", "matching SMART evidence produces one incident", "cross-drive evidence does not correlate", "false overheating claims remain zero", "unaccepted candidate reaches 9/9 trusted while the accepted matrix remains 8/8"],
+      "abort_criteria": ["missing value converted into temperature", "cross-drive correlation", "one restored sample clears the incident", "new polling or runtime dependency", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-blind-spot-v1.json", "sha256": "766284b84bfedb955412016795bc3e1ff22c9e5c84d2d6d8be612305009f1fb0"}],
+      "outcome": {"conclusion": "Five HoloDeck cases detect the Bay 3 observability gap at the first incomplete sample, correlate exact-member SMART evidence at 0.84 confidence, avoid the threshold-only false negative, reduce two actionable cards to one incident, and preserve zero overheating claims, cross-drive correlations, writes, or hardware actions. The result is a 9/9 review candidate; accepted runtime coverage remains 8/8."},
+      "invalidated_assumptions": ["an absent temperature is equivalent to a normal temperature", "generic host staleness covers member-specific omissions", "device-health and temperature alerts can be grouped without an identity join", "one restored reading proves telemetry recovery"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_blind_spot.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_temperature_blind_spot import run_temperature_blind_spot_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["the storage snapshot identity schema changes", "temperature collection gains per-reading timestamps", "a live read-only field check is authorized", "any consumer seeks repair authority"],
+      "strongest_follow_up": "Collect a governed read-only field snapshot that proves the expected-member inventory contract and calibrate the three-observation recovery window without deploying or changing storage.",
+      "freshness": {"reviewed_at": "2026-10-08", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0023", "title": "AEGIS temperature coverage appraisal", "state": "COMPLETED",
+      "hypothesis": "An independent evaluator can reject self-consistent candidate and evidence rewrites by reconstructing the candidate and pinning every reviewed subject.",
+      "value": "Separates evidence-backed appraisal from acceptance and installation while making substitution and predecessor drift machine-verifiable.",
+      "prior_art": ["in-toto Statement v1", "SLSA Verification Summary Attestation", "Prometheus promtool rule tests", "The Update Framework", "Open Policy Agent"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-coverage-appraisal", "pr": null, "commits": []},
+      "protocol": ["pin accepted predecessor", "pin complete candidate and self-digest", "pin complete HoloDeck evidence and self-digest", "pin evaluator implementation", "independently reconstruct candidate", "reject authority escalation", "render mobile appraisal boundary"],
+      "fixtures": ["aegis-temperature-coverage-appraisal", "tests/test_aegis_temperature_coverage_appraisal.py"],
+      "success_criteria": ["exact subjects reach independent review only", "self-consistent candidate rewrite holds", "self-consistent evidence rewrite holds", "predecessor and implementation drift hold", "accepted matrix remains 8/8", "candidate remains unaccepted and uninstalled", "runtime and hardware authority remain false"],
+      "abort_criteria": ["appraisal accepts or installs candidate", "candidate self-digest is treated as independent proof", "unknown field accepted", "runtime or hardware authority granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-coverage-appraisal-v1.json", "sha256": "b25789a8830f178e634325821d3b3c81a490e6e469912e13cd3cee8d31054dad"}],
+      "outcome": {"conclusion": "Ten deterministic cases produce one exact-subject result ready only for independent review and nine HOLD results, with zero unsafe-ready results, acceptances, installations, writes, or hardware actions. Accepted coverage remains 8/8; the 9/9 candidate remains unaccepted and uninstalled."},
+      "invalidated_assumptions": ["a valid self-digest proves an untampered candidate", "a valid evidence self-digest prevents evidence substitution", "9/9 counters are sufficient appraisal evidence", "review-ready means accepted"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_coverage_appraisal.py tests/test_aegis_temperature_blind_spot.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_temperature_coverage_appraisal import run_temperature_coverage_appraisal_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["PR #202 or a pinned subject changes", "the appraisal schema changes", "manual acceptance or installation is proposed"],
+      "strongest_follow_up": "Independently review the exact candidate and appraisal before drafting a separate development-only acceptance record.",
+      "freshness": {"reviewed_at": "2026-10-09", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0024", "title": "AEGIS development-only temperature acceptance", "state": "COMPLETED",
+      "hypothesis": "One explicit JT acknowledgement can advance an exact appraised candidate to development review without being misrepresented as cryptographic authentication, runtime acceptance, installation, or deployment authority.",
+      "value": "Fits the lone-human-plus-Vega team honestly while preserving machine-enforced production and hardware boundaries.",
+      "prior_art": ["in-toto Statement v1", "SLSA Verification Summary Attestation", "The Update Framework", "GitHub deployment environments"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-temperature-development-acceptance", "pr": null, "commits": []},
+      "protocol": ["bind exact candidate and appraisal documents", "require exact JT statement and development-only scope", "limit acknowledgement to 24 hours", "label acknowledgement unauthenticated", "reject unknown fields and substitution", "deny runtime, deployment, storage, network, and hardware authority", "render mobile operator action state"],
+      "fixtures": ["aegis-temperature-development-acceptance", "tests/test_aegis_temperature_development_acceptance.py"],
+      "success_criteria": ["no confirmation yields action required", "exact fixture confirmation reaches development review only", "Vega is never treated as human authority", "stale, extended, substituted, or escalated confirmation holds", "accepted matrix remains 8/8", "candidate remains uninstalled", "production and hardware authority remain false"],
+      "abort_criteria": ["missing confirmation inferred", "acknowledgement called cryptographically authenticated", "runtime candidate accepted or installed", "deployment or hardware authority granted", "live host access or mutation"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-development-acceptance-v1.json", "sha256": "38428ef9e8cfccb4fcf4e17d2ba0f644e38f367e1b2016331fb36afb519978ce"}],
+      "outcome": {"conclusion": "Eleven deterministic cases produce one operator-action-required result, one fixture development-review acceptance, and nine HOLD results. Every case preserves zero runtime acceptances, installations, production authorizations, writes, or hardware actions; the live view has no operator confirmation."},
+      "invalidated_assumptions": ["a review-ready appraisal is operator acceptance", "Vega can stand in for a second human signer", "an explicit acknowledgement is cryptographic authentication", "development acceptance implies installation or deployment authority"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_development_acceptance.py tests/test_aegis_temperature_coverage_appraisal.py tests/test_aegis.py", "python -c \"from truepanel.holodeck.aegis_temperature_development_acceptance import run_temperature_development_acceptance_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies an authenticated development signature", "the candidate or appraisal changes", "any consumer proposes runtime installation or deployment"],
+      "strongest_follow_up": "Add a public-only, operator-owned authentication adapter for this exact record, then rehearse a separate installation proposal that still cannot deploy or actuate hardware.",
+      "freshness": {"reviewed_at": "2026-10-10", "review_after": "2027-04-30"}
     }
   ]
 }
