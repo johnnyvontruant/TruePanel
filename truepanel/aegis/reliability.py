@@ -35,6 +35,9 @@ from .temperature_calibration_admission import (
 from .temperature_calibration_assessment import (
     pending_temperature_calibration_assessment,
 )
+from .temperature_calibration_candidate_appraisal import (
+    pending_temperature_calibration_candidate_appraisal,
+)
 from .temperature_calibration_candidate_dossier import (
     pending_temperature_calibration_candidate_dossier,
 )
@@ -193,12 +196,17 @@ class AegisReliabilityEngine:
         self.temperature_score_review = pending_temperature_score_review(
             self.temperature_authenticated_label_join
         )
-        self.temperature_calibration_decision = pending_temperature_calibration_decision(
-            self.temperature_score_review
+        self.temperature_calibration_decision = (
+            pending_temperature_calibration_decision(self.temperature_score_review)
         )
         self.temperature_calibration_candidate_dossier = (
             pending_temperature_calibration_candidate_dossier(
                 self.temperature_calibration_decision
+            )
+        )
+        self.temperature_calibration_candidate_appraisal = (
+            pending_temperature_calibration_candidate_appraisal(
+                self.temperature_calibration_candidate_dossier
             )
         )
         self.temperature_detector_result_binding = (
@@ -239,9 +247,17 @@ class AegisReliabilityEngine:
     def _metrics(payload: dict[str, Any]) -> dict[str, float]:
         metrics: dict[str, float] = {}
         fans = _dict(payload.get("fans"))
-        channels = [item for item in _list(fans.get("channels")) if isinstance(item, dict)]
-        monitored = [item for item in channels if item.get("monitored") is True] or channels
-        rpm = [value for item in monitored if (value := _number(item.get("rpm"))) is not None]
+        channels = [
+            item for item in _list(fans.get("channels")) if isinstance(item, dict)
+        ]
+        monitored = [
+            item for item in channels if item.get("monitored") is True
+        ] or channels
+        rpm = [
+            value
+            for item in monitored
+            if (value := _number(item.get("rpm"))) is not None
+        ]
         pwm = [
             value
             for item in monitored
@@ -361,7 +377,9 @@ class AegisReliabilityEngine:
 
         storage = _dict(payload.get("storage"))
         entries = [
-            item for item in _list(storage.get("temperatures")) if isinstance(item, dict)
+            item
+            for item in _list(storage.get("temperatures"))
+            if isinstance(item, dict)
         ]
 
         hottest: dict[str, Any] | None = None
@@ -484,6 +502,7 @@ class AegisReliabilityEngine:
             "coverage_score_review": self.temperature_score_review,
             "coverage_calibration_decision": self.temperature_calibration_decision,
             "coverage_calibration_candidate_dossier": self.temperature_calibration_candidate_dossier,
+            "coverage_calibration_candidate_appraisal": self.temperature_calibration_candidate_appraisal,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {

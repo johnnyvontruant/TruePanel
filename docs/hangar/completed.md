@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.20.1 · refreshed 2026-10-20 · 36 experiment(s)
+Registry version 2026.10.20.1 · refreshed 2026-10-20 · 37 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -291,3 +291,11 @@ Eight deterministic paths produce one complete content-bound dossier ready for m
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Design an independent manual appraisal receipt over the exact dossier that can record approve-for-field-checkride or hold but still cannot install deploy or actuate hardware.
 - Revisit when: JT supplies a governed signed passing decision; the detector statistical or coverage contract changes; remote transparency or timestamp services are proposed; field validation installation or deployment is proposed
+
+## TP-EXP-0043 · AEGIS authenticated candidate dossier appraisal
+
+Twelve deterministic paths produce two signing-ready statements, one authenticated planning approval, one authenticated operator HOLD, and eight adversarial HOLDs while field-checkride authorization and every operational authority remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Design a separately confirmed read-only field-checkride plan packet that enumerates exact passive observations abort criteria privacy boundaries and verification evidence but cannot start capture access BattleStation or actuate hardware.
+- Revisit when: JT supplies a real authenticated candidate dossier and appraisal; a second human reviewer becomes available; a remote transparency or timestamp service is proposed; field-checkride execution or production deployment is proposed
