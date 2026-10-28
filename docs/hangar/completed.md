@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.09.14.1 · refreshed 2026-09-14 · 16 experiment(s)
+Registry version 2026.10.20.1 · refreshed 2026-10-20 · 34 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -131,3 +131,147 @@ One stable identity preserves six proved consequences across /dev/sdc to /dev/sd
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add identity coverage to the Recovery Coverage Matrix and rehearse serial-model to WWN or ZFS-GUID migration without splitting or merging incidents.
 - Revisit when: identity migration from serial-model to WWN or ZFS GUID is implemented; Lifeline identity coverage becomes a Recovery Coverage Matrix condition; TrueNAS exposes a supported leaf-vdev GUID
+
+## TP-EXP-0022 · AEGIS drive-temperature telemetry blind spot
+
+Five HoloDeck cases detect the Bay 3 observability gap at the first incomplete sample, correlate exact-member SMART evidence at 0.84 confidence, avoid the threshold-only false negative, reduce two actionable cards to one incident, and preserve zero overheating claims, cross-drive correlations, writes, or hardware actions. The result is a 9/9 review candidate; accepted runtime coverage remains 8/8.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Collect a governed read-only field snapshot that proves the expected-member inventory contract and calibrate the three-observation recovery window without deploying or changing storage.
+- Revisit when: the storage snapshot identity schema changes; temperature collection gains per-reading timestamps; a live read-only field check is authorized; any consumer seeks repair authority
+
+## TP-EXP-0023 · AEGIS temperature coverage appraisal
+
+Ten deterministic cases produce one exact-subject result ready only for independent review and nine HOLD results, with zero unsafe-ready results, acceptances, installations, writes, or hardware actions. Accepted coverage remains 8/8; the 9/9 candidate remains unaccepted and uninstalled.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Independently review the exact candidate and appraisal before drafting a separate development-only acceptance record.
+- Revisit when: PR #202 or a pinned subject changes; the appraisal schema changes; manual acceptance or installation is proposed
+
+## TP-EXP-0024 · AEGIS development-only temperature acceptance
+
+Eleven deterministic cases produce one operator-action-required result, one fixture development-review acceptance, and nine HOLD results. Every case preserves zero runtime acceptances, installations, production authorizations, writes, or hardware actions; the live view has no operator confirmation.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add a public-only, operator-owned authentication adapter for this exact record, then rehearse a separate installation proposal that still cannot deploy or actuate hardware.
+- Revisit when: JT supplies an authenticated development signature; the candidate or appraisal changes; any consumer proposes runtime installation or deployment
+
+## TP-EXP-0026 · AEGIS authenticated temperature development acceptance
+
+Eleven real-SSHSIG cases produce one confirmation-required result, one signature-required result, one authenticated development-review result, and eight HOLD results. Disposable keys are removed and all production, installation, deployment, write, and hardware authority remains false.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Export the exact statement for JT's offline signature and run a read-only field verification before drafting any separate installation proposal.
+- Revisit when: JT provisions the protected development public roster; the candidate appraisal acknowledgement or namespace changes; installation or deployment is proposed
+
+## TP-EXP-0027 · AEGIS public-only temperature signing kit
+
+Twelve deterministic cases produce one public kit ready for offline signature, one fixture-authenticated development-review result, and ten HOLD results with zero private-key inputs, signer invocations, installations, deployments, writes, or hardware actions.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, export one exact kit from the pinned checkout, and run the read-only returned-signature checkride.
+- Revisit when: JT provides a real development public key; the candidate appraisal acknowledgement namespace or export schema changes; installation or deployment is proposed
+
+## TP-EXP-0028 · AEGIS read-only temperature field checkride
+
+Twelve deterministic cases produce one simulation rehearsal pass, one field-shaped fixture ready only for review, and ten HOLD results. False field validation, candidate acceptance, installation, deployment, hardware action, and runtime writes remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, complete the offline signature ceremony, then run this read-only checkride on one separately authorized sanitized recording.
+- Revisit when: JT returns a real development SSHSIG; a governed operator-opt-in Black Box recording exists; TrueNAS exposes a supported leaf-vdev GUID; installation or deployment is proposed
+
+## TP-EXP-0029 · AEGIS protected temperature recording intake
+
+Twelve deterministic cases produce one simulation pass, one field-shaped fixture ready only for review, and ten HOLD results with zero unsafe-ready outcomes, capture operations, path retention, private-key inputs, validation claims, installations, deployments, writes, or hardware actions.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, sign the exact kit offline, and pass one separately authorized sanitized recording through this read-only intake.
+- Revisit when: JT returns a real development SSHSIG; a governed operator-opt-in sanitized recording exists; portable non-POSIX intake is required; installation or deployment is proposed
+
+## TP-EXP-0030 · AEGIS content-bound temperature field-review receipt
+
+Twelve deterministic cases produce one public kit ready for offline signing, two content-bound calibration-review results (immediate and delayed within the valid window), and nine HOLD results. Trust-root substitution, namespace replay, recording drift, tampering, unsafe permissions, expiry, and invalid signatures fail closed.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, export one real field-review kit after the development SSHSIG and recording intake pass, and let JT inspect and sign the exact review statement offline.
+- Revisit when: JT provisions the protected development public roster; JT supplies one governed sanitized recording; review policy or namespace changes; field validation installation or deployment is proposed
+
+## TP-EXP-0031 · AEGIS content-bound temperature calibration admission
+
+Twelve deterministic cases produce one public statement ready for offline signing, two authenticated import-only results, and nine HOLD results. Label drift, recording drift, authority escalation, namespace replay, foreign trust roots, unsafe permissions, and expiry fail closed before any corpus write.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision JT's protected development public roster, complete the development and field-review signatures, then inspect and sign one exact label-bound admission statement before a separate deduplicating corpus import.
+- Revisit when: JT provisions the protected development public roster; JT supplies a governed sanitized recording and signed field review; calibration label schema changes; corpus import field validation installation or deployment is proposed
+
+## TP-EXP-0032 · AEGIS authenticated append-only calibration corpus import
+
+Nine deterministic cases produce one append-only offline import and eight HOLD results. Duplicate identity/content, corpus drift, authority tampering, recording drift, expiry, unsafe permissions, and structural corruption fail closed with exactly one committed case directory.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Complete the real offline signature chain, import one governed sanitized recording, and independently inspect its immutable receipt before any assessment or validation proposal.
+- Revisit when: JT supplies the exact three authenticated signatures and governed recording; remote multi-host corpus storage is required; corpus withdrawal or assessment is proposed; installation or deployment is proposed
+
+## TP-EXP-0033 · AEGIS authenticated calibration corpus assessment
+
+Nine deterministic paths produce one authenticated balanced corpus characterized for independent review and eight HOLD results. Four authenticated cases span two outcomes, two profiles and two workloads, while every mutation and insufficient-corpus path fails closed with zero writes or authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Extend the signed admission with immutable detector-result evidence, then predeclare sensitivity specificity lead-time and uncertainty gates before assessing predictions against operator labels.
+- Revisit when: JT supplies the exact authenticated signature chain and governed recordings; independent detector outputs are bound into admission; statistical performance assessment is proposed; installation or deployment is proposed
+
+## TP-EXP-0034 · AEGIS label-blind detector-result binding
+
+Ten deterministic paths produce one label-blind result bound for calibration review and nine HOLD results. The positive shared-cooling case is detected at sample 19, 27 samples before the isolated threshold, with zero unsafe authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Define a separate governed long-window Black Box intake and predeclare minimum corpus sensitivity specificity lead-time and uncertainty gates before scoring any bound predictions.
+- Revisit when: JT supplies governed long-window recordings and the exact authenticated signature chain; statistical performance gates are proposed; a replaceable external evaluator is benchmarked; installation or deployment is proposed
+
+## TP-EXP-0035 · AEGIS governed long-window Black Box intake
+
+Ten deterministic paths produce one accepted 52-frame label-blind window with a stable 12-frame baseline and nine HOLD outcomes, with zero capture, tailing, checkpoint writes, validation, or operational authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Bind the governed intake receipt into detector-result creation, then predeclare minimum sensitivity specificity lead-time and uncertainty gates before labels are made available.
+- Revisit when: JT supplies a governed real long-window recording; baseline policy requires chassis-specific calibration; continuous ingestion or fleet-scale retention is proposed; statistical scoring or deployment is proposed
+
+## TP-EXP-0036 · AEGIS intake-bound detector replay
+
+Ten deterministic paths produce one exact intake-bound result ready for calibration binding and nine HOLD results. Shared cooling is detected at sample 19, 27 samples before the isolated threshold, with zero bypasses, labels, writes, or unsafe authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Predeclare minimum sensitivity specificity lead-time uncertainty and cohort-size gates before authenticated outcome labels are available.
+- Revisit when: JT supplies a governed real long-window recording; the statistical calibration contract is proposed; fleet-scale lineage export is proposed; installation or deployment is proposed
+
+## TP-EXP-0037 · AEGIS predeclared statistical calibration contract
+
+Ten deterministic paths produce one exact predeclared policy and nine HOLD results. The fixed 440-case floor is mathematically able to satisfy its sensitivity, false-positive, and abstention confidence bounds, while accepting zero labels, scores, writes, or unsafe authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Freeze one content-addressed blinded cohort manifest containing every authenticated intake-bound detector result before any outcome labels are revealed.
+- Revisit when: JT supplies enough governed field cases to freeze a blinded cohort; the detector contract changes; external statistical review recommends a new policy version; installation or deployment is proposed
+
+## TP-EXP-0038 · AEGIS two-phase blinded cohort manifest
+
+Twelve deterministic paths produce two equivalent order-independent frozen manifests and ten HOLD results. All 440 planned cases join exactly once, with zero omissions, extras, duplicates, labels, scores, writes, or unsafe authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Define a one-shot authenticated label-join receipt that can score this exact frozen manifest once without permitting exclusions threshold tuning or operational promotion.
+- Revisit when: JT supplies a governed blinded intake inventory; authenticated outcome labels become available; the detector or statistical contract changes; distributed corpus storage is proposed; installation or deployment is proposed
+
+## TP-EXP-0039 · AEGIS authenticated one-shot label join
+
+Thirteen deterministic paths produce two public statements ready for offline signature, one passing immutable score, one failing immutable score, and nine HOLD results. The 440-case passing fixture satisfies every locked Wilson and lead-time gate while repeated scoring, exclusions, tuning, validation, deployment, and hardware authority remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Create an independent score-review receipt that reconstructs the exact committed passing or failing score without changing it and still cannot validate install deploy or actuate hardware.
+- Revisit when: JT supplies a governed complete label set and detached signature; an independent score reviewer is designed; distributed score registries are proposed; the statistical or detector contract changes; field validation installation or deployment is proposed
+
+## TP-EXP-0040 · AEGIS independent authenticated score review
+
+Twelve deterministic paths independently reconstruct one passing and one failing score while ten adversarial paths HOLD. The 440-case metrics match exactly and score registry writes re-evaluations unsafe authority and production mutations remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Create a separately scoped operator-authenticated calibration decision receipt that references this independent review and can record accept or hold without installing deploying or actuating hardware.
+- Revisit when: JT supplies a governed signed score; a standalone verifier executable is proposed; distributed score storage is proposed; the statistical or detector contract changes; calibration acceptance installation or deployment is proposed
