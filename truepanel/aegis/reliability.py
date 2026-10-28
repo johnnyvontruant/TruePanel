@@ -20,6 +20,32 @@ from .platform_witness import bind_platform_witness
 from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 from .rehearsal import rehearse_recovery_paths
 from .requalification import renewal_guidance
+from .temperature_authenticated_acceptance import (
+    evaluate_authenticated_temperature_acceptance,
+)
+from .temperature_calibration_admission import (
+    pending_temperature_calibration_admission,
+)
+from .temperature_calibration_assessment import (
+    pending_temperature_calibration_assessment,
+)
+from .temperature_calibration_corpus import (
+    pending_temperature_calibration_corpus_import,
+)
+from .temperature_coverage import (
+    build_temperature_coverage_candidate,
+    rehearse_temperature_coverage,
+)
+from .temperature_coverage_appraisal import (
+    appraise_temperature_coverage,
+    temperature_coverage_implementation_sha256,
+)
+from .temperature_detector_result_binding import (
+    pending_temperature_detector_result_binding,
+)
+from .temperature_field_checkride import pending_temperature_field_checkride
+from .temperature_field_review_receipt import pending_temperature_field_review_receipt
+from .temperature_recording_intake import pending_temperature_recording_intake
 
 
 def _dict(value: Any) -> dict[str, Any]:
@@ -72,6 +98,64 @@ class AegisReliabilityEngine:
         self.sample_interval_seconds = interval
         self.rehearsals = rehearse_recovery_paths()
         self.matrix = coverage_matrix(self.rehearsals)
+        self.temperature_coverage_candidate = build_temperature_coverage_candidate(
+            self.matrix,
+            rehearse_temperature_coverage(),
+        )
+        # Import at construction time so package initialization remains acyclic.
+        # This is a deterministic, hardware-isolated proof with no I/O authority.
+        from truepanel.holodeck.aegis_temperature_blind_spot import (
+            run_temperature_blind_spot_checkride,
+        )
+
+        temperature_evidence = run_temperature_blind_spot_checkride()
+        self.temperature_coverage_appraisal = appraise_temperature_coverage(
+            self.matrix,
+            self.temperature_coverage_candidate,
+            temperature_evidence,
+            implementation_sha256=temperature_coverage_implementation_sha256(
+                run_temperature_blind_spot_checkride
+            ),
+        )
+        self.temperature_development_acceptance = (
+            evaluate_authenticated_temperature_acceptance(
+                self.temperature_coverage_candidate,
+                self.temperature_coverage_appraisal,
+                None,
+                None,
+                None,
+                now_utc="2026-10-10T04:30:00Z",
+            )
+        )
+        self.temperature_field_checkride = pending_temperature_field_checkride(
+            self.temperature_development_acceptance
+        )
+        self.temperature_recording_intake = pending_temperature_recording_intake(
+            self.temperature_field_checkride
+        )
+        self.temperature_field_review_receipt = (
+            pending_temperature_field_review_receipt(self.temperature_recording_intake)
+        )
+        self.temperature_calibration_admission = (
+            pending_temperature_calibration_admission(
+                self.temperature_field_review_receipt
+            )
+        )
+        self.temperature_calibration_corpus_import = (
+            pending_temperature_calibration_corpus_import(
+                self.temperature_calibration_admission
+            )
+        )
+        self.temperature_calibration_assessment = (
+            pending_temperature_calibration_assessment(
+                self.temperature_calibration_corpus_import
+            )
+        )
+        self.temperature_detector_result_binding = (
+            pending_temperature_detector_result_binding(
+                self.temperature_calibration_assessment
+            )
+        )
         proof = run_flight_director_proof()
         self.flight_director = {
             "scenario": proof["scenario"],
@@ -333,6 +417,16 @@ class AegisReliabilityEngine:
                 "request_count": self._sequence,
             },
             "coverage_matrix": self.matrix,
+            "coverage_candidate": self.temperature_coverage_candidate,
+            "coverage_appraisal": self.temperature_coverage_appraisal,
+            "coverage_development_acceptance": self.temperature_development_acceptance,
+            "coverage_field_checkride": self.temperature_field_checkride,
+            "coverage_recording_intake": self.temperature_recording_intake,
+            "coverage_field_review_receipt": self.temperature_field_review_receipt,
+            "coverage_calibration_admission": self.temperature_calibration_admission,
+            "coverage_calibration_corpus_import": self.temperature_calibration_corpus_import,
+            "coverage_calibration_assessment": self.temperature_calibration_assessment,
+            "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
                 "total": self.matrix["total"],
