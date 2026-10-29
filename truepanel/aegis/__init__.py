@@ -166,6 +166,11 @@ from .temperature_field_checkride import (
     evaluate_temperature_field_checkride,
     pending_temperature_field_checkride,
 )
+from .temperature_field_checkride_plan import (
+    assemble_temperature_field_checkride_plan,
+    expected_temperature_field_checkride_contract,
+    pending_temperature_field_checkride_plan,
+)
 from .temperature_field_review_receipt import (
     build_temperature_field_review_statement,
     evaluate_temperature_field_review_receipt,
@@ -210,6 +215,8 @@ __all__ = [
     "evaluate_temperature_authenticated_label_join",
     "evaluate_temperature_development_acceptance",
     "evaluate_temperature_field_checkride",
+    "assemble_temperature_field_checkride_plan",
+    "expected_temperature_field_checkride_contract",
     "evaluate_temperature_field_review_receipt",
     "evaluate_temperature_calibration_admission",
     "evaluate_temperature_calibration_decision",
@@ -226,6 +233,7 @@ __all__ = [
     "build_temperature_field_review_statement",
     "export_temperature_field_review_kit",
     "pending_temperature_field_checkride",
+    "pending_temperature_field_checkride_plan",
     "pending_temperature_field_review_receipt",
     "export_temperature_calibration_admission_statement",
     "pending_temperature_calibration_admission",

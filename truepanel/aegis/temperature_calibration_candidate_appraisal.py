@@ -478,6 +478,68 @@ def evaluate_temperature_calibration_candidate_appraisal(
     }
 
 
+def verify_recorded_temperature_calibration_candidate_appraisal(
+    dossier_path: str | Path,
+    verifier: Any,
+    statement_path: str | Path,
+    signature_path: str | Path,
+    receipt_path: str | Path,
+    *,
+    now_utc: str,
+) -> dict[str, Any]:
+    """Reverify one immutable appraisal without writing or expanding authority."""
+    dossier = _dossier(Path(dossier_path))
+    statement_bytes = _snapshot(Path(statement_path), MAX_PUBLIC_BYTES)
+    statement = json.loads(statement_bytes)
+    if not isinstance(statement, dict) or set(statement) != _STATEMENT_KEYS:
+        raise ValueError("CalibrationCandidateAppraisalStatementFieldsInvalid")
+    expected_statement = build_temperature_calibration_candidate_appraisal_statement(
+        dossier_path,
+        verifier,
+        decision=statement["decision"],
+        rationale=statement["rationale"],
+        prepared_at_utc=statement["prepared_at_utc"],
+        expires_at_utc=statement["expires_at_utc"],
+        now_utc=now_utc,
+    )
+    if statement_bytes != expected_statement:
+        raise ValueError("CalibrationCandidateAppraisalStatementMismatch")
+    signature = _snapshot(Path(signature_path), MAX_SIGNATURE_BYTES)
+    if verifier(KEY_ID, statement_bytes, signature.decode("ascii")) is not True:
+        raise ValueError("CalibrationCandidateAppraisalSignatureNotAuthenticated")
+    receipt_bytes = _snapshot(Path(receipt_path), MAX_PUBLIC_BYTES)
+    receipt = json.loads(receipt_bytes)
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt) != _RECEIPT_KEYS
+        or receipt_bytes != _canonical(receipt) + b"\n"
+    ):
+        raise ValueError("CalibrationCandidateAppraisalReceiptInvalid")
+    unsigned = dict(receipt)
+    claimed = unsigned.pop("receipt_sha256")
+    if claimed != _sha256(unsigned):
+        raise ValueError("CalibrationCandidateAppraisalReceiptDigestMismatch")
+    eligible = statement["decision"] == DECISION_APPROVE
+    expected_receipt = {
+        "schema": RECEIPT_SCHEMA,
+        "status": STATUS_APPROVED if eligible else STATUS_HELD,
+        "recorded_at_utc": receipt["recorded_at_utc"],
+        "decision": statement["decision"],
+        "rationale": statement["rationale"],
+        "appraisal_statement_sha256": _sha256(statement_bytes),
+        "appraisal_signature_sha256": _sha256(signature),
+        "dossier_sha256": dossier["dossier_sha256"],
+        "dossier_subjects": dossier["subjects"],
+        "operator_key_fingerprint": statement["operator_key_fingerprint"],
+        "manual_field_checkride_planning_eligible": eligible,
+        **{key: False for key in sorted(_AUTHORITY_KEYS)},
+    }
+    expected_receipt["receipt_sha256"] = _sha256(expected_receipt)
+    if receipt != expected_receipt:
+        raise ValueError("CalibrationCandidateAppraisalReceiptMismatch")
+    return receipt
+
+
 def pending_temperature_calibration_candidate_appraisal(
     dossier: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -511,4 +573,5 @@ __all__ = [
     "evaluate_temperature_calibration_candidate_appraisal",
     "export_temperature_calibration_candidate_appraisal_statement",
     "pending_temperature_calibration_candidate_appraisal",
+    "verify_recorded_temperature_calibration_candidate_appraisal",
 ]

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.20.1",
-  "updated_at": "2026-10-20",
+  "registry_version": "2026.10.28.1",
+  "updated_at": "2026-10-28",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -716,6 +716,25 @@
       "reproduction": ["pytest -q tests/test_aegis_temperature_calibration_candidate_appraisal.py tests/test_aegis_temperature_calibration_candidate_dossier.py", "python -c \"from truepanel.holodeck.aegis_temperature_calibration_candidate_appraisal import run_temperature_calibration_candidate_appraisal_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
       "revisit_conditions": ["JT supplies a real authenticated candidate dossier and appraisal", "a second human reviewer becomes available", "a remote transparency or timestamp service is proposed", "field-checkride execution or production deployment is proposed"],
       "strongest_follow_up": "Design a separately confirmed read-only field-checkride plan packet that enumerates exact passive observations abort criteria privacy boundaries and verification evidence but cannot start capture access BattleStation or actuate hardware.",
+      "freshness": {"reviewed_at": "2026-10-28", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0044", "title": "AEGIS passive field-checkride test card", "state": "COMPLETED",
+      "hypothesis": "One content-bound test card can turn an authenticated planning appraisal into exact passive observations privacy limits abort criteria and verification evidence while remaining unable to access a live host capture data execute a checkride or gain operational authority.",
+      "value": "Closes the gap between planning approval and a separately confirmable procedure without letting documentation silently become execution authority.",
+      "prior_art": ["NASA Test Readiness Review and flight test cards", "AWS FIS stop conditions", "LitmusChaos probes", "Chaos Mesh status checks", "OpenTelemetry hardware semantic conventions"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-field-checkride-plan", "pr": null, "commits": []},
+      "protocol": ["independently reverify the exact appraisal statement SSHSIG receipt dossier and seven evidence subjects", "require the appraisal to approve manual planning only", "require the immutable seven-signal six-abort seven-evidence contract", "bind the accepted 8/8 Recovery Coverage Matrix and 27-sample proof target", "write one owner-protected content-addressed test card", "stop at readiness for separate operator confirmation", "deny recording consumption live-host access capture execution validation acceptance installation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-passive-field-checkride-test-card", "tests/test_aegis_temperature_field_checkride_plan.py"],
+      "success_criteria": ["one exact approved appraisal produces one plan ready for separate confirmation", "the plan names all passive observations units privacy constraints aborts and required evidence", "operator HOLD receipt substitution live source privacy relaxation missing abort automatic capture authority escalation unknown fields and occupied output hold", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains the measured target", "confirmation recording capture BattleStation access execution validation deployment and hardware authority remain zero"],
+      "abort_criteria": ["planning approval is called execution authority", "a HOLD or substituted appraisal can create a plan", "an abort or privacy constraint can be weakened", "TruePanel can start capture or access a live host", "a recording is consumed before separate confirmation", "candidate is validated accepted installed or promoted", "deployment storage network service configuration or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-field-checkride-plan-v1.json", "sha256": "ad5df24781b4cce9328985ba9ac6ec11e9d6f704832eef4a3b6f42dfd9768608"}],
+      "outcome": {"conclusion": "Ten deterministic paths produce one exact passive test card ready for separate confirmation and nine adversarial HOLDs. Seven observations six abort criteria and seven evidence requirements are preserved while confirmations recordings captures BattleStation access execution and every operational authority remain zero."},
+      "invalidated_assumptions": ["planning eligibility is a sufficiently precise procedure", "a prose abort list is safely reviewable", "a valid receipt digest eliminates the need to reverify its signed statement", "plan generation may safely inspect a live host", "OpenTelemetry adoption requires importing a collector or SDK"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_field_checkride_plan.py tests/test_aegis_temperature_calibration_candidate_appraisal.py", "python -c \"from truepanel.holodeck.aegis_temperature_field_checkride_plan import run_temperature_field_checkride_plan_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a real authenticated appraisal", "a second operator confirms an exact plan", "OpenTelemetry hardware conventions stabilize", "field recording capture execution installation or deployment is proposed"],
+      "strongest_follow_up": "Design a distinct offline-signed confirmation receipt over the exact plan digest that can authorize only operator-supplied passive recording review and still cannot capture deploy mutate or actuate anything.",
       "freshness": {"reviewed_at": "2026-10-28", "review_after": "2027-04-30"}
     }
   ]
