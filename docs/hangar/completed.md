@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.28.1 · refreshed 2026-10-28 · 38 experiment(s)
+Registry version 2026.10.29.1 · refreshed 2026-10-29 · 39 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -307,3 +307,11 @@ Ten deterministic paths produce one exact passive test card ready for separate c
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Design a distinct offline-signed confirmation receipt over the exact plan digest that can authorize only operator-supplied passive recording review and still cannot capture deploy mutate or actuate anything.
 - Revisit when: JT supplies a real authenticated appraisal; a second operator confirms an exact plan; OpenTelemetry hardware conventions stabilize; field recording capture execution installation or deployment is proposed
+
+## TP-EXP-0045 · AEGIS offline field-checkride confirmation
+
+Twelve deterministic paths produce two signing-ready statements, one authenticated recording-review confirmation, one authenticated operator HOLD, and eight adversarial HOLDs. No recording is consumed or captured and every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Design a content-bound recording-review intake that consumes this exact receipt and one operator-supplied sanitized recording but cannot capture from a host validate promote deploy mutate or actuate anything.
+- Revisit when: JT provisions the governed development public roster; a second independent reviewer becomes available; an operator supplies one sanitized recording; remote transparency or timestamp services are proposed; live capture field execution installation or deployment is proposed

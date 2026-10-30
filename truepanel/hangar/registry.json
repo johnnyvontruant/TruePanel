@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.28.1",
-  "updated_at": "2026-10-28",
+  "registry_version": "2026.10.29.1",
+  "updated_at": "2026-10-29",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -736,6 +736,25 @@
       "revisit_conditions": ["JT supplies a real authenticated appraisal", "a second operator confirms an exact plan", "OpenTelemetry hardware conventions stabilize", "field recording capture execution installation or deployment is proposed"],
       "strongest_follow_up": "Design a distinct offline-signed confirmation receipt over the exact plan digest that can authorize only operator-supplied passive recording review and still cannot capture deploy mutate or actuate anything.",
       "freshness": {"reviewed_at": "2026-10-28", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0045", "title": "AEGIS offline field-checkride confirmation", "state": "COMPLETED",
+      "hypothesis": "A distinct offline SSHSIG over one exact passive test card can record CONFIRM-for-operator-supplied-recording-review or HOLD without creating capture execution validation deployment mutation or hardware authority.",
+      "value": "Closes the plan-to-consent boundary while ensuring consent cannot silently become evidence collection or execution.",
+      "prior_art": ["in-toto Statement v1", "SLSA Verification Summary Attestation", "TUF roles thresholds and expiry", "OpenSSH SSHSIG namespaces", "Uptane separation of duties"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-field-checkride-confirmation", "pr": null, "commits": []},
+      "protocol": ["load one protected canonical passive plan", "recompute the exact plan digest and contract digest", "bind appraisal dossier seven subjects accepted 8/8 coverage and the 27-sample proof target", "export one public CONFIRM or HOLD statement under a distinct SSHSIG namespace", "authenticate the signature and exact two-hour window", "write one owner-protected content-addressed receipt per plan", "stop at eligibility to review a separately supplied sanitized recording", "deny recording capture BattleStation access checkride execution validation acceptance installation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-offline-field-checkride-confirmation", "tests/test_aegis_temperature_field_checkride_confirmation.py"],
+      "success_criteria": ["one exact plan records authenticated confirmation for recording review only", "the same plan may be explicitly held", "old namespace unknown fields substitution expiry unsafe registry symlink and replay hold", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "recording capture execution validation deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["a confirmation signature is reusable at another workflow stage", "confirmation provides or captures a recording", "confirmation becomes field-checkride execution authority", "a changed plan contract dossier or subject retains eligibility", "duplicate confirmation overwrites history", "candidate is validated accepted installed or promoted", "deployment storage network service configuration or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-field-checkride-confirmation-v1.json", "sha256": "c423ba4810c40633edb2d0de168fd3126be1af1f1c43459c1d0aace98de6a2bc"}],
+      "outcome": {"conclusion": "Twelve deterministic paths produce two signing-ready statements, one authenticated recording-review confirmation, one authenticated operator HOLD, and eight adversarial HOLDs. No recording is consumed or captured and every operational authority remains zero."},
+      "invalidated_assumptions": ["planning approval can double as confirmation", "one signature namespace is safe across workflow stages", "confirmation implies that a recording exists", "consent to review implies consent to collect", "a mutable latest-confirmation file is sufficiently auditable"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_field_checkride_confirmation.py tests/test_aegis_temperature_field_checkride_plan.py", "python -c \"from truepanel.holodeck.aegis_temperature_field_checkride_confirmation import run_temperature_field_checkride_confirmation_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT provisions the governed development public roster", "a second independent reviewer becomes available", "an operator supplies one sanitized recording", "remote transparency or timestamp services are proposed", "live capture field execution installation or deployment is proposed"],
+      "strongest_follow_up": "Design a content-bound recording-review intake that consumes this exact receipt and one operator-supplied sanitized recording but cannot capture from a host validate promote deploy mutate or actuate anything.",
+      "freshness": {"reviewed_at": "2026-10-29", "review_after": "2027-04-30"}
     }
   ]
 }
