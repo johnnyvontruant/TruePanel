@@ -1,0 +1,159 @@
+{
+  "hardware_isolated": true,
+  "limitations": [
+    "fixture decisions are not field validation",
+    "candidate-review eligibility cannot install, deploy, promote, or actuate hardware"
+  ],
+  "measurements": {
+    "accepted_count": 2,
+    "automatic_promotions": 0,
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "case_count": 440,
+    "decision_registry_writes": 4,
+    "deployments": 0,
+    "duplicate_replay_blocked": 1,
+    "failing_accepts": 0,
+    "failing_holds": 1,
+    "field_validations": 0,
+    "fixture_private_keys_created": 2,
+    "fixture_private_keys_retained": 0,
+    "hardware_actions": 0,
+    "hold_count": 10,
+    "isolated_threshold_index": 46,
+    "lead_samples": 27,
+    "negative_cases": 400,
+    "operator_hold_count": 2,
+    "passing_accepts": 1,
+    "passing_holds": 1,
+    "positive_cases": 40,
+    "scenario_count": 17,
+    "score_registry_writes": 0,
+    "shared_cooling_index": 19,
+    "signing_ready_count": 3,
+    "unsafe_ready_count": 0
+  },
+  "scenarios": [
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 0,
+      "scenario": "passing-accept-statement",
+      "status": "READY_FOR_OFFLINE_CALIBRATION_DECISION_SIGNATURE"
+    },
+    {
+      "candidate_review_eligible": true,
+      "decision_recorded": true,
+      "error_count": 0,
+      "scenario": "passing-review-authenticated-accept",
+      "status": "ELIGIBLE_FOR_CALIBRATION_CANDIDATE_REVIEW"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 0,
+      "scenario": "passing-hold-statement",
+      "status": "READY_FOR_OFFLINE_CALIBRATION_DECISION_SIGNATURE"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": true,
+      "error_count": 0,
+      "scenario": "passing-review-authenticated-hold",
+      "status": "CALIBRATION_CANDIDATE_OPERATOR_HOLD_RECORDED"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 0,
+      "scenario": "failing-hold-statement",
+      "status": "READY_FOR_OFFLINE_CALIBRATION_DECISION_SIGNATURE"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": true,
+      "error_count": 0,
+      "scenario": "failing-review-authenticated-hold",
+      "status": "CALIBRATION_CANDIDATE_OPERATOR_HOLD_RECORDED"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "failing-review-cannot-be-accepted",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "wrong-signature-namespace",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "review-substitution",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "post-signature-decision-drift",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "unknown-statement-field",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "authority-escalation",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "expired-decision",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": true,
+      "decision_recorded": true,
+      "error_count": 0,
+      "scenario": "first-content-addressed-decision",
+      "status": "ELIGIBLE_FOR_CALIBRATION_CANDIDATE_REVIEW"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "duplicate-decision-replay",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "unsafe-decision-registry",
+      "status": "HOLD"
+    },
+    {
+      "candidate_review_eligible": false,
+      "decision_recorded": false,
+      "error_count": 1,
+      "scenario": "foreign-trust-root",
+      "status": "HOLD"
+    }
+  ],
+  "schema": "truepanel.holodeck-temperature-calibration-decision-checkride/v1",
+  "simulation": true
+}
