@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.29.1",
-  "updated_at": "2026-10-29",
+  "registry_version": "2026.10.30.1",
+  "updated_at": "2026-10-30",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -755,6 +755,25 @@
       "revisit_conditions": ["JT provisions the governed development public roster", "a second independent reviewer becomes available", "an operator supplies one sanitized recording", "remote transparency or timestamp services are proposed", "live capture field execution installation or deployment is proposed"],
       "strongest_follow_up": "Design a content-bound recording-review intake that consumes this exact receipt and one operator-supplied sanitized recording but cannot capture from a host validate promote deploy mutate or actuate anything.",
       "freshness": {"reviewed_at": "2026-10-29", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0046", "title": "AEGIS confirmed recording intake", "state": "COMPLETED",
+      "hypothesis": "One exact confirmation can admit one operator-supplied canonical sanitized recording into label-blind passive review without enabling capture replay execution validation promotion deployment mutation or hardware authority.",
+      "value": "Closes the consent-to-evidence-handoff boundary while preventing confirmation replay recording substitution privacy leakage and accidental live-source capability.",
+      "prior_art": ["BagIt RFC 8493 fixity and Payload-Oxum", "OCFL strict content-addressed inventories", "RO-Crate dataset descriptors", "W3C PROV custody roles", "in-toto digest-bound subjects", "OpenTelemetry hardware conventions"],
+      "safety_class": "READ_ONLY_EVIDENCE",
+      "development": {"branch": "feature/aegis-confirmed-recording-intake", "pr": null, "commits": []},
+      "protocol": ["independently reverify the exact confirmation statement SSHSIG receipt and plan", "require explicit CONFIRM eligibility rather than HOLD", "read one owner-protected bounded regular file without following symlinks", "require exact canonical bytes and a closed sanitized manifest", "require all seven signal names and units", "require 48 monotonic finite samples with twelve stable baseline samples", "reject labels raw identity TruePanel capture claims and source-path retention", "write one exclusive content-addressed receipt keyed by confirmation", "stop before replay labeling validation promotion deployment or hardware authority"],
+      "fixtures": ["aegis-confirmed-sanitized-recording-intake", "tests/test_aegis_temperature_confirmed_recording_intake.py"],
+      "success_criteria": ["one exact confirmed sanitized recording becomes ready for label-blind passive replay", "operator HOLD substituted confirmation noncanonical bytes missing signals unstable baseline nonmonotonic time raw identity labels capture claims unsafe files symlinks and duplicate replay hold", "source path is absent from returned evidence", "accepted matrix remains 8/8", "the 27-sample proof target remains bound", "capture replay execution validation promotion deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["a recording is accepted without the exact confirmation", "one confirmation admits multiple recordings", "semantic JSON equality bypasses byte identity", "raw host disk network credential or path identity survives", "labels are visible before replay", "TruePanel captures copies rewrites tails deletes or replays the source", "intake is called field validation or deployment readiness", "storage network runtime or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-confirmed-recording-intake-v1.json", "sha256": "1a8ae002db2b3ac305d90b3271281c4c0596931571de957077dc60f0c0fbd8e5"}],
+      "outcome": {"conclusion": "Thirteen deterministic paths produce one confirmed sanitized intake ready for label-blind passive replay and twelve adversarial HOLDs. No source path is retained, no recording is captured or replayed, and every operational authority remains zero."},
+      "invalidated_assumptions": ["a confirmation receipt digest alone proves the signed statement remains valid", "operator supplied means sanitized", "semantic JSON equality is sufficient custody", "confirmation may safely authorize multiple recordings", "intake may retain a source path for convenience", "admitting evidence implies permission to replay or validate it"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_confirmed_recording_intake.py tests/test_aegis_temperature_field_checkride_confirmation.py", "python -c \"from truepanel.holodeck.aegis_temperature_confirmed_recording_intake import run_temperature_confirmed_recording_intake_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a real confirmed sanitized recording", "a second independent reviewer becomes available", "a governed field-evidence corpus is proposed", "remote transparency or preservation storage is proposed", "live capture field execution installation or deployment is proposed"],
+      "strongest_follow_up": "Design an independent label-blind passive replay receipt over this exact intake that reconstructs the shared-cooling result and lead without revealing labels or granting validation promotion deployment capture or hardware authority.",
+      "freshness": {"reviewed_at": "2026-10-30", "review_after": "2027-04-30"}
     }
   ]
 }

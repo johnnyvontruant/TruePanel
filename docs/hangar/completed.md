@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.29.1 · refreshed 2026-10-29 · 39 experiment(s)
+Registry version 2026.10.30.1 · refreshed 2026-10-30 · 40 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -315,3 +315,11 @@ Twelve deterministic paths produce two signing-ready statements, one authenticat
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Design a content-bound recording-review intake that consumes this exact receipt and one operator-supplied sanitized recording but cannot capture from a host validate promote deploy mutate or actuate anything.
 - Revisit when: JT provisions the governed development public roster; a second independent reviewer becomes available; an operator supplies one sanitized recording; remote transparency or timestamp services are proposed; live capture field execution installation or deployment is proposed
+
+## TP-EXP-0046 · AEGIS confirmed recording intake
+
+Thirteen deterministic paths produce one confirmed sanitized intake ready for label-blind passive replay and twelve adversarial HOLDs. No source path is retained, no recording is captured or replayed, and every operational authority remains zero.
+
+- Safety: `READ_ONLY_EVIDENCE`
+- Strongest follow-up: Design an independent label-blind passive replay receipt over this exact intake that reconstructs the shared-cooling result and lead without revealing labels or granting validation promotion deployment capture or hardware authority.
+- Revisit when: JT supplies a real confirmed sanitized recording; a second independent reviewer becomes available; a governed field-evidence corpus is proposed; remote transparency or preservation storage is proposed; live capture field execution installation or deployment is proposed

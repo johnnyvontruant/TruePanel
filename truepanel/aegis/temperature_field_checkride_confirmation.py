@@ -429,6 +429,73 @@ def evaluate_temperature_field_checkride_confirmation(
     }
 
 
+def verify_recorded_temperature_field_checkride_confirmation(
+    plan_path: str | Path,
+    verifier: Any,
+    statement_path: str | Path,
+    signature_path: str | Path,
+    receipt_path: str | Path,
+    *,
+    now_utc: str,
+) -> dict[str, Any]:
+    """Reverify one immutable confirmation without writing or adding authority."""
+    plan = _plan(Path(plan_path))
+    statement_bytes = _snapshot(Path(statement_path), MAX_PUBLIC_BYTES)
+    statement = json.loads(statement_bytes)
+    if not isinstance(statement, dict) or set(statement) != _STATEMENT_KEYS:
+        raise ValueError("FieldCheckrideConfirmationStatementFieldsInvalid")
+    expected_statement = build_temperature_field_checkride_confirmation_statement(
+        plan_path,
+        verifier,
+        decision=statement["decision"],
+        rationale=statement["rationale"],
+        prepared_at_utc=statement["prepared_at_utc"],
+        expires_at_utc=statement["expires_at_utc"],
+        now_utc=now_utc,
+    )
+    if statement_bytes != expected_statement:
+        raise ValueError("FieldCheckrideConfirmationStatementMismatch")
+    signature = _snapshot(Path(signature_path), MAX_SIGNATURE_BYTES)
+    if verifier(KEY_ID, statement_bytes, signature.decode("ascii")) is not True:
+        raise ValueError("FieldCheckrideConfirmationSignatureNotAuthenticated")
+    receipt_bytes = _snapshot(Path(receipt_path), MAX_PUBLIC_BYTES)
+    receipt = json.loads(receipt_bytes)
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt) != _RECEIPT_KEYS
+        or receipt_bytes != _canonical(receipt) + b"\n"
+    ):
+        raise ValueError("FieldCheckrideConfirmationReceiptInvalid")
+    unsigned = dict(receipt)
+    claimed = unsigned.pop("receipt_sha256")
+    if claimed != _sha256(unsigned):
+        raise ValueError("FieldCheckrideConfirmationReceiptDigestMismatch")
+    eligible = statement["decision"] == DECISION_CONFIRM
+    expected_receipt = {
+        "schema": RECEIPT_SCHEMA,
+        "status": STATUS_ELIGIBLE if eligible else STATUS_HELD,
+        "recorded_at_utc": receipt["recorded_at_utc"],
+        "decision": statement["decision"],
+        "rationale": statement["rationale"],
+        "confirmation_statement_sha256": _sha256(statement_bytes),
+        "confirmation_signature_sha256": _sha256(signature),
+        "plan_sha256": plan["plan_sha256"],
+        "appraisal_receipt_sha256": plan["appraisal_receipt_sha256"],
+        "dossier_sha256": plan["dossier_sha256"],
+        "dossier_subjects": plan["dossier_subjects"],
+        "contract_sha256": _sha256(plan["contract"]),
+        "operator_key_fingerprint": statement["operator_key_fingerprint"],
+        "confirmation_present": True,
+        "operator_supplied_recording_review_eligible": eligible,
+        "recording_present": False,
+        **{key: False for key in sorted(_DENIED)},
+    }
+    expected_receipt["receipt_sha256"] = _sha256(expected_receipt)
+    if receipt != expected_receipt:
+        raise ValueError("FieldCheckrideConfirmationReceiptMismatch")
+    return receipt
+
+
 def pending_temperature_field_checkride_confirmation(
     plan: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -458,4 +525,5 @@ __all__ = [
     "evaluate_temperature_field_checkride_confirmation",
     "export_temperature_field_checkride_confirmation_statement",
     "pending_temperature_field_checkride_confirmation",
+    "verify_recorded_temperature_field_checkride_confirmation",
 ]

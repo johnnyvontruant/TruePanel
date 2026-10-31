@@ -45,6 +45,9 @@ from .temperature_calibration_corpus import (
     pending_temperature_calibration_corpus_import,
 )
 from .temperature_calibration_decision import pending_temperature_calibration_decision
+from .temperature_confirmed_recording_intake import (
+    pending_temperature_confirmed_recording_intake,
+)
 from .temperature_coverage import (
     build_temperature_coverage_candidate,
     rehearse_temperature_coverage,
@@ -221,6 +224,11 @@ class AegisReliabilityEngine:
         self.temperature_field_checkride_confirmation = (
             pending_temperature_field_checkride_confirmation(
                 self.temperature_field_checkride_plan
+            )
+        )
+        self.temperature_confirmed_recording_intake = (
+            pending_temperature_confirmed_recording_intake(
+                self.temperature_field_checkride_confirmation
             )
         )
         self.temperature_detector_result_binding = (
@@ -519,6 +527,7 @@ class AegisReliabilityEngine:
             "coverage_calibration_candidate_appraisal": self.temperature_calibration_candidate_appraisal,
             "coverage_field_checkride_plan": self.temperature_field_checkride_plan,
             "coverage_field_checkride_confirmation": self.temperature_field_checkride_confirmation,
+            "coverage_confirmed_recording_intake": self.temperature_confirmed_recording_intake,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
