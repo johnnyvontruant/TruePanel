@@ -1,0 +1,118 @@
+{
+  "hardware_isolated": true,
+  "limitations": [
+    "fixture identity only",
+    "approval permits planning only and does not authorize a field checkride",
+    "no operational authority"
+  ],
+  "measurements": {
+    "appraisal_registry_writes": 2,
+    "approved_for_manual_planning_count": 1,
+    "automatic_promotions": 0,
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "coverage_gaps": 0,
+    "coverage_total": 8,
+    "coverage_trusted": 8,
+    "deployments": 0,
+    "field_checkride_authorizations": 0,
+    "field_validations": 0,
+    "fixture_private_keys_created": 1,
+    "fixture_private_keys_retained": 0,
+    "hardware_actions": 0,
+    "hold_count": 8,
+    "lead_samples": 27,
+    "operator_hold_count": 1,
+    "scenario_count": 12,
+    "signing_ready_count": 2,
+    "unsafe_ready_count": 0
+  },
+  "scenarios": [
+    {
+      "appraisal_recorded": false,
+      "error_count": 0,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "approve-statement",
+      "status": "READY_FOR_OFFLINE_CALIBRATION_CANDIDATE_APPRAISAL_SIGNATURE"
+    },
+    {
+      "appraisal_recorded": true,
+      "error_count": 0,
+      "manual_field_checkride_planning_eligible": true,
+      "scenario": "authenticated-approve-for-manual-planning",
+      "status": "APPROVED_FOR_MANUAL_FIELD_CHECKRIDE_PLANNING"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 0,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "hold-statement",
+      "status": "READY_FOR_OFFLINE_CALIBRATION_CANDIDATE_APPRAISAL_SIGNATURE"
+    },
+    {
+      "appraisal_recorded": true,
+      "error_count": 0,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "authenticated-operator-hold",
+      "status": "CALIBRATION_CANDIDATE_APPRAISAL_HOLD_RECORDED"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 1,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "wrong-signature-namespace",
+      "status": "HOLD"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 1,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "dossier-substitution",
+      "status": "HOLD"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 1,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "unknown-statement-field",
+      "status": "HOLD"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 1,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "authority-escalation",
+      "status": "HOLD"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 1,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "unsafe-registry-permissions",
+      "status": "HOLD"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 1,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "duplicate-appraisal-replay",
+      "status": "HOLD"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 1,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "expired-appraisal-window",
+      "status": "HOLD"
+    },
+    {
+      "appraisal_recorded": false,
+      "error_count": 1,
+      "manual_field_checkride_planning_eligible": false,
+      "scenario": "symlinked-dossier",
+      "status": "HOLD"
+    }
+  ],
+  "schema": "truepanel.holodeck-temperature-calibration-candidate-appraisal/v1",
+  "simulation": true
+}

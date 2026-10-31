@@ -92,6 +92,15 @@ def test_intake_rejects_data_that_only_becomes_safe_during_load(tmp_path):
     assert workflow_status(root)["case_count"] == 0
 
 
+def test_intake_rejects_same_recording_under_a_second_case_id(tmp_path):
+    root = tmp_path / "workflow"
+    _initialize(root)
+    _ingest(root, case_id="first-case")
+    with pytest.raises(ValueError, match="duplicate recording digest"):
+        _ingest(root, case_id="replayed-case")
+    assert workflow_status(root)["case_count"] == 1
+
+
 def test_review_freeze_and_assessment_are_immutable_and_fail_closed(tmp_path):
     root = tmp_path / "workflow"
     _initialize(root)
