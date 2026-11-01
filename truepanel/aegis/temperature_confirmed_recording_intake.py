@@ -347,6 +347,72 @@ def evaluate_temperature_confirmed_recording_intake(
     }
 
 
+def verify_recorded_temperature_confirmed_recording_intake(
+    plan_path: str | Path,
+    verifier: Any,
+    confirmation_statement_path: str | Path,
+    confirmation_signature_path: str | Path,
+    confirmation_receipt_path: str | Path,
+    recording_path: str | Path,
+    intake_receipt_path: str | Path,
+    *,
+    now_utc: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Independently reconstruct one intake receipt and its exact recording."""
+    confirmation = verify_recorded_temperature_field_checkride_confirmation(
+        plan_path,
+        verifier,
+        confirmation_statement_path,
+        confirmation_signature_path,
+        confirmation_receipt_path,
+        now_utc=now_utc,
+    )
+    if (
+        confirmation["decision"] != DECISION_CONFIRM
+        or confirmation["operator_supplied_recording_review_eligible"] is not True
+    ):
+        raise ValueError("ConfirmedRecordingIntakeNotConfirmed")
+    recording_payload, recording = _recording(Path(recording_path))
+    receipt_payload = _snapshot(Path(intake_receipt_path), MAX_PUBLIC_BYTES)
+    try:
+        receipt = json.loads(receipt_payload)
+    except json.JSONDecodeError as error:
+        raise ValueError("ConfirmedRecordingIntakeReceiptInvalid") from error
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt) != _RECEIPT_KEYS
+        or receipt_payload != _canonical(receipt) + b"\n"
+    ):
+        raise ValueError("ConfirmedRecordingIntakeReceiptInvalid")
+    manifest = recording["manifest"]
+    expected = {
+        "schema": RECEIPT_SCHEMA,
+        "status": STATUS_READY,
+        "recorded_at_utc": receipt.get("recorded_at_utc"),
+        "confirmation_receipt_sha256": confirmation["receipt_sha256"],
+        "plan_sha256": confirmation["plan_sha256"],
+        "recording_sha256": _sha256(recording_payload),
+        "recording_bytes": len(recording_payload),
+        "sample_count": len(recording["samples"]),
+        "baseline_sample_count": BASELINE_SAMPLE_COUNT,
+        "system_profile": manifest["system_profile"],
+        "workload_profile": manifest["workload_profile"],
+        "signals": manifest["signals"],
+        "privacy_verified": True,
+        "custody_verified": True,
+        "sequence_verified": True,
+        "stable_baseline_verified": True,
+        "recording_present": True,
+        "capture_performed": False,
+        **{key: False for key in sorted(_DENIED)},
+    }
+    _timestamp(expected["recorded_at_utc"])
+    expected["receipt_sha256"] = _sha256(expected)
+    if receipt != expected:
+        raise ValueError("ConfirmedRecordingIntakeReceiptMismatch")
+    return receipt, recording
+
+
 def pending_temperature_confirmed_recording_intake(
     confirmation: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -377,4 +443,5 @@ __all__ = [
     "STATUS_READY",
     "evaluate_temperature_confirmed_recording_intake",
     "pending_temperature_confirmed_recording_intake",
+    "verify_recorded_temperature_confirmed_recording_intake",
 ]

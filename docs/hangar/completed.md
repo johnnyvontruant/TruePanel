@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.30.1 · refreshed 2026-10-30 · 40 experiment(s)
+Registry version 2026.10.31.1 · refreshed 2026-10-31 · 41 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -323,3 +323,11 @@ Thirteen deterministic paths produce one confirmed sanitized intake ready for la
 - Safety: `READ_ONLY_EVIDENCE`
 - Strongest follow-up: Design an independent label-blind passive replay receipt over this exact intake that reconstructs the shared-cooling result and lead without revealing labels or granting validation promotion deployment capture or hardware authority.
 - Revisit when: JT supplies a real confirmed sanitized recording; a second independent reviewer becomes available; a governed field-evidence corpus is proposed; remote transparency or preservation storage is proposed; live capture field execution installation or deployment is proposed
+
+## TP-EXP-0047 · AEGIS label-blind passive replay
+
+Thirteen deterministic paths produce one label-blind passive replay receipt and twelve adversarial HOLDs. Five corroborating signals identify shared cooling at sample 19 with 0.95 evidence confidence, 27 samples before isolated drift thresholds, while labels and every operational authority remain zero.
+
+- Safety: `READ_ONLY_EVIDENCE`
+- Strongest follow-up: Create a separately authenticated manual replay-review receipt that records ACCEPT_EVIDENCE or HOLD_EVIDENCE over this exact replay while granting no field validation installation promotion deployment capture or hardware authority.
+- Revisit when: JT supplies a real confirmed sanitized recording; an independently governed challenger detector is available; a second human reviewer becomes available; field validation installation or deployment is proposed

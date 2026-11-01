@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.10.30.1",
-  "updated_at": "2026-10-30",
+  "registry_version": "2026.10.31.1",
+  "updated_at": "2026-10-31",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -774,6 +774,25 @@
       "revisit_conditions": ["JT supplies a real confirmed sanitized recording", "a second independent reviewer becomes available", "a governed field-evidence corpus is proposed", "remote transparency or preservation storage is proposed", "live capture field execution installation or deployment is proposed"],
       "strongest_follow_up": "Design an independent label-blind passive replay receipt over this exact intake that reconstructs the shared-cooling result and lead without revealing labels or granting validation promotion deployment capture or hardware authority.",
       "freshness": {"reviewed_at": "2026-10-30", "review_after": "2027-04-30"}
+    },
+    {
+      "id": "TP-EXP-0047", "title": "AEGIS label-blind passive replay", "state": "COMPLETED",
+      "hypothesis": "One exact confirmed intake can be independently replayed without labels to preserve an evidence-backed shared-cooling hypothesis and lead measurement while granting no validation promotion deployment capture mutation or hardware authority.",
+      "value": "Closes the admitted-evidence-to-diagnosis boundary with an independently reconstructed one-shot receipt instead of trusting a producer result or flooding operators with isolated thresholds.",
+      "prior_art": ["OpenTelemetry filelog fingerprint and checkpoint identity", "River ADWIN drift detection", "ruptures PELT offline change points", "content-addressed one-shot replay receipts"],
+      "safety_class": "READ_ONLY_EVIDENCE",
+      "development": {"branch": "feature/aegis-label-blind-passive-replay", "pr": null, "commits": []},
+      "protocol": ["independently reverify the exact confirmation intake receipt and recording bytes", "forbid labels outcome hints online learning and threshold tuning", "compute a stable twelve-sample baseline", "require corroborating fan RPM fan-speed ratio CPU system and physical-disk temperature drift", "emit explicit evidence confidence probable cause match index isolated-threshold index and lead", "write one exclusive receipt keyed by intake identity", "stop at manual replay evidence review", "deny live capture field validation acceptance installation promotion deployment runtime mutation and hardware authority"],
+      "fixtures": ["aegis-label-blind-passive-replay", "tests/test_aegis_temperature_label_blind_passive_replay.py"],
+      "success_criteria": ["one exact admitted recording produces one label-blind replay receipt", "intake substitution recording drift labels noncanonical bytes unstable baseline nonmonotonic time confirmation substitution unsafe permissions symlinks authority escalation insufficient evidence and duplicate replay hold", "five supporting signals produce an explicit 0.95 evidence-weight confidence", "accepted matrix remains 8/8", "shared cooling matches at sample 19 versus isolated drift at sample 46 for a 27-sample lead", "labels capture validation promotion deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["a replay trusts the intake receipt without reconstructing its chain", "labels or outcome hints are visible", "thresholds adapt during replay", "a stable trace is forced into a diagnosis", "the same intake overwrites or creates multiple replay receipts", "replay is called field validation or deployment readiness", "live capture storage network runtime or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-label-blind-passive-replay-v1.json", "sha256": "1589618f0c5747490782b556e2b9c09d485cceac019772ab68092275c4f7709b"}],
+      "outcome": {"conclusion": "Thirteen deterministic paths produce one label-blind passive replay receipt and twelve adversarial HOLDs. Five corroborating signals identify shared cooling at sample 19 with 0.95 evidence confidence, 27 samples before isolated drift thresholds, while labels and every operational authority remain zero."},
+      "invalidated_assumptions": ["an intake receipt alone proves the recording remains admissible", "the producer detector is sufficiently independent", "adaptive learning is safe during evidentiary replay", "semantic JSON equality preserves exact custody", "every admitted recording must yield a diagnosis", "passive replay implies field validation"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_label_blind_passive_replay.py tests/test_aegis_temperature_confirmed_recording_intake.py", "python -c \"from truepanel.holodeck.aegis_temperature_label_blind_passive_replay import run_temperature_label_blind_passive_replay_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["JT supplies a real confirmed sanitized recording", "an independently governed challenger detector is available", "a second human reviewer becomes available", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Create a separately authenticated manual replay-review receipt that records ACCEPT_EVIDENCE or HOLD_EVIDENCE over this exact replay while granting no field validation installation promotion deployment capture or hardware authority.",
+      "freshness": {"reviewed_at": "2026-10-31", "review_after": "2027-04-30"}
     }
   ]
 }

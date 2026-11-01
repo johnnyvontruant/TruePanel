@@ -68,6 +68,9 @@ from .temperature_field_review_receipt import pending_temperature_field_review_r
 from .temperature_intake_bound_detector_result import (
     pending_temperature_intake_bound_detector_result,
 )
+from .temperature_label_blind_passive_replay import (
+    pending_temperature_label_blind_passive_replay,
+)
 from .temperature_long_window_intake import pending_temperature_long_window_intake
 from .temperature_recording_intake import pending_temperature_recording_intake
 from .temperature_score_review import pending_temperature_score_review
@@ -229,6 +232,11 @@ class AegisReliabilityEngine:
         self.temperature_confirmed_recording_intake = (
             pending_temperature_confirmed_recording_intake(
                 self.temperature_field_checkride_confirmation
+            )
+        )
+        self.temperature_label_blind_passive_replay = (
+            pending_temperature_label_blind_passive_replay(
+                self.temperature_confirmed_recording_intake
             )
         )
         self.temperature_detector_result_binding = (
@@ -528,6 +536,7 @@ class AegisReliabilityEngine:
             "coverage_field_checkride_plan": self.temperature_field_checkride_plan,
             "coverage_field_checkride_confirmation": self.temperature_field_checkride_confirmation,
             "coverage_confirmed_recording_intake": self.temperature_confirmed_recording_intake,
+            "coverage_label_blind_passive_replay": self.temperature_label_blind_passive_replay,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
