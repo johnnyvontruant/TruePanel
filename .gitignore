@@ -49,3 +49,6 @@ development/logs/
 
 # Local development snapshots
 development/backups/
+# Local package builds
+build/
+dist/
