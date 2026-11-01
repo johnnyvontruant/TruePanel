@@ -17,10 +17,10 @@ def dependency_name(requirement):
     return re.split(r"[<>=!~\[]", requirement, maxsplit=1)[0].strip().lower()
 
 
-def test_release_candidate_product_version():
-    assert truepanel.__version__ == "1.4.0rc1"
+def test_stable_product_version():
+    assert truepanel.__version__ == "1.4.0"
     assert re.fullmatch(
-        r"\d+\.\d+\.\d+rc\d+",
+        r"\d+\.\d+\.\d+",
         truepanel.__version__,
     )
     assert truepanel.__version__ == MISSION_CONTROL_VERSION
@@ -42,12 +42,17 @@ def test_release_policy_documents_candidate_and_stable_versions():
 def test_stable_changelog_preserves_release_candidate_history():
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
-    stable_heading = "## [1.2.0] - 2026-08-19"
-    rc3_heading = "## [1.2.0-rc3] - 2026-08-18"
+    stable_heading = "## [1.4.0] - 2026-10-31"
+    rc1_heading = "## [1.4.0-rc1] - 2026-10-27"
 
     assert stable_heading in changelog
-    assert rc3_heading in changelog
-    assert changelog.index(stable_heading) < changelog.index(rc3_heading)
+    assert rc1_heading in changelog
+    assert changelog.index(stable_heading) < changelog.index(rc1_heading)
+
+    previous_stable = "## [1.2.0] - 2026-08-19"
+    previous_rc3 = "## [1.2.0-rc3] - 2026-08-18"
+
+    assert changelog.index(previous_stable) < changelog.index(previous_rc3)
     assert "Mission Control Preflight" in changelog
 
 

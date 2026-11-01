@@ -1,0 +1,27 @@
+metadata:
+  name: Tactical
+  description: Dense, direct instrumentation with bold alerts.
+  author: TruePanel
+  version: "2.0"
+
+theme:
+  healthy_message: Systems Green
+  startup_title: TRUEPANEL
+  startup_subtitle: TACTICAL OPS
+  mission_ready: SYSTEMS GREEN
+  all_systems_go: STATUS NOMINAL
+  pool_healthy: STORAGE GREEN
+  system_watch: THREAT WATCH
+  alert_banner: CRITICAL ALERT
+  warning_banner: CAUTION
+
+graphics:
+  filled: "#"
+  empty: "."
+  healthy: "+"
+  info: ":"
+  warning: "!"
+  critical: "X"
+  activity_low: "."
+  activity_mid: "+"
+  activity_high: "#"

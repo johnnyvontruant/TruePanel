@@ -1,0 +1,70 @@
+{
+  "cases": [
+    {
+      "case_id": "fan-bearing-degradation",
+      "challenge": "shared-cause-positive",
+      "expected_shared_cooling": true,
+      "first_isolated_threshold_index": 46,
+      "frame_count": 52,
+      "recording": "fan-bearing-degradation.jsonl",
+      "sha256": "d90b35eae809aa018f913d83a331aa999bb630ad4cc3821b05b0e3970509734f"
+    },
+    {
+      "case_id": "ambient-temperature-rise",
+      "challenge": "ambient-shift",
+      "expected_shared_cooling": false,
+      "first_isolated_threshold_index": null,
+      "frame_count": 36,
+      "recording": "ambient-temperature-rise.jsonl",
+      "sha256": "856277df1b72d85c3244cce30d55f3efc2a3d7c5bb6f7a7e2b6fcb6c6a501ea1"
+    },
+    {
+      "case_id": "workload-temperature-rise",
+      "challenge": "workload-shift",
+      "expected_shared_cooling": false,
+      "first_isolated_threshold_index": null,
+      "frame_count": 32,
+      "recording": "workload-temperature-rise.jsonl",
+      "sha256": "25d38652e6471c5c5a44d8d1ad579bcacbc0614342a728b0d0da3b372a9ad912"
+    },
+    {
+      "case_id": "transient-rpm-sensor-spike",
+      "challenge": "transient-sensor-error",
+      "expected_shared_cooling": false,
+      "first_isolated_threshold_index": 12,
+      "frame_count": 19,
+      "recording": "transient-rpm-sensor-spike.jsonl",
+      "sha256": "d710c78b7ae9efcb35c89f8719cc2ea7f6ea8a227481ba6390a816a2a56dd80a"
+    },
+    {
+      "case_id": "telemetry-dropout",
+      "challenge": "telemetry-dropout",
+      "expected_shared_cooling": false,
+      "first_isolated_threshold_index": null,
+      "frame_count": 24,
+      "recording": "telemetry-dropout.jsonl",
+      "sha256": "56fc81e9267a602aab7cd1cf3d8c874b794a2be1d9ebc42f5c123a1a09e4b82a"
+    },
+    {
+      "case_id": "fan-sensor-noise",
+      "challenge": "sensor-noise",
+      "expected_shared_cooling": false,
+      "first_isolated_threshold_index": null,
+      "frame_count": 30,
+      "recording": "fan-sensor-noise.jsonl",
+      "sha256": "05bb8aa5442287e6067fa09f8986127a233334c99bac4e1546b539d3443db3f8"
+    }
+  ],
+  "corpus_id": "aegis-black-box-corpus-v1",
+  "corpus_sha256": "c5086044e7a23a83a59b870b6396e73e165400bca9a520e7b2aa6321219f27e5",
+  "generated_by": "development/tools/generate_aegis_corpus.py",
+  "license": "MIT (TruePanel fixture data)",
+  "limitations": [
+    "synthetic fixture recordings are not a production false-positive estimate",
+    "aggregate chassis signals are not localized by fan zone or drive bay",
+    "confidence weights require calibration against opt-in real incident recordings"
+  ],
+  "privacy": "sanitized",
+  "schema_version": 1,
+  "source": "deterministic-synthetic"
+}
