@@ -1,0 +1,27 @@
+metadata:
+  name: Quiet
+  description: Calm, low-noise language for always-on displays.
+  author: TruePanel
+  version: "2.0"
+
+theme:
+  healthy_message: All Is Well
+  startup_title: TruePanel
+  startup_subtitle: Waking Up
+  mission_ready: ALL IS WELL
+  all_systems_go: Running Quietly
+  pool_healthy: Storage Healthy
+  system_watch: Needs Attention
+  alert_banner: SYSTEM ALERT
+  warning_banner: NOTICE
+
+graphics:
+  filled: "="
+  empty: " "
+  healthy: "."
+  info: "."
+  warning: "!"
+  critical: "X"
+  activity_low: " "
+  activity_mid: "."
+  activity_high: "="

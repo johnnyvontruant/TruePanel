@@ -1,0 +1,27 @@
+metadata:
+  name: Amber Terminal
+  description: Warm vintage-computer vocabulary for monochrome LCDs.
+  author: TruePanel
+  version: "1.0"
+
+theme:
+  healthy_message: Console Ready
+  startup_title: TRUEPANEL
+  startup_subtitle: AMBER CONSOLE
+  mission_ready: CONSOLE READY
+  all_systems_go: SYSTEM STABLE
+  pool_healthy: VOLUMES READY
+  system_watch: REVIEW EVENTS
+  alert_banner: CONSOLE ALERT
+  warning_banner: ATTENTION
+
+graphics:
+  filled: "="
+  empty: "."
+  healthy: "*"
+  info: ":"
+  warning: "!"
+  critical: "X"
+  activity_low: "."
+  activity_mid: "="
+  activity_high: "#"

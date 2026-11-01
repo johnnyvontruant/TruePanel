@@ -139,6 +139,18 @@ spelling rather than copied a second time.
 While a drive needs attention, the LCD shows Loadmaster screens instead of its
 normal rotation:
 
+<p align="center">
+  <img src="images/lcd/loadmaster-ready.png" alt="Drive ready: press Copy" width="380">
+  <img src="images/lcd/loadmaster-counts.png" alt="Files and sizes each way" width="380">
+</p>
+<p align="center">
+  <img src="images/lcd/loadmaster-copying.png" alt="Copying with progress bar" width="380">
+  <img src="images/lcd/loadmaster-done.png" alt="Done: safe to remove" width="380">
+</p>
+<p align="center">
+  <img src="images/lcd/loadmaster-hold.png" alt="Held for review" width="380">
+</p>
+
 | State | LCD |
 | --- | --- |
 | CHECKING | `TV A-M` / `Checking...` |
@@ -154,7 +166,11 @@ normal rotation:
 * **Copy** starts a READY sync.
 
 When no drive is plugged in, the normal rotation includes a Loadmaster page
-showing which drive to plug in next and how much is waiting for it.
+showing which drive to plug in next and how much is waiting for it:
+
+<p align="center">
+  <img src="images/lcd/loadmaster-next.png" alt="Next drive to plug in" width="380">
+</p>
 
 ### Drive space and health
 
