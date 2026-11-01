@@ -12,6 +12,7 @@ This directory is the operating manual for the current TruePanel platform.
 - [AEGIS Airworthiness](AEGIS_AIRWORTHINESS.md) for the time-bounded acceptance envelope, passive platform witness, requalification, independent approval, staged-byte witness, signatures, and manual final-handoff boundary
 - [Installation](INSTALLATION.md) for compatibility checks, native deployment, service activation, configuration, and removal
 - [Upgrade and rollback](UPGRADING.md) for guarded staging, promotion, verification, cleanup, repair, and recovery
+- [1.4.0 release notes](RELEASE_1.4.0.md) for what is in the current stable release
 - [CLI reference](CLI.md) for diagnostics, lifecycle, simulation, plugins, hardware, and laboratory commands
 - [Hardware support](HARDWARE.md) for verified controllers, ports, command maps, and safety boundaries
 

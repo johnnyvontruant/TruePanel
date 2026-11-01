@@ -6,6 +6,24 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-31
+
+TruePanel 1.4.0 is the stable release of the 1.4 line. It promotes
+1.4.0-rc1 without product changes after the candidate ran on BattleStation
+from 2026-10-27 with both services active, no restarts and no logged errors.
+See `docs/RELEASE_1.4.0.md`.
+
+### Changed
+
+- Product version is `1.4.0`; the release contract now requires a stable
+  version with no prerelease suffix.
+
+### Documentation
+
+- Loadmaster front-panel screens added to the LCD gallery and to
+  `docs/LOADMASTER.md`, rendered from the real screen code.
+- README release status and Loadmaster highlights updated for 1.4.0.
+
 ## [1.4.0-rc1] - 2026-10-27
 
 TruePanel 1.4.0-rc1 is the first candidate for the 1.4 line. Its headline is
