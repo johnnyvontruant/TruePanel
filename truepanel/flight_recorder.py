@@ -4,12 +4,20 @@ No logging failure is allowed to interrupt an alert or hardware operation.
 The recorder records state transitions; callers decide when events are new.
 """
 from datetime import datetime, timezone
-from logging import Formatter, INFO, Logger, getLogger
+from logging import Formatter, INFO, Logger
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from threading import Lock
 
 DEFAULT_PATH = "/var/lib/truepanel/logs/flight.log"
+
+
+class StrictRotatingFileHandler(RotatingFileHandler):
+    """Make file write errors visible to the fail-open caller."""
+
+    def handleError(self, record):
+        raise OSError("Flight Recorder write failed")
+
 _lock = Lock()
 _recorders = {}
 
@@ -22,7 +30,7 @@ def _recorder(path):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         logger = Logger("truepanel.flight." + str(len(_recorders)), level=INFO)
         logger.propagate = False
-        handler = RotatingFileHandler(
+        handler = StrictRotatingFileHandler(
             path, maxBytes=5 * 1024 * 1024, backupCount=7,
             encoding="utf-8",
         )
