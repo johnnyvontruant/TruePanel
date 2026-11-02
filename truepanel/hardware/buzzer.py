@@ -12,6 +12,8 @@ import struct
 import threading
 import time
 
+from truepanel.flight_recorder import record as record_flight
+
 
 LOGGER = logging.getLogger("truepanel.buzzer")
 
@@ -151,7 +153,11 @@ class Buzzer:
 
             if success:
                 self.last_beep = now
-
+                record_flight("BUZZER", "ALERT",
+                              f"beep pattern={pattern} backend={self.backend} force={force}")
+            else:
+                record_flight("BUZZER", "WARNING",
+                              f"beep failed pattern={pattern} backend={self.backend}")
             return success
 
     def melody(self, notes, gap=0.025):
@@ -184,6 +190,8 @@ class Buzzer:
                 LOGGER.warning("Unable to use PC speaker %s: %s", device, error)
                 return False
 
+        record_flight("BUZZER", "ALERT",
+                      f"melody notes={len(notes)} backend={self.backend}")
         return True
 
     def startup(self):
