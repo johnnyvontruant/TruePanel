@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from .constants import Priority
+from truepanel.flight_recorder import record as record_flight
 
 
 class AlertState(Enum):
@@ -98,6 +99,8 @@ class AlertManager:
                 return False
 
         self.history.appendleft(event)
+        record_flight("ALERT", "CRITICAL" if event.priority >= Priority.CRITICAL else "WARNING",
+                      f"event_id={event.event_id} message={event.message}")
         return True
 
     def reset_audible_state(self):
