@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.10.31.1 · refreshed 2026-10-31 · 41 experiment(s)
+Registry version 2026.11.02.1 · refreshed 2026-11-02 · 42 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -331,3 +331,11 @@ Thirteen deterministic paths produce one label-blind passive replay receipt and 
 - Safety: `READ_ONLY_EVIDENCE`
 - Strongest follow-up: Create a separately authenticated manual replay-review receipt that records ACCEPT_EVIDENCE or HOLD_EVIDENCE over this exact replay while granting no field validation installation promotion deployment capture or hardware authority.
 - Revisit when: JT supplies a real confirmed sanitized recording; an independently governed challenger detector is available; a second human reviewer becomes available; field validation installation or deployment is proposed
+
+## TP-EXP-0048 · AEGIS two-person replay evidence review
+
+Five deterministic paths prove distinct-key concurrence, explicit dissent, authority-escalation rejection, exclusive receipt creation, and duplicate HOLD while every operational authority remains zero.
+
+- Safety: `READ_ONLY_EVIDENCE`
+- Strongest follow-up: Add a governed reviewer-roster and key-rotation contract with revocation and expiry while keeping quorum unable to authorize field validation installation deployment or hardware action.
+- Revisit when: two governed human reviewer identities are provisioned; remote transparency or timestamp services are proposed; a challenger detector is available; field validation installation or deployment is proposed

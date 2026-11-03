@@ -407,6 +407,63 @@ def evaluate_temperature_authenticated_replay_review(
     }
 
 
+def verify_recorded_temperature_authenticated_replay_review(
+    replay_receipt_path: str | Path,
+    verifier: Any,
+    statement_path: str | Path,
+    signature_path: str | Path,
+    receipt_path: str | Path,
+    *,
+    now_utc: str,
+) -> dict[str, Any]:
+    """Reconstruct the signed review and immutable receipt without writing."""
+    replay = _replay(Path(replay_receipt_path))
+    statement_bytes = _snapshot(Path(statement_path), MAX_PUBLIC_BYTES)
+    statement = json.loads(statement_bytes)
+    if not isinstance(statement, dict) or set(statement) != _STATEMENT_KEYS:
+        raise ValueError("ReplayReviewStatementFieldsInvalid")
+    expected = build_temperature_authenticated_replay_review_statement(
+        replay_receipt_path,
+        verifier,
+        decision=statement["decision"],
+        rationale=statement["rationale"],
+        prepared_at_utc=statement["prepared_at_utc"],
+        expires_at_utc=statement["expires_at_utc"],
+        now_utc=now_utc,
+    )
+    if statement_bytes != expected:
+        raise ValueError("ReplayReviewStatementMismatch")
+    signature = _snapshot(Path(signature_path), MAX_SIGNATURE_BYTES)
+    if verifier(KEY_ID, statement_bytes, signature.decode("ascii")) is not True:
+        raise ValueError("ReplayReviewSignatureNotAuthenticated")
+    receipt_bytes = _snapshot(Path(receipt_path), MAX_PUBLIC_BYTES)
+    receipt = json.loads(receipt_bytes)
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt) != _RECEIPT_KEYS
+        or receipt_bytes != _canonical(receipt) + b"\n"
+    ):
+        raise ValueError("ReplayReviewReceiptInvalid")
+    accepted = statement["decision"] == DECISION_ACCEPT
+    expected_receipt = {
+        "schema": RECEIPT_SCHEMA,
+        "status": STATUS_ACCEPTED if accepted else STATUS_HELD,
+        "recorded_at_utc": receipt["recorded_at_utc"],
+        "decision": statement["decision"],
+        "rationale": statement["rationale"],
+        "review_statement_sha256": _sha(statement_bytes),
+        "review_signature_sha256": _sha(signature),
+        "replay_receipt_sha256": replay["receipt_sha256"],
+        "operator_key_fingerprint": statement["operator_key_fingerprint"],
+        "manual_calibration_consideration": accepted,
+        **{key: False for key in sorted(_DENIED)},
+    }
+    expected_receipt["receipt_sha256"] = _sha(expected_receipt)
+    if receipt != expected_receipt:
+        raise ValueError("ReplayReviewReceiptMismatch")
+    return receipt
+
+
 def pending_temperature_authenticated_replay_review(
     replay: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -436,4 +493,5 @@ __all__ = [
     "evaluate_temperature_authenticated_replay_review",
     "export_temperature_authenticated_replay_review_statement",
     "pending_temperature_authenticated_replay_review",
+    "verify_recorded_temperature_authenticated_replay_review",
 ]
