@@ -1,0 +1,107 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "82912a4b8bb0f14438c184595cba576ad6f115ecc5320752b6dad98637467a03",
+  "experiment_id": "TP-EXP-0038",
+  "hardware_isolated": true,
+  "invalidated_assumption": "Freezing detector results alone prevents selection bias; the complete intake inventory must be frozen before predictions and joined one-for-one afterward.",
+  "measurements": {
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "deployments": 0,
+    "duplicate_results_accepted": 0,
+    "field_validations": 0,
+    "frozen_count": 2,
+    "hardware_actions": 0,
+    "hold_count": 10,
+    "labels_accepted": 0,
+    "order_independent_manifest_identity": true,
+    "planned_case_count": 440,
+    "planned_omissions_accepted": 0,
+    "result_count": 440,
+    "runtime_writes": 0,
+    "scenario_count": 12,
+    "scores_accepted": 0,
+    "system_profile_count": 2,
+    "unplanned_results_accepted": 0,
+    "unsafe_ready_count": 0,
+    "workload_class_count": 4
+  },
+  "production_mutation": false,
+  "scenario": "aegis-two-phase-blinded-cohort-manifest",
+  "scenarios": [
+    {
+      "error_count": 0,
+      "ready_for_authenticated_label_join": true,
+      "scenario": "complete-two-phase-freeze",
+      "status": "BLINDED_COHORT_MANIFEST_FROZEN"
+    },
+    {
+      "error_count": 0,
+      "ready_for_authenticated_label_join": true,
+      "scenario": "input-order-independent-freeze",
+      "status": "BLINDED_COHORT_MANIFEST_FROZEN"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "planned-case-omitted",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "unplanned-case-added",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "duplicate-case-result",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "result-digest-tamper",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "recording-substitution",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "detector-contract-drift",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "prediction-leaked-into-plan",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "outcome-label-injected",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "statistical-contract-substitution",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 2,
+      "ready_for_authenticated_label_join": false,
+      "scenario": "post-freeze-authority-edit",
+      "status": "HOLD"
+    }
+  ],
+  "schema_version": 1,
+  "simulation": true
+}

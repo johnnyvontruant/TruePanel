@@ -1,0 +1,144 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "cdad49f65e72d61ab0e64df59f884f75057410e7f65b5c4a7349732546bd4ce6",
+  "experiment_id": "TP-EXP-0039",
+  "hardware_isolated": true,
+  "invalidated_assumption": "A passing score is the only result worth sealing; a failing authenticated score must also consume the one evaluation so it cannot be relabeled or rerun.",
+  "measurements": {
+    "abstention_rate_wilson_upper": 0.008655,
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "case_count": 440,
+    "case_exclusions": 0,
+    "deployments": 0,
+    "failing_score_sealed_count": 1,
+    "false_positive_rate_wilson_upper": 0.009512,
+    "field_validations": 0,
+    "fixture_private_keys_created": 1,
+    "fixture_private_keys_retained": 0,
+    "fixture_score_receipts_committed": 2,
+    "hardware_actions": 0,
+    "hold_count": 9,
+    "isolated_threshold_index": 46,
+    "lead_samples": 27,
+    "median_lead_samples": 27.0,
+    "negative_cases": 400,
+    "p10_lead_samples": 27,
+    "passing_score_count": 1,
+    "positive_cases": 40,
+    "private_key_inputs": 0,
+    "production_writes": 0,
+    "repeat_scores_accepted": 0,
+    "scenario_count": 13,
+    "scored_count": 2,
+    "sensitivity_wilson_lower": 0.912378,
+    "shared_cooling_index": 19,
+    "signer_invocations_by_truepanel": 0,
+    "signing_ready_count": 2,
+    "threshold_changes": 0
+  },
+  "production_mutation": false,
+  "scenario": "aegis-authenticated-one-shot-label-join",
+  "scenarios": [
+    {
+      "error_count": 0,
+      "scenario": "complete-public-label-statement",
+      "status": "READY_FOR_OFFLINE_LABEL_JOIN_SIGNATURE"
+    },
+    {
+      "error_count": 0,
+      "scenario": "authenticated-one-shot-score",
+      "score_committed": true,
+      "signature_verified": true,
+      "statistical_gates_passed": true,
+      "status": "AUTHENTICATED_CALIBRATION_SCORE_REVIEW_READY"
+    },
+    {
+      "error_count": 1,
+      "scenario": "same-detector-rescore",
+      "score_committed": false,
+      "signature_verified": true,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "scenario": "missing-frozen-case",
+      "score_committed": false,
+      "signature_verified": false,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "scenario": "duplicate-case-label",
+      "score_committed": false,
+      "signature_verified": false,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "scenario": "post-signature-label-drift",
+      "score_committed": false,
+      "signature_verified": false,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "scenario": "manifest-substitution",
+      "score_committed": false,
+      "signature_verified": false,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "scenario": "statement-authority-escalation",
+      "score_committed": false,
+      "signature_verified": false,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "scenario": "wrong-signature-namespace",
+      "score_committed": false,
+      "signature_verified": false,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "scenario": "expired-label-statement",
+      "score_committed": false,
+      "signature_verified": false,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "scenario": "unsafe-score-registry",
+      "score_committed": false,
+      "signature_verified": true,
+      "statistical_gates_passed": false,
+      "status": "HOLD"
+    },
+    {
+      "error_count": 0,
+      "scenario": "complete-weak-public-label-statement",
+      "status": "READY_FOR_OFFLINE_LABEL_JOIN_SIGNATURE"
+    },
+    {
+      "error_count": 0,
+      "scenario": "authenticated-failing-score-sealed",
+      "score_committed": true,
+      "signature_verified": true,
+      "statistical_gates_passed": false,
+      "status": "AUTHENTICATED_CALIBRATION_SCORE_REVIEW_READY"
+    }
+  ],
+  "schema_version": 1,
+  "simulation": true
+}
