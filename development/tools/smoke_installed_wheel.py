@@ -12,13 +12,19 @@ from pathlib import Path
 
 
 def run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        command,
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        return subprocess.run(
+            command,
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            f"installed-wheel command failed ({error.returncode})\n"
+            f"stdout:\n{error.stdout}\nstderr:\n{error.stderr}"
+        ) from error
 
 
 def main() -> int:
