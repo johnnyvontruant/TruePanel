@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.02.1 · refreshed 2026-11-02 · 42 experiment(s)
+Registry version 2026.11.03.1 · refreshed 2026-11-03 · 43 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -339,3 +339,11 @@ Five deterministic paths prove distinct-key concurrence, explicit dissent, autho
 - Safety: `READ_ONLY_EVIDENCE`
 - Strongest follow-up: Add a governed reviewer-roster and key-rotation contract with revocation and expiry while keeping quorum unable to authorize field validation installation deployment or hardware action.
 - Revisit when: two governed human reviewer identities are provisioned; remote transparency or timestamp services are proposed; a challenger detector is available; field validation installation or deployment is proposed
+
+## TP-EXP-0049 · AEGIS governed reviewer roster
+
+Six deterministic paths activate two valid roster generations and hold expiration, revocation, duplicate identity, and authority escalation while every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Design an offline dual-signed governance-root rotation ceremony with compromise-time revocation and provisioned human identity evidence.
+- Revisit when: two real human reviewer identities are provisioned; an offline governance root ceremony is planned; compromise-time revocation is required; remote transparency services are proposed; field validation installation or deployment is proposed

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.02.1",
-  "updated_at": "2026-11-02",
+  "registry_version": "2026.11.03.1",
+  "updated_at": "2026-11-03",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -812,6 +812,25 @@
       "revisit_conditions": ["two governed human reviewer identities are provisioned", "remote transparency or timestamp services are proposed", "a challenger detector is available", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Add a governed reviewer-roster and key-rotation contract with revocation and expiry while keeping quorum unable to authorize field validation installation deployment or hardware action.",
       "freshness": {"reviewed_at": "2026-11-02", "review_after": "2027-05-02"}
+    },
+    {
+      "id": "TP-EXP-0049", "title": "AEGIS governed reviewer roster", "state": "COMPLETED",
+      "hypothesis": "A root-signed expiring generation-chained reviewer roster can bind two distinct roles and revoke or rotate their keys without turning reviewer identity into operational authority.",
+      "value": "Closes the cryptographic-identity governance gap before two-person evidence quorum is trusted.",
+      "prior_art": ["TUF root rotation and unique-key thresholds", "OpenSSH SSHSIG allowed signers and KRL", "in-toto owner layouts and functionaries", "Sigstore trust root", "SPIFFE trust bundles"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-governed-reviewer-roster", "pr": null, "commits": []},
+      "protocol": ["anchor one exact governance-root public key", "verify a canonical root-signed roster in a workflow-specific SSHSIG namespace", "bind primary and independent roles to distinct fingerprints", "require activation expiry generation predecessor digest and threshold two", "reject any active fingerprint in the signed revocation set", "rehearse a generation-two rotation", "stop at reviewer-quorum eligibility", "deny validation installation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-governed-reviewer-roster", "tests/test_aegis_temperature_governed_reviewer_roster.py"],
+      "success_criteria": ["generation one and chained generation two activate", "expired revoked duplicate-identity and authority-escalated manifests hold", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "private fixture keys are not retained", "field validation deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["an unsigned expired or noncanonical roster activates", "one key fills both reviewer roles", "a revoked reviewer contributes to quorum", "a rotation omits predecessor continuity", "roster activation is called human identity proof", "deployment storage network runtime or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-governed-reviewer-roster-v1.json", "sha256": "38522b238ed032a6b4be1ba053e98337d4754e36c691c528065c2b9964e0fd3b"}],
+      "outcome": {"conclusion": "Six deterministic paths activate two valid roster generations and hold expiration, revocation, duplicate identity, and authority escalation while every operational authority remains zero."},
+      "invalidated_assumptions": ["two distinct keys necessarily represent two governed people", "a mutable allowed-signers file preserves rotation history", "key presence implies indefinite trust", "revocation can wait until the next code release", "reviewer authorization implies operational authority"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_governed_reviewer_roster.py", "python -c \"from truepanel.holodeck.aegis_temperature_governed_reviewer_roster import run_temperature_governed_reviewer_roster_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["two real human reviewer identities are provisioned", "an offline governance root ceremony is planned", "compromise-time revocation is required", "remote transparency services are proposed", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Design an offline dual-signed governance-root rotation ceremony with compromise-time revocation and provisioned human identity evidence.",
+      "freshness": {"reviewed_at": "2026-11-03", "review_after": "2027-05-03"}
     }
   ]
 }

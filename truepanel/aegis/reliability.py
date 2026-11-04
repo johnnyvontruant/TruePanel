@@ -26,6 +26,9 @@ from .temperature_authenticated_acceptance import (
 from .temperature_authenticated_label_join import (
     pending_temperature_authenticated_label_join,
 )
+from .temperature_authenticated_replay_review import (
+    pending_temperature_authenticated_replay_review,
+)
 from .temperature_blinded_cohort_manifest import (
     pending_temperature_blinded_cohort_manifest,
 )
@@ -65,23 +68,23 @@ from .temperature_field_checkride_confirmation import (
 )
 from .temperature_field_checkride_plan import pending_temperature_field_checkride_plan
 from .temperature_field_review_receipt import pending_temperature_field_review_receipt
+from .temperature_governed_reviewer_roster import (
+    pending_temperature_governed_reviewer_roster,
+)
 from .temperature_intake_bound_detector_result import (
     pending_temperature_intake_bound_detector_result,
 )
 from .temperature_label_blind_passive_replay import (
     pending_temperature_label_blind_passive_replay,
 )
-from .temperature_authenticated_replay_review import (
-    pending_temperature_authenticated_replay_review,
-)
-from .temperature_two_person_replay_review import (
-    pending_temperature_two_person_replay_review,
-)
 from .temperature_long_window_intake import pending_temperature_long_window_intake
 from .temperature_recording_intake import pending_temperature_recording_intake
 from .temperature_score_review import pending_temperature_score_review
 from .temperature_statistical_calibration_contract import (
     pending_temperature_statistical_calibration_contract,
+)
+from .temperature_two_person_replay_review import (
+    pending_temperature_two_person_replay_review,
 )
 
 
@@ -253,6 +256,11 @@ class AegisReliabilityEngine:
         self.temperature_two_person_replay_review = (
             pending_temperature_two_person_replay_review(
                 self.temperature_authenticated_replay_review
+            )
+        )
+        self.temperature_governed_reviewer_roster = (
+            pending_temperature_governed_reviewer_roster(
+                self.temperature_two_person_replay_review
             )
         )
         self.temperature_detector_result_binding = (
@@ -555,6 +563,7 @@ class AegisReliabilityEngine:
             "coverage_label_blind_passive_replay": self.temperature_label_blind_passive_replay,
             "coverage_authenticated_replay_review": self.temperature_authenticated_replay_review,
             "coverage_two_person_replay_review": self.temperature_two_person_replay_review,
+            "coverage_governed_reviewer_roster": self.temperature_governed_reviewer_roster,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
