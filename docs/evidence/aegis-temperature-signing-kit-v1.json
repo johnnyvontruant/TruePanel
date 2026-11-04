@@ -1,0 +1,41 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "81cff4a05e10a1df9349c7488a095fa9f5e24053705482cd512f045b31332a74",
+  "experiment_id": "TP-EXP-0027",
+  "hardware_isolated": true,
+  "measurements": {
+    "authenticated_development_acceptance_count": 1,
+    "candidate_installations": 0,
+    "deployments": 0,
+    "fixture_private_keys_created": 1,
+    "fixture_private_keys_retained": 0,
+    "hardware_actions": 0,
+    "hold_count": 10,
+    "private_key_inputs_accepted": 0,
+    "production_keys": 0,
+    "runtime_acceptances": 0,
+    "runtime_writes": 0,
+    "scenario_count": 12,
+    "signer_invocations_by_truepanel": 0,
+    "signing_ready_count": 1
+  },
+  "production_mutation": false,
+  "scenario": "aegis-temperature-public-signing-kit",
+  "scenarios": [
+    {"error_count": 0, "scenario": "public-only-kit-export", "status": "READY_FOR_OFFLINE_OPERATOR_SIGNATURE"},
+    {"error_count": 0, "scenario": "exact-returned-sshsig", "status": "AUTHENTICATED_DEVELOPMENT_ACCEPTED_FOR_REVIEW"},
+    {"error_count": 1, "scenario": "occupied-output", "status": "HOLD"},
+    {"error_count": 1, "scenario": "output-inside-checkout", "status": "HOLD"},
+    {"error_count": 1, "scenario": "symlinked-kit", "status": "HOLD"},
+    {"error_count": 1, "scenario": "statement-tampering", "status": "HOLD"},
+    {"error_count": 1, "scenario": "manifest-authority-escalation", "status": "HOLD"},
+    {"error_count": 1, "scenario": "unexpected-kit-file", "status": "HOLD"},
+    {"error_count": 1, "scenario": "unsafe-signature-permissions", "status": "HOLD"},
+    {"error_count": 1, "scenario": "symlinked-signature", "status": "HOLD"},
+    {"error_count": 1, "scenario": "invalid-returned-signature", "status": "HOLD"},
+    {"error_count": 1, "scenario": "expired-confirmation", "status": "HOLD"}
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "temporary_fixture_removed": true
+}
