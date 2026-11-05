@@ -79,6 +79,9 @@ from .temperature_label_blind_passive_replay import (
 )
 from .temperature_long_window_intake import pending_temperature_long_window_intake
 from .temperature_recording_intake import pending_temperature_recording_intake
+from .temperature_reviewer_root_rotation import (
+    pending_temperature_reviewer_root_rotation,
+)
 from .temperature_score_review import pending_temperature_score_review
 from .temperature_statistical_calibration_contract import (
     pending_temperature_statistical_calibration_contract,
@@ -261,6 +264,11 @@ class AegisReliabilityEngine:
         self.temperature_governed_reviewer_roster = (
             pending_temperature_governed_reviewer_roster(
                 self.temperature_two_person_replay_review
+            )
+        )
+        self.temperature_reviewer_root_rotation = (
+            pending_temperature_reviewer_root_rotation(
+                self.temperature_governed_reviewer_roster
             )
         )
         self.temperature_detector_result_binding = (
@@ -564,6 +572,7 @@ class AegisReliabilityEngine:
             "coverage_authenticated_replay_review": self.temperature_authenticated_replay_review,
             "coverage_two_person_replay_review": self.temperature_two_person_replay_review,
             "coverage_governed_reviewer_roster": self.temperature_governed_reviewer_roster,
+            "coverage_reviewer_root_rotation": self.temperature_reviewer_root_rotation,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {

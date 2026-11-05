@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.03.1",
-  "updated_at": "2026-11-03",
+  "registry_version": "2026.11.04.1",
+  "updated_at": "2026-11-04",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -831,6 +831,25 @@
       "revisit_conditions": ["two real human reviewer identities are provisioned", "an offline governance root ceremony is planned", "compromise-time revocation is required", "remote transparency services are proposed", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Design an offline dual-signed governance-root rotation ceremony with compromise-time revocation and provisioned human identity evidence.",
       "freshness": {"reviewed_at": "2026-11-03", "review_after": "2027-05-03"}
+    },
+    {
+      "id": "TP-EXP-0050", "title": "AEGIS dual-root rotation ceremony", "state": "COMPLETED",
+      "hypothesis": "A consecutive reviewer-governance root transition signed by both predecessor and successor roots can preserve trust continuity and compromise-time revocation without granting operational authority.",
+      "value": "Prevents a proposed successor root from authorizing itself and makes rotation history machine-verifiable.",
+      "prior_art": ["TUF predecessor-and-successor root thresholds", "Sigstore root-signing ceremonies", "Uptane compromised-root recovery", "OpenSSH SSHSIG namespaces"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-dual-root-rotation-ceremony", "pr": null, "commits": []},
+      "protocol": ["bind exact predecessor and successor roster-manifest digests", "require generation N to N+1", "require distinct predecessor and successor root fingerprints", "sign identical canonical bytes with both roots", "record compromise and revocation timestamps in monotonic order", "verify a two-hour ceremony window", "stop at reviewer-governance trust transition", "deny validation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-dual-root-rotation-ceremony", "tests/test_aegis_temperature_reviewer_root_rotation.py"],
+      "success_criteria": ["normal and compromise-time transitions require two valid signatures", "missing signatures generation gaps impossible compromise chronology and authority escalation hold", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "fixture private keys are not retained", "field validation deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["a successor root authorizes itself", "an unsigned predecessor or successor transition activates", "a generation is skipped", "revocation predates compromise", "rotation proves human identity", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-reviewer-root-rotation-v1.json", "sha256": "6ee07133bc8ee0f5ec7fa79a206c2b21898dcfb3d6565508572bd64ecb36ea96"}],
+      "outcome": {"conclusion": "Seven deterministic paths trust two dual-signed transitions and hold five incomplete or inconsistent transitions while every operational authority remains zero."},
+      "invalidated_assumptions": ["a predecessor digest is equivalent to predecessor consent", "a successor may safely authorize itself", "generation jumps are harmless", "revocation chronology need not be explicit", "two root keys establish two human custodians"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_reviewer_root_rotation.py", "python -c \"from truepanel.holodeck.aegis_temperature_reviewer_root_rotation import run_temperature_reviewer_root_rotation_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["offline human root keyholders are provisioned", "threshold greater than one per generation is proposed", "historical reviewer signatures must honor compromise time", "an external transparency witness is proposed", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Provision human root custody and enforce compromise-time revocation when validating historical reviewer signatures.",
+      "freshness": {"reviewed_at": "2026-11-04", "review_after": "2027-05-04"}
     }
   ]
 }

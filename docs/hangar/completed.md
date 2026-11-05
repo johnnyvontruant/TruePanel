@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.03.1 · refreshed 2026-11-03 · 43 experiment(s)
+Registry version 2026.11.04.1 · refreshed 2026-11-04 · 44 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -347,3 +347,11 @@ Six deterministic paths activate two valid roster generations and hold expiratio
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Design an offline dual-signed governance-root rotation ceremony with compromise-time revocation and provisioned human identity evidence.
 - Revisit when: two real human reviewer identities are provisioned; an offline governance root ceremony is planned; compromise-time revocation is required; remote transparency services are proposed; field validation installation or deployment is proposed
+
+## TP-EXP-0050 · AEGIS dual-root rotation ceremony
+
+Seven deterministic paths trust two dual-signed transitions and hold five incomplete or inconsistent transitions while every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision human root custody and enforce compromise-time revocation when validating historical reviewer signatures.
+- Revisit when: offline human root keyholders are provisioned; threshold greater than one per generation is proposed; historical reviewer signatures must honor compromise time; an external transparency witness is proposed; field validation installation or deployment is proposed
