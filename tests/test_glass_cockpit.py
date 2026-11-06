@@ -68,7 +68,7 @@ def test_hangar_closed_experiment_and_evidence_agree():
     assert status_summary(registry) == {
         "FUTURE": 2,
         "IN_PROGRESS": 1,
-        "COMPLETED": 44,
+        "COMPLETED": 45,
         "FAILED": 2,
     }
 

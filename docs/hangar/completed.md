@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.04.1 · refreshed 2026-11-04 · 44 experiment(s)
+Registry version 2026.11.05.1 · refreshed 2026-11-05 · 45 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -355,3 +355,11 @@ Seven deterministic paths trust two dual-signed transitions and hold five incomp
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision human root custody and enforce compromise-time revocation when validating historical reviewer signatures.
 - Revisit when: offline human root keyholders are provisioned; threshold greater than one per generation is proposed; historical reviewer signatures must honor compromise time; an external transparency witness is proposed; field validation installation or deployment is proposed
+
+## TP-EXP-0051 · AEGIS compromise-time reviewer-signature validity
+
+Six deterministic paths accept pre-compromise and unaffected signatures, hold signatures at and after compromise, and reject untrusted rotation and authority escalation while every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add a replaceable timestamp-evidence interface and deterministic RFC 3161 fixture so historical eligibility uses independently witnessed time rather than only signer-asserted time.
+- Revisit when: an RFC 3161 fixture is available; a transparency-log witness is proposed; offline human root keyholders are provisioned; field validation installation or deployment is proposed
