@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.05.1 · refreshed 2026-11-05 · 45 experiment(s)
+Registry version 2026.11.06.1 · refreshed 2026-11-06 · 46 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -363,3 +363,11 @@ Six deterministic paths accept pre-compromise and unaffected signatures, hold si
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add a replaceable timestamp-evidence interface and deterministic RFC 3161 fixture so historical eligibility uses independently witnessed time rather than only signer-asserted time.
 - Revisit when: an RFC 3161 fixture is available; a transparency-log witness is proposed; offline human root keyholders are provisioned; field validation installation or deployment is proposed
+
+## TP-EXP-0052 · AEGIS RFC 3161 reviewer timestamp witness
+
+Seven deterministic paths use real DER RFC 3161 tokens to accept witnessed pre-compromise and unaffected signatures and hold post-compromise tampered delayed untrusted-root and authority-escalated evidence while every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Govern timestamp trust-root rotation validity intervals archived revocation evidence and multi-operator thresholds before any public TSA or production workflow is enabled.
+- Revisit when: a production TSA operator policy is proposed; multiple independent timestamp authorities are required; archival CRL or OCSP evidence is available; a transparency-log witness is proposed; field validation installation or deployment is proposed

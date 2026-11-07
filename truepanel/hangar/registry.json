@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.05.1",
-  "updated_at": "2026-11-05",
+  "registry_version": "2026.11.06.1",
+  "updated_at": "2026-11-06",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -869,6 +869,25 @@
       "revisit_conditions": ["an RFC 3161 fixture is available", "a transparency-log witness is proposed", "offline human root keyholders are provisioned", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Add a replaceable timestamp-evidence interface and deterministic RFC 3161 fixture so historical eligibility uses independently witnessed time rather than only signer-asserted time.",
       "freshness": {"reviewed_at": "2026-11-05", "review_after": "2027-05-05"}
+    },
+    {
+      "id": "TP-EXP-0052", "title": "AEGIS RFC 3161 reviewer timestamp witness", "state": "COMPLETED",
+      "hypothesis": "An RFC 3161 countersignature over the exact reviewer SSHSIG can replace signer-asserted time with independently verifiable evidence before compromise-time quorum eligibility is decided.",
+      "value": "Closes the backdating gap that remains when a compromised reviewer controls both the signature key and its claimed preparation time.",
+      "prior_art": ["RFC 3161 signature timestamps", "OpenSSL ts verifier", "Sigstore timestamp bundles", "Rekor v2 external timestamp authority"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-rfc3161-time-witness", "pr": null, "commits": []},
+      "protocol": ["verify the exact reviewer statement SSHSIG and dual-root compromise timeline", "verify one DER RFC 3161 token over the exact SSHSIG bytes", "require the protected timestamp trust root exact policy OID and SHA-256", "require timestamp at or after statement preparation and within fifteen minutes", "compare independently witnessed time to compromise time", "stop at reviewer-quorum eligibility", "deny validation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-rfc3161-reviewer-timestamp-witness", "tests/test_aegis_temperature_reviewer_timestamp_witness.py"],
+      "success_criteria": ["witnessed pre-compromise and unaffected signatures remain eligible", "witnessed post-compromise signatures hold", "tampered delayed untrusted-root and authority-escalated evidence holds", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "fixture private keys are not retained", "field validation deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["signer-asserted time substitutes for the witness", "a token over different bytes verifies", "an untrusted policy or chain passes", "a delayed or future timestamp passes", "timestamp eligibility proves TSA clock quality or human identity", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-reviewer-timestamp-witness-v1.json", "sha256": "b6f7d3fd8d147b2e90677f8a7c24ff1e56d77cfd32a9611d6dd08f2123792e29"}],
+      "outcome": {"conclusion": "Seven deterministic paths use real DER RFC 3161 tokens to accept witnessed pre-compromise and unaffected signatures and hold post-compromise tampered delayed untrusted-root and authority-escalated evidence while every operational authority remains zero."},
+      "invalidated_assumptions": ["an authenticated signer timestamp is independent evidence", "timestamping the artifact is equivalent to countersigning its signature", "one valid token proves the TSA clock is honest", "root rotation supplies historical time", "timestamp eligibility implies operational authority"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_reviewer_timestamp_witness.py", "python -c \"from truepanel.holodeck.aegis_temperature_reviewer_timestamp_witness import run_temperature_reviewer_timestamp_witness_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["a production TSA operator policy is proposed", "multiple independent timestamp authorities are required", "archival CRL or OCSP evidence is available", "a transparency-log witness is proposed", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Govern timestamp trust-root rotation validity intervals archived revocation evidence and multi-operator thresholds before any public TSA or production workflow is enabled.",
+      "freshness": {"reviewed_at": "2026-11-06", "review_after": "2027-05-06"}
     }
   ]
 }

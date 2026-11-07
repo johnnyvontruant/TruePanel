@@ -85,6 +85,9 @@ from .temperature_reviewer_root_rotation import (
 from .temperature_reviewer_signature_validity import (
     pending_temperature_reviewer_signature_validity,
 )
+from .temperature_reviewer_timestamp_witness import (
+    pending_temperature_reviewer_timestamp_witness,
+)
 from .temperature_score_review import pending_temperature_score_review
 from .temperature_statistical_calibration_contract import (
     pending_temperature_statistical_calibration_contract,
@@ -277,6 +280,11 @@ class AegisReliabilityEngine:
         self.temperature_reviewer_signature_validity = (
             pending_temperature_reviewer_signature_validity(
                 self.temperature_reviewer_root_rotation
+            )
+        )
+        self.temperature_reviewer_timestamp_witness = (
+            pending_temperature_reviewer_timestamp_witness(
+                self.temperature_reviewer_signature_validity
             )
         )
         self.temperature_detector_result_binding = (
@@ -582,6 +590,7 @@ class AegisReliabilityEngine:
             "coverage_governed_reviewer_roster": self.temperature_governed_reviewer_roster,
             "coverage_reviewer_root_rotation": self.temperature_reviewer_root_rotation,
             "coverage_reviewer_signature_validity": self.temperature_reviewer_signature_validity,
+            "coverage_reviewer_timestamp_witness": self.temperature_reviewer_timestamp_witness,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
