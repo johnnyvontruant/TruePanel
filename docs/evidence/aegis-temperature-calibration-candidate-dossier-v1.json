@@ -1,0 +1,75 @@
+{
+  "hardware_isolated": true,
+  "limitations": [
+    "fixture identities only",
+    "manual review remains mandatory",
+    "no operational authority"
+  ],
+  "measurements": {
+    "automatic_promotions": 0,
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "coverage_gaps": 0,
+    "coverage_total": 8,
+    "coverage_trusted": 8,
+    "deployments": 0,
+    "hardware_actions": 0,
+    "hold_count": 7,
+    "lead_samples": 27,
+    "ready_count": 1,
+    "scenario_count": 8,
+    "unsafe_ready_count": 0
+  },
+  "scenarios": [
+    {
+      "error_count": 0,
+      "ready": true,
+      "scenario": "complete-content-bound-dossier",
+      "status": "READY_FOR_MANUAL_CALIBRATION_CANDIDATE_REVIEW"
+    },
+    {
+      "error_count": 1,
+      "ready": false,
+      "scenario": "coverage-gap",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready": false,
+      "scenario": "detector-substitution",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready": false,
+      "scenario": "unsafe-holodeck-evidence",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready": false,
+      "scenario": "authority-escalation",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready": false,
+      "scenario": "occupied-output",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready": false,
+      "scenario": "missing-score",
+      "status": "HOLD"
+    },
+    {
+      "error_count": 1,
+      "ready": false,
+      "scenario": "noncanonical-score",
+      "status": "HOLD"
+    }
+  ],
+  "schema": "truepanel.holodeck-temperature-calibration-candidate-dossier/v1",
+  "simulation": true
+}

@@ -1,0 +1,37 @@
+{
+  "hardware_isolated": true,
+  "measurements": {
+    "active_count": 2,
+    "active_reviewers": 2,
+    "confidence": 0.95,
+    "coverage_gaps": 0,
+    "coverage_total": 8,
+    "coverage_trusted": 8,
+    "deployments": 0,
+    "duplicate_identity_acceptances": 0,
+    "field_validations": 0,
+    "fixture_private_keys_created": 3,
+    "fixture_private_keys_retained": 0,
+    "hardware_actions": 0,
+    "hold_count": 4,
+    "isolated_threshold_first_match_sample": 46,
+    "lead_samples": 27,
+    "revoked_acceptances": 0,
+    "rotation_generations": 2,
+    "runtime_writes": 0,
+    "scenario_count": 6,
+    "shared_cooling_first_match_sample": 19,
+    "supporting_signal_count": 5,
+    "threshold": 2
+  },
+  "scenarios": [
+    {"errors": [], "name": "active", "status": "GOVERNED_REVIEWER_ROSTER_ACTIVE"},
+    {"errors": [], "name": "rotation", "status": "GOVERNED_REVIEWER_ROSTER_ACTIVE"},
+    {"errors": ["ReviewerRosterNotActive"], "name": "expired", "status": "HOLD"},
+    {"errors": ["ReviewerRosterIdentityRevoked"], "name": "revoked-primary", "status": "HOLD"},
+    {"errors": ["ReviewerRosterIdentityNotDistinct"], "name": "duplicate-identity", "status": "HOLD"},
+    {"errors": ["ReviewerRosterManifestMismatch"], "name": "authority-escalation", "status": "HOLD"}
+  ],
+  "schema": "truepanel.holodeck-temperature-governed-reviewer-roster/v1",
+  "simulation": true
+}
