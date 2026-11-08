@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.06.1",
-  "updated_at": "2026-11-06",
+  "registry_version": "2026.11.07.1",
+  "updated_at": "2026-11-07",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -888,6 +888,25 @@
       "revisit_conditions": ["a production TSA operator policy is proposed", "multiple independent timestamp authorities are required", "archival CRL or OCSP evidence is available", "a transparency-log witness is proposed", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Govern timestamp trust-root rotation validity intervals archived revocation evidence and multi-operator thresholds before any public TSA or production workflow is enabled.",
       "freshness": {"reviewed_at": "2026-11-06", "review_after": "2027-05-06"}
+    },
+    {
+      "id": "TP-EXP-0053", "title": "AEGIS governed timestamp trust bundle", "state": "COMPLETED",
+      "hypothesis": "An expiring generation-scoped timestamp trust bundle can require a threshold of independently operated RFC 3161 authorities without granting operational authority.",
+      "value": "Prevents one TSA operator from satisfying an apparent multi-token threshold with multiple certificates or tokens.",
+      "prior_art": ["Sigstore TrustedRoot TSA operators and validity intervals", "RFC 3161 relying-party policy", "RFC 6024 scoped trust anchors", "TUF root generation and expiry", "OpenSSL PKIX verification"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-governed-timestamp-trust", "pr": null, "commits": []},
+      "protocol": ["bind exact TSA operator root fingerprint policy OID and validity interval", "require an unexpired generation-scoped bundle", "count each operator once regardless of token or certificate count", "require at least two distinct governed operators", "retain historical authority intervals for verification", "stop at reviewer-quorum eligibility", "deny validation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-governed-timestamp-trust", "tests/test_aegis_temperature_timestamp_trust_bundle.py"],
+      "success_criteria": ["two distinct governed operators satisfy threshold", "duplicate operator expired bundle unknown root policy drift and authority escalation hold", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "field validation deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["multiple tokens from one operator count more than once", "a system-wide trust store silently expands authority", "an expired or future authority counts", "an unknown policy OID passes", "operator threshold implies clock honesty", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-timestamp-trust-bundle-v1.json", "sha256": "e91a7a27eaf18034cc5351d7de0e4977a904cfbe961cfd5f2146a68c61a1b0d7"}],
+      "outcome": {"conclusion": "Seven deterministic paths trust one two-operator threshold and hold six expired duplicated unknown drifted or authority-escalated policies while every operational authority remains zero."},
+      "invalidated_assumptions": ["two tokens necessarily represent two independent authorities", "a valid PKIX chain is sufficient governance", "the system CA store is an appropriate TSA policy", "operator independence can be inferred from certificate count"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_timestamp_trust_bundle.py", "python -c \"from truepanel.holodeck.aegis_temperature_timestamp_trust_bundle import run_temperature_timestamp_trust_bundle_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["a signed timestamp trust bundle is proposed", "historical CRL or OCSP evidence is available", "a transparency-log witness is proposed", "production TSA operators are selected", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Dual-root-sign timestamp trust-bundle rotation and archive revocation evidence before enabling any public TSA or production workflow.",
+      "freshness": {"reviewed_at": "2026-11-07", "review_after": "2027-05-07"}
     }
   ]
 }

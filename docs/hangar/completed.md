@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.06.1 · refreshed 2026-11-06 · 46 experiment(s)
+Registry version 2026.11.07.1 · refreshed 2026-11-07 · 47 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -371,3 +371,11 @@ Seven deterministic paths use real DER RFC 3161 tokens to accept witnessed pre-c
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Govern timestamp trust-root rotation validity intervals archived revocation evidence and multi-operator thresholds before any public TSA or production workflow is enabled.
 - Revisit when: a production TSA operator policy is proposed; multiple independent timestamp authorities are required; archival CRL or OCSP evidence is available; a transparency-log witness is proposed; field validation installation or deployment is proposed
+
+## TP-EXP-0053 · AEGIS governed timestamp trust bundle
+
+Seven deterministic paths trust one two-operator threshold and hold six expired duplicated unknown drifted or authority-escalated policies while every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Dual-root-sign timestamp trust-bundle rotation and archive revocation evidence before enabling any public TSA or production workflow.
+- Revisit when: a signed timestamp trust bundle is proposed; historical CRL or OCSP evidence is available; a transparency-log witness is proposed; production TSA operators are selected; field validation installation or deployment is proposed

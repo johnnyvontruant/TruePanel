@@ -92,6 +92,7 @@ from .temperature_score_review import pending_temperature_score_review
 from .temperature_statistical_calibration_contract import (
     pending_temperature_statistical_calibration_contract,
 )
+from .temperature_timestamp_trust_bundle import pending_timestamp_trust_bundle
 from .temperature_two_person_replay_review import (
     pending_temperature_two_person_replay_review,
 )
@@ -285,6 +286,11 @@ class AegisReliabilityEngine:
         self.temperature_reviewer_timestamp_witness = (
             pending_temperature_reviewer_timestamp_witness(
                 self.temperature_reviewer_signature_validity
+            )
+        )
+        self.temperature_timestamp_trust_bundle = (
+            pending_timestamp_trust_bundle(
+                self.temperature_reviewer_timestamp_witness
             )
         )
         self.temperature_detector_result_binding = (
@@ -591,6 +597,7 @@ class AegisReliabilityEngine:
             "coverage_reviewer_root_rotation": self.temperature_reviewer_root_rotation,
             "coverage_reviewer_signature_validity": self.temperature_reviewer_signature_validity,
             "coverage_reviewer_timestamp_witness": self.temperature_reviewer_timestamp_witness,
+            "coverage_timestamp_trust_bundle": self.temperature_timestamp_trust_bundle,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
