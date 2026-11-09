@@ -22,7 +22,7 @@ def test_hangar_registry_is_packaged_valid_and_uses_exact_states():
     assert status_summary(registry) == {
         "FUTURE": 2,
         "IN_PROGRESS": 1,
-        "COMPLETED": 47,
+        "COMPLETED": 48,
         "FAILED": 2,
     }
 
@@ -53,3 +53,4 @@ def test_hangar_state_contracts_fail_closed():
 
     assert any("failed experiment needs reusable_lesson" in error for error in errors)
     assert any("hypothesis must be non-empty" in error for error in errors)
+

@@ -68,7 +68,7 @@ def test_hangar_closed_experiment_and_evidence_agree():
     assert status_summary(registry) == {
         "FUTURE": 2,
         "IN_PROGRESS": 1,
-        "COMPLETED": 47,
+        "COMPLETED": 48,
         "FAILED": 2,
     }
 
@@ -99,3 +99,4 @@ def test_glass_cockpit_uses_incident_bay_fallback():
     assert "function incidentBay(incident)" in source
     assert "supporting_signals" in source
     assert "hottestBay" in source
+

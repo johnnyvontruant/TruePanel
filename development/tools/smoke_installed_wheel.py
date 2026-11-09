@@ -84,7 +84,7 @@ def main() -> int:
                     "from truepanel.hangar import load_registry, validate_registry; "
                     "registry = load_registry(); "
                     "assert validate_registry(registry) == (); "
-                    "assert len(registry['experiments']) == 52; "
+                    "assert len(registry['experiments']) == 53; "
                     "checkride = next(item for item in registry['experiments'] "
                     "if item['id'] == 'TP-EXP-0015'); "
                     "assert checkride['state'] == 'IN_PROGRESS'; "
@@ -432,6 +432,15 @@ def main() -> int:
                     "assert trust_proof['measurements']['trusted_thresholds'] == 1; "
                     "assert trust_proof['measurements']['duplicate_operator_acceptances'] == 0; "
                     "assert trust_proof['measurements']['deployments'] == 0; "
+                    "rotation = next(item for item in registry['experiments'] "
+                    "if item['id'] == 'TP-EXP-0054'); "
+                    "assert rotation['state'] == 'COMPLETED'; "
+                    "from truepanel.holodeck.aegis_temperature_timestamp_trust_rotation import "
+                    "run_temperature_timestamp_trust_rotation_checkride; "
+                    "rotation_proof = run_temperature_timestamp_trust_rotation_checkride(); "
+                    "assert rotation_proof['measurements']['trusted_rotations'] == 1; "
+                    "assert rotation_proof['measurements']['revocation_objects_archived'] == 2; "
+                    "assert rotation_proof['measurements']['deployments'] == 0; "
                     "from truepanel.glass_cockpit import "
                     "benchmark, validate_corpus; "
                     "assert validate_corpus() == (); "
@@ -596,3 +605,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

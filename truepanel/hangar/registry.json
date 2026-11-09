@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.07.1",
-  "updated_at": "2026-11-07",
+  "registry_version": "2026.11.08.1",
+  "updated_at": "2026-11-08",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -907,6 +907,26 @@
       "revisit_conditions": ["a signed timestamp trust bundle is proposed", "historical CRL or OCSP evidence is available", "a transparency-log witness is proposed", "production TSA operators are selected", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Dual-root-sign timestamp trust-bundle rotation and archive revocation evidence before enabling any public TSA or production workflow.",
       "freshness": {"reviewed_at": "2026-11-07", "review_after": "2027-05-07"}
+    },
+    {
+      "id": "TP-EXP-0054", "title": "AEGIS dual-root timestamp trust rotation", "state": "COMPLETED",
+      "hypothesis": "A consecutive timestamp trust-bundle transition signed by predecessor and successor governance roots and bound to fresh revocation evidence can prevent self-authorized or unverifiable TSA rotation.",
+      "value": "Makes timestamp-authority rotation machine-verifiable and preserves the revocation state needed to defend historical verification.",
+      "prior_art": ["TUF predecessor-and-successor root thresholds", "RFC 6283 evidence records", "ETSI AdES validation objects", "Sigstore TSA long-term verification", "Sigstore historical trusted roots"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-timestamp-trust-rotation", "pr": null, "commits": []},
+      "protocol": ["bind canonical predecessor and successor trust-bundle digests", "require generation N to N plus one", "require distinct predecessor and successor governance roots", "sign identical bytes with both roots", "bind current CRL or OCSP evidence for every outgoing operator", "reject stale incomplete duplicate or unknown revocation evidence", "stop at timestamp trust rotation authorization", "deny validation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-timestamp-trust-rotation", "tests/test_aegis_temperature_timestamp_trust_rotation.py"],
+      "success_criteria": ["one consecutive dual-signed transition with two current revocation objects is trusted", "missing signatures generation gaps stale or incomplete revocation and authority escalation hold", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "fixture private keys are not retained", "deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["a successor root authorizes itself", "a generation is skipped", "an outgoing operator lacks preserved revocation evidence", "stale revocation state passes", "a URI substitutes for content identity", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-timestamp-trust-rotation-v1.json", "sha256": "2fc7664dde1f6138ca58abadba30a70c95db181410a241bda6707f8ae633da79"}],
+      "outcome": {"conclusion": "Seven deterministic paths trust one dual-signed consecutive rotation with complete current revocation evidence and hold six unsigned skipped stale incomplete or authority-escalated paths while operational authority remains zero."},
+      "invalidated_assumptions": ["a signed successor bundle proves predecessor consent", "online revocation state will remain retrievable", "one revocation object covers every TSA operator", "bundle rotation may safely skip generations"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_timestamp_trust_rotation.py", "python -c \"from truepanel.holodeck.aegis_temperature_timestamp_trust_rotation import run_temperature_timestamp_trust_rotation_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["real DER CRL or OCSP evidence is available", "offline governance root keyholders are provisioned", "archive timestamp renewal is proposed", "production TSA operators are selected", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Package and parse the exact DER revocation objects bind them to TSA certificate serials and renew their archive timestamp before cryptographic or revocation evidence expires.",
+      "freshness": {"reviewed_at": "2026-11-08", "review_after": "2027-05-08"}
     }
   ]
 }
+

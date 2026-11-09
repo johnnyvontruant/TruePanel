@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.07.1 · refreshed 2026-11-07 · 47 experiment(s)
+Registry version 2026.11.08.1 · refreshed 2026-11-08 · 48 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -379,3 +379,11 @@ Seven deterministic paths trust one two-operator threshold and hold six expired 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Dual-root-sign timestamp trust-bundle rotation and archive revocation evidence before enabling any public TSA or production workflow.
 - Revisit when: a signed timestamp trust bundle is proposed; historical CRL or OCSP evidence is available; a transparency-log witness is proposed; production TSA operators are selected; field validation installation or deployment is proposed
+
+## TP-EXP-0054 · AEGIS dual-root timestamp trust rotation
+
+Seven deterministic paths trust one dual-signed consecutive rotation with complete current revocation evidence and hold six unsigned skipped stale incomplete or authority-escalated paths while operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Package and parse the exact DER revocation objects bind them to TSA certificate serials and renew their archive timestamp before cryptographic or revocation evidence expires.
+- Revisit when: real DER CRL or OCSP evidence is available; offline governance root keyholders are provisioned; archive timestamp renewal is proposed; production TSA operators are selected; field validation installation or deployment is proposed
