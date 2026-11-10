@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.08.1",
-  "updated_at": "2026-11-08",
+  "registry_version": "2026.11.09.1",
+  "updated_at": "2026-11-09",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -926,6 +926,25 @@
       "revisit_conditions": ["real DER CRL or OCSP evidence is available", "offline governance root keyholders are provisioned", "archive timestamp renewal is proposed", "production TSA operators are selected", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Package and parse the exact DER revocation objects bind them to TSA certificate serials and renew their archive timestamp before cryptographic or revocation evidence expires.",
       "freshness": {"reviewed_at": "2026-11-08", "review_after": "2027-05-08"}
+    },
+    {
+      "id": "TP-EXP-0055", "title": "AEGIS DER CRL evidence package", "state": "COMPLETED",
+      "hypothesis": "An exact signed DER CRL bound to the governed TSA certificate serial and renewed with an RFC 3161 archive timestamp before expiry can provide durable machine-verifiable rotation evidence.",
+      "value": "Replaces caller-asserted CRL metadata with preserved cryptographic objects and a renewal proof that remains reviewable after online revocation state changes.",
+      "prior_art": ["RFC 5280 CRL profile", "RFC 4998 evidence record renewal", "OpenSSL CRL and RFC 3161 verification", "PyCA X.509 parsing", "Sigstore timestamp verification limitations", "ETSI DSS validation material"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-revocation-evidence-package", "pr": null, "commits": []},
+      "protocol": ["preserve the exact DER CRL TSA certificate and issuer certificate", "verify the TSA certificate chain and CRL signature", "bind the governed TSA certificate serial and issuer", "require the TSA serial to be absent from the revoked set", "bind exact SHA-256 content identities", "timestamp the canonical manifest before CRL nextUpdate", "stop at timestamp-rotation evidence eligibility", "deny validation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-revocation-evidence-package", "tests/test_aegis_temperature_revocation_evidence_package.py"],
+      "success_criteria": ["one current signed DER CRL package with a valid pre-expiry archive timestamp is trusted", "revoked serial mismatch tampered CRL missing or wrong timestamp late renewal and authority escalation hold", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "fixture private keys are not retained", "deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["a URL or parsed summary substitutes for DER bytes", "a caller serial is trusted without certificate parsing", "a revoked certificate passes", "a timestamp over different bytes or after CRL expiry passes", "OCSP is accepted without responder authorization", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-revocation-evidence-package-v1.json", "sha256": "8040c72fd6c875bc691e782a2a38f8f6748123bc565a42d56673f91b249d1039"}],
+      "outcome": {"conclusion": "Eight deterministic paths trust one exact signed DER CRL package archived before expiry and hold seven revoked mismatched tampered missing wrongly timestamped late-renewed or authority-escalated paths while operational authority remains zero."},
+      "invalidated_assumptions": ["CRL metadata is equivalent to a preserved signed CRL", "a CRL URL is durable evidence", "certificate absence can be trusted without issuer and signature verification", "an archive timestamp created after revocation evidence expiry repairs the evidence", "generic timestamp verification includes revocation checking"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_revocation_evidence_package.py", "python -c \"from truepanel.holodeck.aegis_temperature_revocation_evidence_package import run_temperature_revocation_evidence_package_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["a signed OCSP fixture with delegated responder authorization is available", "production TSA and issuer certificates are selected", "an archive timestamp renewal chain is proposed", "a digest algorithm migration is required", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Add equivalent signed OCSP evidence with responder authorization and certificate ID checks then renew the combined CRL and OCSP archive before timestamp certificate or digest policy expiry.",
+      "freshness": {"reviewed_at": "2026-11-09", "review_after": "2027-05-09"}
     }
   ]
 }

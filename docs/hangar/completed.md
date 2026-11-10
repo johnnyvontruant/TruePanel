@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.08.1 · refreshed 2026-11-08 · 48 experiment(s)
+Registry version 2026.11.09.1 · refreshed 2026-11-09 · 49 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -387,3 +387,11 @@ Seven deterministic paths trust one dual-signed consecutive rotation with comple
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Package and parse the exact DER revocation objects bind them to TSA certificate serials and renew their archive timestamp before cryptographic or revocation evidence expires.
 - Revisit when: real DER CRL or OCSP evidence is available; offline governance root keyholders are provisioned; archive timestamp renewal is proposed; production TSA operators are selected; field validation installation or deployment is proposed
+
+## TP-EXP-0055 · AEGIS DER CRL evidence package
+
+Eight deterministic paths trust one exact signed DER CRL package archived before expiry and hold seven revoked mismatched tampered missing wrongly timestamped late-renewed or authority-escalated paths while operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add equivalent signed OCSP evidence with responder authorization and certificate ID checks then renew the combined CRL and OCSP archive before timestamp certificate or digest policy expiry.
+- Revisit when: a signed OCSP fixture with delegated responder authorization is available; production TSA and issuer certificates are selected; an archive timestamp renewal chain is proposed; a digest algorithm migration is required; field validation installation or deployment is proposed
