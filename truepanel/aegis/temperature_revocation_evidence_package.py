@@ -87,7 +87,7 @@ class OpenSslDerCrlInspector:
             "certificate_serial_hex": None,
             "certificate_status": None,
             "issuer": None,
-            "issuer_sha256_fingerprint": None,
+            "crl_sha256_fingerprint": None,
             "this_update_utc": None,
             "next_update_utc": None,
             "crl_sha256": None,
@@ -217,7 +217,7 @@ class OpenSslDerCrlInspector:
                     "certificate_serial_hex": actual,
                     "certificate_status": status,
                     "issuer": crl_issuer.group(1).strip(),
-                    "issuer_sha256_fingerprint": fingerprint.group(1)
+                    "crl_sha256_fingerprint": fingerprint.group(1)
                     .replace(":", "")
                     .lower(),
                     "this_update_utc": _openssl_time(last_update.group(1)),
@@ -260,7 +260,7 @@ def build_revocation_evidence_manifest(
         "certificate_serial_hex": inspection["certificate_serial_hex"],
         "certificate_status": inspection["certificate_status"],
         "issuer": inspection["issuer"],
-        "issuer_sha256_fingerprint": inspection["issuer_sha256_fingerprint"],
+        "crl_sha256_fingerprint": inspection["crl_sha256_fingerprint"],
         "this_update_utc": inspection["this_update_utc"],
         "next_update_utc": inspection["next_update_utc"],
         "archive_timestamp_required": True,
