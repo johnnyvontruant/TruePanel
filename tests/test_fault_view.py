@@ -340,3 +340,32 @@ def test_all_clear_without_active_guidance():
     assert model["kind"] == "clear"
     assert model["headline"] == "Everything's working"
     assert model["poolNote"] == "tank storage is 90% full"
+
+
+def test_fault_view_modes_folding_and_placement_contract():
+    source = SCRIPT.read_text(encoding="utf-8")
+    # The virtual front panel stays first; the view leads the overview.
+    assert "overview.prepend(view)" in source
+    assert "grid.prepend(view)" not in source
+    # Pilot gets the compact card and no Technical details drawer.
+    assert '"truepanel:mission-mode"' in source
+    assert "function renderPilot(model)" in source
+    assert (
+        'body[data-mission-mode="pilot"] #ffTechnical{display:none!important}' in source
+    )
+    # Folding is per incident and kept in this browser only.
+    assert 'const FOLD_PREFIX="truepanel-fault-view:"' in source
+    assert "data-ff-fold" in source
+    # Status lights land on the fault view only for the subsystem it owns.
+    assert "pill.dataset.gcHealthTarget!==ui.model.subsystem" in source
+
+
+def test_pilot_tiles_summarise_the_drive_fault():
+    model = _build_model(_fixture())
+    assert model["subsystem"] == "storage"
+    assert [tile["value"] for tile in model["pilotTiles"]] == [
+        "Bay 3",
+        "tank",
+        "2 of 3 OK",
+    ]
+    assert model["pilotTiles"][0]["note"] == "IronWolf Pro 8 TB"
