@@ -236,6 +236,19 @@ renames and deletions in the activity log with the drive each belongs to. The
 log is for you. Sync decisions come from comparing the folders directly, so a
 download Sonarr missed, or a file you added by hand, is still picked up.
 
+Loadmaster remembers how far it has read in `state_dir/cursors.json`: the id
+of the newest Sonarr and Radarr history record it has seen, for example
+`{"sonarr_history_id": 628, "radarr_history_id": 2366}`. Each poll logs only
+records newer than that and then moves the bookmark forward. On the very first
+start there is no bookmark yet, so Loadmaster sets it to the newest record and
+logs nothing from the past.
+
+Deleting `cursors.json` (or one of its entries) is safe: nothing is copied or
+removed because of it. The next poll simply starts a fresh bookmark, so imports
+from the time in between are not written to the activity log. Do not edit the
+numbers by hand to "replay" history; the log would show those events with the
+time of the replay, not when they happened.
+
 Ingested files reach Plex on its nightly scan. Sonarr refreshes series on its
 own schedule (every 12 hours, not adjustable in its settings).
 
@@ -273,6 +286,7 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `verify` | `sha256` | `sha256` reads every copy back; `size` only checks the size. |
 | `sounds` | `true` | PC-speaker tones on state changes (see *Sounds*); `false` turns them off. Needs `buzzer.enabled`. |
 | `large_delete_files` | `100` | Above this many removals, confirm in Mission Control. |
+| `servarr_poll_seconds` | `300` | How often Sonarr/Radarr history is read for the activity log. |
 | `ingest_owner` | NAS folder owner | `uid:gid` for files and folders brought to the NAS. |
 
 ### Files Loadmaster keeps
@@ -282,6 +296,8 @@ own schedule (every 12 hours, not adjustable in its settings).
 | `state_dir/drives/<drive>.json` | The last-sync record for each drive. |
 | `state_dir/activity.jsonl` | Activity log (rotates at 5 MB). |
 | `state_dir/receipts/` | One JSON receipt per sync, listing every file and its SHA-256 (last 100 kept). |
+| `state_dir/cursors.json` | How far Sonarr/Radarr history has been read (see *Sonarr and Radarr*). Safe to delete. |
+| `state_dir/capacity.jsonl` | Drive space and SMART samples behind the "full in N weeks" forecast. |
 | `/run/truepanel/loadmaster-status.json` | Live status read by the LCD and Mission Control. |
 | `/run/truepanel/loadmaster-command.sock` | Commands from the LCD and Mission Control. |
 
