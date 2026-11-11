@@ -6,6 +6,15 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+## [1.5.0-rc1] - 2026-11-11
+
+TruePanel 1.5.0-rc1 is the first candidate for the 1.5 line. Its headline is
+a plain-language fault view: one headline, what is wrong, what it affects,
+what is protecting you, and a guided replacement checklist backed by the
+TrueNAS and QNAP procedures. It also adds a read-only Flight Recorder and
+carries fixes for Loadmaster's activity log, Fintek fan-controller startup
+and the Mission Control card layout.
+
 ### Added
 
 - Friendly fault view (`fault-view.js`). Faults now open with one plain
@@ -14,16 +23,53 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
   the TrueNAS Replacing Disks page and the QNAP TVS-x71 hardware manual.
   TruePanel ticks off the steps it can see for itself; the rest can be ticked
   in the browser, which never clears a safety gate. When nothing is wrong the
-  same spot shows an all-clear summary.
+  same spot shows an all-clear summary. (#265)
+- The fault view follows Mission Control's modes: Pilot shows the headline,
+  three summary tiles and only the next step; Flight Engineer shows the full
+  guide and the Technical details drawer. "Hide details" folds the card to a
+  single line with the next step, remembered per fault, and the status light
+  for the faulted subsystem jumps straight to it. The virtual front panel
+  stays at the top of the page.
 - The failed drive's bay, model and serial suffix come from the active
   Lifeline session and the bay mirror, so a drive that has stopped responding
-  is still named instead of showing "unknown".
+  is still named instead of showing "unknown". (#265)
+- Flight Recorder: a rotating, human-readable event log at
+  `/var/lib/truepanel/logs/flight.log` recording new alerts, buzzer
+  activations and Loadmaster tone requests. Read it with
+  `python -m truepanel.flight_logs` or the searchable Flight Logs overlay in
+  Mission Control (`/api/v1/flight-logs`, read-only). Recording is fail-open:
+  a write failure never blocks an alert or hardware action. (#255)
 
 ### Changed
 
 - System Health, Flight Director, the AEGIS / Checkride view, Watchtower and
   the advisory banner now live in a "Technical details" drawer under the new
-  view. They are moved, not removed, and keep updating as before.
+  fault view. They are moved, not removed, and keep updating as before.
+  (#265)
+- Mission Control keeps command, preflight and Current Activity cards full
+  width, groups CPU and memory with the live telemetry cards, and shows the
+  active incident summary once with full reasoning behind a disclosure.
+  (#171)
+
+### Fixed
+
+- Loadmaster's Sonarr/Radarr activity log read only the newest 100 history
+  records per poll; a larger burst between polls was silently cut. It now
+  pages back to its bookmark (up to 2,000 records) and logs a visible
+  "Log gap" entry if a backlog is larger still. Sync decisions were never
+  affected. (#266)
+- Mission Control's hottest drive is identified from its own telemetry,
+  including NVMe ties, and is no longer attributed to an unrelated incident
+  bay. (#171)
+- Host fan runtime waits, within a bound, for a Fintek controller that
+  appears late at boot instead of failing at startup; it still fails closed
+  if the controller never appears. (#170)
+
+### Documentation
+
+- `docs/LOADMASTER.md` explains `cursors.json` (the Sonarr/Radarr history
+  bookmark, safe to delete), `capacity.jsonl` and `servarr_poll_seconds`.
+  (#267)
 
 ## [1.4.0] - 2026-10-31
 
