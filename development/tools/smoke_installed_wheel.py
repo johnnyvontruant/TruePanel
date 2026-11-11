@@ -84,7 +84,7 @@ def main() -> int:
                     "from truepanel.hangar import load_registry, validate_registry; "
                     "registry = load_registry(); "
                     "assert validate_registry(registry) == (); "
-                    "assert len(registry['experiments']) == 54; "
+                    "assert len(registry['experiments']) == 55; "
                     "checkride = next(item for item in registry['experiments'] "
                     "if item['id'] == 'TP-EXP-0015'); "
                     "assert checkride['state'] == 'IN_PROGRESS'; "
@@ -451,6 +451,16 @@ def main() -> int:
                     "assert archive_proof['measurements']['serial_bindings_verified'] == 1; "
                     "assert archive_proof['measurements']['revoked_certificate_acceptances'] == 0; "
                     "assert archive_proof['measurements']['deployments'] == 0; "
+                    "ocsp = next(item for item in registry['experiments'] "
+                    "if item['id'] == 'TP-EXP-0056'); "
+                    "assert ocsp['state'] == 'COMPLETED'; "
+                    "from truepanel.holodeck.aegis_temperature_ocsp_evidence_package import "
+                    "run_temperature_ocsp_evidence_package_checkride; "
+                    "ocsp_proof = run_temperature_ocsp_evidence_package_checkride(); "
+                    "assert ocsp_proof['measurements']['trusted_packages'] == 1; "
+                    "assert ocsp_proof['measurements']['authorized_responders_verified'] == 1; "
+                    "assert ocsp_proof['measurements']['unauthorized_responder_acceptances'] == 0; "
+                    "assert ocsp_proof['measurements']['deployments'] == 0; "
                     "from truepanel.glass_cockpit import "
                     "benchmark, validate_corpus; "
                     "assert validate_corpus() == (); "
@@ -615,4 +625,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

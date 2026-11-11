@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.09.1 · refreshed 2026-11-09 · 49 experiment(s)
+Registry version 2026.11.10.1 · refreshed 2026-11-10 · 50 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -395,3 +395,11 @@ Eight deterministic paths trust one exact signed DER CRL package archived before
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add equivalent signed OCSP evidence with responder authorization and certificate ID checks then renew the combined CRL and OCSP archive before timestamp certificate or digest policy expiry.
 - Revisit when: a signed OCSP fixture with delegated responder authorization is available; production TSA and issuer certificates are selected; an archive timestamp renewal chain is proposed; a digest algorithm migration is required; field validation installation or deployment is proposed
+
+## TP-EXP-0056 · AEGIS signed OCSP evidence package
+
+Nine deterministic paths trust one exact authorized GOOD OCSP package archived before expiry and hold eight revoked unauthorized mismatched incomplete tampered missing wrongly timestamped or authority-escalated paths while operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Combine signed CRL and OCSP objects in one archive-renewal chain and renew it before either status object timestamp certificate or digest policy becomes unsuitable.
+- Revisit when: production TSA issuer and responder certificates are selected; an online nonce-bearing OCSP request path is proposed; a combined CRL and OCSP archive renewal chain is proposed; a digest algorithm migration is required; field validation installation or deployment is proposed
