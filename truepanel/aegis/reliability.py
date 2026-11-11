@@ -78,6 +78,7 @@ from .temperature_label_blind_passive_replay import (
     pending_temperature_label_blind_passive_replay,
 )
 from .temperature_long_window_intake import pending_temperature_long_window_intake
+from .temperature_ocsp_evidence_package import pending_ocsp_evidence_package
 from .temperature_recording_intake import pending_temperature_recording_intake
 from .temperature_reviewer_root_rotation import (
     pending_temperature_reviewer_root_rotation,
@@ -292,10 +293,8 @@ class AegisReliabilityEngine:
                 self.temperature_reviewer_signature_validity
             )
         )
-        self.temperature_timestamp_trust_bundle = (
-            pending_timestamp_trust_bundle(
-                self.temperature_reviewer_timestamp_witness
-            )
+        self.temperature_timestamp_trust_bundle = pending_timestamp_trust_bundle(
+            self.temperature_reviewer_timestamp_witness
         )
         self.temperature_timestamp_trust_rotation = pending_timestamp_trust_rotation(
             self.temperature_timestamp_trust_bundle
@@ -304,6 +303,9 @@ class AegisReliabilityEngine:
             pending_revocation_evidence_package(
                 self.temperature_timestamp_trust_rotation
             )
+        )
+        self.temperature_ocsp_evidence_package = pending_ocsp_evidence_package(
+            self.temperature_revocation_evidence_package
         )
         self.temperature_detector_result_binding = (
             pending_temperature_detector_result_binding(
@@ -612,6 +614,7 @@ class AegisReliabilityEngine:
             "coverage_timestamp_trust_bundle": self.temperature_timestamp_trust_bundle,
             "coverage_timestamp_trust_rotation": self.temperature_timestamp_trust_rotation,
             "coverage_revocation_evidence_package": self.temperature_revocation_evidence_package,
+            "coverage_ocsp_evidence_package": self.temperature_ocsp_evidence_package,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {
@@ -627,4 +630,3 @@ class AegisReliabilityEngine:
 
 
 __all__ = ["AegisReliabilityEngine"]
-

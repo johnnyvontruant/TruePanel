@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.09.1",
-  "updated_at": "2026-11-09",
+  "registry_version": "2026.11.10.1",
+  "updated_at": "2026-11-10",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -945,6 +945,25 @@
       "revisit_conditions": ["a signed OCSP fixture with delegated responder authorization is available", "production TSA and issuer certificates are selected", "an archive timestamp renewal chain is proposed", "a digest algorithm migration is required", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Add equivalent signed OCSP evidence with responder authorization and certificate ID checks then renew the combined CRL and OCSP archive before timestamp certificate or digest policy expiry.",
       "freshness": {"reviewed_at": "2026-11-09", "review_after": "2027-05-09"}
+    },
+    {
+      "id": "TP-EXP-0056", "title": "AEGIS signed OCSP evidence package", "state": "COMPLETED",
+      "hypothesis": "An exact signed DER OCSP response for the governed TSA certificate with an explicitly authorized responder and a pre-expiry RFC 3161 archive timestamp can provide durable machine-verifiable rotation evidence.",
+      "value": "Completes the online-status complement to preserved CRLs without trusting caller summaries embedded responder certificates or future network availability.",
+      "prior_art": ["RFC 6960 OCSP", "OpenSSL explicit responder verification", "RFC 4998 evidence record renewal", "ETSI DSS OCSP freshness policy", "PyCA OCSP tests", "Sigstore timestamp verification limitations"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-ocsp-evidence-package", "pr": null, "commits": []},
+      "protocol": ["preserve exact DER OCSP TSA issuer and responder certificates", "verify the exact TSA certificate serial", "require a successful GOOD response for that single certificate ID", "supply one responder explicitly and ignore embedded responder certificates", "verify the responder signature direct issuer chain and OCSP-signing EKU", "require producedAt thisUpdate and nextUpdate", "bind exact SHA-256 content identities", "timestamp the canonical manifest before nextUpdate", "stop at timestamp-rotation evidence eligibility", "deny validation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-ocsp-evidence-package", "tests/test_aegis_temperature_ocsp_evidence_package.py"],
+      "success_criteria": ["one authorized GOOD DER OCSP package with a valid pre-expiry archive timestamp is trusted", "revoked unauthorized wrong-certificate incomplete tampered missing or wrongly timestamped and authority-escalated paths hold", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "fixture private keys are not retained", "deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["an embedded or unverified responder is trusted", "GOOD is accepted for a different certificate", "a response without nextUpdate passes", "a URL or parsed summary substitutes for DER bytes", "a timestamp over different bytes or after response expiry passes", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-ocsp-evidence-package-v1.json", "sha256": "0fb24c85737add91bf47f842e38168527af604cf704b1dd107ea19fda6186d00"}],
+      "outcome": {"conclusion": "Nine deterministic paths trust one exact authorized GOOD OCSP package archived before expiry and hold eight revoked unauthorized mismatched incomplete tampered missing wrongly timestamped or authority-escalated paths while operational authority remains zero."},
+      "invalidated_assumptions": ["a GOOD string is sufficient revocation evidence", "an embedded responder certificate establishes authorization", "a valid signature alone proves OCSP signer authority", "online status will remain retrievable", "an archive timestamp created after nextUpdate repairs expired status evidence"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_ocsp_evidence_package.py", "python -c \"from truepanel.holodeck.aegis_temperature_ocsp_evidence_package import run_temperature_ocsp_evidence_package_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["production TSA issuer and responder certificates are selected", "an online nonce-bearing OCSP request path is proposed", "a combined CRL and OCSP archive renewal chain is proposed", "a digest algorithm migration is required", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Combine signed CRL and OCSP objects in one archive-renewal chain and renew it before either status object timestamp certificate or digest policy becomes unsuitable.",
+      "freshness": {"reviewed_at": "2026-11-10", "review_after": "2027-05-10"}
     }
   ]
 }
