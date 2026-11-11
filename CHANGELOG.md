@@ -6,6 +6,25 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+### Added
+
+- Friendly fault view (`fault-view.js`). Faults now open with one plain
+  headline, then "What's wrong", "What it affects" and "What's protecting
+  you", a drive-bay picture, and a step-by-step replacement guide backed by
+  the TrueNAS Replacing Disks page and the QNAP TVS-x71 hardware manual.
+  TruePanel ticks off the steps it can see for itself; the rest can be ticked
+  in the browser, which never clears a safety gate. When nothing is wrong the
+  same spot shows an all-clear summary.
+- The failed drive's bay, model and serial suffix come from the active
+  Lifeline session and the bay mirror, so a drive that has stopped responding
+  is still named instead of showing "unknown".
+
+### Changed
+
+- System Health, Flight Director, the AEGIS / Checkride view, Watchtower and
+  the advisory banner now live in a "Technical details" drawer under the new
+  view. They are moved, not removed, and keep updating as before.
+
 ## [1.4.0] - 2026-10-31
 
 TruePanel 1.4.0 is the stable release of the 1.4 line. It promotes

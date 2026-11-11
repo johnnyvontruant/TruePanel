@@ -42,6 +42,12 @@ _RELIABILITY_TAG = (
     _RELIABILITY_MARKER
     + b'\n<script src="/reliability-view.js" defer></script>\n'
 )
+_FAULT_VIEW_SCRIPT = "fault-view.js"
+_FAULT_VIEW_MARKER = b"<!-- truepanel-fault-view -->"
+_FAULT_VIEW_TAG = (
+    _FAULT_VIEW_MARKER
+    + b'\n<script src="/fault-view.js" defer></script>\n'
+)
 _THEME_BOOTSTRAP_MARKER = b"<!-- truepanel-theme-bootstrap -->"
 _THEME_BOOTSTRAP_TAG = (
     _THEME_BOOTSTRAP_MARKER
@@ -77,6 +83,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             return
         if parsed.path == f"/{_RELIABILITY_SCRIPT}":
             self._static_script(_RELIABILITY_SCRIPT, "aegis_reliability_unavailable")
+            return
+        if parsed.path == f"/{_FAULT_VIEW_SCRIPT}":
+            self._static_script(_FAULT_VIEW_SCRIPT, "fault_view_unavailable")
             return
         if parsed.path == f"/{_THEME_TOGGLE_SYNC_SCRIPT}":
             self._static_script(_THEME_TOGGLE_SYNC_SCRIPT, "theme_toggle_sync_unavailable")
@@ -128,6 +137,8 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             tags += _RECOVERY_TAG
         if _RELIABILITY_MARKER not in body:
             tags += _RELIABILITY_TAG
+        if _FAULT_VIEW_MARKER not in body:
+            tags += _FAULT_VIEW_TAG
         if _THEME_TOGGLE_SYNC_MARKER not in body:
             tags += _THEME_TOGGLE_SYNC_TAG
         if b"<!-- truepanel-flight-logs -->" not in body:
