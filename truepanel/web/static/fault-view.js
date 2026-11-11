@@ -412,8 +412,16 @@ function buildModel(payload){
             };
         });
         const reliability=obj(payload.reliability);
+        const shortModel=[friendlyModel(failed.model).replace(/^(Seagate|WD)\s+/,""),terabytes(failed.capacity)].filter(Boolean).join(" ");
+        const folderNote=contents.folders.slice(0,2).join(", ")+(contents.folders.length>2?"…":"");
         return {
             kind:"fault",
+            subsystem:"storage",
+            pilotTiles:[
+                {label:"What's wrong",value:bayText,note:shortModel||"Failed drive",tone:"bad"},
+                {label:"Affects",value:failed.pool||"Storage",note:folderNote||"Your files",tone:"warn"},
+                {label:"Protected",value:peers.count?`${peers.count} of ${peers.count+1} OK`:"Check",note:"+ USB copies",tone:"good"},
+            ],
             incidentId,
             tone:rebuilding?"warn":faulted?"bad":"warn",
             headline,
@@ -438,8 +446,11 @@ function buildModel(payload){
 
     const card=guidance[0];
     const steps=genericSteps(card,ticks);
+    const prefix=String(card.code||"").split(".")[0];
     return {
         kind:"fault",
+        subsystem:prefix==="telemetry"?"services":prefix,
+        pilotTiles:[],
         incidentId,
         tone:card.severity==="critical"?"bad":"warn",
         headline:String(card.title||"Something needs attention"),
@@ -520,7 +531,33 @@ const ICON={
     shield:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',
 };
 
-const ui={open:null,current:null,lastSignature:"",model:null,busy:"",error:""};
+const ui={open:null,current:null,lastSignature:"",model:null,busy:"",error:"",mode:"pilot",fold:{}};
+const FOLD_PREFIX="truepanel-fault-view:";
+
+function missionMode(){
+    const mode=typeof document!=="undefined"&&document.body?document.body.dataset.missionMode:"";
+    return mode==="engineer"?"engineer":"pilot";
+}
+
+function loadFold(incident){
+    try{
+        return JSON.parse(window.localStorage.getItem(FOLD_PREFIX+incident)||"{}")||{};
+    }catch(_error){
+        return {};
+    }
+}
+
+function saveFold(incident,fold){
+    try{
+        window.localStorage.setItem(FOLD_PREFIX+incident,JSON.stringify(fold));
+    }catch(_error){
+        // Folding is a convenience; a fresh page simply opens expanded.
+    }
+}
+
+function foldButton(key,folded,label){
+    return `<button type="button" class="ff-fold" data-ff-fold="${esc(key)}" aria-expanded="${folded?"false":"true"}">${esc(folded?`Show ${label}`:`Hide ${label}`)}<span aria-hidden="true">${folded?"▾":"▴"}</span></button>`;
+}
 
 function safeUrl(value){
     const text=String(value||"");
@@ -534,6 +571,7 @@ function safeUrl(value){
 }
 
 function renderHero(model){
+    const next=(model.steps||[]).find(s=>!s.done);
     const doneCount=(model.steps||[]).filter(s=>s.done).length;
     const total=(model.steps||[]).length;
     const label=model.kind==="clear"?(model.tone==="good"?"All clear":"Heads up"):"Action needed";
@@ -546,9 +584,13 @@ function renderHero(model){
                 ${model.sub?`<p>${esc(model.sub)}</p>`:""}
             </div>
         </div>
-        ${model.kind==="fault"&&total?`<div class="ff-hero-cta">
-            <a class="ff-primary" href="#ffManual">Show me how to fix it</a>
+        ${model.kind==="fault"&&total&&!ui.fold.all?`<div class="ff-hero-cta">
+            ${ui.mode==="engineer"?'<a class="ff-primary" href="#ffManual">Show me how to fix it</a>':'<a class="ff-primary" href="#ffNext">See your next step</a>'}
             <span>${doneCount?`${doneCount} of ${total} steps done`:`${total} steps · most of it is waiting`}</span>
+        </div>`:""}
+        ${model.kind==="fault"?`<div class="ff-hero-foot">
+            ${ui.fold.all&&next?`<span class="ff-next-line"><span class="ff-muted">Next step:</span> ${esc(next.title)}${total?` <span class="ff-muted">· ${doneCount} of ${total} done</span>`:""}</span>`:"<span></span>"}
+            ${foldButton("all",!!ui.fold.all,"details")}
         </div>`:""}
     </section>`;
 }
@@ -575,8 +617,8 @@ function renderCards(model){
 function renderBays(model){
     if(!model.bays.length) return "";
     return `<section class="ff-card ff-bays" aria-label="Your drives">
-        <div class="ff-row"><h3>Your drives</h3>${model.poolNote?`<span class="${model.poolFull?"ff-warn-text":"ff-muted"}">${esc(model.poolNote)}</span>`:""}</div>
-        <div class="ff-bay-grid">${model.bays.map(b=>`<div class="ff-bay${b.bad?" ff-bay-bad":""}"><span class="ff-muted">Bay ${esc(b.n)}</span><strong>${esc(b.label)}</strong><span class="${b.bad?"ff-bad-text":"ff-muted"}">${esc(b.note)}</span></div>`).join("")}</div>
+        <div class="ff-row"><h3>Your drives</h3><span class="ff-row-end">${model.poolNote?`<span class="${model.poolFull?"ff-warn-text":"ff-muted"}">${esc(model.poolNote)}</span>`:""}${foldButton("drives",!!ui.fold.drives,"drives")}</span></div>
+        ${ui.fold.drives?"":`<div class="ff-bay-grid">${model.bays.map(b=>`<div class="ff-bay${b.bad?" ff-bay-bad":""}"><span class="ff-muted">Bay ${esc(b.n)}</span><strong>${esc(b.label)}</strong><span class="${b.bad?"ff-bad-text":"ff-muted"}">${esc(b.note)}</span></div>`).join("")}</div>`}
     </section>`;
 }
 
@@ -590,11 +632,10 @@ function renderSteps(model){
     return `<section id="ffManual" class="ff-card ff-manual" aria-label="${esc(model.manualTitle)}">
         <div class="ff-row ff-manual-head">
             <div><span class="ff-kicker ff-accent-text">Flight manual</span><h3>${esc(model.manualTitle)}</h3><p class="ff-muted">Steps from the TrueNAS and QNAP guides, in order. TruePanel ticks off what it can see for itself.</p></div>
-            <div class="ff-progress"><strong>${doneCount} of ${steps.length} done</strong><div class="ff-bar"><div style="width:${Math.round(doneCount/steps.length*100)}%"></div></div></div>
+            <div class="ff-progress"><strong>${doneCount} of ${steps.length} done</strong><div class="ff-bar"><div style="width:${Math.round(doneCount/steps.length*100)}%"></div></div>${foldButton("manual",!!ui.fold.manual,"steps")}</div>
         </div>
-        <ol class="ff-steps">${steps.map(step=>{
+        ${ui.fold.manual?"":`<ol class="ff-steps">${steps.map(step=>{
             const open=step.key===openKey;
-            const url=step.source?safeUrl(step.source.url):"";
             const tickLabel=step.confirmed?"TruePanel confirmed this step":step.done?`Unmark step ${step.n}`:`Mark step ${step.n} done`;
             const tickDisabled=step.confirmed||(step.noManualTick&&!step.done);
             return `<li class="ff-step${open?" ff-open":""}${step.done?" ff-done":""}">
@@ -605,18 +646,39 @@ function renderSteps(model){
                         <span class="ff-muted" aria-hidden="true">${open?"−":"+"}</span>
                     </button>
                 </div>
-                ${open?`<div class="ff-step-body">
-                    <p>${esc(step.body)}</p>
-                    ${step.warn?`<div class="ff-warn-box">${esc(step.warn)}</div>`:""}
-                    ${step.action&&ui.error?`<div class="ff-warn-box" role="alert">${esc(ui.error)}</div>`:""}
-                    <div class="ff-actions">
-                        ${step.action&&!step.done?`<button type="button" class="ff-primary" data-ff-action="${esc(step.action.kind)}"${ui.busy?" disabled":""}>${esc(ui.busy===step.action.kind?"Working…":step.action.label)}</button>`:""}
-                        ${url?`<a href="${esc(url)}"${url.startsWith("#")?"":' target="_blank" rel="noopener noreferrer"'}>${esc(step.source.title)} ↗</a>`:""}
-                    </div>
-                </div>`:""}
+                ${open?`<div class="ff-step-body">${stepBody(step)}</div>`:""}
             </li>`;
-        }).join("")}</ol>
+        }).join("")}</ol>`}
     </section>`;
+}
+
+function stepBody(step){
+    const url=step.source?safeUrl(step.source.url):"";
+    return `<p>${esc(step.body)}</p>
+        ${step.warn?`<div class="ff-warn-box">${esc(step.warn)}</div>`:""}
+        ${step.action&&ui.error?`<div class="ff-warn-box" role="alert">${esc(ui.error)}</div>`:""}
+        <div class="ff-actions">
+            ${step.action&&!step.done?`<button type="button" class="ff-primary" data-ff-action="${esc(step.action.kind)}"${ui.busy?" disabled":""}>${esc(ui.busy===step.action.kind?"Working…":step.action.label)}</button>`:""}
+            ${url?`<a href="${esc(url)}"${url.startsWith("#")?"":' target="_blank" rel="noopener noreferrer"'}>${esc(step.source.title)} ↗</a>`:""}
+        </div>`;
+}
+
+function renderPilot(model){
+    const steps=model.steps||[];
+    const next=steps.find(s=>!s.done);
+    const tiles=(model.pilotTiles||[]).length?`<div class="ff-pilot-tiles">${model.pilotTiles.map(t=>`<div class="ff-card ff-pilot-tile"><span class="ff-muted ff-small">${esc(t.label)}</span><strong class="ff-${esc(t.tone)}-text">${esc(t.value)}</strong><span class="ff-small">${esc(t.note)}</span></div>`).join("")}</div>`:"";
+    const avoid=model.avoid?`<div class="ff-avoid"><strong>The one thing to avoid</strong><span>${esc(model.avoid)}</span></div>`:"";
+    const tickDisabled=next&&(next.confirmed||next.noManualTick);
+    const nextCard=next?`<section id="ffNext" class="ff-card ff-next" aria-label="Your next step">
+        <div class="ff-row"><h3>Your next step</h3><span class="ff-muted">Step ${esc(next.n)} of ${esc(steps.length)}</span></div>
+        <div class="ff-step-head">
+            <button type="button" class="ff-tick" data-ff-tick="${esc(next.key)}" aria-label="Mark step ${esc(next.n)} done" aria-pressed="false"${tickDisabled?" disabled":""}></button>
+            <span class="ff-step-title">${esc(next.title)}</span>
+        </div>
+        <div class="ff-step-body">${stepBody(next)}</div>
+        <button type="button" class="ff-link" data-ff-engineer="manual">See all ${esc(steps.length)} steps in Flight Engineer</button>
+    </section>`:"";
+    return tiles+avoid+nextCard;
 }
 
 function renderClear(model){
@@ -632,16 +694,26 @@ function renderTechnical(model){
 function render(view,drawer,payload){
     const model=buildModel(payload);
     ui.model=model;
-    const signature=JSON.stringify([model,ui.open,ui.busy,ui.error]);
+    ui.mode=missionMode();
+    ui.fold=model.incidentId?loadFold(model.incidentId):{};
+    const signature=JSON.stringify([model,ui.open,ui.busy,ui.error,ui.mode,ui.fold]);
     if(signature===ui.lastSignature) return;
     ui.lastSignature=signature;
     if(model.kind==="waiting"){
         view.innerHTML='<section class="ff-hero ff-warn"><div class="ff-hero-main"><div class="ff-hero-text"><span class="ff-kicker">Checking</span><h2>Checking your NAS…</h2></div></div></section>';
         return;
     }
+    const steps=model.steps||[];
+    ui.current=(steps.find(s=>!s.done)||{}).key||null;
+    view.dataset.ffState=model.kind;
+    view.dataset.ffSubsystem=model.subsystem||"";
     view.innerHTML=model.kind==="clear"
         ?renderHero(model)+renderClear(model)
-        :renderHero(model)+renderCards(model)+renderBays(model)+renderSteps(model);
+        :ui.fold.all
+            ?renderHero(model)
+            :ui.mode==="engineer"
+                ?renderHero(model)+renderCards(model)+renderBays(model)+renderSteps(model)
+                :renderHero(model)+renderPilot(model);
     const summary=drawer.querySelector(".ff-tech-summary");
     if(summary) summary.innerHTML=renderTechnical(model);
 }
@@ -682,6 +754,10 @@ async function runAction(kind,refresh){
 }
 
 /* --------------------------------------------------------------- install */
+
+function reduceMotion(){
+    return !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+}
 
 function adopt(drawerBody){
     const health=document.querySelector(".health-command");
@@ -763,6 +839,20 @@ const STYLE=`
 .ff-tech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:.75rem;margin:1rem 0;font-size:.9rem;line-height:1.5}
 .ff-tech-grid>div{padding:.85rem;border-radius:12px;background:color-mix(in srgb,var(--text) 4%,transparent);display:flex;flex-direction:column;gap:.2rem}
 .ff-tech-body{display:flex;flex-direction:column;gap:1rem}
+.ff-hero{position:relative}
+.ff-hero-foot{flex:1 1 100%;display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:-.25rem}
+.ff-next-line{font-size:1rem;font-weight:600}
+.ff-fold{display:inline-flex;align-items:center;gap:.4rem;min-height:36px;padding:0 .8rem;border-radius:10px;border:1px solid var(--edge-strong);background:color-mix(in srgb,var(--text) 5%,transparent);color:var(--text);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer}
+.ff-fold:hover{border-color:var(--accent)}
+.ff-row-end{display:inline-flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+.ff-pilot-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.ff-pilot-tile{gap:.25rem;padding:1rem}
+.ff-pilot-tile strong{font-size:1.15rem}
+.ff-next .ff-step-head{align-items:center}
+.ff-next .ff-step-body{margin-left:3.6rem}
+@media (max-width:640px){.ff-next .ff-step-body{margin-left:0}}
+.ff-link{align-self:flex-start;background:none;border:0;padding:.5rem 0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;min-height:44px}
+body[data-mission-mode="pilot"] #ffTechnical{display:none!important}
 `;
 
 function install(){
@@ -794,15 +884,11 @@ function install(){
 
     let lastPayload=null;
     const place=()=>{
-        // During a fault the plain-language banner leads the page, above the
-        // virtual front panel; when all is clear it sits back in the overview.
-        const grid=document.querySelector("main .grid");
+        // The virtual front panel stays at the top of the page; this view
+        // leads the overview directly beneath it, with the drawer after it.
         const overview=document.getElementById("cockpitOverview")||host;
-        if(ui.model&&ui.model.kind==="fault"&&grid){
-            if(grid.firstElementChild!==view) grid.prepend(view);
-        }else if(view.parentElement!==overview){
-            overview.prepend(view);
-        }
+        if(overview.firstElementChild!==view) overview.prepend(view);
+        if(view.nextElementSibling!==drawer) view.insertAdjacentElement("afterend",drawer);
     };
     const refresh=force=>{
         if(force) ui.lastSignature="";
@@ -811,8 +897,28 @@ function install(){
         adopt(drawerBody);
     };
 
+    const toEngineer=()=>{
+        window.TruePanelMissionMode?.setMode?.("engineer");
+        if(missionMode()!=="engineer"&&document.body) document.body.dataset.missionMode="engineer";
+        refresh(true);
+        window.requestAnimationFrame(()=>document.getElementById("ffManual")?.scrollIntoView({block:"start",behavior:reduceMotion()?"auto":"smooth"}));
+    };
+
     view.addEventListener("click",event=>{
         const target=event.target;
+        const fold=target.closest?.("[data-ff-fold]");
+        if(fold&&ui.model&&ui.model.incidentId){
+            const key=fold.dataset.ffFold;
+            const state=loadFold(ui.model.incidentId);
+            state[key]=!state[key];
+            saveFold(ui.model.incidentId,state);
+            refresh(true);
+            return;
+        }
+        if(target.closest?.("[data-ff-engineer]")){
+            toEngineer();
+            return;
+        }
         const opener=target.closest?.("[data-ff-open]");
         if(opener){
             const key=opener.dataset.ffOpen;
@@ -834,6 +940,24 @@ function install(){
         const action=target.closest?.("[data-ff-action]");
         if(action) runAction(action.dataset.ffAction,refresh);
     });
+
+    document.addEventListener("truepanel:mission-mode",()=>refresh(true));
+
+    // The top-bar status lights jump to the relevant section. While a fault
+    // owns that light, land on this view (unfolded) instead.
+    document.addEventListener("click",event=>{
+        const pill=event.target.closest?.("#gcHealthAnnunciators [data-gc-health-target]");
+        if(!pill||!ui.model||ui.model.kind!=="fault") return;
+        if(pill.dataset.gcHealthTarget!==ui.model.subsystem) return;
+        event.stopPropagation();
+        if(ui.model.incidentId){
+            const state=loadFold(ui.model.incidentId);
+            if(state.all){ state.all=false; saveFold(ui.model.incidentId,state); refresh(true); }
+        }
+        view.classList.add("gc-jump-focus");
+        window.requestAnimationFrame(()=>view.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"start"}));
+        window.setTimeout(()=>view.classList.remove("gc-jump-focus"),1300);
+    },true);
 
     window.addEventListener("truepanel:status",event=>{
         const payload=event?.detail;
