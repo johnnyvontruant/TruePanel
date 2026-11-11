@@ -938,6 +938,7 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 .lm-list li{display:flex;gap:.6rem;padding:.35rem 0;border-top:1px solid var(--edge);min-width:0}
 .lm-list li:first-child{border-top:0}
 .lm-list .lm-tag{flex:0 0 auto;min-width:5.5rem;color:var(--muted);font-weight:600}
+.lm-list .lm-tag.warn{color:var(--warn)}
 .lm-list .lm-path{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
 .lm-list .lm-when{flex:0 0 auto;color:var(--muted)}
 .lm-list .warn{color:var(--warn)}
@@ -1021,7 +1022,8 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
 const $=id=>document.getElementById(id);
 const OPS={to_usb:"→ USB",to_nas:"→ NAS",delete_usb:"Remove USB",retire_nas:"Retire NAS"};
 const KIND={imported:"Imported",deleted:"Deleted",renamed:"Renamed",moved:"Moved",run:"Sync",
-  plugged_in:"Plugged in",unplugged:"Unplugged",ejected:"Ejected",adopted:"Adopted",service_started:"Started"};
+  plugged_in:"Plugged in",unplugged:"Unplugged",ejected:"Ejected",adopted:"Adopted",service_started:"Started",
+  history_gap:"Log gap"};
 const HELD={TWO_VERSIONS_NAS:"Different version on each side",TWO_VERSIONS_USB:"Different version on each side",
   SAME_TITLE_ON_NAS:"Already in the library",EXTRA_VERSION:"Second version of a synced file",PROTECTED:"Protected folder",
   NAME_NOT_STORABLE_ON_USB:"Name not allowed on the drive",NAME_DIFFERS_ONLY_BY_CASE_ON_NAS:"Two NAS names differ only in case"};
@@ -1073,7 +1075,7 @@ function render(s){
   const act=$("lmActivity");act.replaceChildren();
   for(const e of(s.activity||[]).slice(0,25)){const when=new Date(e.time*1000).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
     const text=e.kind==="run"?`${e.drive}: ${String(e.state).toLowerCase()}${e.reason?" — "+e.reason:""}`:e.kind==="moved"?`${e.drive}: ${OPS[e.op]||e.op} ${e.path}`:[e.title||e.path||"",e.drive?`(${e.drive})`:"",e.detail?`— ${e.detail}`:""].join(" ").trim()||e.drive||"";
-    act.append(li(KIND[e.kind]||e.kind,text,when))}
+    act.append(li(KIND[e.kind]||e.kind,text,when,e.kind==="history_gap"?"warn":""))}
   const svc=Object.entries(s.servarr||{}).map(([k,v])=>`${k[0].toUpperCase()+k.slice(1)}: ${v}`);
   $("lmFoot").textContent=[`Copy button: ${s.button||"off"}`,...svc].join(" · ");
 }

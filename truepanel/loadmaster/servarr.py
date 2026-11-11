@@ -27,6 +27,10 @@ EVENTS = {
     "movieFileRenamed": "renamed",
 }
 PAGE_SIZE = 100
+# Pages read back per poll before giving up on reaching the cursor. 20 pages is
+# 2,000 history records: far more than a five-minute poll ever sees, but enough
+# to catch up after TruePanel was down for a day while a whole series came in.
+MAX_PAGES = 20
 
 
 def host_path(config: ServarrConfig, path: str) -> Path | None:
@@ -59,30 +63,75 @@ def poll(
     return status
 
 
-def _poll_one(
-    config: ServarrConfig, settings: Settings, store: StateStore, client
-) -> int:
+def _record_id(record: dict) -> int:
+    try:
+        return int(record.get("id") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _fetch_page(client, page: int) -> list[dict]:
     payload = client.get(
         "/api/v3/history",
         {
-            "page": 1,
+            "page": page,
             "pageSize": PAGE_SIZE,
             "sortKey": "date",
             "sortDirection": "descending",
         },
     )
-    records = [r for r in (payload or {}).get("records") or [] if isinstance(r, dict)]
+    return [r for r in (payload or {}).get("records") or [] if isinstance(r, dict)]
+
+
+def _poll_one(
+    config: ServarrConfig, settings: Settings, store: StateStore, client
+) -> int:
     cursor_name = f"{config.name}_history_id"
     last_id = store.load_cursor(cursor_name)
-    newest = max((int(r.get("id") or 0) for r in records), default=0)
+    records = _fetch_page(client, 1)
+    newest = max((_record_id(r) for r in records), default=0)
 
     if last_id is None:
         # First start: remember where history is, don't replay the past.
         store.save_cursor(cursor_name, newest)
         return 0
+    last_id = int(last_id)
 
-    fresh = [r for r in records if int(r.get("id") or 0) > int(last_id)]
-    for record in sorted(fresh, key=lambda r: int(r.get("id") or 0)):
+    # History is newest first. Keep reading older pages until one reaches the
+    # cursor, so a burst of more than one page between polls (a restart, an
+    # outage, a big season pack) is logged in full instead of silently cut.
+    def reaches_cursor(batch: list[dict]) -> bool:
+        return (
+            len(batch) < PAGE_SIZE  # last page of history (or empty)
+            or any(_record_id(r) <= last_id for r in batch)
+        )
+
+    page = 1
+    reached = reaches_cursor(records)
+    while not reached and page < MAX_PAGES:
+        page += 1
+        older = _fetch_page(client, page)
+        records.extend(older)
+        reached = reaches_cursor(older)
+
+    fresh = {_record_id(r): r for r in records if _record_id(r) > last_id}
+    fresh = list(fresh.values())
+    if not reached:
+        oldest = min((_record_id(r) for r in fresh), default=newest)
+        LOGGER.warning(
+            "Loadmaster %s history: more than %d new records; ids %d-%d not logged",
+            config.name,
+            MAX_PAGES * PAGE_SIZE,
+            last_id + 1,
+            oldest - 1,
+        )
+        store.log(
+            "history_gap",
+            app=config.name,
+            detail=f"history records {last_id + 1}-{oldest - 1} were not logged "
+            f"(more than {MAX_PAGES * PAGE_SIZE} arrived between polls)",
+        )
+    for record in sorted(fresh, key=_record_id):
         event = EVENTS.get(str(record.get("eventType")))
         if event is None:
             continue
@@ -97,7 +146,7 @@ def _poll_one(
             drive=drive.name if drive else None,
             detail=str(data.get("reason") or "") or None,
         )
-    if newest > int(last_id):
+    if newest > last_id:
         store.save_cursor(cursor_name, newest)
     return len(fresh)
 

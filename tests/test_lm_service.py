@@ -770,3 +770,93 @@ def test_servarr_failure_is_reported_not_raised(tmp_path):
 
     status = poll(settings, StateStore(tmp_path), client_factory=lambda c: Down())
     assert status["radarr"].startswith("unreachable")
+
+
+class PagedClient:
+    """Serves history newest-first in pages, like Sonarr/Radarr /api/v3/history."""
+
+    def __init__(self, records):
+        self.records = sorted(records, key=lambda r: r["id"], reverse=True)
+        self.pages_read = []
+
+    def get(self, endpoint, params=None):
+        page, size = params["page"], params["pageSize"]
+        self.pages_read.append(page)
+        return {"records": self.records[(page - 1) * size : page * size]}
+
+
+def _sonarr_settings():
+    return load_settings(
+        {
+            "loadmaster": {
+                "enabled": True,
+                "drives": [{"name": "TV A-M", "nas_path": "/mnt/HDDs/Shows/TV A-M"}],
+            },
+            "mission_control": {
+                "cargo_bay": {
+                    "sonarr": {
+                        "url": "http://x",
+                        "config_path": "/c.xml",
+                        "media_prefix": "/media/tv",
+                        "host_prefix": "/mnt/HDDs/Shows",
+                    }
+                }
+            },
+        }
+    )
+
+
+def _imports(first, last):
+    return [
+        {
+            "id": i,
+            "eventType": "downloadFolderImported",
+            "sourceTitle": f"Dexter E{i}",
+            "data": {"importedPath": f"/media/tv/TV A-M/Dexter (2006)/{i}.mkv"},
+        }
+        for i in range(first, last + 1)
+    ]
+
+
+def test_servarr_burst_larger_than_one_page_is_logged_in_full(tmp_path):
+    settings, store = _sonarr_settings(), StateStore(tmp_path)
+    store.save_cursor("sonarr_history_id", 1000)
+    client = PagedClient(_imports(900, 1000) + _imports(1001, 1250))
+
+    status = poll(settings, store, client_factory=lambda c: client)
+
+    logged = [e["title"] for e in store.recent_activity(limit=500)]
+    assert len(logged) == 250
+    assert set(logged) == {f"Dexter E{i}" for i in range(1001, 1251)}
+    assert status["sonarr"] == "ok (250 new)"
+    assert store.load_cursor("sonarr_history_id") == 1250
+    assert client.pages_read == [1, 2, 3]  # stops at the page holding the cursor
+
+
+def test_servarr_quiet_poll_reads_one_page(tmp_path):
+    settings, store = _sonarr_settings(), StateStore(tmp_path)
+    store.save_cursor("sonarr_history_id", 1000)
+    client = PagedClient(_imports(800, 1003))
+
+    poll(settings, store, client_factory=lambda c: client)
+
+    assert client.pages_read == [1]
+    assert len(store.recent_activity()) == 3
+
+
+def test_servarr_backlog_beyond_page_limit_logs_a_visible_gap(tmp_path, monkeypatch):
+    from truepanel.loadmaster import servarr
+
+    monkeypatch.setattr(servarr, "MAX_PAGES", 2)
+    settings, store = _sonarr_settings(), StateStore(tmp_path)
+    store.save_cursor("sonarr_history_id", 0)
+    client = PagedClient(_imports(1, 450))
+
+    poll(settings, store, client_factory=lambda c: client)
+
+    activity = store.recent_activity(limit=500)
+    gaps = [e for e in activity if e["kind"] == "history_gap"]
+    assert len(gaps) == 1 and "1-250" in gaps[0]["detail"]
+    assert len([e for e in activity if e["kind"] == "imported"]) == 200
+    assert store.load_cursor("sonarr_history_id") == 450  # moves on, never loops
+    assert client.pages_read == [1, 2]
