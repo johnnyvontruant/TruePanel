@@ -27,6 +27,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
+from truepanel.flight_recorder import record as record_flight
+
 LOGGER = logging.getLogger(__name__)
 
 Notes = list[tuple[int, float]]
@@ -148,6 +150,7 @@ class Sounds:
         if not self.enabled or self.quiet():
             return False
         notes = self.tones[name]
+        record_flight("LOADMASTER", "INFO", f"tone requested name={name} notes={len(notes)}")
         if wait:
             return self._melody(notes)
         threading.Thread(
