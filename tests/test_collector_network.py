@@ -116,8 +116,8 @@ def test_network_rates_use_monotonic_elapsed_time_and_publish_mbps(
 
     assert collector.get_network_rates() == {
         "enp116s0": {
-            "download_mb": 0.5,
-            "upload_mb": 0.1,
+            "download_mb": 0.4768,
+            "upload_mb": 0.1192,
             "download_mbps": 4.0,
             "upload_mbps": 1.0,
         }
@@ -486,3 +486,57 @@ def test_network_telemetry_handles_ip_failure(
         )
         == {}
     )
+
+
+def test_primary_bridge_included_without_docker_bridge(monkeypatch, tmp_path):
+    net=tmp_path/"net"
+    net.mkdir()
+    nic=net/"enp116s0"
+    nic.mkdir()
+    (nic/"device").mkdir()
+    bridge=net/"br0"
+    bridge.mkdir()
+    (bridge/"bridge").mkdir()
+    (net/"docker0").mkdir()
+    real_path=Path
+    monkeypatch.setattr(
+        collector_module, "Path",
+        lambda value: net if value=="/sys/class/net" else real_path(value),
+    )
+
+    def fake_run(command, **kwargs):
+        if "address" in command:
+            return FakeCompletedProcess([
+                {"ifname":"enp116s0","operstate":"UP",
+                 "flags":["LOWER_UP"],"master":"br0","addr_info":[]},
+                {"ifname":"br0","operstate":"UP","flags":["LOWER_UP"],
+                 "addr_info":[{"family":"inet","local":"192.168.0.108"}]},
+                {"ifname":"docker0","operstate":"UP","flags":["LOWER_UP"],
+                 "addr_info":[{"family":"inet","local":"172.20.0.1"}]},
+            ])
+        return FakeCompletedProcess([{"dst":"default","dev":"br0"}])
+
+    monkeypatch.setattr(collector_module.subprocess,"run",fake_run)
+    data=TruePanelCollector().get_network_telemetry(
+        {"br0":{"download_mb":0.0029},"enp116s0":{"download_mb":0.0029}}
+    )
+    assert set(data)=={"br0","enp116s0"}
+    assert data["br0"]["primary"] is True
+    assert data["br0"]["link_up"] is True
+    assert data["br0"]["address"]=="192.168.0.108"
+    assert data["br0"]["kind"]=="bridge"
+    assert data["br0"]["label"]=="Bridge (br0)"
+    assert data["br0"]["download_mb"]==0.0029
+    assert data["enp116s0"]["address"] is None
+    assert data["enp116s0"]["master"]=="br0"
+
+
+def test_small_network_rates_remain_visible(monkeypatch,tmp_path):
+    net=install_network_sysfs(monkeypatch,tmp_path,{"br0":(5000,1000)})
+    install_clock(monkeypatch,[10,11])
+    collector=TruePanelCollector()
+    assert collector.get_network_rates()=={}
+    set_counters(net,"br0",8072,3048)
+    rates=collector.get_network_rates()
+    assert rates["br0"]["download_mb"]==0.0029
+    assert rates["br0"]["upload_mb"]==0.002

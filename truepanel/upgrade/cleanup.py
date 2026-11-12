@@ -17,9 +17,14 @@ from .backup_receipt import (
     BACKUP_RECEIPT_NAME,
     validate_backup_receipt,
 )
+from .checks import timestamp_token
 from .promotion import MANIFEST_NAME
 
 CLEANUP_CONFIRMATION = "CLEAN_TRUEPANEL"
+
+# Refused assets moved aside by --set-aside-unsafe land in a sibling folder
+# with this prefix, which cleanup never scans.
+UNMANAGED_PREFIX = "TruePanel-Unmanaged-"
 
 STAGE_PREFIX = ".truepanel-stage-"
 
@@ -691,10 +696,37 @@ def safe_remove(
     shutil.rmtree(path)
 
 
+def set_aside(
+    assets: tuple[CleanupAsset, ...],
+    *,
+    deploy_root: Path,
+    stamp: str | None = None,
+) -> Path:
+    """Move refused assets into a new sibling folder; never deletes."""
+
+    parent = deploy_root.parent
+    for asset in assets:
+        path = asset.path
+        if (
+            path.parent != parent
+            or path.is_symlink()
+            or not path.is_dir()
+            or not path.name.startswith((STAGE_PREFIX, BACKUP_PREFIX))
+        ):
+            raise ValueError(f"will not move {path}")
+
+    target = parent / f"{UNMANAGED_PREFIX}{stamp or timestamp_token()}"
+    target.mkdir()
+    for asset in assets:
+        os.rename(asset.path, target / asset.path.name)
+    return target
+
+
 def run_cleanup(
     *,
     deploy_root: Path,
     confirmation: str | None = None,
+    set_aside_unsafe: bool = False,
 ) -> int:
     try:
         plan = build_cleanup_plan(
@@ -722,6 +754,14 @@ def run_cleanup(
 
     if confirmation is None:
         print()
+        if refused and set_aside_unsafe:
+            print(
+                f"With --confirm, {len(refused)} refused "
+                f"asset(s) would be moved to a new "
+                f"{UNMANAGED_PREFIX}<time> folder first "
+                "(nothing is deleted)."
+            )
+            refused = ()
         print(
             "DRY RUN: no files were removed."
         )
@@ -752,12 +792,43 @@ def run_cleanup(
         )
         return 2
 
+    if refused and set_aside_unsafe:
+        try:
+            target = set_aside(
+                refused,
+                deploy_root=plan.deploy_root,
+            )
+        except (OSError, ValueError) as error:
+            print(f"FAIL set aside: {error}")
+            return 1
+        print()
+        for asset in refused:
+            print(f"SET ASIDE {asset.path} -> {target}")
+        plan = build_cleanup_plan(
+            deploy_root=deploy_root,
+        )
+        removable = tuple(
+            asset
+            for asset in plan.assets
+            if asset.action == "remove"
+        )
+        refused = tuple(
+            asset
+            for asset in plan.assets
+            if asset.action == "refuse"
+        )
+
     if refused:
         print()
         print(
             "Cleanup refused because unsafe "
             "assets were discovered."
         )
+        if not set_aside_unsafe:
+            print(
+                "Add --set-aside-unsafe to move them "
+                "out of the way (nothing is deleted)."
+            )
         return 1
 
     for asset in removable:

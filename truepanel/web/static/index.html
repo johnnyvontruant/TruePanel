@@ -910,19 +910,210 @@ footer{text-align:center;color:var(--muted);padding:2.5rem 1rem 3rem;font-size:.
       </div>
     </div>
   </details>
-
-  <details class="cargo-drawer" id="cargoLoadmasterDrawer">
-    <summary>
-      <span>Loadmaster</span>
-      <small id="cargoLoadmasterSummary">DISABLED</small>
-    </summary>
-    <div id="cargoLoadmaster" class="cargo-list">
-      <div class="detail">
-        Loadmaster cartridge planning is disabled.
-      </div>
-    </div>
-  </details>
 </div>
+</article>
+<article class="card wide lm-card" id="cardLoadmaster" aria-labelledby="lmTitle" hidden>
+<style>
+.lm-card[hidden],#cardLoadmaster [hidden]{display:none!important}
+.lm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.lm-head h2{margin-bottom:.2rem}
+.lm-drive{font-size:1.15rem;font-weight:700}
+.lm-msg{color:var(--muted);font-size:.88rem;margin-top:.2rem}
+.lm-badge{padding:.28rem .6rem;border:1px solid var(--edge);border-radius:999px;font-size:.68rem;font-weight:800;letter-spacing:.08em;white-space:nowrap}
+.lm-badge.good{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,var(--edge))}
+.lm-badge.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--edge))}
+.lm-badge.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--edge))}
+.lm-badge.busy{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--edge))}
+.lm-bar{height:.45rem;margin-top:.8rem;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--edge) 75%,transparent)}
+.lm-bar>span{display:block;height:100%;width:0;background:var(--accent);transition:width .6s ease}
+.lm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin-top:.9rem}
+.lm-grid>div{min-width:0;padding:.6rem .7rem;border:1px solid var(--edge);border-radius:var(--radius-sm)}
+.lm-label{display:block;color:var(--muted);font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.lm-grid strong{display:block;font-size:.98rem;margin-top:.15rem}
+.lm-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.9rem}
+.lm-note{min-height:1.1rem;margin-top:.45rem;color:var(--muted);font-size:.8rem}
+.lm-section{margin-top:1rem}
+.lm-section>summary{cursor:pointer;font-weight:600;font-size:.9rem}
+.lm-list{margin:.5rem 0 0;padding:0;list-style:none;font-size:.8rem}
+.lm-list li{display:flex;gap:.6rem;padding:.35rem 0;border-top:1px solid var(--edge);min-width:0}
+.lm-list li:first-child{border-top:0}
+.lm-list .lm-tag{flex:0 0 auto;min-width:5.5rem;color:var(--muted);font-weight:600}
+.lm-list .lm-tag.warn{color:var(--warn)}
+.lm-list .lm-path{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.lm-list .lm-when{flex:0 0 auto;color:var(--muted)}
+.lm-list .warn{color:var(--warn)}
+.lm-drives{width:100%;margin-top:.5rem;border-collapse:collapse;font-size:.82rem}
+.lm-drives td,.lm-drives th{padding:.4rem .3rem;border-top:1px solid var(--edge);text-align:left}
+.lm-drives tr.warn td{color:var(--warn)}
+.lm-drives th{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-top:0}
+.lm-drives td:last-child,.lm-drives th:last-child{text-align:right}
+.lm-foot{margin-top:.9rem;color:var(--muted);font-size:.74rem}
+.lm-review{width:min(860px,94vw);max-height:88vh;padding:0;border:1px solid var(--edge-strong);border-radius:var(--radius);background:var(--panel-solid);color:var(--text);box-shadow:var(--shadow-lg)}
+.lm-review::backdrop{background:rgba(0,0,0,.55)}
+.lm-review form{display:flex;flex-direction:column;max-height:88vh}
+.lm-review .lm-review-head,.lm-review .lm-review-foot{padding:1rem 1.2rem;border-bottom:1px solid var(--edge)}
+.lm-review .lm-review-foot{border-top:1px solid var(--edge);border-bottom:0;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:flex-end}
+.lm-review .lm-review-head h3{margin:0 0 .25rem}
+.lm-review .lm-body{overflow:auto;padding:.4rem 1.2rem 1rem}
+.lm-review .lm-held{margin-top:.8rem;padding:.7rem .8rem;border:1px solid color-mix(in srgb,var(--warn) 45%,var(--edge));border-radius:var(--radius-sm);background:var(--warn-soft)}
+.lm-review .lm-held h4,.lm-review .lm-group h4{margin:0 0 .3rem;font-size:.86rem}
+.lm-review .lm-group{margin-top:.9rem}
+.lm-review .lm-other{display:block;color:var(--muted);font-size:.74rem}
+.lm-review .lm-ack{margin-right:auto;font-size:.8rem;color:var(--muted)}
+@media (max-width:640px){
+  .lm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lm-actions button{flex:1 1 calc(50% - .5rem)}
+  .lm-list .lm-when{display:none}
+}
+</style>
+<div class="lm-head">
+  <div>
+    <h2 id="lmTitle">Loadmaster</h2>
+    <div class="lm-drive" id="lmDrive">No drive plugged in</div>
+    <div class="lm-msg" id="lmMessage">Plug in a Loadmaster drive.</div>
+  </div>
+  <span class="lm-badge" id="lmBadge">IDLE</span>
+</div>
+<div class="lm-bar" id="lmBar" hidden><span></span></div>
+<div class="lm-grid" id="lmGrid" hidden>
+  <div><span class="lm-label">NAS → USB</span><strong id="lmToUsb">–</strong></div>
+  <div><span class="lm-label">USB → NAS</span><strong id="lmToNas">–</strong></div>
+  <div><span class="lm-label">Remove from USB</span><strong id="lmRemove">–</strong></div>
+  <div><span class="lm-label">Retire on NAS</span><strong id="lmRetire">–</strong></div>
+</div>
+<div class="lm-actions">
+  <button class="primary" id="lmStart" type="button" hidden>Start sync</button>
+  <button class="danger" id="lmStop" type="button" hidden>Stop</button>
+  <button id="lmEject" type="button" hidden>Eject</button>
+  <button id="lmRescan" type="button" hidden>Rescan</button>
+  <button id="lmAdopt" type="button" hidden>Adopt this drive</button>
+</div>
+<div class="lm-note" id="lmNote" aria-live="polite"></div>
+<dialog class="lm-review" id="lmReview" aria-labelledby="lmReviewTitle">
+  <form method="dialog">
+    <div class="lm-review-head">
+      <h3 id="lmReviewTitle">Review sync</h3>
+      <div class="lm-msg" id="lmReviewSummary"></div>
+    </div>
+    <div class="lm-body" id="lmReviewBody"></div>
+    <div class="lm-review-foot">
+      <label class="lm-ack" id="lmReviewAckBox" hidden><input type="checkbox" id="lmReviewAck"> I have checked the files that will be removed</label>
+      <button value="cancel" type="submit">Cancel</button>
+      <button class="primary" id="lmReviewStart" type="button">Start sync</button>
+    </div>
+  </form>
+</dialog>
+<details class="lm-section" id="lmPreviewBox" hidden>
+  <summary id="lmPreviewTitle">What will happen</summary>
+  <ul class="lm-list" id="lmPreview"></ul>
+</details>
+<details class="lm-section" open>
+  <summary>Drives</summary>
+  <table class="lm-drives"><thead><tr><th>Drive</th><th>Last sync</th><th>Space</th><th>Health</th><th>Waiting</th></tr></thead>
+  <tbody id="lmDrives"></tbody></table>
+</details>
+<details class="lm-section">
+  <summary>Activity</summary>
+  <ul class="lm-list" id="lmActivity"></ul>
+</details>
+<div class="lm-foot" id="lmFoot"></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const OPS={to_usb:"→ USB",to_nas:"→ NAS",delete_usb:"Remove USB",retire_nas:"Retire NAS"};
+const KIND={imported:"Imported",deleted:"Deleted",renamed:"Renamed",moved:"Moved",run:"Sync",
+  plugged_in:"Plugged in",unplugged:"Unplugged",ejected:"Ejected",adopted:"Adopted",service_started:"Started",
+  history_gap:"Log gap"};
+const HELD={TWO_VERSIONS_NAS:"Different version on each side",TWO_VERSIONS_USB:"Different version on each side",
+  SAME_TITLE_ON_NAS:"Already in the library",EXTRA_VERSION:"Second version of a synced file",PROTECTED:"Protected folder",
+  NAME_NOT_STORABLE_ON_USB:"Name not allowed on the drive",NAME_DIFFERS_ONLY_BY_CASE_ON_NAS:"Two NAS names differ only in case"};
+const INFO={CASE_DIFFERS_ON_USB:"Same file, different letter case on the drive"};
+const reason=n=>HELD[n.reason]||INFO[n.reason]||n.reason.replaceAll("_"," ").toLowerCase();
+const detail=n=>n.other?"Already: "+n.other.join(", "):n.would?"Would have: "+n.would.replaceAll("_"," ").toLowerCase():n.usb_path?"On the drive: "+n.usb_path:"";
+let status=null,busy=false,lastState=null;
+const bytes=v=>{let n=Number(v)||0;for(const u of["B","KB","MB","GB","TB"]){if(n<1000||u==="TB")return(u==="B"?n.toFixed(0):n.toFixed(1))+" "+u;n/=1000}};
+const files=(n,b)=>Number(n)?`${n} file${n==1?"":"s"}${b!==undefined?" · "+bytes(b):""}`:"Nothing";
+const ago=t=>{if(!t)return"Never";const s=Date.now()/1000-t;if(s<90)return"Just now";if(s<5400)return Math.round(s/60)+" min ago";if(s<129600)return Math.round(s/3600)+" h ago";return Math.round(s/86400)+" days ago"};
+const li=(tag,text,when,cls)=>{const e=document.createElement("li");const a=document.createElement("span");a.className="lm-tag"+(cls?" "+cls:"");a.textContent=tag;const b=document.createElement("span");b.className="lm-path";b.textContent=text;e.append(a,b);if(when){const c=document.createElement("span");c.className="lm-when";c.textContent=when;e.append(c)}return e};
+const tone=s=>({READY:"good",CLEAR:"good",DONE:"good",EJECTED:"good",CHECKING:"busy",COPYING:"busy",CONFIRM:"warn",HOLD:"warn",NEW_DRIVE:"warn",PARTIAL:"warn",STOPPED:"warn",FAILED:"bad",OFF:"bad"}[s]||"");
+function show(id,on){$(id).hidden=!on}
+function render(s){
+  status=s;const card=$("cardLoadmaster");
+  card.hidden=!s||(s.state==="OFF"&&String(s.message||"").includes("not running"));
+  if(card.hidden)return;
+  const state=s.available?s.state:"OFF";
+  if(state!==lastState&&!busy){$("lmNote").textContent=""}lastState=state;
+  $("lmBadge").textContent=state.replace("_"," ");$("lmBadge").className="lm-badge "+tone(state);
+  $("lmDrive").textContent=s.drive?s.drive.name:"No drive plugged in";
+  $("lmMessage").textContent=s.message||"";
+  const plan=s.plan,sum=plan&&plan.summary;
+  show("lmGrid",!!sum&&state!=="COPYING");
+  if(sum){$("lmToUsb").textContent=files(sum.to_usb_files,sum.to_usb_bytes);$("lmToNas").textContent=files(sum.to_nas_files,sum.to_nas_bytes);$("lmRemove").textContent=files(sum.delete_usb_files);$("lmRetire").textContent=files(sum.retire_nas_files)}
+  const p=s.progress;show("lmBar",state==="COPYING"&&!!p);
+  if(state==="COPYING"&&p){const pct=p.total_bytes?Math.min(100,Math.round(p.done_bytes*100/p.total_bytes)):0;$("lmBar").firstElementChild.style.width=pct+"%";$("lmMessage").textContent=`${Math.min(p.total_files,p.done_files+1)} of ${p.total_files} · ${pct}% · ${bytes(p.done_bytes)} of ${bytes(p.total_bytes)}`+(p.current?` · ${p.current}`:"")}
+  if(s.last_run&&["DONE","PARTIAL","FAILED","STOPPED"].includes(state)){const r=s.last_run.summary||{};$("lmMessage").textContent=`${s.message} Moved ${(r.to_usb_files||0)+(r.to_nas_files||0)} files (${bytes(r.copied_bytes)}), removed ${r.deleted_usb_files||0}, retired ${r.retired_nas_files||0}.`}
+  const ready=["READY","CONFIRM"].includes(state);
+  const arming=!s.remote_start&&state==="CONFIRM";
+  show("lmStart",ready);$("lmStart").textContent=s.remote_start?"Start sync":arming?(s.armed?"Confirmed: press Copy":"Confirm removals"):"Press Copy on the NAS";
+  $("lmStart").disabled=busy||(!s.remote_start&&(!arming||!!s.armed));$("lmStart").title=s.remote_start?"":"Remote start is off: syncs start from the Copy button";
+  show("lmStop",state==="COPYING");show("lmAdopt",state==="NEW_DRIVE");
+  show("lmEject",!!s.drive&&["READY","CONFIRM","CLEAR","HOLD","NEW_DRIVE"].includes(state));
+  show("lmRescan",!!s.drive&&!["COPYING","CHECKING"].includes(state));
+  for(const id of["lmStop","lmEject","lmRescan","lmAdopt"])$(id).disabled=busy;
+  const list=$("lmPreview");list.replaceChildren();
+  if(plan){for(const c of plan.conflicts||[])list.append(li("Conflict",c.path,"","warn"));for(const n of plan.notices||[])list.append(li(HELD[n.reason]?"Held":"Note",`${n.path} (${reason(n)})`,"",HELD[n.reason]?"warn":""));for(const a of plan.preview||[])list.append(li(OPS[a.op]||a.op,a.path,bytes(a.size)));
+    const total=(sum.to_usb_files+sum.to_nas_files+sum.delete_usb_files+sum.retire_nas_files);$("lmPreviewTitle").textContent=`What will happen (${total} change${total==1?"":"s"}${total>(plan.preview||[]).length?", first "+(plan.preview||[]).length+" shown":""})`}
+  show("lmPreviewBox",!!plan&&list.children.length>0);
+  const rows=$("lmDrives");rows.replaceChildren();
+  for(const d of s.drives||[]){const tr=document.createElement("tr");const h=d.smart||{};
+    const full=d.full_in_days==null?"":d.full_in_days<14?` · full in ~${Math.round(d.full_in_days)} d`:` · full in ~${Math.round(d.full_in_days/7)} wk`;
+    const spaceText=d.capacity_bytes?`${Math.round((d.used_fraction||0)*100)}% of ${bytes(d.capacity_bytes)}${full}`:"–";
+    const healthText=h.status==="PASSED"?["SMART ok",h.temperature_c!=null?`${h.temperature_c}°C`:"",h.percent_used!=null?`${h.percent_used}% worn`:""].filter(Boolean).join(" · "):h.status==="FAILED"?"SMART FAILED":"–";
+    const warn=h.status==="FAILED"||(d.full_in_days!=null&&d.full_in_days<60);
+    for(const v of[d.name+(s.drive&&s.drive.name===d.name?" (plugged in)":""),ago(d.last_sync),spaceText,healthText,d.error?d.error:(d.last_sync?files(d.pending_files,d.pending_bytes):"First sync pending")]){const td=document.createElement("td");td.textContent=v;tr.append(td)}
+    if(warn)tr.classList.add("warn");rows.append(tr)}
+  const act=$("lmActivity");act.replaceChildren();
+  for(const e of(s.activity||[]).slice(0,25)){const when=new Date(e.time*1000).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+    const text=e.kind==="run"?`${e.drive}: ${String(e.state).toLowerCase()}${e.reason?" — "+e.reason:""}`:e.kind==="moved"?`${e.drive}: ${OPS[e.op]||e.op} ${e.path}`:[e.title||e.path||"",e.drive?`(${e.drive})`:"",e.detail?`— ${e.detail}`:""].join(" ").trim()||e.drive||"";
+    act.append(li(KIND[e.kind]||e.kind,text,when,e.kind==="history_gap"?"warn":""))}
+  const svc=Object.entries(s.servarr||{}).map(([k,v])=>`${k[0].toUpperCase()+k.slice(1)}: ${v}`);
+  $("lmFoot").textContent=[`Copy button: ${s.button||"off"}`,...svc].join(" · ");
+}
+async function refresh(){try{const r=await fetch("/api/v1/loadmaster",{cache:"no-store"});render(await r.json())}catch(e){render({available:false,state:"OFF",message:"Mission Control could not read Loadmaster status."})}}
+async function send(body){busy=true;render(status);$("lmNote").textContent="Sending…";
+  try{const r=await fetch("/api/v1/loadmaster/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();$("lmNote").textContent=d.message||(r.ok?"Done":"Refused")}
+  catch(e){$("lmNote").textContent="Loadmaster did not respond."}finally{busy=false;await refresh()}}
+const ROWS=400;let reviewed=null;
+function group(title,items,row){const box=document.createElement("section");box.className="lm-group";const h=document.createElement("h4");h.textContent=title;const ul=document.createElement("ul");ul.className="lm-list";
+  for(const x of items.slice(0,ROWS))ul.append(row(x));if(items.length>ROWS)ul.append(li("",`…and ${items.length-ROWS} more`,""));box.append(h,ul);return box}
+async function review(){const note=$("lmNote");let doc;
+  try{const r=await fetch("/api/v1/loadmaster/plan",{cache:"no-store"});doc=await r.json()}catch(e){note.textContent="Could not load the plan.";return}
+  const p=doc.plan;if(!p||!status.plan||p.digest!==status.plan.digest){note.textContent="The plan is changing; try again in a moment.";await refresh();return}
+  reviewed=p;const s=p.summary,body=$("lmReviewBody");body.replaceChildren();
+  $("lmReviewTitle").textContent=`Review ${p.drive||"drive"} sync`+(p.first_sync?" (first sync)":"");
+  $("lmReviewSummary").textContent=`NAS → USB ${files(s.to_usb_files,s.to_usb_bytes)} · USB → NAS ${files(s.to_nas_files,s.to_nas_bytes)} · remove ${s.delete_usb_files} · retire ${s.retire_nas_files}`+(p.first_sync?" · nothing is removed on a first sync":"");
+  const held=(p.notices||[]).filter(n=>HELD[n.reason]),info=(p.notices||[]).filter(n=>!HELD[n.reason]);
+  if(held.length||(p.conflicts||[]).length){const box=document.createElement("div");box.className="lm-held";const h=document.createElement("h4");h.textContent=`${held.length+(p.conflicts||[]).length} held: not copied, needs your decision`;box.append(h);
+    const ul=document.createElement("ul");ul.className="lm-list";for(const c of p.conflicts||[])ul.append(li("Conflict",c.path,"","warn"));
+    for(const n of held){const e=li(HELD[n.reason],n.path,"","warn");const d=detail(n);if(d){const o=document.createElement("span");o.className="lm-other";o.textContent=d;e.querySelector(".lm-path").append(o)}ul.append(e)}box.append(ul);body.append(box)}
+  const by=op=>(p.actions||[]).filter(a=>a.op===op);
+  for(const[op,title]of[["to_nas","USB → NAS"],["to_usb","NAS → USB"],["delete_usb","Remove from the drive (gone from the NAS)"],["retire_nas","Move old NAS versions to .loadmaster-replaced"]]){
+    const items=by(op);if(items.length)body.append(group(`${title}: ${files(items.length,items.reduce((t,a)=>t+a.size,0))}`,items,a=>li(a.reason.replaceAll("_"," ").toLowerCase(),a.usb_path&&a.usb_path!==a.path?`${a.path} (drive: ${a.usb_path})`:a.path,bytes(a.size))))}
+  if(info.length){const d=document.createElement("details");d.className="lm-group";const sm=document.createElement("summary");sm.textContent=`${info.length} note${info.length==1?"":"s"} (no action)`;d.append(sm,group("",info,n=>li("Note",`${n.path} (${reason(n)})`,"")));body.append(d)}
+  if(!(p.actions||[]).length)body.append(Object.assign(document.createElement("p"),{textContent:"Nothing will be copied or removed."}));
+  const removals=s.delete_usb_files+s.retire_nas_files;$("lmReviewAckBox").hidden=!removals;$("lmReviewAck").checked=false;
+  $("lmReviewStart").textContent=status.remote_start?"Start sync":"Confirm removals";
+  $("lmReviewStart").disabled=!!removals||!(p.actions||[]).length;$("lmReview").showModal()}
+$("lmReviewAck").onchange=e=>{$("lmReviewStart").disabled=!e.target.checked};
+$("lmReviewStart").onclick=()=>{const p=reviewed;$("lmReview").close();if(p)send({action:"start",digest:p.digest,confirm:true})};
+$("lmStart").onclick=review;
+$("lmStop").onclick=()=>{if(confirm("Stop the sync? Finished files are kept; an unfinished file resumes next time."))send({action:"stop"})};
+$("lmEject").onclick=()=>{if(confirm("Unmount this drive without syncing?"))send({action:"eject"})};
+$("lmRescan").onclick=()=>send({action:"rescan"});
+$("lmAdopt").onclick=()=>{if(confirm("Treat this drive as a fresh copy? Nothing will be deleted on the first sync."))send({action:"adopt"})};
+refresh();setInterval(refresh,2000);
+})();
+</script>
 </article>
 </section></main>
 <footer>TruePanel v1.1 Mission Control</footer>
@@ -1415,7 +1606,7 @@ function render(data){renderHealth(data.health||{});const s=data.system||{},f=da
         </div>
         <div class="row">
             <span class="label">${val(n.name||n.interface,"Interface")}</span>
-            <span class="value">${val(n.address||n.ip,"No IPv4 address")}</span>
+            <span class="value">${val(n.address||n.ip,n.master?"Bridge member of "+n.master:"No IPv4 address")}</span>
         </div>
         <div class="row">
             <span class="label">Traffic</span>
@@ -3475,221 +3666,6 @@ function renderCargoDownloads(downloads){
     });
 }
 
-function renderCargoLoadmaster(loadmaster){
-    const payload=(
-        loadmaster&&typeof loadmaster==="object"
-    )?loadmaster:{};
-
-    const enabled=payload.enabled===true;
-    const state=String(
-        payload.state||(enabled?"INVALID":"DISABLED")
-    ).toUpperCase();
-    const pending=Number(
-        payload.pending_items
-    )||0;
-    const pendingBytes=Number(
-        payload.pending_bytes
-    )||0;
-
-    let summary="DISABLED";
-
-    if(enabled){
-        if(state==="INVALID"){
-            summary="INVALID";
-        }else if(state==="REVIEW"){
-            summary="REVIEW";
-        }else if(pending>0){
-            summary=`${pending} WAITING`;
-        }else{
-            summary="CLEAR";
-        }
-    }
-
-    if(q("cargoLoadmasterSummary")){
-        q("cargoLoadmasterSummary").textContent=
-            summary;
-    }
-
-    const root=q("cargoLoadmaster");
-
-    if(!root){
-        return;
-    }
-
-    root.replaceChildren();
-
-    if(!enabled){
-        root.append(
-            cargoElement(
-                "div",
-                "detail",
-                "Loadmaster cartridge planning is disabled."
-            )
-        );
-        return;
-    }
-
-    if(state==="INVALID"){
-        root.append(
-            cargoElement(
-                "div",
-                "detail",
-                val(
-                    payload.invalid_reason,
-                    "Loadmaster cartridge registry is invalid."
-                )
-            )
-        );
-        return;
-    }
-
-    const next=(
-        payload.next_cartridge
-        &&typeof payload.next_cartridge==="object"
-    )?payload.next_cartridge:null;
-
-    if(next){
-        const card=cargoElement(
-            "div",
-            "cargo-item"
-        );
-
-        const head=cargoElement(
-            "div",
-            "cargo-item-head"
-        );
-
-        head.append(
-            cargoElement(
-                "strong",
-                "cargo-title",
-                `NEXT CARTRIDGE • ${val(next.label,"Unknown")}`
-            ),
-            cargoElement(
-                "span",
-                "cargo-size",
-                cargoBytes(
-                    next.pending_bytes
-                )
-            )
-        );
-
-        card.append(head);
-
-        card.append(
-            cargoElement(
-                "div",
-                "cargo-detail",
-                `${Number(next.pending_items)||0} item${
-                    Number(next.pending_items)===1?"":"s"
-                } waiting for backup`
-            )
-        );
-
-        card.append(
-            cargoElement(
-                "div",
-                "cargo-meta",
-                "Dock this cartridge for the next Loadmaster run."
-            )
-        );
-
-        root.append(card);
-    }else{
-        root.append(
-            cargoElement(
-                "div",
-                "detail",
-                pendingBytes>0
-                    ?`${cargoBytes(pendingBytes)} awaiting cartridge assignment`
-                    :"All tracked cartridge cargo is current."
-            )
-        );
-    }
-
-    const cartridges=Array.isArray(
-        payload.cartridges
-    )?payload.cartridges:[];
-
-    cartridges.forEach(item=>{
-        const card=cargoElement(
-            "div",
-            "cargo-item"
-        );
-
-        const head=cargoElement(
-            "div",
-            "cargo-item-head"
-        );
-
-        const itemPending=Number(
-            item&&item.pending_items
-        )||0;
-
-        const itemBytes=Number(
-            item&&item.pending_bytes
-        )||0;
-
-        const review=Number(
-            item&&item.review_items
-        )||0;
-
-        head.append(
-            cargoElement(
-                "strong",
-                "cargo-title",
-                val(item&&item.label,"Unknown cartridge")
-            ),
-            cargoElement(
-                "span",
-                "cargo-size",
-                cargoBytes(itemBytes)
-            )
-        );
-
-        card.append(head);
-
-        const cartridgeState=review>0
-            ?"REVIEW"
-            :itemPending>0
-                ?"AWAITING"
-                :"VERIFIED";
-
-        card.append(
-            cargoElement(
-                "span",
-                `cargo-backup-state ${cartridgeState.toLowerCase()}`,
-                cartridgeState==="VERIFIED"
-                    ?"CURRENT"
-                    :cartridgeState
-            )
-        );
-
-        card.append(
-            cargoElement(
-                "div",
-                "cargo-detail",
-                itemPending>0
-                    ?`${itemPending} pending ${itemPending===1?"item":"items"}`
-                    :"No pending cargo"
-            )
-        );
-
-        if(item&&item.source_prefix){
-            card.append(
-                cargoElement(
-                    "code",
-                    "cargo-path",
-                    item.source_prefix
-                )
-            );
-        }
-
-        root.append(card);
-    });
-}
-
-
 function renderCargoBay(cargo){
     const payload=(
         cargo&&typeof cargo==="object"
@@ -3761,23 +3737,6 @@ function renderCargoBay(cargo){
         payload.backup
         &&typeof payload.backup==="object"
     )?payload.backup:{};
-
-    const loadmaster=(
-        payload.loadmaster
-        &&typeof payload.loadmaster==="object"
-    )?payload.loadmaster:{};
-
-    const loadmasterEnabled=
-        loadmaster.enabled===true;
-
-    const loadmasterPending=Number(
-        loadmaster.pending_items
-    )||0;
-
-    const loadmasterNext=(
-        loadmaster.next_cartridge
-        &&typeof loadmaster.next_cartridge==="object"
-    )?loadmaster.next_cartridge:null;
 
     const backupTracking=
         backup.tracking===true;
@@ -3921,24 +3880,6 @@ function renderCargoBay(cargo){
             } recent arrivals backup verified`;
     }
 
-    if(
-        state!=="UNAVAILABLE"
-        &&loadmasterEnabled
-        &&loadmasterPending>0
-        &&loadmasterNext
-    ){
-        if(downloadReview===0){
-            tertiary=
-                `Next backup: ${val(loadmasterNext.label,"Unknown cartridge")}`;
-        }
-
-        summaryText+=
-            ` • ${loadmasterPending} awaiting ${val(
-                loadmasterNext.label,
-                "cartridge"
-            )}`;
-    }
-
     if(q("cargoGlancePrimary")){
         q("cargoGlancePrimary").textContent=primary;
     }
@@ -3978,10 +3919,6 @@ function renderCargoBay(cargo){
 
     renderCargoBackup(
         payload.backup
-    );
-
-    renderCargoLoadmaster(
-        payload.loadmaster
     );
 }
 

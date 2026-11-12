@@ -6,9 +6,12 @@ from truepanel.upgrade.backup_receipt import (
 )
 from truepanel.upgrade.cleanup import (
     CLEANUP_CONFIRMATION,
+    UNMANAGED_PREFIX,
+    CleanupAsset,
     backup_content_identity,
     build_cleanup_plan,
     run_cleanup,
+    set_aside,
 )
 from truepanel.upgrade.promotion import (
     MANIFEST_NAME,
@@ -467,3 +470,70 @@ def test_backup_identity_ignores_empty_and_cache_directories(
     )
 
     assert identity_after == identity_before
+
+
+def make_refused_stage(parent: Path) -> Path:
+    stage = parent / ".truepanel-stage-ebc7b3d"
+    stage.mkdir()
+    (stage / "leftover.txt").write_text("no manifest")
+    return stage
+
+
+def test_refused_asset_blocks_cleanup_without_set_aside(
+    tmp_path,
+):
+    deployed = tmp_path / "TruePanel"
+    create_deployment(deployed)
+    stage, backup = create_completed_upgrade(
+        tmp_path, deployed, token="20260101T000000Z"
+    )
+    refused = make_refused_stage(tmp_path)
+
+    assert run_cleanup(deploy_root=deployed, confirmation=CLEANUP_CONFIRMATION) == 1
+    assert stage.exists() and refused.exists()
+
+
+def test_set_aside_moves_refused_assets_then_cleans(
+    tmp_path,
+):
+    deployed = tmp_path / "TruePanel"
+    create_deployment(deployed)
+    stage, backup = create_completed_upgrade(
+        tmp_path, deployed, token="20260101T000000Z"
+    )
+    refused = make_refused_stage(tmp_path)
+
+    # Dry run: says what would happen, moves nothing.
+    assert run_cleanup(deploy_root=deployed, set_aside_unsafe=True) == 0
+    assert refused.exists() and stage.exists()
+
+    assert (
+        run_cleanup(
+            deploy_root=deployed,
+            confirmation=CLEANUP_CONFIRMATION,
+            set_aside_unsafe=True,
+        )
+        == 0
+    )
+    aside = list(tmp_path.glob(f"{UNMANAGED_PREFIX}*"))
+    assert len(aside) == 1
+    assert (aside[0] / refused.name / "leftover.txt").read_text() == "no manifest"
+    assert not refused.exists()
+    assert not stage.exists() and backup.exists()
+
+
+def test_set_aside_only_moves_upgrade_assets_beside_the_deployment(
+    tmp_path,
+):
+    deployed = tmp_path / "TruePanel"
+    create_deployment(deployed)
+    other = tmp_path / "Media"
+    other.mkdir()
+    asset = CleanupAsset(path=other, kind="stage", action="refuse", reason="test")
+    try:
+        set_aside((asset,), deploy_root=deployed, stamp="x")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("moved a folder that is not an upgrade asset")
+    assert other.exists() and not (tmp_path / f"{UNMANAGED_PREFIX}x").exists()

@@ -558,3 +558,20 @@ def test_known_service_failure_wins_over_incomplete_observation():
     assert payload["state"] == "DEGRADED"
     assert services["state"] == "DEGRADED"
     assert "truepanel.service" in services["reason"]
+
+
+def test_primary_bridge_is_nominal_with_physical_member():
+    health=HealthEvaluator().evaluate(network=[
+        {"name":"enp116s0","master":"br0","primary":False,"link_up":True},
+        {"name":"br0","kind":"bridge","primary":True,"link_up":True,
+         "address":"192.168.0.108"},
+    ])
+    assert health["subsystems"]["network"]["state"]=="NOMINAL"
+
+
+def test_down_primary_bridge_is_not_hidden_by_physical_member():
+    health=HealthEvaluator().evaluate(network=[
+        {"name":"enp116s0","primary":False,"link_up":True},
+        {"name":"br0","primary":True,"link_up":False},
+    ])
+    assert health["subsystems"]["network"]["state"]=="DEGRADED"

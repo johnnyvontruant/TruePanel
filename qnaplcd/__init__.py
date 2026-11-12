@@ -3,6 +3,7 @@
 #
 import errno
 import logging
+import termios
 import time
 from collections import deque
 from queue import Queue
@@ -652,8 +653,15 @@ class QnapLCD:
                     try:
                         connection.flush()
                         break
-                    except OSError as error:
-                        if error.errno == errno.EINTR:
+                    except (OSError, termios.error) as error:
+                        # pyserial's flush() is termios.tcdrain(), whose
+                        # termios.error is not an OSError and carries the
+                        # errno only in args. A signal (TruePanel stopping)
+                        # interrupts it; retry rather than crash on shutdown.
+                        code = getattr(error, "errno", None)
+                        if code is None and error.args:
+                            code = error.args[0]
+                        if code == errno.EINTR:
                             if self.stop_event.is_set():
                                 return False
 

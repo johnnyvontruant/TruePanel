@@ -6,6 +6,146 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+## [1.5.0-rc1] - 2026-11-11
+
+TruePanel 1.5.0-rc1 is the first candidate for the 1.5 line. Its headline is
+a plain-language fault view: one headline, what is wrong, what it affects,
+what is protecting you, and a guided replacement checklist backed by the
+TrueNAS and QNAP procedures. It also adds a read-only Flight Recorder and
+carries fixes for Loadmaster's activity log, Fintek fan-controller startup
+and the Mission Control card layout.
+
+### Added
+
+- Friendly fault view (`fault-view.js`). Faults now open with one plain
+  headline, then "What's wrong", "What it affects" and "What's protecting
+  you", a drive-bay picture, and a step-by-step replacement guide backed by
+  the TrueNAS Replacing Disks page and the QNAP TVS-x71 hardware manual.
+  TruePanel ticks off the steps it can see for itself; the rest can be ticked
+  in the browser, which never clears a safety gate. When nothing is wrong the
+  same spot shows an all-clear summary. (#265)
+- The fault view follows Mission Control's modes: Pilot shows the headline,
+  three summary tiles and only the next step; Flight Engineer shows the full
+  guide and the Technical details drawer. "Hide details" folds the card to a
+  single line with the next step, remembered per fault, and the status light
+  for the faulted subsystem jumps straight to it. The virtual front panel
+  stays at the top of the page.
+- The failed drive's bay, model and serial suffix come from the active
+  Lifeline session and the bay mirror, so a drive that has stopped responding
+  is still named instead of showing "unknown". (#265)
+- Flight Recorder: a rotating, human-readable event log at
+  `/var/lib/truepanel/logs/flight.log` recording new alerts, buzzer
+  activations and Loadmaster tone requests. Read it with
+  `python -m truepanel.flight_logs` or the searchable Flight Logs overlay in
+  Mission Control (`/api/v1/flight-logs`, read-only). Recording is fail-open:
+  a write failure never blocks an alert or hardware action. (#255)
+
+### Changed
+
+- System Health, Flight Director, the AEGIS / Checkride view, Watchtower and
+  the advisory banner now live in a "Technical details" drawer under the new
+  fault view. They are moved, not removed, and keep updating as before.
+  (#265)
+- Mission Control keeps command, preflight and Current Activity cards full
+  width, groups CPU and memory with the live telemetry cards, and shows the
+  active incident summary once with full reasoning behind a disclosure.
+  (#171)
+
+### Fixed
+
+- Loadmaster's Sonarr/Radarr activity log read only the newest 100 history
+  records per poll; a larger burst between polls was silently cut. It now
+  pages back to its bookmark (up to 2,000 records) and logs a visible
+  "Log gap" entry if a backlog is larger still. Sync decisions were never
+  affected. (#266)
+- Mission Control's hottest drive is identified from its own telemetry,
+  including NVMe ties, and is no longer attributed to an unrelated incident
+  bay. (#171)
+- Host fan runtime waits, within a bound, for a Fintek controller that
+  appears late at boot instead of failing at startup; it still fails closed
+  if the controller never appears. (#170)
+
+### Documentation
+
+- `docs/LOADMASTER.md` explains `cursors.json` (the Sonarr/Radarr history
+  bookmark, safe to delete), `capacity.jsonl` and `servarr_poll_seconds`.
+  (#267)
+
+## [1.4.0] - 2026-10-31
+
+TruePanel 1.4.0 is the stable release of the 1.4 line. It promotes
+1.4.0-rc1 without product changes after the candidate ran on BattleStation
+from 2026-10-27 with both services active, no restarts and no logged errors.
+See `docs/RELEASE_1.4.0.md`.
+
+### Changed
+
+- Product version is `1.4.0`; the release contract now requires a stable
+  version with no prerelease suffix.
+
+### Documentation
+
+- Loadmaster front-panel screens added to the LCD gallery and to
+  `docs/LOADMASTER.md`, rendered from the real screen code.
+- README release status and Loadmaster highlights updated for 1.4.0.
+
+## [1.4.0-rc1] - 2026-10-27
+
+TruePanel 1.4.0-rc1 is the first candidate for the 1.4 line. Its headline is
+Loadmaster, rebuilt and proven on BattleStation across all six media drives,
+plus guarded-upgrade changes that make every deployment show what it will
+change and which commit is running. It supersedes 1.3.1-rc1, whose fixes it
+includes.
+
+### Added
+
+- Loadmaster (`truepanel/loadmaster/`): plug in a USB drive, press Copy (or
+  Start sync in Mission Control), unplug. USB drives mirror their NAS
+  folders, new drive files come to the NAS, newest wins on conflicts, and
+  replaced NAS files are moved to `.loadmaster-replaced` rather than deleted.
+  Verified, resumable copies; front-panel screens; a Mission Control card
+  with per-drive status and activity; Sonarr/Radarr activity log. Disabled
+  by default. See `docs/LOADMASTER.md`. (#223)
+- Loadmaster holds instead of guessing: two unsynced versions of a file,
+  a title already in another NAS folder, extra versions, and protected
+  folders (`protected:` per drive). Mission Control shows the full plan
+  for review before a sync. (#225, #226, #231)
+- `python3 -m truepanel.loadmaster selftest` checks the whole setup on the
+  NAS; `--hardware` adds a drive write test and a Copy button read. (#232)
+- PC-speaker tones for Loadmaster state changes, with quiet hours. (#233)
+- Drive health and space: each plug-in records size, free space and SMART
+  (read through USB bridges), and Mission Control forecasts when a drive
+  will fill. (#239, #243)
+- Copy-button-only mode (`loadmaster.remote_start: false`): Mission
+  Control can review and confirm, only the front-panel button starts a
+  sync. (#241)
+- Build stamp: staging records the commit and a fingerprint of every file;
+  `truepanel version` and `verify` report the deployed commit and warn
+  about files changed outside the guarded upgrade. (#236, #238)
+- Guarded upgrade: `--stage-only` lists exactly what promotion would
+  change and smoke-tests the stage with the deployment's own Python;
+  `cleanup --set-aside-unsafe` moves refused assets aside instead of
+  stopping. (#237, #240)
+
+### Fixed
+
+- Loadmaster on exFAT: case-insensitive paths, names exFAT cannot store,
+  and macOS `Icon\r` files. (#225, #228)
+- USB drives are found when `lsblk` prints a flat list. (#227)
+- A first sync that is already in step records its baseline. (#229)
+- The self-test no longer fails Sonarr/Radarr while they report new
+  activity ("ok (1 new)").
+- Receipts record how each file was published; TruePanel restarts cleanly
+  when a restart interrupts an LCD write. (#235)
+- Mission Control network telemetry after the TrueNAS bridge migration.
+  (#220)
+
+### Removed
+
+- First-generation Loadmaster (Cargo Bay cartridge planning, backlog
+  observer and GPIO75 confirmation, #188-#198), replaced by Loadmaster v2.
+  (#222)
+
 ## [1.3.1-rc1] - 2026-10-03
 
 TruePanel 1.3.1-rc1 is a focused maintenance candidate for the 1.3 line.

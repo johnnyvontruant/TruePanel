@@ -12,7 +12,6 @@ from .enclosure import (
     EnclosureController,
     EnclosureSlot,
 )
-from .fintek_gpio import FintekCopyButtonReader
 from .inventory import (
     DEFAULT_BLOCK_ROOT,
     Drive,
@@ -32,7 +31,6 @@ __all__ = [
     "EnclosureController",
     "EnclosureSlot",
     "FrontBay",
-    "FintekCopyButtonReader",
     "HardwareManager",
     "StorageDevice",
     "StorageInventory",

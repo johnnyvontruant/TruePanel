@@ -41,6 +41,14 @@ TruePanel began by adapting earlier QNAP LCD utilities, but the current project 
 - Privacy-safe compatibility support bundles
 - Historical telemetry, event evidence, and guarded configuration surfaces
 
+### Loadmaster USB drive sync
+
+- Labelled USB drives stay mirrored with their NAS folders: plug in, press Copy on the front panel, unplug
+- Verified, resumable copies in both directions; newest wins, and replaced NAS files are moved aside rather than deleted
+- Ambiguous cases (two changed versions, a title already in another folder, extra versions, protected folders) are held for review instead of guessed
+- Front-panel progress screens, a Mission Control card with the full plan, per-drive SMART health and fill forecasts, and optional PC-speaker tones
+- Copy-button-only mode, so Mission Control can review and confirm while only the physical button starts a sync
+
 ### Health, recovery, and reliability
 
 - Conservative Health Intelligence for cooling, thermal, storage, network, front-panel, and service faults
@@ -183,6 +191,24 @@ OBSERVATORY adds normalized CURRENT ACTIVITY without creating another polling lo
        alt="Pool health" width="420">
 </p>
 
+### Loadmaster screens
+
+While a USB drive needs attention, Loadmaster takes over the LCD; SELECT steps through its pages and the Copy button starts the sync. See [Loadmaster](docs/LOADMASTER.md#at-the-nas-front-panel).
+
+<p align="center">
+  <img src="docs/images/lcd/loadmaster-ready.png"
+       alt="Loadmaster: drive ready, press Copy" width="420">
+  <img src="docs/images/lcd/loadmaster-copying.png"
+       alt="Loadmaster: copying with progress bar" width="420">
+</p>
+
+<p align="center">
+  <img src="docs/images/lcd/loadmaster-done.png"
+       alt="Loadmaster: sync done, safe to remove" width="420">
+  <img src="docs/images/lcd/loadmaster-next.png"
+       alt="Loadmaster: next drive to plug in" width="420">
+</p>
+
 ## Command line
 
 Common entry points include:
@@ -211,6 +237,7 @@ See the [CLI Reference](docs/CLI.md), [Upgrade and Rollback Guide](docs/UPGRADIN
 - [Documentation map](docs/README.md)
 - [Mission Control and reliability](docs/MISSION_CONTROL.md)
 - [Cargo Bay](docs/CARGO_BAY.md)
+- [Loadmaster](docs/LOADMASTER.md)
 - [Installation](docs/INSTALLATION.md)
 - [Upgrade and rollback](docs/UPGRADING.md)
 - [Architecture](docs/ARCHITECTURE.md)
@@ -238,11 +265,11 @@ TruePanel's reliability systems are designed to explain and verify recovery. The
 
 ## Release status
 
-TruePanel 1.3.1-rc1 is the maintenance candidate for the current 1.3 reliability and guided-recovery line. It includes Pathfinder, Lifeline, ORACLE, AEGIS, HANGAR, Flight Director, GLASS COCKPIT, supported TrueNAS `i2c-dev` boot persistence, and physical-bay localization for drive-temperature reliability evidence. The major post-1.2 capabilities have been deployed and live-validated on the reference BattleStation while preserving their documented safety boundaries.
+TruePanel 1.5.0-rc1 is the release candidate for the 1.5 line. It adds a plain-language fault view with a guided drive-replacement checklist and a read-only Flight Recorder; see the [1.5.0-rc1 release notes](docs/RELEASE_1.5.0_RC1.md). TruePanel 1.4.0 is the current stable release. It adds Loadmaster, which keeps a set of labelled USB drives mirrored with their NAS folders (plug in, press Copy, unplug), and makes guarded upgrades show what they will change and which commit is deployed. It carries forward the 1.3 reliability and guided-recovery line: Pathfinder, Lifeline, ORACLE, AEGIS, HANGAR, Flight Director, GLASS COCKPIT, supported TrueNAS `i2c-dev` boot persistence, and physical-bay localization for drive-temperature reliability evidence. The major post-1.2 capabilities have been deployed and live-validated on the reference BattleStation while preserving their documented safety boundaries.
 
 Every promoted change is expected to pass focused regression coverage, the complete GitHub Actions suite, installed-wheel smoke testing, and the applicable HoloDeck or physical-hardware validation gate.
 
-See the [Changelog](CHANGELOG.md) for release and development history.
+See the [1.4.0 release notes](docs/RELEASE_1.4.0.md) and the [Changelog](CHANGELOG.md) for release and development history.
 
 ## License and lineage
 

@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from truepanel.build import write_build
 from truepanel.paths import installation_root
 
 STAGE_PREFIX = ".truepanel-stage-"
@@ -494,6 +495,35 @@ def prepare_stage(
             ),
         )
 
+    from .smoke import command as smoke_command
+
+    smoke_response = runner(
+        smoke_command(
+            python_path,
+            stage_root,
+            staged_config,
+        ),
+        timeout=180.0,
+    )
+
+    if (
+        smoke_response.returncode
+        != 0
+    ):
+        shutil.rmtree(
+            stage_root,
+            ignore_errors=True,
+        )
+        return (
+            False,
+            (
+                "Staged smoke test failed: "
+                + command_detail(
+                    smoke_response
+                )
+            ),
+        )
+
     staged_version = read_version(
         stage_root
     )
@@ -515,8 +545,14 @@ def prepare_stage(
             ),
         )
 
+    build = write_build(
+        stage_root,
+        Path(plan.source_root),
+    )
+
     manifest = {
         **asdict(plan),
+        "source_commit": build.get("commit", ""),
         "created_at": (
             datetime.now(
                 UTC
@@ -557,7 +593,10 @@ def run_upgrade(
     dry_run: bool = False,
     stage_only: bool = False,
     runner: Callable[..., Any] = run_command,
+    diff_runner: Callable[..., Any] = run_command,
 ) -> int:
+    from .diff import content_changes, print_changes
+
     source = (
         source_root.resolve()
         if source_root is not None
@@ -583,6 +622,13 @@ def run_upgrade(
     print_plan(plan)
 
     if dry_run:
+        print_changes(
+            *content_changes(
+                Path(plan.source_root),
+                Path(plan.deploy_root),
+                runner=diff_runner,
+            )
+        )
         print("\nUpgrade Result")
         print("--------------")
         print(
@@ -614,8 +660,15 @@ def run_upgrade(
         )
         return 1
 
+    print_changes(
+        *content_changes(
+            Path(plan.stage_root),
+            Path(plan.deploy_root),
+            runner=diff_runner,
+        )
+    )
     print(
-        f"STAGED AND VALIDATED  {detail}"
+        f"\nSTAGED AND VALIDATED  {detail}"
     )
     print(
         "The deployed installation and services "

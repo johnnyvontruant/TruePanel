@@ -256,6 +256,7 @@ def test_cli_dispatches_cleanup(
         "confirmation": (
             "CLEAN_TRUEPANEL"
         ),
+        "set_aside_unsafe": False,
     }
 
 

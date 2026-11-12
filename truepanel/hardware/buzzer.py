@@ -12,6 +12,8 @@ import struct
 import threading
 import time
 
+from truepanel.flight_recorder import record as record_flight
+
 
 LOGGER = logging.getLogger("truepanel.buzzer")
 
@@ -151,8 +153,46 @@ class Buzzer:
 
             if success:
                 self.last_beep = now
-
+                record_flight("BUZZER", "ALERT",
+                              f"beep pattern={pattern} backend={self.backend} force={force}")
+            else:
+                record_flight("BUZZER", "WARNING",
+                              f"beep failed pattern={pattern} backend={self.backend}")
             return success
+
+    def melody(self, notes, gap=0.025):
+        """Play [(frequency, seconds), ...] in one go.
+
+        Short event tones (Loadmaster) are rare and meant to be heard, so they
+        skip the alert cooldown; the lock keeps them from overlapping a beep.
+        """
+
+        if not self.enabled or self.backend != "pcspkr":
+            return False
+
+        device = self.find_device()
+        if device is None:
+            LOGGER.warning("Linux PC-speaker device was not found")
+            return False
+
+        with self.lock:
+            try:
+                with open(device, "wb", buffering=0) as speaker:
+                    try:
+                        for frequency, duration in notes:
+                            speaker.write(self._event(frequency))
+                            time.sleep(duration)
+                            speaker.write(self._event(0))
+                            time.sleep(gap)
+                    finally:
+                        speaker.write(self._event(0))
+            except OSError as error:
+                LOGGER.warning("Unable to use PC speaker %s: %s", device, error)
+                return False
+
+        record_flight("BUZZER", "ALERT",
+                      f"melody notes={len(notes)} backend={self.backend}")
+        return True
 
     def startup(self):
         return self.beep(

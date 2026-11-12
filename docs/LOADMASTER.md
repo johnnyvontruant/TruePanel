@@ -1,0 +1,351 @@
+# Loadmaster
+
+Loadmaster keeps six USB drives and their matching NAS media folders in sync.
+
+1. Plug a drive into the NAS.
+2. Press **Copy** on the front panel, or **Start sync** in Mission Control.
+3. Unplug when it says **Safe to remove**.
+
+New Sonarr/Radarr downloads go to the drive, files you added to the drive
+elsewhere (for example upgrades from your laptop) come to the NAS, and the
+drive is kept as a mirror of the NAS.
+
+The code is the self-contained `truepanel/loadmaster/` package. It uses two
+existing pieces of TruePanel: the read-only Sonarr/Radarr client from Cargo
+Bay, and the Copy-button reader `truepanel/hardware/fintek_gpio.py`
+(characterised on the TVS-671 as Fintek GPIO75, bank 7 bit 5, active-low).
+
+## Drives
+
+| Drive (filesystem label) | NAS folder |
+| --- | --- |
+| Movies 1-D | `/mnt/HDDs/Movies/Movies 1-D` |
+| Movies E-I | `/mnt/HDDs/Movies/Movies E-I` |
+| Movies J-S | `/mnt/HDDs/Movies/Movies J-S` |
+| Movies T-Z | `/mnt/HDDs/Movies/Movies T-Z` |
+| TV A-M | `/mnt/HDDs/Shows/TV A-M` |
+| TV N-Z | `/mnt/HDDs/Shows/TV N-Z` |
+
+A USB filesystem whose **label** matches a drive name (case-insensitive) is
+that drive. On the drive, files are expected inside a folder with the same
+name (`TV A-M/...`); set `usb_folder: ""` for a drive whose files sit at the
+top level.
+
+The first time a drive is seen, Loadmaster remembers its filesystem UUID. If a
+different physical drive later shows up with the same label, Loadmaster stops
+with **NEW_DRIVE** and nothing happens until you press **Adopt this drive** in
+Mission Control. Adopting treats it as a first sync.
+
+## How Loadmaster decides what to do
+
+For every file it compares three things: what is on the NAS, what is on the
+drive, and what both held at the end of the **last sync** (the drive record in
+`state_dir/drives/`). The record is what lets it tell "you deleted this on the
+NAS" from "this is new on the drive". There is no setup or commissioning step;
+the first sync creates it.
+
+| Situation | Action |
+| --- | --- |
+| New or changed on the NAS (Sonarr/Radarr import) | Copy to the drive |
+| New on the drive | Copy to the NAS |
+| Removed from the NAS since the last sync (for example a Radarr upgrade deleted the old file) | Remove from the drive — the drive mirrors the NAS |
+| Changed on the drive since the last sync, unchanged on the NAS | Copy to the NAS |
+| Changed on both sides, or different with no record | The **newest** file wins |
+| Same modification time but different size | Conflict: nothing happens until resolved |
+| Video removed from the drive and a new video added for the same episode (`S01E05` or `1x05`), or in the same folder when names have no episode number (movies) | Upgraded on the laptop: the new file comes to the NAS and the old NAS file is retired (moved, not deleted) |
+| Removed from the drive for any other reason | Copied back to the drive |
+| A video new on the drive whose folder is not on this drive's NAS folder, while the same title is elsewhere in the library (renamed by Radarr, words reordered, or filed on another drive) | **Held** as SAME_TITLE_ON_NAS, naming where the library has it. Matched by the TMDB id in `.media-identity.json`, else by the folder's words and year. |
+| A second video arriving from the drive for a movie or episode that already has a video in sync on both sides | **Held** as EXTRA_VERSION. Name it with a Plex edition tag (`Movie (2000) {edition-Director's Cut}.mkv`) to bring a deliberate second version across. |
+| First sync of a drive | Copy whatever each side lacks. **Nothing is ever removed on a first sync.** A drive that is already in sync is simply recorded (CLEAR), so later changes are judged against it. |
+| A different video on each side for the same movie folder or episode, and neither has been synced before (a Radarr upgrade or rename the drive never saw, or the other way round) | Nothing is copied; both are listed as **TWO_VERSIONS** so you can keep one. Copying both ways would leave two versions on each side. |
+
+Files and folders whose names start with `.` (macOS `.DS_Store`, `._*`,
+`.Spotlight-V100`, `.Trashes`, `.fseventsd`), and, in any letter case,
+`$RECYCLE.BIN`, `RECYCLER`, `System Volume Information`, `FOUND.000`,
+`Thumbs.db`, `ehthumbs.db`, `desktop.ini`, `lost+found`, `__MACOSX` and the
+macOS folder-icon file `Icon\r` (stored on exFAT/NTFS as `Icon` + U+F00D) are ignored on both sides: never scanned,
+copied or removed. Sonarr, Radarr and Plex ignore them too. Names that exFAT/NTFS cannot
+store (`< > : " | ? * \`) are skipped and listed rather than failing the sync.
+
+### Protected folders
+
+A drive can list folders that must never change, for example a series whose
+files are irreplaceable:
+
+```yaml
+    - name: TV A-M
+      nas_path: /mnt/HDDs/Shows/TV A-M
+      protected: ["Daria (1997)"]
+```
+
+Paths are relative to the drive's folder and matched ignoring case. Inside a
+protected folder Loadmaster only copies a file to a side that lacks it (a new
+or missing drive copy). It never overwrites, retires or deletes a file there,
+and never brings new files into it on the NAS; anything it would otherwise do
+is listed as a **PROTECTED** notice so you can decide by hand.
+
+### Letter case
+
+exFAT and NTFS drives treat `1x05.mkv` and `1X05.mkv` as the same name. On
+those drives Loadmaster matches paths ignoring case, so a Sonarr rename that
+only changes case is not a new file on either side (it is listed as
+`CASE_DIFFERS_ON_USB`), and a changed file is replaced under the drive's own
+spelling rather than copied a second time.
+
+## Safety rules
+
+* **The NAS never loses data.** When Loadmaster has to replace or retire a NAS
+  file, the old version is moved to `.loadmaster-replaced/<date-time>/` inside
+  that drive's NAS folder. It is hidden, so Plex, Sonarr and Radarr normally
+  skip it. Clear it out yourself when you're happy.
+* **Nothing moves without a decision.** Either the Copy button is pressed or
+  you confirm **Start sync** in Mission Control. **Start sync** opens a review
+  of the whole plan first: held files and why, then every file to be copied,
+  removed or retired. The sync that starts is exactly the plan you reviewed.
+* **Held files are never copied.** Held items (two versions, same title
+  elsewhere, an extra version, protected folders) only appear in the plan for
+  you to resolve by hand; everything else in the plan still syncs.
+* **No surprises between preview and copy.** Right before copying, Loadmaster
+  re-checks both sides. If anything changed since the plan was shown, it stops
+  and shows the new plan.
+* **Large removals need confirmation in Mission Control.** More than
+  `large_delete_files` (default 100) removals puts the drive in **CONFIRM**.
+  The Copy button alone will not start it.
+* **An empty NAS folder stops everything.** If a NAS folder that previously
+  had files is suddenly empty (an unmounted dataset, for example), Loadmaster
+  holds instead of mirroring that to the drive.
+* **Every copy is verified.** Files are written to a hidden partial file, read
+  back from the disk and compared by SHA-256, and only then put in place. New
+  files are put in place with an atomic "no replace" rename, so a file that
+  appears at the last moment is never overwritten.
+* **Interrupted copies resume.** If the drive is unplugged or power is lost
+  mid-copy, the partial file stays. The next sync proves it matches the source
+  byte for byte and continues from there.
+* **Old NAS files are retired only after the replacement arrives.** If any copy
+  in a sync fails, retirements in that sync are skipped.
+* **Only one drive at a time**, and only over USB. A drive already mounted
+  somewhere else is left alone.
+* Drives are mounted read-only while being checked, and read-write only while
+  copying. They are synced and unmounted when the sync finishes.
+* Mission Control has no login, like the rest of the dashboard: anyone who can
+  open it on your network can start a sync. Set `remote_start: false` to allow
+  starting only from the Copy button. Stop, Eject, Rescan and Adopt still work
+  from Mission Control, and a **CONFIRM** sync takes both: **Confirm removals**
+  in Mission Control (after reviewing the plan), then Copy on the NAS. The
+  confirmation is tied to that exact plan; if anything changes, it lapses.
+
+## At the NAS: front panel
+
+While a drive needs attention, the LCD shows Loadmaster screens instead of its
+normal rotation:
+
+<p align="center">
+  <img src="images/lcd/loadmaster-ready.png" alt="Drive ready: press Copy" width="380">
+  <img src="images/lcd/loadmaster-counts.png" alt="Files and sizes each way" width="380">
+</p>
+<p align="center">
+  <img src="images/lcd/loadmaster-copying.png" alt="Copying with progress bar" width="380">
+  <img src="images/lcd/loadmaster-done.png" alt="Done: safe to remove" width="380">
+</p>
+<p align="center">
+  <img src="images/lcd/loadmaster-hold.png" alt="Held for review" width="380">
+</p>
+
+| State | LCD |
+| --- | --- |
+| CHECKING | `TV A-M` / `Checking...` |
+| READY | `TV A-M READY` / `Press COPY`, then counts each way and removals |
+| CONFIRM | `Confirm in TP` and how many files would be removed (`Press COPY` once confirmed, with remote start off) |
+| COPYING | percent with a progress bar, file *n/m*, current file, `Do not unplug` |
+| DONE | `TV A-M DONE` / `Safe to remove`, then what was copied |
+| HOLD / NEW_DRIVE | the reason, wrapped over two screens |
+| CLEAR | `Up to date` (for one minute) |
+
+* **SELECT (▼)** steps through the screens.
+* **ENTER (▲)** ejects the drive (unmounts without syncing).
+* **Copy** starts a READY sync.
+
+When no drive is plugged in, the normal rotation includes a Loadmaster page
+showing which drive to plug in next and how much is waiting for it:
+
+<p align="center">
+  <img src="images/lcd/loadmaster-next.png" alt="Next drive to plug in" width="380">
+</p>
+
+### Drive space and health
+
+Each time a drive is plugged in, Loadmaster records its size and free space
+and reads its SMART health with `smartctl` (pass/fail, temperature, power-on
+hours, SSD wear; USB bridges are retried with `-d sat`, and a drive that
+cannot report SMART is shown as unavailable). A SMART failure is also written
+to the activity log.
+
+Because a drive mirrors its NAS folder, the folder's growth is the drive's
+growth: Loadmaster logs each NAS folder's size once a day and, after three
+days of history, forecasts when the drive will be full (a straight line over
+the last 60 days, against 98% of the drive's capacity). Mission Control's
+drive table shows **Space** ("79% of 8.0 TB · full in ~14 wk") and **Health**
+("SMART ok · 41°C · 3% worn"), highlighted when a drive will be full within
+60 days or SMART failed; `selftest` warns on the same. The history is kept in
+`state_dir/capacity.jsonl`.
+
+### Sounds
+
+With the `buzzer:` section enabled, Loadmaster plays a short tone when its
+state changes, so you can hear what the front panel says:
+
+| Tone | When | Sound |
+| --- | --- | --- |
+| ready | READY: work to do, press Copy | two rising notes |
+| start | COPYING: the Copy press was heard | one blip |
+| done | DONE: safe to remove | four-note chime |
+| clear | CLEAR / EJECTED: up to date or unmounted | one high chirp |
+| attention | HOLD, CONFIRM, NEW_DRIVE: needs a decision | two falling notes |
+| failed | PARTIAL, FAILED: see the receipt | three falling notes |
+
+`python3 -m truepanel.loadmaster --config truepanel.yaml sound done` plays one
+(leave out the name to hear them all). Set `sounds: false` to turn them off, or
+
+```yaml
+  sounds:
+    quiet_hours: "22:00-07:00"
+    tones:
+      done: [[1047, 0.10], [784, 0.09], [1175, 0.10], [988, 0.10]]
+```
+
+## Remotely: Mission Control
+
+The **Loadmaster** card shows:
+
+* the plugged-in drive, its state and a preview of the changes;
+* **Start sync**, which first shows the full plan for review (also at
+  `GET /api/v1/loadmaster/plan`), **Stop**, **Eject**, **Rescan** and **Adopt this drive**;
+* every drive with when it was last synced and how much is waiting for it,
+  worked out from the NAS even while the drive is in a drawer;
+* recent activity: Sonarr/Radarr imports and deletions, and each sync.
+
+**Stop** finishes the current block and stops; finished files are kept and the
+unfinished file resumes next time. **Rescan** re-checks a drive that is still
+plugged in, for example after new downloads arrive.
+
+## Sonarr and Radarr
+
+Loadmaster reads Sonarr and Radarr history every five minutes, using the same
+read-only connection settings as Cargo Bay, and records imports, upgrades,
+renames and deletions in the activity log with the drive each belongs to. The
+log is for you. Sync decisions come from comparing the folders directly, so a
+download Sonarr missed, or a file you added by hand, is still picked up.
+
+Loadmaster remembers how far it has read in `state_dir/cursors.json`: the id
+of the newest Sonarr and Radarr history record it has seen, for example
+`{"sonarr_history_id": 628, "radarr_history_id": 2366}`. Each poll logs only
+records newer than that and then moves the bookmark forward. On the very first
+start there is no bookmark yet, so Loadmaster sets it to the newest record and
+logs nothing from the past.
+
+Deleting `cursors.json` (or one of its entries) is safe: nothing is copied or
+removed because of it. The next poll simply starts a fresh bookmark, so imports
+from the time in between are not written to the activity log. Do not edit the
+numbers by hand to "replay" history; the log would show those events with the
+time of the replay, not when they happened.
+
+Ingested files reach Plex on its nightly scan. Sonarr refreshes series on its
+own schedule (every 12 hours, not adjustable in its settings).
+
+## Setup
+
+1. **Label the drives** with exactly the names above. If they are already
+   labelled, `lsblk -o PATH,LABEL,UUID,FSTYPE,TRAN` on the NAS shows them.
+2. **Check the paths** in the `loadmaster:` section of `truepanel.yaml`.
+3. **Try a dry run** on one drive before enabling anything. Mount it by hand
+   (read-only) and run:
+
+   ```
+   sudo mount -o ro /dev/sdX1 /mnt/test
+   python3 -m truepanel.loadmaster --config truepanel.yaml preview "TV A-M" "/mnt/test/TV A-M"
+   sudo umount /mnt/test
+   ```
+
+   This lists exactly what a first sync would do and changes nothing. It works
+   while Loadmaster is still disabled.
+4. **Enable**: set `loadmaster.enabled: true` and restart TruePanel. The
+   service runs inside the TruePanel LCD process. To run it on its own instead
+   (for testing), use `python3 -m truepanel.loadmaster run`.
+5. **Check**: run `selftest` (see *Checking the setup* below).
+
+### Settings (`loadmaster:`)
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `enabled` | `false` | Turn Loadmaster on. |
+| `drives` | — | `name`, `nas_path`, optional `usb_folder` and `protected`. |
+| `state_dir` | `/var/lib/truepanel/loadmaster` | Drive records, activity log, receipts. |
+| `mount_root` | `/mnt/loadmaster` | Where drives are mounted. |
+| `remote_start` | `true` | Allow Start sync from Mission Control. `false`: only the Copy button starts a sync; Mission Control can still confirm a CONFIRM sync for Copy to start. |
+| `copy_button` | `true` | Use the front-panel Copy button. |
+| `verify` | `sha256` | `sha256` reads every copy back; `size` only checks the size. |
+| `sounds` | `true` | PC-speaker tones on state changes (see *Sounds*); `false` turns them off. Needs `buzzer.enabled`. |
+| `large_delete_files` | `100` | Above this many removals, confirm in Mission Control. |
+| `servarr_poll_seconds` | `300` | How often Sonarr/Radarr history is read for the activity log. |
+| `ingest_owner` | NAS folder owner | `uid:gid` for files and folders brought to the NAS. |
+
+### Files Loadmaster keeps
+
+| Path | What |
+| --- | --- |
+| `state_dir/drives/<drive>.json` | The last-sync record for each drive. |
+| `state_dir/activity.jsonl` | Activity log (rotates at 5 MB). |
+| `state_dir/receipts/` | One JSON receipt per sync, listing every file and its SHA-256 (last 100 kept). |
+| `state_dir/cursors.json` | How far Sonarr/Radarr history has been read (see *Sonarr and Radarr*). Safe to delete. |
+| `state_dir/capacity.jsonl` | Drive space and SMART samples behind the "full in N weeks" forecast. |
+| `/run/truepanel/loadmaster-status.json` | Live status read by the LCD and Mission Control. |
+| `/run/truepanel/loadmaster-command.sock` | Commands from the LCD and Mission Control. |
+
+## Code map
+
+| Module | Job |
+| --- | --- |
+| `config.py` | Settings and the drive list. |
+| `scan.py` | Walks a folder; size and mtime per file. |
+| `state.py` | Drive records, activity log. |
+| `plan.py` | The decision table above; pure and fully tested. |
+| `transfer.py` | Verified, resumable copy; checked delete; retire to `.loadmaster-replaced`. |
+| `run.py` | Carries out a plan in a safe order and updates the drive record. |
+| `dock.py` | Finds drives by label over USB; mounts and unmounts. |
+| `servarr.py` | Sonarr/Radarr history to the activity log. |
+| `service.py` | The state machine, Copy button, worker threads. |
+| `../hardware/fintek_gpio.py` | Reads the Copy button (GPIO75) through `/dev/port`. |
+| `link.py` | Status file and command socket. |
+| `lcd.py` | Front-panel screens. |
+| `identity.py` | Identity keys (TMDB id, title words and year) for duplicate holds. |
+| `selftest.py` | The `selftest` checks. |
+| `sounds.py` | PC-speaker tones for state changes. |
+| `capacity.py` | Drive space, SMART health and the "full in N weeks" forecast. |
+| `__main__.py` | `run`, `status`, `preview`, `selftest`, `sound`. |
+
+Tests: `tests/test_lm_*.py`.
+
+## Checking the setup
+
+```
+python3 -m truepanel.loadmaster --config truepanel.yaml selftest
+```
+
+prints PASS / WARN / FAIL / SKIP for: the configuration, every drive's record,
+the library identity index (and how many titles sit in more than one NAS
+folder), USB drive detection (including USB drives whose label is not a drive
+name), the running service, the Copy button and Sonarr/Radarr as the service
+reports them, and, with a drive plugged in, whether an independent re-plan of
+that drive gives the same plan as the service. It only reads, so it is safe
+while TruePanel runs. Run it after every upgrade; it exits 1 if anything fails.
+
+With TruePanel stopped, `selftest --hardware` also mounts the plugged-in drive,
+remounts it read-write, writes and reads back 1 MB in a hidden
+`.loadmaster-selftest` folder (removed afterwards), checks that the no-replace
+rename refuses an existing name, and reads the Copy button (GPIO75). It refuses
+to run while the service owns the drive and the button.
+
+Verified on BattleStation (TVS-671, TrueNAS 25.10) in October 2026: exFAT
+mount, read-only and read-write; `renameat2(RENAME_NOREPLACE)` on exFAT; the
+Copy button from the LCD process; drive detection from TrueNAS's flat `lsblk`
+output; and first syncs of all six drives.

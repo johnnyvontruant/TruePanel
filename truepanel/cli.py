@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from truepanel import __version__
+from truepanel.build import describe, read_build
 from truepanel.collectors import create_collector
 from truepanel.compatibility import run_compatibility
 from truepanel.config.loader import load_config
@@ -104,6 +105,7 @@ def print_version(registry):
     print("\nTruePanel")
     print("=========")
     print(f"Version: {__version__}")
+    print(f"Build:   {describe(read_build(Path(__file__).resolve().parent.parent))}")
     print(f"Python:  {platform.python_version()}")
     print(f"System:  {platform.system()} {platform.machine()}")
     print(f"Plugins: {len(registry.plugins)}")
@@ -381,6 +383,16 @@ def build_parser():
             "without touching services"
         ),
     )
+    upgrade.add_argument(
+        "--set-aside-unsafe",
+        dest="upgrade_set_aside_unsafe",
+        action="store_true",
+        help=(
+            "With --cleanup: move refused assets into a "
+            "TruePanel-Unmanaged-<time> folder instead of "
+            "refusing the whole cleanup"
+        ),
+    )
     upgrade_mode.add_argument(
         "--rollback",
         action="store_true",
@@ -590,6 +602,9 @@ def main():
                     deploy_root=upgrade_root,
                     confirmation=(
                         args.upgrade_confirmation
+                    ),
+                    set_aside_unsafe=(
+                        args.upgrade_set_aside_unsafe
                     ),
                 )
             )

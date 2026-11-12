@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import json
 from http import HTTPStatus
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
+
+from truepanel.flight_logs import recent as recent_flight_logs
 
 from truepanel.aegis import AegisReliabilityEngine
 from truepanel.guidance.checklist import checklists_for_guidance
@@ -40,6 +42,12 @@ _RELIABILITY_TAG = (
     _RELIABILITY_MARKER
     + b'\n<script src="/reliability-view.js" defer></script>\n'
 )
+_FAULT_VIEW_SCRIPT = "fault-view.js"
+_FAULT_VIEW_MARKER = b"<!-- truepanel-fault-view -->"
+_FAULT_VIEW_TAG = (
+    _FAULT_VIEW_MARKER
+    + b'\n<script src="/fault-view.js" defer></script>\n'
+)
 _THEME_BOOTSTRAP_MARKER = b"<!-- truepanel-theme-bootstrap -->"
 _THEME_BOOTSTRAP_TAG = (
     _THEME_BOOTSTRAP_MARKER
@@ -49,6 +57,8 @@ _THEME_BOOTSTRAP_TAG = (
     + b"catch(e){}}());"
     + b"</script>\n"
 )
+_FLIGHT_LOGS_SCRIPT = "flight-logs.js"
+_FLIGHT_LOGS_TAG = b'<!-- truepanel-flight-logs -->\n<script src="/flight-logs.js" defer></script>\n'
 _THEME_TOGGLE_SYNC_SCRIPT = "theme-toggle-sync.js"
 _THEME_TOGGLE_SYNC_MARKER = b"<!-- truepanel-theme-toggle-sync -->"
 _THEME_TOGGLE_SYNC_TAG = (
@@ -62,11 +72,20 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        if parsed.path == "/api/v1/flight-logs":
+            self._flight_logs(parsed)
+            return
+        if parsed.path == f"/{_FLIGHT_LOGS_SCRIPT}":
+            self._static_script(_FLIGHT_LOGS_SCRIPT, "flight_logs_script_unavailable")
+            return
         if parsed.path == f"/{_RECOVERY_SCRIPT}":
             self._static_script(_RECOVERY_SCRIPT, "pathfinder_recovery_unavailable")
             return
         if parsed.path == f"/{_RELIABILITY_SCRIPT}":
             self._static_script(_RELIABILITY_SCRIPT, "aegis_reliability_unavailable")
+            return
+        if parsed.path == f"/{_FAULT_VIEW_SCRIPT}":
+            self._static_script(_FAULT_VIEW_SCRIPT, "fault_view_unavailable")
             return
         if parsed.path == f"/{_THEME_TOGGLE_SYNC_SCRIPT}":
             self._static_script(_THEME_TOGGLE_SYNC_SCRIPT, "theme_toggle_sync_unavailable")
@@ -118,8 +137,12 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             tags += _RECOVERY_TAG
         if _RELIABILITY_MARKER not in body:
             tags += _RELIABILITY_TAG
+        if _FAULT_VIEW_MARKER not in body:
+            tags += _FAULT_VIEW_TAG
         if _THEME_TOGGLE_SYNC_MARKER not in body:
             tags += _THEME_TOGGLE_SYNC_TAG
+        if b"<!-- truepanel-flight-logs -->" not in body:
+            tags += _FLIGHT_LOGS_TAG
 
         if tags:
             if b"</body>" in body:
@@ -128,6 +151,24 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
                 body += tags
 
         self._send(body, content_type="text/html; charset=utf-8")
+
+    def _flight_logs(self, parsed):
+        query = parse_qs(parsed.query)
+        try:
+            limit = int(query.get("limit", ["100"])[0])
+            if not 1 <= limit <= 500:
+                raise ValueError("out of range")
+        except (ValueError, TypeError):
+            self._json({"error": "invalid_limit"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        category = query.get("category", [""])[0][:32]
+        severity = query.get("severity", [""])[0][:32]
+        try:
+            lines = recent_flight_logs(limit=limit, category=category, severity=severity)
+        except OSError:
+            self._json({"error": "flight_log_unavailable"}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+            return
+        self._json({"read_only": True, "count": len(lines), "entries": lines})
 
     def _status(self, parsed):
         del parsed

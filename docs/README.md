@@ -6,11 +6,13 @@ This directory is the operating manual for the current TruePanel platform.
 
 - [Mission Control and reliability](MISSION_CONTROL.md) for the cockpit, Preflight, Health Intelligence, Pathfinder, Lifeline, ORACLE, AEGIS, mobile behavior, and access boundaries
 - [Cargo Bay](CARGO_BAY.md) for recent Sonarr/Radarr imports, live queue state, current-file resolution, Pilot/Flight Engineer presentation, and evidence-backed independent backup status
+- [Loadmaster](LOADMASTER.md) for plug-in-and-press USB drive sync: rules, safety, front panel, Mission Control and setup
 - [AEGIS Black Box calibration corpus](AEGIS_BLACK_BOX_CORPUS.md) for versioned privacy-safe replay evidence and calibration limits
 - [AEGIS field-evidence gate](AEGIS_FIELD_EVIDENCE_GATE.md) for opt-in admission, uncertainty bounds, and promotion holds
 - [AEGIS Airworthiness](AEGIS_AIRWORTHINESS.md) for the time-bounded acceptance envelope, passive platform witness, requalification, independent approval, staged-byte witness, signatures, and manual final-handoff boundary
 - [Installation](INSTALLATION.md) for compatibility checks, native deployment, service activation, configuration, and removal
 - [Upgrade and rollback](UPGRADING.md) for guarded staging, promotion, verification, cleanup, repair, and recovery
+- [1.4.0 release notes](RELEASE_1.4.0.md) for what is in the current stable release
 - [CLI reference](CLI.md) for diagnostics, lifecycle, simulation, plugins, hardware, and laboratory commands
 - [Hardware support](HARDWARE.md) for verified controllers, ports, command maps, and safety boundaries
 
