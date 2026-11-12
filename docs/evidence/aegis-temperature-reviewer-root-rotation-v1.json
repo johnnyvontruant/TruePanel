@@ -1,0 +1,37 @@
+{
+  "hardware_isolated": true,
+  "measurements": {
+    "compromise_time_events": 1,
+    "confidence": 0.95,
+    "coverage_gaps": 0,
+    "coverage_total": 8,
+    "coverage_trusted": 8,
+    "deployments": 0,
+    "dual_signature_transitions": 2,
+    "field_validations": 0,
+    "fixture_private_keys_created": 2,
+    "fixture_private_keys_retained": 0,
+    "generation_gap_acceptances": 0,
+    "hardware_actions": 0,
+    "hold_count": 5,
+    "isolated_threshold_first_match_sample": 46,
+    "lead_samples": 27,
+    "runtime_writes": 0,
+    "scenario_count": 7,
+    "shared_cooling_first_match_sample": 19,
+    "supporting_signal_count": 5,
+    "trusted_count": 2,
+    "unsigned_transition_acceptances": 0
+  },
+  "scenarios": [
+    {"errors": [], "name": "dual-signed", "status": "DUAL_ROOT_ROTATION_TRUSTED"},
+    {"errors": [], "name": "compromise-time", "status": "DUAL_ROOT_ROTATION_TRUSTED"},
+    {"errors": ["RootRotationDualSignatureRequired"], "name": "missing-predecessor", "status": "HOLD"},
+    {"errors": ["RootRotationDualSignatureRequired"], "name": "missing-successor", "status": "HOLD"},
+    {"errors": ["RootRotationGenerationInvalid"], "name": "generation-gap", "status": "HOLD"},
+    {"errors": ["RootRotationCompromiseTimelineInvalid"], "name": "invalid-compromise-time", "status": "HOLD"},
+    {"errors": ["RootRotationStatementMismatch"], "name": "authority-escalation", "status": "HOLD"}
+  ],
+  "schema": "truepanel.holodeck-temperature-reviewer-root-rotation/v1",
+  "simulation": true
+}
