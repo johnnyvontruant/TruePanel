@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import tempfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,7 @@ def _run(*command: str) -> None:
 
 
 def _fixture(root: Path) -> dict[str, Path | str]:
+    now = datetime.now(UTC).replace(microsecond=0)
     ca_key, ca_cert = root / "issuer.key", root / "issuer.crt"
     tsa_key, tsa_csr, tsa_cert = (
         root / "operator.key",
@@ -143,8 +145,8 @@ def _fixture(root: Path) -> dict[str, Path | str]:
         )
         return der
 
-    current_crl = crl("current", "20261112000000Z")
-    stale_crl = crl("stale", "20261109010000Z")
+    current_crl = crl("current", (now + timedelta(days=3)).strftime("%Y%m%d%H%M%SZ"))
+    stale_crl = crl("stale", (now - timedelta(minutes=1)).strftime("%Y%m%d%H%M%SZ"))
     _run(
         "/usr/bin/openssl",
         "ca",
@@ -156,7 +158,7 @@ def _fixture(root: Path) -> dict[str, Path | str]:
         "-crl_reason",
         "keyCompromise",
     )
-    revoked_crl = crl("revoked", "20261112000000Z")
+    revoked_crl = crl("revoked", (now + timedelta(days=3)).strftime("%Y%m%d%H%M%SZ"))
     return {
         "issuer": ca_cert,
         "certificate": tsa_cert,

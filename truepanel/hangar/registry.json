@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.10.1",
-  "updated_at": "2026-11-10",
+  "registry_version": "2026.11.11.1",
+  "updated_at": "2026-11-11",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -964,6 +964,25 @@
       "revisit_conditions": ["production TSA issuer and responder certificates are selected", "an online nonce-bearing OCSP request path is proposed", "a combined CRL and OCSP archive renewal chain is proposed", "a digest algorithm migration is required", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Combine signed CRL and OCSP objects in one archive-renewal chain and renew it before either status object timestamp certificate or digest policy becomes unsuitable.",
       "freshness": {"reviewed_at": "2026-11-10", "review_after": "2027-05-10"}
+    },
+    {
+      "id": "TP-EXP-0057", "title": "AEGIS combined revocation archive renewal", "state": "COMPLETED",
+      "hypothesis": "Re-verifying exact CRL and OCSP packages and binding both predecessor RFC 3161 tokens into one consecutive renewal can preserve evidence continuity without trusting summaries or granting operational authority.",
+      "value": "Advances the preserved revocation record by one machine-verifiable generation before any governed status timestamp-authority or digest-policy deadline.",
+      "prior_art": ["RFC 4998 timestamp renewal", "RFC 6283 evidence-record renewal", "ETSI DSS renewal digest builders", "OpenSSL CRL OCSP and RFC 3161 verification", "Sigstore portable verification bundles"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-revocation-archive-renewal", "pr": null, "commits": []},
+      "protocol": ["re-verify exact CRL and OCSP evidence packages", "require identical operator TSA certificate issuer and serial", "bind both prior manifests and RFC 3161 tokens by SHA-256", "advance archive generation exactly N to N plus one", "timestamp the canonical renewal manifest after both predecessors and before the earliest governed deadline", "label the format ERS inspired but not RFC 4998 wire compatible", "stop at archive-renewal eligibility", "deny validation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-revocation-archive-renewal", "tests/test_aegis_temperature_revocation_archive_renewal.py"],
+      "success_criteria": ["one combined CRL and OCSP renewal is trusted", "identity mismatch missing or tampered predecessor wrong or missing renewal late renewal expired policy generation skip and authority escalation hold", "both source packages are cryptographically reverified", "both predecessor tokens are content bound", "accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "fixture private keys are not retained", "deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["a prior result summary substitutes for source-package verification", "CRL and OCSP evidence for different identities is combined", "a predecessor token is omitted", "a renewal token covers different bytes or arrives after the earliest deadline", "a generation is skipped", "ERS wire compatibility is claimed without ASN.1 conformance", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-revocation-archive-renewal-v1.json", "sha256": "90fe8ed1465ac0c9cfc2658fca5e69f14be2fa29636f4b7d7cf7eab73f7288cd"}],
+      "outcome": {"conclusion": "Ten deterministic paths trust one combined consecutive renewal and hold nine identity custody freshness chronology generation or authority failures while re-verifying both source packages and retaining no operational authority."},
+      "invalidated_assumptions": ["independently trusted CRL and OCSP summaries prove a shared identity", "renewing only the latest token preserves both evidence branches", "archive renewal may wait until after one status object expires", "a generation counter may skip without breaking custody", "an ERS-inspired invariant implies RFC 4998 wire compatibility"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_revocation_archive_renewal.py tests/test_aegis_temperature_ocsp_evidence_package.py tests/test_aegis_temperature_revocation_evidence_package.py", "python -c \"from truepanel.holodeck.aegis_temperature_revocation_archive_renewal import run_temperature_revocation_archive_renewal_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["a second digest policy is available for migration rehearsal", "RFC 4998 ASN.1 interoperability is required", "production preservation-service custody is designed", "durable archive storage is selected", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Rehearse hash-tree renewal into a second digest policy while binding the original CRL OCSP certificates predecessor tokens and complete generation history.",
+      "freshness": {"reviewed_at": "2026-11-11", "review_after": "2027-05-11"}
     }
   ]
 }

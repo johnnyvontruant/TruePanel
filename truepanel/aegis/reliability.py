@@ -89,6 +89,9 @@ from .temperature_reviewer_signature_validity import (
 from .temperature_reviewer_timestamp_witness import (
     pending_temperature_reviewer_timestamp_witness,
 )
+from .temperature_revocation_archive_renewal import (
+    pending_revocation_archive_renewal,
+)
 from .temperature_revocation_evidence_package import (
     pending_revocation_evidence_package,
 )
@@ -306,6 +309,9 @@ class AegisReliabilityEngine:
         )
         self.temperature_ocsp_evidence_package = pending_ocsp_evidence_package(
             self.temperature_revocation_evidence_package
+        )
+        self.temperature_revocation_archive_renewal = (
+            pending_revocation_archive_renewal(self.temperature_ocsp_evidence_package)
         )
         self.temperature_detector_result_binding = (
             pending_temperature_detector_result_binding(
@@ -615,6 +621,7 @@ class AegisReliabilityEngine:
             "coverage_timestamp_trust_rotation": self.temperature_timestamp_trust_rotation,
             "coverage_revocation_evidence_package": self.temperature_revocation_evidence_package,
             "coverage_ocsp_evidence_package": self.temperature_ocsp_evidence_package,
+            "coverage_revocation_archive_renewal": self.temperature_revocation_archive_renewal,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {

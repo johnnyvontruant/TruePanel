@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.10.1 · refreshed 2026-11-10 · 50 experiment(s)
+Registry version 2026.11.11.1 · refreshed 2026-11-11 · 51 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -403,3 +403,11 @@ Nine deterministic paths trust one exact authorized GOOD OCSP package archived b
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Combine signed CRL and OCSP objects in one archive-renewal chain and renew it before either status object timestamp certificate or digest policy becomes unsuitable.
 - Revisit when: production TSA issuer and responder certificates are selected; an online nonce-bearing OCSP request path is proposed; a combined CRL and OCSP archive renewal chain is proposed; a digest algorithm migration is required; field validation installation or deployment is proposed
+
+## TP-EXP-0057 · AEGIS combined revocation archive renewal
+
+Ten deterministic paths trust one combined consecutive renewal and hold nine identity custody freshness chronology generation or authority failures while re-verifying both source packages and retaining no operational authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Rehearse hash-tree renewal into a second digest policy while binding the original CRL OCSP certificates predecessor tokens and complete generation history.
+- Revisit when: a second digest policy is available for migration rehearsal; RFC 4998 ASN.1 interoperability is required; production preservation-service custody is designed; durable archive storage is selected; field validation installation or deployment is proposed
