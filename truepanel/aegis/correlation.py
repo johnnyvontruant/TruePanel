@@ -6,12 +6,15 @@ from collections.abc import Iterable, Mapping
 from copy import deepcopy
 from typing import Any
 
+from truepanel.guidance.storage_evidence import normalize_device
+
 from .policy import DEFAULT_CORRELATION_POLICY, CorrelationPolicy
 
 _PRIORITY = {
-    "storage.disk_faulted": 0,
-    "storage.pool_degraded": 1,
-    "storage.smart_warning": 2,
+    "storage.temperature_telemetry_missing": 0,
+    "storage.disk_faulted": 1,
+    "storage.pool_degraded": 2,
+    "storage.smart_warning": 3,
     "cooling.fan_stall": 3,
     "thermal.high_temperature": 4,
     "telemetry.stale": 5,
@@ -99,6 +102,100 @@ def _verification_state(cards: list[dict[str, Any]]) -> str:
     return "pending"
 
 
+def _member_identity_tokens(card: Mapping[str, Any]) -> set[str]:
+    evidence = _dict(_dict(card.get("runtime")).get("evidence"))
+    records = [evidence]
+    records.extend(
+        item
+        for item in _list(evidence.get("missing_members"))
+        if isinstance(item, dict)
+    )
+    tokens: set[str] = set()
+    for record in records:
+        device = normalize_device(record.get("device") or record.get("drive"))
+        if device:
+            tokens.add(f"device:{device}")
+        bay = record.get("bay") or record.get("physical_bay")
+        try:
+            parsed_bay = int(bay)
+        except (TypeError, ValueError):
+            parsed_bay = 0
+        if parsed_bay > 0:
+            tokens.add(f"bay:{parsed_bay}")
+        member = _text(record.get("member_id"))
+        if member:
+            tokens.add(f"member:{member}")
+    return tokens
+
+
+def _temperature_blind_spot_incident(
+    cards: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    blind = next(
+        (
+            card
+            for card in cards
+            if _text(card.get("code"))
+            == "storage.temperature_telemetry_missing"
+        ),
+        None,
+    )
+    if blind is None:
+        return None
+    blind_identity = _member_identity_tokens(blind)
+    candidates = [
+        card
+        for card in cards
+        if _text(card.get("code"))
+        in {"storage.smart_warning", "storage.disk_faulted"}
+        and blind_identity.intersection(_member_identity_tokens(card))
+    ]
+    if not candidates:
+        return None
+
+    related = [blind, candidates[0]]
+    shared_identity = sorted(
+        blind_identity.intersection(_member_identity_tokens(candidates[0]))
+    )
+    hard_fault = _text(candidates[0].get("code")) == "storage.disk_faulted"
+    return {
+        "incident_id": "aegis:drive-temperature-observability",
+        "state": "active",
+        "likely_cause": "Shared drive-health and telemetry-path degradation",
+        "hypothesis": (
+            "The same identified storage member has independent health evidence "
+            "and no temperature observation. Its temperature remains unknown; "
+            "this does not prove overheating."
+        ),
+        "confidence": 0.90 if hard_fault else 0.84,
+        "confidence_basis": {
+            "matched_evidence": [
+                "alert:storage.temperature_telemetry_missing",
+                f"alert:{_text(candidates[0].get('code'))}",
+            ],
+            "exact_member_identity": shared_identity,
+            "temperature_claim": "unknown",
+        },
+        "supporting_signals": _card_evidence(related),
+        "contributing_alerts": [_text(card.get("code")) for card in related],
+        "consolidated_alert_count": 1,
+        "suppressed_duplicate_count": 1,
+        "presentation": {
+            "group_by": ["exact_member_identity", "observability_domain"],
+            "inhibited_alerts": [_text(candidates[0].get("code"))],
+            "raw_alerts_retained": True,
+        },
+        "safest_next_action": _safe_action(
+            [blind],
+            "Verify the read-only member identity and restore its temperature collector path.",
+        ),
+        "verification_state": _verification_state([blind]),
+        "verification_scenario": "aegis-drive-temperature-blind-spot",
+        "read_only": True,
+        "control_authority": False,
+    }
+
+
 def correlate_incident(
     cards: Iterable[dict[str, Any]],
     oracle_outlook: Mapping[str, Any] | None = None,
@@ -114,6 +211,9 @@ def correlate_incident(
     active_cards = [card for card in cards if isinstance(card, dict)]
     active_cards.sort(key=lambda item: _PRIORITY.get(_text(item.get("code")), 99))
     outlook = dict(oracle_outlook or {})
+    blind_spot = _temperature_blind_spot_incident(active_cards)
+    if blind_spot is not None:
+        return blind_spot
     active_policy = policy or DEFAULT_CORRELATION_POLICY
     match = active_policy.evaluate(active_cards, outlook)
 
