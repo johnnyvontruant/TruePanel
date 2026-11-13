@@ -72,7 +72,11 @@ def _format(value: datetime) -> str:
     )
 
 
-def _tsa(root: Path) -> tuple[OpenSslRfc3161TimestampVerifier, Path]:
+def _tsa(
+    root: Path, *, digest_algorithm: str = "sha256"
+) -> tuple[OpenSslRfc3161TimestampVerifier, Path]:
+    if digest_algorithm not in {"sha256", "sha512"}:
+        raise ValueError("UnsupportedHoloDeckTimestampDigest")
     ca_key, ca_cert = root / "tsa-ca.key", root / "tsa-ca.crt"
     tsa_key, tsa_csr, tsa_cert = (
         root / "tsa.key",
@@ -154,10 +158,10 @@ def _tsa(root: Path) -> tuple[OpenSslRfc3161TimestampVerifier, Path]:
         f"signer_cert={tsa_cert}\n"
         f"certs={ca_cert}\n"
         f"signer_key={tsa_key}\n"
-        "signer_digest=sha256\n"
+        f"signer_digest={digest_algorithm}\n"
         f"default_policy={DEFAULT_POLICY_OID}\n"
         f"other_policies={DEFAULT_POLICY_OID}\n"
-        "digests=sha256\n"
+        f"digests={digest_algorithm}\n"
         "accuracy=secs:1\n"
         "ordering=yes\n"
         "tsa_name=yes\n"
@@ -165,10 +169,23 @@ def _tsa(root: Path) -> tuple[OpenSslRfc3161TimestampVerifier, Path]:
         encoding="ascii",
     )
     os.chmod(ca_cert, 0o600)
-    return OpenSslRfc3161TimestampVerifier(ca_cert), config
+    return (
+        OpenSslRfc3161TimestampVerifier(
+            ca_cert, expected_hash_algorithm=digest_algorithm
+        ),
+        config,
+    )
 
 
-def _issue(config: Path, signature: Path, token: Path) -> None:
+def _issue(
+    config: Path,
+    signature: Path,
+    token: Path,
+    *,
+    digest_algorithm: str = "sha256",
+) -> None:
+    if digest_algorithm not in {"sha256", "sha512"}:
+        raise ValueError("UnsupportedHoloDeckTimestampDigest")
     query = token.with_suffix(".tsq")
     _run(
         "/usr/bin/openssl",
@@ -176,7 +193,7 @@ def _issue(config: Path, signature: Path, token: Path) -> None:
         "-query",
         "-data",
         str(signature),
-        "-sha256",
+        f"-{digest_algorithm}",
         "-cert",
         "-out",
         str(query),

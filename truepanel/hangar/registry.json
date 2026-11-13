@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.11.1",
-  "updated_at": "2026-11-11",
+  "registry_version": "2026.11.12.1",
+  "updated_at": "2026-11-12",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -983,6 +983,25 @@
       "revisit_conditions": ["a second digest policy is available for migration rehearsal", "RFC 4998 ASN.1 interoperability is required", "production preservation-service custody is designed", "durable archive storage is selected", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Rehearse hash-tree renewal into a second digest policy while binding the original CRL OCSP certificates predecessor tokens and complete generation history.",
       "freshness": {"reviewed_at": "2026-11-11", "review_after": "2027-05-11"}
+    },
+    {
+      "id": "TP-EXP-0058", "title": "AEGIS SHA-512 revocation archive hash-tree renewal", "state": "COMPLETED",
+      "hypothesis": "Rehashing every archived object and the complete prior timestamp sequence into a domain-separated SHA-512 tree can preserve revocation-evidence continuity across digest-policy retirement without granting operational authority.",
+      "value": "Provides a machine-verifiable cryptographic-agility path before SHA-256 policy expiry while preserving every original object and prior timestamp.",
+      "prior_art": ["RFC 4998 hash-tree renewal", "RFC 9162 domain-separated Merkle trees", "ETSI DSS ASN1EvidenceRecordRenewalDigestBuilder", "Bouncy Castle ERSEvidenceRecord renewHash"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-hash-tree-renewal", "pr": null, "commits": []},
+      "protocol": ["re-verify the exact predecessor CRL OCSP and combined archive", "rehash all 11 objects and the complete prior timestamp sequence with SHA-512", "prove every object in a domain-separated Merkle tree", "advance generation and archive chain exactly once", "timestamp the raw SHA-512 root before the old digest-policy deadline", "label the record ERS inspired but not RFC 4998 wire compatible", "deny validation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-revocation-hash-tree-renewal", "tests/test_aegis_temperature_revocation_hash_tree_renewal.py"],
+      "success_criteria": ["one complete SHA-256 to SHA-512 renewal is trusted", "missing tampered incomplete wrong-root downgrade skipped-generation late and authority-escalation paths hold", "all 11 objects and proofs are verified", "the accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "fixture private keys are not retained", "deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["any archive object or prior timestamp is omitted", "a SHA-256 renewal token is accepted", "a timestamp covers the manifest instead of the raw tree root", "a generation or chain is skipped", "RFC 4998 wire compatibility is claimed without ASN.1 conformance", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-revocation-hash-tree-renewal-v1.json", "sha256": "d24f8f0d7007de8eacf3744e8812472d3fe9416e0f88332c7c608daa077d364e"}],
+      "outcome": {"conclusion": "Ten deterministic paths trust one complete SHA-512 hash-tree renewal and hold nine custody completeness integrity downgrade chronology generation or authority failures while retaining no operational authority."},
+      "invalidated_assumptions": ["renewing only the newest token preserves the full archive", "a digest migration may omit original evidence objects", "timestamping a manifest is equivalent to timestamping its tree root", "an ERS-inspired tree is automatically RFC 4998 wire compatible"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_revocation_hash_tree_renewal.py", "python -c \"from truepanel.holodeck.aegis_temperature_revocation_hash_tree_renewal import run_temperature_revocation_hash_tree_renewal_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["ASN.1 RFC 4998 interoperability is required", "a post-SHA-512 digest policy is selected", "production preservation-service custody is designed", "durable archive storage is selected", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Cross-validate a detached-content ASN.1 EvidenceRecord fixture with ETSI DSS and Bouncy Castle while keeping the current internal interface replaceable.",
+      "freshness": {"reviewed_at": "2026-11-12", "review_after": "2027-05-12"}
     }
   ]
 }

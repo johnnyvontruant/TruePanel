@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.11.1 · refreshed 2026-11-11 · 51 experiment(s)
+Registry version 2026.11.12.1 · refreshed 2026-11-12 · 52 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -411,3 +411,11 @@ Ten deterministic paths trust one combined consecutive renewal and hold nine ide
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Rehearse hash-tree renewal into a second digest policy while binding the original CRL OCSP certificates predecessor tokens and complete generation history.
 - Revisit when: a second digest policy is available for migration rehearsal; RFC 4998 ASN.1 interoperability is required; production preservation-service custody is designed; durable archive storage is selected; field validation installation or deployment is proposed
+
+## TP-EXP-0058 · AEGIS SHA-512 revocation archive hash-tree renewal
+
+Ten deterministic paths trust one complete SHA-512 hash-tree renewal and hold nine custody completeness integrity downgrade chronology generation or authority failures while retaining no operational authority.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Cross-validate a detached-content ASN.1 EvidenceRecord fixture with ETSI DSS and Bouncy Castle while keeping the current internal interface replaceable.
+- Revisit when: ASN.1 RFC 4998 interoperability is required; a post-SHA-512 digest policy is selected; production preservation-service custody is designed; durable archive storage is selected; field validation installation or deployment is proposed

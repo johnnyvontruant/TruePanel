@@ -34,11 +34,13 @@ class OpenSslRfc3161TimestampVerifier:
         trust_anchor_path: str | Path,
         *,
         expected_policy_oid: str = DEFAULT_POLICY_OID,
+        expected_hash_algorithm: str = "sha256",
         executable: str = "/usr/bin/openssl",
         timeout: float = 5.0,
     ) -> None:
         self.trust_anchor_path = Path(trust_anchor_path)
         self.expected_policy_oid = expected_policy_oid
+        self.expected_hash_algorithm = expected_hash_algorithm.lower()
         self.executable = executable
         self.timeout = float(timeout)
 
@@ -61,6 +63,7 @@ class OpenSslRfc3161TimestampVerifier:
                 or len(token) > MAX_TIMESTAMP_TOKEN_BYTES
                 or not Path(self.executable).is_absolute()
                 or not self.expected_policy_oid
+                or self.expected_hash_algorithm not in {"sha256", "sha512"}
             ):
                 raise ValueError("Rfc3161InputInvalid")
             anchor = OpenSshSignatureVerifier._snapshot(
@@ -123,7 +126,7 @@ class OpenSslRfc3161TimestampVerifier:
                 raise ValueError("Rfc3161ProfileInvalid")
             if policy.group(1) != self.expected_policy_oid:
                 raise ValueError("Rfc3161PolicyMismatch")
-            if algorithm.group(1).lower() != "sha256":
+            if algorithm.group(1).lower() != self.expected_hash_algorithm:
                 raise ValueError("Rfc3161DigestPolicyMismatch")
             result.update(
                 {
