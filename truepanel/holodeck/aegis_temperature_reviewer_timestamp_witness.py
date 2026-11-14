@@ -213,6 +213,19 @@ def _issue(
     )
 
 
+def _extract_timestamp_token(response: Path, token: Path) -> None:
+    _run(
+        "/usr/bin/openssl",
+        "ts",
+        "-reply",
+        "-in",
+        str(response),
+        "-token_out",
+        "-out",
+        str(token),
+    )
+
+
 def run_temperature_reviewer_timestamp_witness_checkride() -> dict[str, Any]:
     scenarios: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="truepanel-rfc3161-witness-") as directory:

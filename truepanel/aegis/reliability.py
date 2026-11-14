@@ -98,6 +98,9 @@ from .temperature_revocation_evidence_package import (
 from .temperature_revocation_hash_tree_renewal import (
     pending_revocation_hash_tree_renewal,
 )
+from .temperature_rfc4998_interop_fixture import (
+    pending_rfc4998_interoperability_fixture,
+)
 from .temperature_score_review import pending_temperature_score_review
 from .temperature_statistical_calibration_contract import (
     pending_temperature_statistical_calibration_contract,
@@ -319,6 +322,11 @@ class AegisReliabilityEngine:
         self.temperature_revocation_hash_tree_renewal = (
             pending_revocation_hash_tree_renewal(
                 self.temperature_revocation_archive_renewal
+            )
+        )
+        self.temperature_rfc4998_interoperability = (
+            pending_rfc4998_interoperability_fixture(
+                self.temperature_revocation_hash_tree_renewal
             )
         )
         self.temperature_detector_result_binding = (
@@ -631,6 +639,7 @@ class AegisReliabilityEngine:
             "coverage_ocsp_evidence_package": self.temperature_ocsp_evidence_package,
             "coverage_revocation_archive_renewal": self.temperature_revocation_archive_renewal,
             "coverage_revocation_hash_tree_renewal": self.temperature_revocation_hash_tree_renewal,
+            "coverage_rfc4998_interoperability": self.temperature_rfc4998_interoperability,
             "coverage_detector_result_binding": self.temperature_detector_result_binding,
             "correlation_policy": policy_description,
             "coverage_summary": {

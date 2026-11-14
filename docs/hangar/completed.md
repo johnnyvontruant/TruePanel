@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.12.1 · refreshed 2026-11-12 · 52 experiment(s)
+Registry version 2026.11.13.1 · refreshed 2026-11-13 · 53 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -419,3 +419,11 @@ Ten deterministic paths trust one complete SHA-512 hash-tree renewal and hold ni
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Cross-validate a detached-content ASN.1 EvidenceRecord fixture with ETSI DSS and Bouncy Castle while keeping the current internal interface replaceable.
 - Revisit when: ASN.1 RFC 4998 interoperability is required; a post-SHA-512 digest policy is selected; production preservation-service custody is designed; durable archive storage is selected; field validation installation or deployment is proposed
+
+## TP-EXP-0059 · AEGIS RFC 4998 detached interoperability fixture
+
+Eight deterministic paths self-verify one bounded RFC 4998 detached SHA-512 fixture and hold seven root integrity structure downgrade timestamp or trust failures while independent interoperability remains explicitly pending and all operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Cross-validate the exact DER and detached root with Bouncy Castle and ETSI DSS and preserve versioned receipts before claiming interoperability.
+- Revisit when: Bouncy Castle accepts the exact fixture; ETSI DSS accepts the exact fixture; multiple detached objects are required; archive timestamp renewal is required; production preservation-service custody is designed; field validation installation or deployment is proposed

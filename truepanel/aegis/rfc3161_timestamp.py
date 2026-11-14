@@ -35,12 +35,14 @@ class OpenSslRfc3161TimestampVerifier:
         *,
         expected_policy_oid: str = DEFAULT_POLICY_OID,
         expected_hash_algorithm: str = "sha256",
+        token_is_content_info: bool = False,
         executable: str = "/usr/bin/openssl",
         timeout: float = 5.0,
     ) -> None:
         self.trust_anchor_path = Path(trust_anchor_path)
         self.expected_policy_oid = expected_policy_oid
         self.expected_hash_algorithm = expected_hash_algorithm.lower()
+        self.token_is_content_info = bool(token_is_content_info)
         self.executable = executable
         self.timeout = float(timeout)
 
@@ -82,18 +84,21 @@ class OpenSslRfc3161TimestampVerifier:
                 "token": f"/proc/self/fd/{token_fd}",
                 "anchor": f"/proc/self/fd/{anchor_fd}",
             }
+            verify_command = [
+                self.executable,
+                "ts",
+                "-verify",
+                "-data",
+                paths["value"],
+                "-in",
+                paths["token"],
+                "-CAfile",
+                paths["anchor"],
+            ]
+            if self.token_is_content_info:
+                verify_command.append("-token_in")
             verified = subprocess.run(
-                [
-                    self.executable,
-                    "ts",
-                    "-verify",
-                    "-data",
-                    paths["value"],
-                    "-in",
-                    paths["token"],
-                    "-CAfile",
-                    paths["anchor"],
-                ],
+                verify_command,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 timeout=self.timeout,
@@ -102,15 +107,18 @@ class OpenSslRfc3161TimestampVerifier:
             )
             if verified.returncode != 0:
                 raise ValueError("Rfc3161VerificationFailed")
+            inspect_command = [
+                self.executable,
+                "ts",
+                "-reply",
+                "-in",
+                paths["token"],
+                "-text",
+            ]
+            if self.token_is_content_info:
+                inspect_command.append("-token_in")
             inspected = subprocess.run(
-                [
-                    self.executable,
-                    "ts",
-                    "-reply",
-                    "-in",
-                    paths["token"],
-                    "-text",
-                ],
+                inspect_command,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,

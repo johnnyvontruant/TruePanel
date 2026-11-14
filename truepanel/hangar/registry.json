@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.12.1",
-  "updated_at": "2026-11-12",
+  "registry_version": "2026.11.13.1",
+  "updated_at": "2026-11-13",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1002,6 +1002,25 @@
       "revisit_conditions": ["ASN.1 RFC 4998 interoperability is required", "a post-SHA-512 digest policy is selected", "production preservation-service custody is designed", "durable archive storage is selected", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Cross-validate a detached-content ASN.1 EvidenceRecord fixture with ETSI DSS and Bouncy Castle while keeping the current internal interface replaceable.",
       "freshness": {"reviewed_at": "2026-11-12", "review_after": "2027-05-12"}
+    },
+    {
+      "id": "TP-EXP-0059", "title": "AEGIS RFC 4998 detached interoperability fixture", "state": "COMPLETED",
+      "hypothesis": "A bounded RFC 4998 single-detached-object EvidenceRecord can expose the exact SHA-512 archive root to independent validators without overstating local self-verification or granting operational authority.",
+      "value": "Closes the internal-format gap with a standards-shaped export fixture and makes independent cross-library acceptance a machine-visible trust gate.",
+      "prior_art": ["RFC 4998 Evidence Record Syntax", "Bouncy Castle ERS generator and validator", "ETSI DSS evidence-record validation", "OpenSSL RFC 3161 and DER tooling"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-rfc4998-interoperability-fixture", "pr": null, "commits": []},
+      "protocol": ["derive a deterministic detached SHA-512 root from the trusted predecessor rehearsal", "issue and extract one RFC 3161 CMS ContentInfo token over the exact root", "encode the bounded RFC 4998 version 1 single-object profile", "require generic DER acceptance and strict local structural parsing", "verify the embedded token over the exact detached root with one protected trust anchor and policy", "label the result self-verified with independent ETSI DSS or Bouncy Castle validation pending", "deny timestamp trust rotation deployment mutation and hardware authority"],
+      "fixtures": ["aegis-temperature-rfc4998-interoperability", "tests/test_aegis_temperature_rfc4998_interop_fixture.py"],
+      "success_criteria": ["one exact SHA-512 detached record is self-verified and export eligible", "wrong-root malformed version downgrade tamper trailing-data and untrusted-CA paths hold", "external validation completion remains zero", "the accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["local self-verification is called interoperability", "a record over different root bytes verifies", "malformed or trailing DER passes", "a digest downgrade passes", "a system trust store silently expands authority", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-temperature-rfc4998-interoperability-v1.json", "sha256": "59a8e99c55568bec39cef48c8793844d0efb254acfcd7ffc2dc42dc2fa42bb48"}],
+      "outcome": {"conclusion": "Eight deterministic paths self-verify one bounded RFC 4998 detached SHA-512 fixture and hold seven root integrity structure downgrade timestamp or trust failures while independent interoperability remains explicitly pending and all operational authority remains zero."},
+      "invalidated_assumptions": ["an ERS-inspired internal tree is automatically RFC 4998 wire compatible", "OpenSSL plus the producer's own parser is independent interoperability evidence", "a generic ASN.1 dependency is required for a bounded export profile", "export eligibility implies timestamp trust rotation eligibility"],
+      "reproduction": ["pytest -q tests/test_aegis_temperature_rfc4998_interop_fixture.py", "python -c \"from truepanel.holodeck.aegis_temperature_rfc4998_interop_fixture import run_temperature_rfc4998_interop_checkride as run; print(run()['measurements'])\"", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["Bouncy Castle accepts the exact fixture", "ETSI DSS accepts the exact fixture", "multiple detached objects are required", "archive timestamp renewal is required", "production preservation-service custody is designed", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Cross-validate the exact DER and detached root with Bouncy Castle and ETSI DSS and preserve versioned receipts before claiming interoperability.",
+      "freshness": {"reviewed_at": "2026-11-13", "review_after": "2027-05-13"}
     }
   ]
 }
