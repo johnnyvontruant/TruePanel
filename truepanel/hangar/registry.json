@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.13.1",
-  "updated_at": "2026-11-13",
+  "registry_version": "2026.11.14.1",
+  "updated_at": "2026-11-14",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1021,6 +1021,25 @@
       "revisit_conditions": ["Bouncy Castle accepts the exact fixture", "ETSI DSS accepts the exact fixture", "multiple detached objects are required", "archive timestamp renewal is required", "production preservation-service custody is designed", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Cross-validate the exact DER and detached root with Bouncy Castle and ETSI DSS and preserve versioned receipts before claiming interoperability.",
       "freshness": {"reviewed_at": "2026-11-13", "review_after": "2027-05-13"}
+    },
+    {
+      "id": "TP-EXP-0060", "title": "AEGIS Bouncy Castle RFC 4998 independent oracle", "state": "COMPLETED",
+      "hypothesis": "A version-pinned independent ERS implementation can validate the exact preserved TruePanel EvidenceRecord and reject content structure and trust substitutions without becoming a runtime dependency or granting operational authority.",
+      "value": "Replaces circular producer-side confidence with an independently implemented parser presence check signature verifier and PKIX path receipt enforced by CI.",
+      "prior_art": ["Bouncy Castle Java 1.86 ERSEvidenceRecord", "Bouncy Castle ERSTest", "RFC 4998 single-data-object validation", "ETSI DSS evidence-record validation"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-bouncycastle-rfc4998-oracle", "pr": null, "commits": []},
+      "protocol": ["preserve one content-addressed TruePanel RFC 4998 DER fixture detached data TSA root and unrelated root without private keys", "pin Bouncy Castle Java 1.86 in a development-only Maven adapter", "parse and DER-round-trip the exact record", "validate detached-data presence and primary SHA-512 imprint", "verify the RFC 3161 timestamp signature", "validate the TSA certificate path against the preserved root at timestamp generation time", "reject wrong data truncated DER and the wrong trust root", "compare the deterministic receipt byte-for-byte in CI", "deny production deployment runtime network storage and hardware authority"],
+      "fixtures": ["aegis-rfc4998-bouncycastle-fixture-v1", "aegis-rfc4998-bouncycastle-receipt-v1", "tests/test_aegis_rfc4998_bouncycastle_oracle_contract.py"],
+      "success_criteria": ["one independent Bouncy Castle implementation accepts the exact preserved record", "the DER round trip and primary imprint are exact", "detached data timestamp signature and intended PKIX path validate", "wrong data truncated DER and wrong root are rejected", "the CI receipt matches the reviewed receipt exactly", "the 27-sample shared-cooling lead remains bound", "active-record trust remains pending", "deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["a producer-side parser counts as independent", "a dependency is added to the appliance runtime", "an unpinned oracle version runs", "a receipt may drift without CI failure", "fixture success is generalized to an untested active record", "wrong content malformed DER or the wrong root passes", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-rfc4998-bouncycastle-fixture-v1.json", "sha256": "7253abe2f7b4a3560b7b0ee7bdfde5d54f551ab819a6ee999b81183b16a0e73c"}, {"path": "docs/evidence/aegis-rfc4998-bouncycastle-receipt-v1.json", "sha256": "f4b77861bb9a779ecedc4503ff34ac09d880f22bee9a0b63114add97dee71c25"}],
+      "outcome": {"conclusion": "Bouncy Castle Java 1.86 independently parses and exactly round-trips the preserved TruePanel RFC 4998 record validates its detached content timestamp signature and intended PKIX path and rejects wrong data truncated DER and an unrelated root while every operational authority remains zero."},
+      "invalidated_assumptions": ["producer-side OpenSSL and local parsing are sufficient interoperability evidence", "an independent oracle must become a runtime dependency", "ASN.1 parse success proves detached-content presence and trust", "one validated fixture automatically validates future active records"],
+      "reproduction": ["mvn --batch-mode --no-transfer-progress -f development/interop/rfc4998-bouncycastle/pom.xml verify", "pytest -q tests/test_aegis_rfc4998_bouncycastle_oracle_contract.py tests/test_aegis_temperature_rfc4998_interop_fixture.py", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["ETSI DSS is added as a second oracle", "per-record oracle receipts are designed", "multiple detached objects are required", "timestamp or hash renewal is added to the wire fixture", "production preservation-service custody is designed"],
+      "strongest_follow_up": "Add ETSI DSS as a second pinned oracle over the same immutable fixture then require fresh per-record receipts before any active archive can leave PENDING.",
+      "freshness": {"reviewed_at": "2026-11-14", "review_after": "2027-05-14"}
     }
   ]
 }

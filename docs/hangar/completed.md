@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.13.1 · refreshed 2026-11-13 · 53 experiment(s)
+Registry version 2026.11.14.1 · refreshed 2026-11-14 · 54 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -427,3 +427,11 @@ Eight deterministic paths self-verify one bounded RFC 4998 detached SHA-512 fixt
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Cross-validate the exact DER and detached root with Bouncy Castle and ETSI DSS and preserve versioned receipts before claiming interoperability.
 - Revisit when: Bouncy Castle accepts the exact fixture; ETSI DSS accepts the exact fixture; multiple detached objects are required; archive timestamp renewal is required; production preservation-service custody is designed; field validation installation or deployment is proposed
+
+## TP-EXP-0060 · AEGIS Bouncy Castle RFC 4998 independent oracle
+
+Bouncy Castle Java 1.86 independently parses and exactly round-trips the preserved TruePanel RFC 4998 record validates its detached content timestamp signature and intended PKIX path and rejects wrong data truncated DER and an unrelated root while every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add ETSI DSS as a second pinned oracle over the same immutable fixture then require fresh per-record receipts before any active archive can leave PENDING.
+- Revisit when: ETSI DSS is added as a second oracle; per-record oracle receipts are designed; multiple detached objects are required; timestamp or hash renewal is added to the wire fixture; production preservation-service custody is designed

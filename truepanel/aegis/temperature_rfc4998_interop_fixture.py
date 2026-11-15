@@ -252,7 +252,11 @@ def evaluate_detached_evidence_record(
         "detached_root_bound": timestamp_verified,
         "archive_timestamp_verified": timestamp_verified,
         "archive_timestamp_utc": generated_at,
+        "independent_oracle_fixture_validation": "BOUNCY_CASTLE_1.86_PASSED",
+        "active_record_external_validation": "PENDING" if valid else "BLOCKED",
         "external_interoperability_validation": "PENDING" if valid else "BLOCKED",
+        "independent_validators_rehearsed": 1,
+        "remaining_independent_oracles": ["ETSI DSS"],
         "eligible_for_external_interoperability_validation": valid,
         "eligible_for_timestamp_trust_rotation": False,
         **{key: False for key in _DENIED},
@@ -273,11 +277,15 @@ def pending_rfc4998_interoperability_fixture(
         "digest_algorithm": "sha512",
         "detached_root_bound": False,
         "archive_timestamp_verified": False,
+        "independent_oracle_fixture_validation": "BOUNCY_CASTLE_1.86_PASSED",
+        "active_record_external_validation": "PENDING",
         "external_interoperability_validation": "PENDING",
+        "independent_validators_rehearsed": 1,
+        "remaining_independent_oracles": ["ETSI DSS"],
         "eligible_for_external_interoperability_validation": False,
         "eligible_for_timestamp_trust_rotation": False,
         **{key: False for key in _DENIED},
-        "next_action": "Export the SHA-512 archive root as a detached RFC 4998 EvidenceRecord fixture, self-verify it, then cross-validate the exact DER with ETSI DSS and Bouncy Castle.",
+        "next_action": "Validate each active EvidenceRecord with the pinned Bouncy Castle oracle, then add an independent ETSI DSS receipt before production trust is considered.",
     }
 
 

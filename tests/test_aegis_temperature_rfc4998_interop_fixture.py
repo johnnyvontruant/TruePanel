@@ -50,5 +50,6 @@ def test_mobile_copy_does_not_overstate_interoperability():
     with open("truepanel/web/static/reliability-view.js", encoding="utf-8") as stream:
         source = stream.read()
     assert "RFC 4998 Interoperability Gate" in source
-    assert "ETSI DSS / Bouncy Castle validation" in source
-    assert "Self-verification is an export gate" in source
+    assert "Independent fixture oracle" in source
+    assert "Active record" in source
+    assert "never an untested active record" in source
