@@ -1,0 +1,49 @@
+{
+  "comparison": {
+    "after": "a distinct SSHSIG binds the exact reviewed recording, corpus identity, outcome, profile, workload, threshold landmark, expiry, and zero authority",
+    "before": "a reviewed recording could be paired with caller-supplied corpus labels",
+    "result": "label drift fails closed before any calibration-corpus write"
+  },
+  "control_authority": false,
+  "evidence_sha256": "34ff620230e5e928f47eb0871f35fb705ac3291fb9f73dda6f349612a4689ba8",
+  "experiment_id": "TP-EXP-0031",
+  "hardware_isolated": true,
+  "measurements": {
+    "admitted_count": 2,
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "corpus_writes": 0,
+    "deployments": 0,
+    "field_validations": 0,
+    "fixture_private_keys_created": 2,
+    "fixture_private_keys_retained": 0,
+    "hardware_actions": 0,
+    "hold_count": 9,
+    "private_key_inputs": 0,
+    "runtime_writes": 0,
+    "scenario_count": 12,
+    "signer_invocations_by_truepanel": 0,
+    "signing_ready_count": 1,
+    "source_paths_retained": 0,
+    "unsafe_ready_count": 0
+  },
+  "production_mutation": false,
+  "scenario": "aegis-content-bound-temperature-calibration-admission",
+  "scenarios": [
+    {"error_count": 0, "scenario": "public-admission-statement", "status": "READY_FOR_OFFLINE_CALIBRATION_ADMISSION_SIGNATURE"},
+    {"error_count": 0, "scenario": "content-bound-calibration-admission", "status": "CALIBRATION_CASE_AUTHENTICATED_FOR_CORPUS_IMPORT"},
+    {"error_count": 0, "scenario": "delayed-admission-within-window", "status": "CALIBRATION_CASE_AUTHENTICATED_FOR_CORPUS_IMPORT"},
+    {"error_count": 1, "scenario": "outcome-label-drift", "status": "HOLD"},
+    {"error_count": 1, "scenario": "system-profile-drift", "status": "HOLD"},
+    {"error_count": 1, "scenario": "unknown-label-field", "status": "HOLD"},
+    {"error_count": 1, "scenario": "recording-drift", "status": "HOLD"},
+    {"error_count": 1, "scenario": "authority-escalation", "status": "HOLD"},
+    {"error_count": 1, "scenario": "wrong-signature-namespace", "status": "HOLD"},
+    {"error_count": 1, "scenario": "same-principal-foreign-trust-root", "status": "HOLD"},
+    {"error_count": 1, "scenario": "unsafe-statement-permissions", "status": "HOLD"},
+    {"error_count": 1, "scenario": "expired-admission-window", "status": "HOLD"}
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "temporary_fixture_removed": true
+}

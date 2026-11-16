@@ -84,3 +84,69 @@ jobs:
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/truepanel-wheel/bin/python" \
             "$GITHUB_WORKSPACE/development/tools/smoke_installed_wheel.py"
+
+  rfc4998-bouncycastle-oracle:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: development/interop/rfc4998-bouncycastle/pom.xml
+
+      - name: Validate exact RFC 4998 fixture with Bouncy Castle 1.86
+        run: |
+          mvn --batch-mode --no-transfer-progress \
+            -f development/interop/rfc4998-bouncycastle/pom.xml \
+            -Dfixture="$GITHUB_WORKSPACE/docs/evidence/aegis-rfc4998-bouncycastle-fixture-v1.json" \
+            -Dreceipt="$RUNNER_TEMP/aegis-rfc4998-bouncycastle-receipt-v1.json" \
+            verify
+          diff -u \
+            docs/evidence/aegis-rfc4998-bouncycastle-receipt-v1.json \
+            "$RUNNER_TEMP/aegis-rfc4998-bouncycastle-receipt-v1.json"
+
+      - name: Preserve independent validation receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-rfc4998-bouncycastle-receipt
+          path: ${{ runner.temp }}/aegis-rfc4998-bouncycastle-receipt-v1.json
+          if-no-files-found: error
+
+  rfc4998-etsi-dss-oracle:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: development/interop/rfc4998-etsi-dss/pom.xml
+
+      - name: Validate exact RFC 4998 fixture with ETSI DSS 6.5.1
+        run: |
+          mvn --batch-mode --no-transfer-progress \
+            -f development/interop/rfc4998-etsi-dss/pom.xml \
+            -Dfixture="$GITHUB_WORKSPACE/docs/evidence/aegis-rfc4998-bouncycastle-fixture-v1.json" \
+            -Dreceipt="$RUNNER_TEMP/aegis-rfc4998-etsi-dss-receipt-v1.json" \
+            verify
+          diff -u \
+            docs/evidence/aegis-rfc4998-etsi-dss-receipt-v1.json \
+            "$RUNNER_TEMP/aegis-rfc4998-etsi-dss-receipt-v1.json"
+
+      - name: Preserve independent validation receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-rfc4998-etsi-dss-receipt
+          path: ${{ runner.temp }}/aegis-rfc4998-etsi-dss-receipt-v1.json
+          if-no-files-found: error

@@ -1,0 +1,45 @@
+{
+  "comparison": {
+    "aegis": "detects the missing member temperature in the first sanitized frame and proves recovery only after three complete identity-stable frames",
+    "isolated_thresholds": "cannot detect the absent value and cannot prove restoration of inventory coverage",
+    "result": "one authenticated replay contract with explicit non-production authority"
+  },
+  "control_authority": false,
+  "evidence_sha256": "f668dcaaadc348ed3e64140ea45c7eaf5d343f930950a89973e2e0e9fc30b384",
+  "experiment_id": "TP-EXP-0028",
+  "hardware_isolated": true,
+  "measurements": {
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "deployments": 0,
+    "false_field_validation_count": 0,
+    "field_observation_review_ready_count": 1,
+    "fixture_private_keys_created": 1,
+    "fixture_private_keys_retained": 0,
+    "hardware_actions": 0,
+    "hold_count": 10,
+    "production_keys": 0,
+    "runtime_writes": 0,
+    "scenario_count": 12,
+    "simulation_rehearsal_passed_count": 1
+  },
+  "production_mutation": false,
+  "scenario": "aegis-temperature-read-only-field-checkride",
+  "scenarios": [
+    {"error_count": 0, "scenario": "deterministic-recovery-replay", "status": "SIMULATION_REHEARSAL_PASSED"},
+    {"error_count": 0, "scenario": "reviewed-opt-in-field-fixture", "status": "FIELD_OBSERVATION_ACCEPTED_FOR_REVIEW"},
+    {"error_count": 1, "scenario": "invalid-operator-signature", "status": "HOLD"},
+    {"error_count": 1, "scenario": "unsanitized-identifier", "status": "HOLD"},
+    {"error_count": 1, "scenario": "non-monotonic-sequence", "status": "HOLD"},
+    {"error_count": 1, "scenario": "incomplete-three-sample-recovery", "status": "HOLD"},
+    {"error_count": 2, "scenario": "member-identity-drift", "status": "HOLD"},
+    {"error_count": 1, "scenario": "initial-fault-not-reproduced", "status": "HOLD"},
+    {"error_count": 1, "scenario": "ungoverned-source", "status": "HOLD"},
+    {"error_count": 1, "scenario": "field-without-opt-in", "status": "HOLD"},
+    {"error_count": 1, "scenario": "field-without-outcome-review", "status": "HOLD"},
+    {"error_count": 1, "scenario": "simulation-claiming-field-review", "status": "HOLD"}
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "temporary_fixture_removed": true
+}

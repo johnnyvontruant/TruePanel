@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "experiment_id": "TP-EXP-0030",
+  "scenario": "aegis-content-bound-temperature-field-review-receipt",
+  "simulation": true,
+  "hardware_isolated": true,
+  "production_mutation": false,
+  "control_authority": false,
+  "scenarios": [
+    {"scenario": "public-only-review-kit", "status": "READY_FOR_OFFLINE_FIELD_REVIEW_SIGNATURE", "error_count": 0},
+    {"scenario": "content-bound-field-review", "status": "FIELD_OBSERVATION_ACCEPTED_FOR_REVIEW", "error_count": 0},
+    {"scenario": "delayed-review-within-window", "status": "FIELD_OBSERVATION_ACCEPTED_FOR_REVIEW", "error_count": 0},
+    {"scenario": "wrong-signature-namespace", "status": "HOLD", "error_count": 1},
+    {"scenario": "same-principal-foreign-trust-root", "status": "HOLD", "error_count": 1},
+    {"scenario": "invalid-review-signature", "status": "HOLD", "error_count": 1},
+    {"scenario": "recording-changed-after-export", "status": "HOLD", "error_count": 1},
+    {"scenario": "authority-escalation", "status": "HOLD", "error_count": 1},
+    {"scenario": "manifest-substitution", "status": "HOLD", "error_count": 1},
+    {"scenario": "unsafe-statement-permissions", "status": "HOLD", "error_count": 1},
+    {"scenario": "unexpected-kit-file", "status": "HOLD", "error_count": 1},
+    {"scenario": "expired-review-window", "status": "HOLD", "error_count": 1}
+  ],
+  "measurements": {
+    "scenario_count": 12,
+    "signing_ready_count": 1,
+    "field_review_accepted_count": 2,
+    "hold_count": 9,
+    "unsafe_ready_count": 0,
+    "source_paths_retained": 0,
+    "private_key_inputs": 0,
+    "signer_invocations_by_truepanel": 0,
+    "fixture_private_keys_created": 2,
+    "fixture_private_keys_retained": 0,
+    "field_validations": 0,
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "deployments": 0,
+    "hardware_actions": 0,
+    "runtime_writes": 0
+  },
+  "comparison": {
+    "before": "caller booleans could describe opt-in and outcome review without a content-bound operator receipt",
+    "after": "one offline SSHSIG binds the exact recording, privacy and outcome review, expiry, development identity, and zero authority",
+    "result": "review intent is machine-verifiable while calibration use remains review-only"
+  },
+  "temporary_fixture_removed": true,
+  "evidence_sha256": "0b37f50cb67eba9b057e2b0b9dad2c82f0a88b918c6a1d71b33748f4f5fad07b"
+}

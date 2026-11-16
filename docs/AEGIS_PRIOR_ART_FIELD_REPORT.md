@@ -163,6 +163,17 @@ degradation, and storage incidents. Run the built-in policy and an optional
 River-backed detector through the same interface, then publish per-scenario
 false-positive rate, lead time, confidence stability, and root-cause stability.
 
+## RFC 4998 second-oracle follow-up
+
+The 2026-11-15 survey inspected the current European Commission DSS 6.5.1
+release, its RFC 4998 validator/analyzer source, cookbook validation path,
+diagnostic wrappers, tests, Maven modules, and LGPL-2.1-or-later license. The
+selected shortcut is a CI-only TruePanel adapter over the public DSS API. It
+validates the exact immutable fixture already accepted by Bouncy Castle and
+preserves a deterministic receipt while keeping Java out of the appliance
+runtime. See [`AEGIS_RFC4998_ETSI_DSS_ORACLE.md`](AEGIS_RFC4998_ETSI_DSS_ORACLE.md)
+for comparisons, provenance, rejected paths, and the remaining per-record gate.
+
 ## Recovery-ground-truth follow-up
 
 The 2026-09-02 survey inspected in-toto Statement v1, W3C PROV-DM,
