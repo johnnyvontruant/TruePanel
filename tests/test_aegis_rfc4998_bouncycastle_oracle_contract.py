@@ -57,13 +57,14 @@ def test_mission_control_distinguishes_fixture_proof_from_active_record():
         "coverage_rfc4998_interoperability"
     ]
     assert result["independent_oracle_fixture_validation"] == (
-        "BOUNCY_CASTLE_1.86_PASSED"
+        "BOUNCY_CASTLE_1.86_AND_ETSI_DSS_6.5.1_PASSED"
     )
     assert result["active_record_external_validation"] == "PENDING"
-    assert result["independent_validators_rehearsed"] == 1
+    assert result["independent_validators_rehearsed"] == 2
+    assert result["remaining_independent_oracles"] == []
     assert result["eligible_for_timestamp_trust_rotation"] is False
 
     source = (ROOT / "truepanel/web/static/reliability-view.js").read_text()
-    assert "Independent fixture oracle" in source
+    assert "Independent fixture oracles" in source
     assert "Active record" in source
     assert "never an untested active record" in source

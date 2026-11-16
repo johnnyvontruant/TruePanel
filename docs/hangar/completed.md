@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.14.1 · refreshed 2026-11-14 · 54 experiment(s)
+Registry version 2026.11.15.1 · refreshed 2026-11-15 · 55 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -435,3 +435,11 @@ Bouncy Castle Java 1.86 independently parses and exactly round-trips the preserv
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add ETSI DSS as a second pinned oracle over the same immutable fixture then require fresh per-record receipts before any active archive can leave PENDING.
 - Revisit when: ETSI DSS is added as a second oracle; per-record oracle receipts are designed; multiple detached objects are required; timestamp or hash renewal is added to the wire fixture; production preservation-service custody is designed
+
+## TP-EXP-0061 · AEGIS ETSI DSS RFC 4998 second oracle
+
+ETSI DSS 6.5.1 validates the preserved RFC 4998 fixture through its structure detached-data timestamp and trust diagnostics and rejects three adversarial substitutions while active-record trust and every operational authority remain withheld.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Bind fresh Bouncy Castle and ETSI DSS receipts to every active record and detached payload before Mission Control can move that record beyond PENDING.
+- Revisit when: per-record dual-oracle receipts are designed; multiple detached objects are required; timestamp or hash renewal is added to the wire fixture; a cryptographic provider independent of Bouncy Castle is required; production preservation-service custody is designed

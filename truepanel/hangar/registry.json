@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.14.1",
-  "updated_at": "2026-11-14",
+  "registry_version": "2026.11.15.1",
+  "updated_at": "2026-11-15",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1040,6 +1040,25 @@
       "revisit_conditions": ["ETSI DSS is added as a second oracle", "per-record oracle receipts are designed", "multiple detached objects are required", "timestamp or hash renewal is added to the wire fixture", "production preservation-service custody is designed"],
       "strongest_follow_up": "Add ETSI DSS as a second pinned oracle over the same immutable fixture then require fresh per-record receipts before any active archive can leave PENDING.",
       "freshness": {"reviewed_at": "2026-11-14", "review_after": "2027-05-14"}
+    },
+    {
+      "id": "TP-EXP-0061", "title": "AEGIS ETSI DSS RFC 4998 second oracle", "state": "COMPLETED",
+      "hypothesis": "A second version-pinned validation product can independently exercise the same immutable RFC 4998 fixture and preserve policy-rich evidence without becoming an appliance dependency or promoting untested active records.",
+      "value": "Closes the remaining static-fixture oracle gap with European Commission DSS diagnostics and makes per-record receipts the explicit next trust boundary.",
+      "prior_art": ["European Commission ETSI DSS 6.5.1", "DSS ASN1EvidenceRecordValidator", "ETSI evidence-record diagnostic reports", "RFC 4998 single-data-object validation"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-etsi-dss-rfc4998-oracle", "pr": null, "commits": []},
+      "protocol": ["reuse the exact content-addressed RFC 4998 fixture from the first oracle", "pin DSS 6.5.1 in a development-only Maven adapter", "configure only the explicit fixture trust root and no network validation sources", "validate structure detached-data binding timestamp imprint signature and trust chain", "reject wrong data truncated DER and an unrelated root", "compare a deterministic receipt byte-for-byte in CI", "show two fixture oracles while leaving active-record validation pending", "deny production deployment runtime network storage and hardware authority"],
+      "fixtures": ["aegis-rfc4998-bouncycastle-fixture-v1", "aegis-rfc4998-etsi-dss-receipt-v1", "tests/test_aegis_rfc4998_etsi_dss_oracle_contract.py"],
+      "success_criteria": ["DSS accepts the exact immutable record and detached object", "structure data imprint signature and intended trust anchor validate", "wrong data truncated DER and wrong root are rejected", "the reviewed receipt matches CI output exactly", "two fixture validators are visible", "active-record trust remains pending", "the accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "deployment hardware and runtime authority remain zero"],
+      "abort_criteria": ["DSS source is copied or modified", "DSS becomes an appliance runtime dependency", "system trust or network validation silently expands authority", "an unpinned oracle version runs", "fixture success promotes an active record", "wrong content malformed DER or the wrong root passes", "storage network runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-rfc4998-etsi-dss-receipt-v1.json", "sha256": "b3254c2b2277b50ef34bbf7cb4d35df0a79bb12dbb4aae7e86e7a9237f06034f"}, {"path": "docs/AEGIS_RFC4998_ETSI_DSS_ORACLE.md", "sha256": "1045921fb3a6430b1b881ae5efdc7a75a29b7239a7218ad267bd7c9e2f11d577"}],
+      "outcome": {"conclusion": "ETSI DSS 6.5.1 validates the preserved RFC 4998 fixture through its structure detached-data timestamp and trust diagnostics and rejects three adversarial substitutions while active-record trust and every operational authority remain withheld."},
+      "invalidated_assumptions": ["one independent product is sufficient interoperability evidence", "a second oracle must run on the appliance", "DSS diagnostic success implies every future record is trusted", "using DSS makes its underlying cryptographic provider independent from Bouncy Castle"],
+      "reproduction": ["mvn --batch-mode --no-transfer-progress -f development/interop/rfc4998-etsi-dss/pom.xml verify", "pytest -q tests/test_aegis_rfc4998_etsi_dss_oracle_contract.py tests/test_aegis_rfc4998_bouncycastle_oracle_contract.py tests/test_aegis_temperature_rfc4998_interop_fixture.py", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["per-record dual-oracle receipts are designed", "multiple detached objects are required", "timestamp or hash renewal is added to the wire fixture", "a cryptographic provider independent of Bouncy Castle is required", "production preservation-service custody is designed"],
+      "strongest_follow_up": "Bind fresh Bouncy Castle and ETSI DSS receipts to every active record and detached payload before Mission Control can move that record beyond PENDING.",
+      "freshness": {"reviewed_at": "2026-11-15", "review_after": "2027-05-15"}
     }
   ]
 }
