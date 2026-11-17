@@ -257,6 +257,14 @@ def evaluate_detached_evidence_record(
         ),
         "active_record_external_validation": "PENDING" if valid else "BLOCKED",
         "external_interoperability_validation": "PENDING" if valid else "BLOCKED",
+        "per_record_receipt_contract": "DUAL_ORACLE_REHEARSAL_PASSED",
+        "active_record_receipt_schema": (
+            "truepanel.aegis-rfc4998-active-record-receipt/v1"
+        ),
+        "required_active_record_oracles": [
+            "Bouncy Castle 1.86",
+            "European Commission ETSI DSS 6.5.1",
+        ],
         "independent_validators_rehearsed": 2,
         "remaining_independent_oracles": [],
         "eligible_for_external_interoperability_validation": valid,
@@ -284,12 +292,20 @@ def pending_rfc4998_interoperability_fixture(
         ),
         "active_record_external_validation": "PENDING",
         "external_interoperability_validation": "PENDING",
+        "per_record_receipt_contract": "DUAL_ORACLE_REHEARSAL_PASSED",
+        "active_record_receipt_schema": (
+            "truepanel.aegis-rfc4998-active-record-receipt/v1"
+        ),
+        "required_active_record_oracles": [
+            "Bouncy Castle 1.86",
+            "European Commission ETSI DSS 6.5.1",
+        ],
         "independent_validators_rehearsed": 2,
         "remaining_independent_oracles": [],
         "eligible_for_external_interoperability_validation": False,
         "eligible_for_timestamp_trust_rotation": False,
         **{key: False for key in _DENIED},
-        "next_action": "Issue fresh Bouncy Castle and ETSI DSS receipts for each active EvidenceRecord before production trust is considered.",
+        "next_action": "Issue and join fresh Bouncy Castle and ETSI DSS receipts for this exact active EvidenceRecord and detached payload before production trust is considered.",
     }
 
 

@@ -150,3 +150,48 @@ jobs:
           name: aegis-rfc4998-etsi-dss-receipt
           path: ${{ runner.temp }}/aegis-rfc4998-etsi-dss-receipt-v1.json
           if-no-files-found: error
+
+  rfc4998-active-record-receipt:
+    runs-on: ubuntu-latest
+    needs:
+      - rfc4998-bouncycastle-oracle
+      - rfc4998-etsi-dss-oracle
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download same-run Bouncy Castle receipt
+        uses: actions/download-artifact@v4
+        with:
+          name: aegis-rfc4998-bouncycastle-receipt
+          path: ${{ runner.temp }}/bouncycastle
+
+      - name: Download same-run ETSI DSS receipt
+        uses: actions/download-artifact@v4
+        with:
+          name: aegis-rfc4998-etsi-dss-receipt
+          path: ${{ runner.temp }}/etsi-dss
+
+      - name: Join exact active-record subjects and oracle verdicts
+        run: |
+          python -m truepanel.aegis.rfc4998_active_receipt \
+            docs/evidence/aegis-rfc4998-active-record-manifest-v1.json \
+            "$RUNNER_TEMP/bouncycastle/aegis-rfc4998-bouncycastle-receipt-v1.json" \
+            "$RUNNER_TEMP/etsi-dss/aegis-rfc4998-etsi-dss-receipt-v1.json" \
+            --output "$RUNNER_TEMP/aegis-rfc4998-active-record-receipt-v1.json"
+          diff -u \
+            docs/evidence/aegis-rfc4998-active-record-receipt-v1.json \
+            "$RUNNER_TEMP/aegis-rfc4998-active-record-receipt-v1.json"
+
+      - name: Preserve active-record receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-rfc4998-active-record-receipt
+          path: ${{ runner.temp }}/aegis-rfc4998-active-record-receipt-v1.json
+          if-no-files-found: error
