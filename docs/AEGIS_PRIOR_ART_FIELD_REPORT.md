@@ -1,5 +1,20 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-16 active-record receipt delta
+
+The current follow-up adapts the in-toto subject/digest concept into an
+original, narrow TruePanel receipt join. Same-run Bouncy Castle 1.86 and ETSI
+DSS 6.5.1 artifacts must identify the same EvidenceRecord and detached object,
+carry every required positive and negative verdict, and retain all authority
+denials. The detailed comparison, rejected approaches, license notes, and
+measurements are in
+[`AEGIS_RFC4998_ACTIVE_RECORD_RECEIPT.md`](AEGIS_RFC4998_ACTIVE_RECORD_RECEIPT.md).
+
+No in-toto, SLSA, Sigstore, or DSS source was copied. No production attestation
+service, credential, network call, runtime package, or public log was added.
+Sigstore/DSSE remains a future option only after a production attester identity
+and authenticated custody model exist.
+
 Research dates: 2026-08-28 through 2026-09-02
 
 This report records the public-software survey behind the first AEGIS

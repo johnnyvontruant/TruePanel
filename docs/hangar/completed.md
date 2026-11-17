@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.15.1 · refreshed 2026-11-15 · 55 experiment(s)
+Registry version 2026.11.15.1 · refreshed 2026-11-15 · 56 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -443,3 +443,11 @@ ETSI DSS 6.5.1 validates the preserved RFC 4998 fixture through its structure de
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Bind fresh Bouncy Castle and ETSI DSS receipts to every active record and detached payload before Mission Control can move that record beyond PENDING.
 - Revisit when: per-record dual-oracle receipts are designed; multiple detached objects are required; timestamp or hash renewal is added to the wire fixture; a cryptographic provider independent of Bouncy Castle is required; production preservation-service custody is designed
+
+## TP-EXP-0062 · AEGIS RFC 4998 active-record receipt join
+
+The same-run Bouncy Castle and ETSI DSS receipts join only when they identify the exact same record and detached object and carry the complete reviewed verdict set; seven adversarial substitutions hold and every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Issue the two receipts over one authenticated real active EvidenceRecord and bind the aggregate to reviewed clock revocation custody and trust policy before any production promotion.
+- Revisit when: a production attester identity is approved; active EvidenceRecord custody is authenticated; DSSE or Sigstore offline verification is required; a cryptographic provider independent of Bouncy Castle is added; multiple detached objects are required
