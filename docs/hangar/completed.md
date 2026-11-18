@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.15.1 · refreshed 2026-11-15 · 56 experiment(s)
+Registry version 2026.11.17.1 · refreshed 2026-11-17 · 57 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -451,3 +451,11 @@ The same-run Bouncy Castle and ETSI DSS receipts join only when they identify th
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Issue the two receipts over one authenticated real active EvidenceRecord and bind the aggregate to reviewed clock revocation custody and trust policy before any production promotion.
 - Revisit when: a production attester identity is approved; active EvidenceRecord custody is authenticated; DSSE or Sigstore offline verification is required; a cryptographic provider independent of Bouncy Castle is added; multiple detached objects are required
+
+## TP-EXP-0063 · AEGIS authenticated RFC 4998 custody
+
+Ten deterministic paths authenticate one exact read-only custody admission and hold nine missing invalid stale mismatched or authority-escalating paths while the runtime active record remains pending and every operational authority remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Provision the governed preservation custodian then capture one fresh passive Black Box EvidenceRecord obtain fresh dual-oracle receipts and attach independent RFC 3161 signing-time evidence before any production promotion.
+- Revisit when: a governed production custodian is provisioned; a fresh passive Black Box EvidenceRecord and dual-oracle receipts are available; independent RFC 3161 signing-time evidence is attached; DSSE or Sigstore bundle interchange is required; a distributed preservation service requires workload identity; field validation installation or deployment is proposed

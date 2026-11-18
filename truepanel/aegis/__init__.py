@@ -80,6 +80,10 @@ from .promotion_gate import (
 )
 from .rehearsal import rehearse_recovery_paths
 from .reliability import AegisReliabilityEngine
+from .rfc4998_authenticated_custody import (
+    build_custody_statement,
+    evaluate_authenticated_custody,
+)
 from .requalification import (
     classify_platform_transition,
     envelope_sha256,
@@ -276,6 +280,7 @@ __all__ = [
     "bind_platform_witness",
     "build_promotion_request",
     "build_witnessed_promotion_request",
+    "build_custody_statement",
     "compose_storage_checkride",
     "collect_recovery_attestations",
     "classify_platform_transition",
@@ -284,6 +289,7 @@ __all__ = [
     "evaluate_acceptance_receipt",
     "evaluate_pre_service_clearance",
     "evaluate_manual_promotion",
+    "evaluate_authenticated_custody",
     "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",

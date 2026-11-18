@@ -1,5 +1,19 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-17 authenticated-custody delta
+
+The current follow-up authenticates the custodian of one exact dual-oracle RFC
+4998 receipt with a purpose-specific OpenSSH SSHSIG namespace and a protected
+one-principal roster. It adapts in-toto's envelope/statement separation while
+keeping the implementation behind TruePanel-owned interfaces. The detailed
+candidate comparison, licensing, rejected paths, and measurements are in
+[`AEGIS_RFC4998_AUTHENTICATED_CUSTODY.md`](AEGIS_RFC4998_AUTHENTICATED_CUSTODY.md).
+
+OpenSSH is reused through the existing verifier. No in-toto, Sigstore, SCITT,
+or SPIFFE source, schema, credential, service, key, or runtime dependency was
+added. Sigstore bundles remain the leading future interchange path after a real
+attester identity, offline root custody, and timestamp policy are approved.
+
 ## 2026-11-16 active-record receipt delta
 
 The current follow-up adapts the in-toto subject/digest concept into an

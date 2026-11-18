@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.15.1",
-  "updated_at": "2026-11-15",
+  "registry_version": "2026.11.17.1",
+  "updated_at": "2026-11-17",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1078,6 +1078,25 @@
       "revisit_conditions": ["a production attester identity is approved", "active EvidenceRecord custody is authenticated", "DSSE or Sigstore offline verification is required", "a cryptographic provider independent of Bouncy Castle is added", "multiple detached objects are required"],
       "strongest_follow_up": "Issue the two receipts over one authenticated real active EvidenceRecord and bind the aggregate to reviewed clock revocation custody and trust policy before any production promotion.",
       "freshness": {"reviewed_at": "2026-11-16", "review_after": "2027-05-16"}
+    },
+    {
+      "id": "TP-EXP-0063", "title": "AEGIS authenticated RFC 4998 custody", "state": "COMPLETED",
+      "hypothesis": "A protected exact-principal SSHSIG roster can authenticate who admitted one exact dual-oracle RFC 4998 receipt into read-only custody without promoting a rehearsed record or granting operational authority.",
+      "value": "Adds a machine-verifiable custody identity and bounded validity window to the per-record receipt while preserving a replaceable path to standard attestation envelopes.",
+      "prior_art": ["OpenSSH SSHSIG namespaces and allowed signers", "in-toto Attestation Framework v1.2 statement layering", "Sigstore bundle 0.3 offline verification material", "IETF SCITT signed-statement receipts", "SPIFFE and SPIRE workload identity"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-authenticated-rfc4998-custody", "pr": null, "commits": []},
+      "protocol": ["load the exact reviewed active-record manifest and dual-oracle aggregate receipt", "reconstruct one canonical custody statement binding both receipt hashes subjects sequence source time window and every authority denial", "snapshot a protected one-principal Ed25519 allowed-signers roster", "verify a detached signature under a purpose-specific SSHSIG namespace", "reject missing corrupt foreign wrong-namespace expired future mutated split-subject or authority-escalating custody", "generate ephemeral HoloDeck keys and retain no private key or reusable signature", "keep the runtime active record pending", "deny production deployment runtime network storage and hardware authority"],
+      "fixtures": ["aegis-rfc4998-authenticated-custody-checkride-v1", "tests/test_aegis_rfc4998_authenticated_custody.py"],
+      "success_criteria": ["one exact detached SSHSIG authenticates the governed custodian", "nine missing invalid stale mismatched or authority-escalating paths hold", "the canonical statement binds the manifest aggregate both oracle receipts and subjects", "the accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "no private key or reusable signature is preserved", "runtime active-record custody remains pending", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["a signer-asserted time is treated as independent proof of signing time", "an unrostered or wrong-namespace signer passes", "receipt or subject mutation after signing passes", "a reusable private key or signature enters repository evidence", "a simulation result promotes a runtime active record", "a public identity service or network dependency is introduced", "storage runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-rfc4998-authenticated-custody-checkride-v1.json", "sha256": "d670d4edb5f82e81d837cafa37877ee19649924b59ecbadd26f194e1ac9ada37"}, {"path": "docs/AEGIS_RFC4998_AUTHENTICATED_CUSTODY.md", "sha256": "b22cc7ec4de5962ec706305f0f69767d3edf65f892a3ff658d8ae69e31b90bde"}],
+      "outcome": {"conclusion": "Ten deterministic paths authenticate one exact read-only custody admission and hold nine missing invalid stale mismatched or authority-escalating paths while the runtime active record remains pending and every operational authority remains zero."},
+      "invalidated_assumptions": ["a dual-oracle receipt identifies who admitted it into custody", "an artifact signature may omit its namespace and validity policy", "a signer-asserted timestamp is independent signing-time evidence", "a public attestation service is required for bounded offline custody authentication", "a rehearsed authenticated receipt may promote an unvalidated runtime record"],
+      "reproduction": ["pytest -q tests/test_aegis_rfc4998_authenticated_custody.py tests/test_aegis_rfc4998_active_receipt.py", "python -m truepanel.holodeck.aegis_rfc4998_authenticated_custody --output /tmp/aegis-custody.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["a governed production custodian is provisioned", "a fresh passive Black Box EvidenceRecord and dual-oracle receipts are available", "independent RFC 3161 signing-time evidence is attached", "DSSE or Sigstore bundle interchange is required", "a distributed preservation service requires workload identity", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Provision the governed preservation custodian then capture one fresh passive Black Box EvidenceRecord obtain fresh dual-oracle receipts and attach independent RFC 3161 signing-time evidence before any production promotion.",
+      "freshness": {"reviewed_at": "2026-11-17", "review_after": "2027-05-17"}
     }
   ]
 }

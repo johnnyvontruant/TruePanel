@@ -258,6 +258,12 @@ def evaluate_detached_evidence_record(
         "active_record_external_validation": "PENDING" if valid else "BLOCKED",
         "external_interoperability_validation": "PENDING" if valid else "BLOCKED",
         "per_record_receipt_contract": "DUAL_ORACLE_REHEARSAL_PASSED",
+        "authenticated_custody_contract": "SSHSIG_CUSTODY_REHEARSAL_PASSED",
+        "active_record_custody": "PENDING",
+        "required_custodian": "aegis-preservation-custodian",
+        "custody_signature_namespace": (
+            "truepanel-aegis-rfc4998-custody-v1@truepanel"
+        ),
         "active_record_receipt_schema": (
             "truepanel.aegis-rfc4998-active-record-receipt/v1"
         ),
@@ -293,6 +299,12 @@ def pending_rfc4998_interoperability_fixture(
         "active_record_external_validation": "PENDING",
         "external_interoperability_validation": "PENDING",
         "per_record_receipt_contract": "DUAL_ORACLE_REHEARSAL_PASSED",
+        "authenticated_custody_contract": "SSHSIG_CUSTODY_REHEARSAL_PASSED",
+        "active_record_custody": "PENDING",
+        "required_custodian": "aegis-preservation-custodian",
+        "custody_signature_namespace": (
+            "truepanel-aegis-rfc4998-custody-v1@truepanel"
+        ),
         "active_record_receipt_schema": (
             "truepanel.aegis-rfc4998-active-record-receipt/v1"
         ),
@@ -305,7 +317,7 @@ def pending_rfc4998_interoperability_fixture(
         "eligible_for_external_interoperability_validation": False,
         "eligible_for_timestamp_trust_rotation": False,
         **{key: False for key in _DENIED},
-        "next_action": "Issue and join fresh Bouncy Castle and ETSI DSS receipts for this exact active EvidenceRecord and detached payload before production trust is considered.",
+        "next_action": "Capture a fresh active EvidenceRecord, join both oracle receipts, then authenticate its read-only custody with the governed preservation key before production trust is considered.",
     }
 
 

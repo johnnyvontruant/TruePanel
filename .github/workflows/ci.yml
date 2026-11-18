@@ -195,3 +195,38 @@ jobs:
           name: aegis-rfc4998-active-record-receipt
           path: ${{ runner.temp }}/aegis-rfc4998-active-record-receipt-v1.json
           if-no-files-found: error
+
+  rfc4998-authenticated-custody:
+    runs-on: ubuntu-latest
+    needs: rfc4998-active-record-receipt
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download same-run active-record receipt
+        uses: actions/download-artifact@v4
+        with:
+          name: aegis-rfc4998-active-record-receipt
+          path: ${{ runner.temp }}/active-record
+
+      - name: Rehearse authenticated read-only custody
+        run: |
+          python -m truepanel.holodeck.aegis_rfc4998_authenticated_custody \
+            --receipt "$RUNNER_TEMP/active-record/aegis-rfc4998-active-record-receipt-v1.json" \
+            --output "$RUNNER_TEMP/aegis-rfc4998-authenticated-custody-checkride-v1.json"
+          diff -u \
+            docs/evidence/aegis-rfc4998-authenticated-custody-checkride-v1.json \
+            "$RUNNER_TEMP/aegis-rfc4998-authenticated-custody-checkride-v1.json"
+
+      - name: Preserve authenticated-custody evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-rfc4998-authenticated-custody-checkride
+          path: ${{ runner.temp }}/aegis-rfc4998-authenticated-custody-checkride-v1.json
+          if-no-files-found: error
