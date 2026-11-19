@@ -1,5 +1,19 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-18 RFC 3161 custody-time delta
+
+The current follow-up countersigns the exact authenticated-custody SSHSIG with
+a real RFC 3161 response and rejects trust-root, policy, digest, signature,
+window, and authority substitutions. It reuses TruePanel's existing OpenSSL
+adapter and adapts the primitive-signature countersignature pattern documented
+by Sigstore and Notary Project.
+
+The detailed capability, maturity, security, license, rejected-candidate, and
+collaboration analysis is in
+[`AEGIS_RFC4998_TIMESTAMPED_CUSTODY.md`](AEGIS_RFC4998_TIMESTAMPED_CUSTODY.md).
+No external source, service, schema, certificate, trust root, key, credential,
+fixture, or runtime dependency was added.
+
 ## 2026-11-17 authenticated-custody delta
 
 The current follow-up authenticates the custodian of one exact dual-oracle RFC

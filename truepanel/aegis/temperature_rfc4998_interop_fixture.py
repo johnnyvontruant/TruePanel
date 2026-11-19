@@ -259,7 +259,10 @@ def evaluate_detached_evidence_record(
         "external_interoperability_validation": "PENDING" if valid else "BLOCKED",
         "per_record_receipt_contract": "DUAL_ORACLE_REHEARSAL_PASSED",
         "authenticated_custody_contract": "SSHSIG_CUSTODY_REHEARSAL_PASSED",
+        "independent_custody_time_contract": "RFC3161_COUNTERSIGNATURE_REHEARSAL_PASSED",
         "active_record_custody": "PENDING",
+        "active_record_custody_time": "PENDING",
+        "custody_timestamp_profile": "RFC3161-SIGNATURE-COUNTERSIGNATURE",
         "required_custodian": "aegis-preservation-custodian",
         "custody_signature_namespace": (
             "truepanel-aegis-rfc4998-custody-v1@truepanel"
@@ -300,7 +303,10 @@ def pending_rfc4998_interoperability_fixture(
         "external_interoperability_validation": "PENDING",
         "per_record_receipt_contract": "DUAL_ORACLE_REHEARSAL_PASSED",
         "authenticated_custody_contract": "SSHSIG_CUSTODY_REHEARSAL_PASSED",
+        "independent_custody_time_contract": "RFC3161_COUNTERSIGNATURE_REHEARSAL_PASSED",
         "active_record_custody": "PENDING",
+        "active_record_custody_time": "PENDING",
+        "custody_timestamp_profile": "RFC3161-SIGNATURE-COUNTERSIGNATURE",
         "required_custodian": "aegis-preservation-custodian",
         "custody_signature_namespace": (
             "truepanel-aegis-rfc4998-custody-v1@truepanel"
@@ -317,7 +323,7 @@ def pending_rfc4998_interoperability_fixture(
         "eligible_for_external_interoperability_validation": False,
         "eligible_for_timestamp_trust_rotation": False,
         **{key: False for key in _DENIED},
-        "next_action": "Capture a fresh active EvidenceRecord, join both oracle receipts, then authenticate its read-only custody with the governed preservation key before production trust is considered.",
+        "next_action": "Capture a fresh active EvidenceRecord, join both oracle receipts, authenticate its read-only custody, then countersign the exact custody signature with a governed RFC 3161 authority before production trust is considered.",
     }
 
 

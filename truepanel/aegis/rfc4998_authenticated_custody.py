@@ -191,6 +191,8 @@ def evaluate_authenticated_custody(
         "record_id": manifest.get("record_id"),
         "custody_id": custody.get("custody_id"),
         "custodian_id": custody.get("custodian_id"),
+        "issued_at": custody.get("issued_at"),
+        "expires_at": custody.get("expires_at"),
         "key_id": KEY_ID,
         "namespace": NAMESPACE,
         "subjects": manifest.get("subjects", []),

@@ -84,6 +84,7 @@ from .rfc4998_authenticated_custody import (
     build_custody_statement,
     evaluate_authenticated_custody,
 )
+from .rfc4998_timestamped_custody import evaluate_timestamped_custody
 from .requalification import (
     classify_platform_transition,
     envelope_sha256,
@@ -290,6 +291,7 @@ __all__ = [
     "evaluate_pre_service_clearance",
     "evaluate_manual_promotion",
     "evaluate_authenticated_custody",
+    "evaluate_timestamped_custody",
     "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",

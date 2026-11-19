@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.17.1",
-  "updated_at": "2026-11-17",
+  "registry_version": "2026.11.18.1",
+  "updated_at": "2026-11-18",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1097,6 +1097,25 @@
       "revisit_conditions": ["a governed production custodian is provisioned", "a fresh passive Black Box EvidenceRecord and dual-oracle receipts are available", "independent RFC 3161 signing-time evidence is attached", "DSSE or Sigstore bundle interchange is required", "a distributed preservation service requires workload identity", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Provision the governed preservation custodian then capture one fresh passive Black Box EvidenceRecord obtain fresh dual-oracle receipts and attach independent RFC 3161 signing-time evidence before any production promotion.",
       "freshness": {"reviewed_at": "2026-11-17", "review_after": "2027-05-17"}
+    },
+    {
+      "id": "TP-EXP-0064", "title": "AEGIS RFC 3161 authenticated-custody time", "state": "COMPLETED",
+      "hypothesis": "A trusted RFC 3161 authority can countersign the exact authenticated-custody SSHSIG and provide independent proof-of-existence inside the custody validity window without promoting a rehearsed record or granting operational authority.",
+      "value": "Replaces signer-asserted custody time with a cryptographically bound third-party time proof while retaining an offline replaceable verifier and explicit production gate.",
+      "prior_art": ["RFC 3161 Time-Stamp Protocol", "OpenSSL ts verification", "Sigstore signature countersigning", "Sigstore Timestamp Authority", "Notary Project timestamp countersignatures", "Roughtime RFC 10049"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-rfc3161-custody-time", "pr": null, "commits": []},
+      "protocol": ["require the exact prior authenticated-custody result and every authority denial", "timestamp the exact ASCII SSHSIG bytes rather than caller signing-time metadata", "verify the RFC 3161 response with an explicit protected CA bundle", "require the expected TSA policy OID and SHA-256 imprint policy", "require signed genTime inside the signed custody validity window", "reject missing truncated wrong-root wrong-policy wrong-digest substituted-signature out-of-window and authority-escalating evidence", "generate ephemeral HoloDeck custodian and TSA keys and retain no keys tokens or credentials", "keep active runtime custody time and production trust pending", "deny production deployment runtime network storage and hardware authority"],
+      "fixtures": ["aegis-rfc4998-timestamped-custody-checkride-v1", "tests/test_aegis_rfc4998_timestamped_custody.py"],
+      "success_criteria": ["one exact SSHSIG countersignature verifies under the intended TSA root policy and digest", "nine missing invalid mismatched out-of-window or authority-escalating paths hold", "the timestamp binds the primitive custody signature", "the accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "no private key timestamp token credential or production trust root is retained", "runtime active-record custody time remains pending", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["a signer-asserted time is treated as independent evidence", "a timestamp over only the record statement satisfies signature countersigning", "wrong root policy digest signature or time window passes", "a public TSA is contacted or an internal digest is disclosed", "a reusable private key token or credential enters repository evidence", "a simulation result promotes a runtime active record", "storage runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-rfc4998-timestamped-custody-checkride-v1.json", "sha256": "6e89e5049f194fe32962332d5b714f58f989cf54fda852f3f45cba4ee51792e0"}, {"path": "docs/AEGIS_RFC4998_TIMESTAMPED_CUSTODY.md", "sha256": "297a40c58b6be7b6b5ab4a4045bfcd6345efeb523b2f020cf8d8196d2d4f5016"}],
+      "outcome": {"conclusion": "Ten deterministic paths verify one real RFC 3161 countersignature over the exact custody SSHSIG and hold nine missing tampered mismatched out-of-window or authority-escalating paths while runtime custody time and every operational authority remain withheld."},
+      "invalidated_assumptions": ["a signed custody event independently proves when its signature was created", "timestamping the record is equivalent to countersigning the custodian signature", "a network TSA or new parsing library is required for a deterministic offline gate", "a valid token may ignore application policy digest or custody-window constraints", "a rehearsed timestamp may promote an unvalidated runtime record"],
+      "reproduction": ["pytest -q tests/test_aegis_rfc4998_timestamped_custody.py tests/test_aegis_rfc4998_authenticated_custody.py", "python -m truepanel.holodeck.aegis_rfc4998_timestamped_custody --output /tmp/aegis-timestamped-custody.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["governed production custodian and TSA identities are provisioned", "protected TSA key custody and fail-closed clock monitoring are approved", "TSA root rotation and revocation evidence are preserved", "a fresh passive Black Box EvidenceRecord and dual-oracle receipts are available", "a portable Sigstore or Notary bundle is required", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Define and rehearse governed TSA root rotation revocation preservation and fail-closed clock monitoring before issuing a timestamp over one fresh passively captured active-record custody signature.",
+      "freshness": {"reviewed_at": "2026-11-18", "review_after": "2027-05-18"}
     }
   ]
 }
