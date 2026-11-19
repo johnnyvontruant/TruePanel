@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.17.1 · refreshed 2026-11-17 · 57 experiment(s)
+Registry version 2026.11.18.1 · refreshed 2026-11-18 · 58 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -459,3 +459,11 @@ Ten deterministic paths authenticate one exact read-only custody admission and h
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Provision the governed preservation custodian then capture one fresh passive Black Box EvidenceRecord obtain fresh dual-oracle receipts and attach independent RFC 3161 signing-time evidence before any production promotion.
 - Revisit when: a governed production custodian is provisioned; a fresh passive Black Box EvidenceRecord and dual-oracle receipts are available; independent RFC 3161 signing-time evidence is attached; DSSE or Sigstore bundle interchange is required; a distributed preservation service requires workload identity; field validation installation or deployment is proposed
+
+## TP-EXP-0064 · AEGIS RFC 3161 authenticated-custody time
+
+Ten deterministic paths verify one real RFC 3161 countersignature over the exact custody SSHSIG and hold nine missing tampered mismatched out-of-window or authority-escalating paths while runtime custody time and every operational authority remain withheld.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Define and rehearse governed TSA root rotation revocation preservation and fail-closed clock monitoring before issuing a timestamp over one fresh passively captured active-record custody signature.
+- Revisit when: governed production custodian and TSA identities are provisioned; protected TSA key custody and fail-closed clock monitoring are approved; TSA root rotation and revocation evidence are preserved; a fresh passive Black Box EvidenceRecord and dual-oracle receipts are available; a portable Sigstore or Notary bundle is required; field validation installation or deployment is proposed
