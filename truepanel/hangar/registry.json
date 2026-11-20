@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.18.1",
-  "updated_at": "2026-11-18",
+  "registry_version": "2026.11.19.1",
+  "updated_at": "2026-11-19",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1116,6 +1116,25 @@
       "revisit_conditions": ["governed production custodian and TSA identities are provisioned", "protected TSA key custody and fail-closed clock monitoring are approved", "TSA root rotation and revocation evidence are preserved", "a fresh passive Black Box EvidenceRecord and dual-oracle receipts are available", "a portable Sigstore or Notary bundle is required", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Define and rehearse governed TSA root rotation revocation preservation and fail-closed clock monitoring before issuing a timestamp over one fresh passively captured active-record custody signature.",
       "freshness": {"reviewed_at": "2026-11-18", "review_after": "2027-05-18"}
+    },
+    {
+      "id": "TP-EXP-0065", "title": "AEGIS signed append-only RFC 4998 custody receipt", "state": "COMPLETED",
+      "hypothesis": "A signed RFC 9162-shaped inclusion receipt plus a consistency proof between separately signed checkpoints can detect custody-evidence omission rewriting reordering and log rewind without promoting a rehearsed record or granting operational authority.",
+      "value": "Adds a machine-verifiable append-only witness boundary after authenticated and independently timestamped custody while retaining a replaceable path to Tessera Rekor or SCITT transparency services.",
+      "prior_art": ["RFC 9162 inclusion and consistency proofs", "Tessera tile-backed transparency logs", "Sigstore Rekor v2 signed checkpoints", "SCITT RFC 9943 transparency receipts", "Trillian application personalities"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-transparent-custody-log", "pr": null, "commits": []},
+      "protocol": ["bind the exact timestamped-custody checkride digest into one canonical authority-free entry", "use RFC 9162 SHA-256 leaf and node domain separation", "verify entry inclusion at the declared index and tree size", "verify append-only growth from a separately signed prior checkpoint", "authenticate both checkpoints under one protected purpose-specific SSHSIG log roster", "reject missing substituted wrong-index corrupt-proof inconsistent-extension origin-fork invalid-signature rewind and authority-escalating evidence", "generate ephemeral HoloDeck keys and retain no private key receipt or reusable signature", "keep independent monitor and active runtime validation pending", "deny production deployment runtime network storage and hardware authority"],
+      "fixtures": ["aegis-rfc4998-transparent-custody-checkride-v1", "tests/test_aegis_rfc4998_transparent_custody.py"],
+      "success_criteria": ["one exact signed append-only receipt verifies", "nine missing invalid forked rewound substituted or authority-escalating paths require action or hold", "inclusion and consistency algorithms round-trip power-of-two and non-power-of-two trees", "the accepted matrix remains 8/8", "the 27-sample shared-cooling lead remains bound", "no private key credential or production receipt is retained", "runtime active-record transparency remains pending", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["inclusion without append-only consistency is called transparency", "a local signer is called an independent witness", "wrong entry index root checkpoint origin signature or tree extension passes", "a public log is contacted or Black Box metadata is disclosed", "a reusable private key receipt signature or credential enters repository evidence", "a simulation result promotes a runtime active record", "storage runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-rfc4998-transparent-custody-checkride-v1.json", "sha256": "d71efb199f8c8ef3a788ba90596bfd9380b525742e8374ed604b6931a2dedbe6"}, {"path": "docs/AEGIS_RFC4998_TRANSPARENT_CUSTODY.md", "sha256": "f0fdcde6b01f82a1c5f27a39c0308b9c31706b52e32d6dc52356dad3dad531f1"}],
+      "outcome": {"conclusion": "Ten deterministic paths verify one signed inclusion and append-only consistency receipt and hold nine missing substituted malformed forked rewound or authority-escalating paths while independent monitoring and every operational authority remain withheld."},
+      "invalidated_assumptions": ["independent time proves append-only publication", "an inclusion proof alone detects log rewriting", "one locally signed checkpoint establishes non-equivocation", "a production transparency service must be embedded in the appliance", "a rehearsed receipt may promote an unvalidated runtime record"],
+      "reproduction": ["pytest -q tests/test_aegis_rfc4998_transparent_custody.py", "python -m truepanel.holodeck.aegis_rfc4998_transparent_custody --output /tmp/aegis-transparent-custody.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["an external Tessera Rekor or SCITT operator is selected", "privacy-safe production entry contents are approved", "governed log and monitor identities are provisioned", "at least two independent monitors can gossip signed checkpoints", "a fresh passive Black Box active record and production custody receipt are available", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Define privacy retention and checkpoint-gossip policy then register one fresh passive active-record custody entry with a governed external log and at least two independently operated monitors before any production promotion.",
+      "freshness": {"reviewed_at": "2026-11-19", "review_after": "2027-05-19"}
     }
   ]
 }
