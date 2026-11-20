@@ -1,5 +1,21 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-19 transparent-custody delta
+
+The current follow-up adds a signed append-only receipt rehearsal over the exact
+timestamped-custody evidence. It adapts RFC 9162 inclusion and consistency
+proofs, SCITT's registration-receipt separation, and Rekor/Tessera's signed
+checkpoint boundary without adding a network service, dependency, credential,
+or production authority. The detailed code inspection, dependency comparison,
+licensing, rejected paths, and measurements are in
+[`AEGIS_RFC4998_TRANSPARENT_CUSTODY.md`](AEGIS_RFC4998_TRANSPARENT_CUSTODY.md).
+
+Tessera is the preferred future external log engine; Trillian is rejected for a
+new deployment because upstream places it in maintenance mode, and embedding
+Rekor v2 is deferred because its real dependency and operational surface is far
+larger than an offline verifier. Independent non-equivocation remains pending
+until separately operated monitors gossip signed checkpoints.
+
 ## 2026-11-18 RFC 3161 custody-time delta
 
 The current follow-up countersigns the exact authenticated-custody SSHSIG with

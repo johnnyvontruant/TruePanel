@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.18.1 · refreshed 2026-11-18 · 58 experiment(s)
+Registry version 2026.11.19.1 · refreshed 2026-11-19 · 59 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -467,3 +467,11 @@ Ten deterministic paths verify one real RFC 3161 countersignature over the exact
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Define and rehearse governed TSA root rotation revocation preservation and fail-closed clock monitoring before issuing a timestamp over one fresh passively captured active-record custody signature.
 - Revisit when: governed production custodian and TSA identities are provisioned; protected TSA key custody and fail-closed clock monitoring are approved; TSA root rotation and revocation evidence are preserved; a fresh passive Black Box EvidenceRecord and dual-oracle receipts are available; a portable Sigstore or Notary bundle is required; field validation installation or deployment is proposed
+
+## TP-EXP-0065 · AEGIS signed append-only RFC 4998 custody receipt
+
+Ten deterministic paths verify one signed inclusion and append-only consistency receipt and hold nine missing substituted malformed forked rewound or authority-escalating paths while independent monitoring and every operational authority remain withheld.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Define privacy retention and checkpoint-gossip policy then register one fresh passive active-record custody entry with a governed external log and at least two independently operated monitors before any production promotion.
+- Revisit when: an external Tessera Rekor or SCITT operator is selected; privacy-safe production entry contents are approved; governed log and monitor identities are provisioned; at least two independent monitors can gossip signed checkpoints; a fresh passive Black Box active record and production custody receipt are available; field validation installation or deployment is proposed

@@ -260,8 +260,11 @@ def evaluate_detached_evidence_record(
         "per_record_receipt_contract": "DUAL_ORACLE_REHEARSAL_PASSED",
         "authenticated_custody_contract": "SSHSIG_CUSTODY_REHEARSAL_PASSED",
         "independent_custody_time_contract": "RFC3161_COUNTERSIGNATURE_REHEARSAL_PASSED",
+        "transparent_custody_contract": "SIGNED_APPEND_ONLY_RECEIPT_REHEARSAL_PASSED",
         "active_record_custody": "PENDING",
         "active_record_custody_time": "PENDING",
+        "active_record_transparency": "PENDING",
+        "transparency_profile": "RFC9162-SHAPED-SIGNED-CHECKPOINT",
         "custody_timestamp_profile": "RFC3161-SIGNATURE-COUNTERSIGNATURE",
         "required_custodian": "aegis-preservation-custodian",
         "custody_signature_namespace": (
@@ -304,8 +307,11 @@ def pending_rfc4998_interoperability_fixture(
         "per_record_receipt_contract": "DUAL_ORACLE_REHEARSAL_PASSED",
         "authenticated_custody_contract": "SSHSIG_CUSTODY_REHEARSAL_PASSED",
         "independent_custody_time_contract": "RFC3161_COUNTERSIGNATURE_REHEARSAL_PASSED",
+        "transparent_custody_contract": "SIGNED_APPEND_ONLY_RECEIPT_REHEARSAL_PASSED",
         "active_record_custody": "PENDING",
         "active_record_custody_time": "PENDING",
+        "active_record_transparency": "PENDING",
+        "transparency_profile": "RFC9162-SHAPED-SIGNED-CHECKPOINT",
         "custody_timestamp_profile": "RFC3161-SIGNATURE-COUNTERSIGNATURE",
         "required_custodian": "aegis-preservation-custodian",
         "custody_signature_namespace": (
