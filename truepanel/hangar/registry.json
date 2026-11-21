@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.19.1",
-  "updated_at": "2026-11-19",
+  "registry_version": "2026.11.20.1",
+  "updated_at": "2026-11-20",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1135,6 +1135,25 @@
       "revisit_conditions": ["an external Tessera Rekor or SCITT operator is selected", "privacy-safe production entry contents are approved", "governed log and monitor identities are provisioned", "at least two independent monitors can gossip signed checkpoints", "a fresh passive Black Box active record and production custody receipt are available", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Define privacy retention and checkpoint-gossip policy then register one fresh passive active-record custody entry with a governed external log and at least two independently operated monitors before any production promotion.",
       "freshness": {"reviewed_at": "2026-11-19", "review_after": "2027-05-19"}
+    },
+    {
+      "id": "TP-EXP-0066", "title": "AEGIS independent transparency monitor quorum", "state": "COMPLETED",
+      "hypothesis": "Two distinct governed monitors can countersign one exact transparency checkpoint and expose missing duplicate substituted stale or split views without promoting a rehearsed record or granting operational authority.",
+      "value": "Adds a machine-verifiable non-equivocation policy boundary after the signed append-only custody receipt while retaining replaceable C2SP and Sigsum adapters.",
+      "prior_art": ["transparency-dev witness and C2SP tlog-witness", "Sigsum witness quorum policy", "Sigstore Rekor Monitor", "Armored Witness"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-transparency-monitor-quorum", "pr": null, "commits": []},
+      "protocol": ["require the exact prior signed checkpoint inclusion and append-only result", "bind each observation to the canonical checkpoint digest origin size and root", "verify purpose-specific SSHSIG observations against a protected exact-principal roster", "count each distinct trusted monitor identity once", "require a two-of-two quorum", "reject missing duplicate untrusted substituted split stale invalid-signature or authority-escalating observations", "generate ephemeral HoloDeck keys and call their operators simulated", "keep active runtime validation and operator independence pending", "deny production deployment runtime network storage and hardware authority"],
+      "fixtures": ["aegis-transparency-monitor-quorum-checkride-v1", "tests/test_aegis_transparency_monitor_quorum.py"],
+      "success_criteria": ["one exact two-monitor quorum verifies", "nine missing invalid split stale substituted or authority-escalating paths hold", "duplicate identities never increase quorum", "split roots and stale tree sizes are visible", "the accepted matrix remains 9/9", "the 27-sample shared-cooling lead remains bound", "independent production monitor count remains zero", "runtime active-record validation remains pending", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["two signatures from one identity satisfy quorum", "different checkpoint roots sizes or origins satisfy quorum", "local ephemeral keys are called independent operators", "a simulation result promotes a runtime active record", "a network witness service credential or new runtime dependency is introduced", "storage runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-transparency-monitor-quorum-checkride-v1.json", "sha256": "d6550fc2fd5e64499ac3b416e66fb9bb899ac4b82eb1d1a3e48dd67293a33493"}, {"path": "docs/AEGIS_TRANSPARENCY_MONITOR_QUORUM.md", "sha256": "06f3fd49430e58c6776882b9db7f0faeed0d8ec9a5b781e485ccf8a4aa05f95b"}],
+      "outcome": {"conclusion": "Ten deterministic paths verify one exact two-monitor checkpoint quorum and hold nine missing duplicate untrusted substituted split stale invalid-signature or authority-escalating paths while production operator independence and every operational authority remain withheld."},
+      "invalidated_assumptions": ["one signed checkpoint establishes non-equivocation", "two keys created by one process prove operator independence", "root equality alone is enough checkpoint identity", "a general witness service must be embedded before an offline quorum policy can be rehearsed", "a witnessed rehearsal may promote an unvalidated runtime record"],
+      "reproduction": ["pytest -q tests/test_aegis_transparency_monitor_quorum.py", "python -m truepanel.holodeck.aegis_transparency_monitor_quorum --output /tmp/aegis-monitor-quorum.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["two independently operated monitors are commissioned", "governed monitor public keys and checkpoint persistence are provisioned", "a C2SP witness endpoint is selected", "privacy-safe production entry contents are approved", "a fresh passive Black Box active record and production custody receipt are available", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Commission two separately operated C2SP-compatible monitors and rehearse persisted checkpoint gossip over one privacy-safe external log entry before any production promotion.",
+      "freshness": {"reviewed_at": "2026-11-20", "review_after": "2027-05-20"}
     }
   ]
 }

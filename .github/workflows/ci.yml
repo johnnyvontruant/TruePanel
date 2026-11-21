@@ -300,3 +300,32 @@ jobs:
           name: aegis-rfc4998-transparent-custody-checkride
           path: ${{ runner.temp }}/aegis-rfc4998-transparent-custody-checkride-v1.json
           if-no-files-found: error
+
+  transparency-monitor-quorum:
+    runs-on: ubuntu-latest
+    needs: rfc4998-transparent-custody
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download same-run transparent custody evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: aegis-rfc4998-transparent-custody-checkride
+          path: ${{ runner.temp }}/transparent-custody
+      - name: Rehearse independent monitor quorum
+        run: |
+          python -m truepanel.holodeck.aegis_transparency_monitor_quorum \
+            --transparent-evidence "$RUNNER_TEMP/transparent-custody/aegis-rfc4998-transparent-custody-checkride-v1.json" \
+            --output "$RUNNER_TEMP/aegis-transparency-monitor-quorum-checkride-v1.json"
+          diff -u docs/evidence/aegis-transparency-monitor-quorum-checkride-v1.json \
+            "$RUNNER_TEMP/aegis-transparency-monitor-quorum-checkride-v1.json"
+      - name: Preserve monitor-quorum evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-transparency-monitor-quorum-checkride
+          path: ${{ runner.temp }}/aegis-transparency-monitor-quorum-checkride-v1.json
+          if-no-files-found: error

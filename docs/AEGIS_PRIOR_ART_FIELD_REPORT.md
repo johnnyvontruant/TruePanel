@@ -1,5 +1,20 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-20 transparency-monitor quorum delta
+
+The current follow-up requires two distinct rostered monitors to sign one exact
+checkpoint view and fails closed on missing, duplicate, untrusted, substituted,
+split-root, stale-size, or authority-escalating observations. It adapts the
+checkpoint witness contract from transparency-dev and the explicit threshold
+policy from Sigsum without importing either implementation.
+
+The detailed code inspection, dependency and license comparison, rejected
+paths, collaboration opportunity, and deterministic measurements are in
+[`AEGIS_TRANSPARENCY_MONITOR_QUORUM.md`](AEGIS_TRANSPARENCY_MONITOR_QUORUM.md).
+No external source, package, binary, service, key, credential, or network path
+was added. The two local ephemeral signers are explicitly simulated operators,
+not independently operated production witnesses.
+
 ## 2026-11-19 transparent-custody delta
 
 The current follow-up adds a signed append-only receipt rehearsal over the exact
