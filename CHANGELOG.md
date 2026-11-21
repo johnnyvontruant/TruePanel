@@ -6,6 +6,21 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+### Added
+
+- Flightdeck skin, phase 1 (`flightdeck-skin.js`). Mission Control is now
+  drawn as a hardware instrument panel. Every section is a screwed-in panel,
+  every button is a raised key, and annunciators stay dark when normal and
+  light amber or red when something needs you. New Master WARNING and Master
+  CAUTION keys in the top bar light from the existing subsystem states and
+  can be pressed to acknowledge. The theme toggle becomes Day/Night lighting.
+  The virtual LCD keys read BACK and NEXT, and the left key reads EJECT while
+  Loadmaster owns the panel. Fonts (Barlow Condensed, Chivo, Chivo Mono,
+  SIL OFL 1.1) are vendored and served from `/fonts/` so nothing loads from
+  the internet. Presentation only: no ids, handlers or API calls change.
+  `/?skin=classic` restores the previous look per browser. See
+  `docs/FLIGHTDECK_SKIN.md`.
+
 ## [1.5.0-rc1] - 2026-11-11
 
 TruePanel 1.5.0-rc1 is the first candidate for the 1.5 line. Its headline is
