@@ -9,6 +9,7 @@ machine verification remains the sole path to ``resolved``.
 from __future__ import annotations
 
 import json
+import re
 from http import HTTPStatus
 from urllib.parse import urlparse, parse_qs
 
@@ -65,6 +66,16 @@ _THEME_TOGGLE_SYNC_TAG = (
     _THEME_TOGGLE_SYNC_MARKER
     + b'\n<script src="/theme-toggle-sync.js" defer></script>\n'
 )
+_FLIGHTDECK_SKIN_SCRIPT = "flightdeck-skin.js"
+_FLIGHTDECK_SKIN_MARKER = b"<!-- truepanel-flightdeck-skin -->"
+_FLIGHTDECK_SKIN_TAG = (
+    _FLIGHTDECK_SKIN_MARKER
+    + b'\n<script src="/flightdeck-skin.js" defer></script>\n'
+)
+# Fonts for the Flightdeck skin are vendored (SIL OFL 1.1, see static/fonts)
+# so the dashboard renders the same on a LAN or Tailscale with no internet.
+_FONT_DIR = STATIC_DIR / "fonts"
+_FONT_NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,80}\.woff2$")
 
 
 class MissionControlRequestHandler(_server.MissionControlRequestHandler):
@@ -89,6 +100,12 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             return
         if parsed.path == f"/{_THEME_TOGGLE_SYNC_SCRIPT}":
             self._static_script(_THEME_TOGGLE_SYNC_SCRIPT, "theme_toggle_sync_unavailable")
+            return
+        if parsed.path == f"/{_FLIGHTDECK_SKIN_SCRIPT}":
+            self._static_script(_FLIGHTDECK_SKIN_SCRIPT, "flightdeck_skin_unavailable")
+            return
+        if parsed.path.startswith("/fonts/"):
+            self._font(parsed.path[len("/fonts/"):])
             return
         super().do_GET()
 
@@ -143,6 +160,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
             tags += _THEME_TOGGLE_SYNC_TAG
         if b"<!-- truepanel-flight-logs -->" not in body:
             tags += _FLIGHT_LOGS_TAG
+        # The skin goes last so its stylesheet lands after every companion's.
+        if _FLIGHTDECK_SKIN_MARKER not in body:
+            tags += _FLIGHTDECK_SKIN_TAG
 
         if tags:
             if b"</body>" in body:
@@ -151,6 +171,19 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
                 body += tags
 
         self._send(body, content_type="text/html; charset=utf-8")
+
+    def _font(self, name):
+        # Only bare, lowercase .woff2 names that exist in static/fonts are
+        # served: no traversal, no other file types.
+        if not _FONT_NAME.match(name):
+            self._json({"error": "font_not_found"}, status=HTTPStatus.NOT_FOUND)
+            return
+        try:
+            body = (_FONT_DIR / name).read_bytes()
+        except OSError:
+            self._json({"error": "font_not_found"}, status=HTTPStatus.NOT_FOUND)
+            return
+        self._send(body, content_type="font/woff2")
 
     def _flight_logs(self, parsed):
         query = parse_qs(parsed.query)

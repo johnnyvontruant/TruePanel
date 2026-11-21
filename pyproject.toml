@@ -70,7 +70,7 @@ exclude = [
 
 [tool.setuptools.package-data]
 "truepanel.themes" = ["packs/*.yaml"]
-"truepanel.web" = ["static/*.html", "static/*.js"]
+"truepanel.web" = ["static/*.html", "static/*.js", "static/fonts/*.woff2", "static/fonts/*.txt"]
 "truepanel.holodeck" = ["corpus/v1/*.json", "corpus/v1/*.jsonl"]
 "truepanel.hangar" = ["registry.json"]
 "truepanel.aegis" = ["assurance_envelope.json", "assurance_envelope_v1.json"]
