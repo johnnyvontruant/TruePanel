@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.19.1 · refreshed 2026-11-19 · 59 experiment(s)
+Registry version 2026.11.20.1 · refreshed 2026-11-20 · 60 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -475,3 +475,11 @@ Ten deterministic paths verify one signed inclusion and append-only consistency 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Define privacy retention and checkpoint-gossip policy then register one fresh passive active-record custody entry with a governed external log and at least two independently operated monitors before any production promotion.
 - Revisit when: an external Tessera Rekor or SCITT operator is selected; privacy-safe production entry contents are approved; governed log and monitor identities are provisioned; at least two independent monitors can gossip signed checkpoints; a fresh passive Black Box active record and production custody receipt are available; field validation installation or deployment is proposed
+
+## TP-EXP-0066 · AEGIS independent transparency monitor quorum
+
+Ten deterministic paths verify one exact two-monitor checkpoint quorum and hold nine missing duplicate untrusted substituted split stale invalid-signature or authority-escalating paths while production operator independence and every operational authority remain withheld.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Commission two separately operated C2SP-compatible monitors and rehearse persisted checkpoint gossip over one privacy-safe external log entry before any production promotion.
+- Revisit when: two independently operated monitors are commissioned; governed monitor public keys and checkpoint persistence are provisioned; a C2SP witness endpoint is selected; privacy-safe production entry contents are approved; a fresh passive Black Box active record and production custody receipt are available; field validation installation or deployment is proposed
