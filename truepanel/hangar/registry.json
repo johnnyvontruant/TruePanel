@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.20.1",
-  "updated_at": "2026-11-20",
+  "registry_version": "2026.11.21.1",
+  "updated_at": "2026-11-21",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1154,6 +1154,25 @@
       "revisit_conditions": ["two independently operated monitors are commissioned", "governed monitor public keys and checkpoint persistence are provisioned", "a C2SP witness endpoint is selected", "privacy-safe production entry contents are approved", "a fresh passive Black Box active record and production custody receipt are available", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Commission two separately operated C2SP-compatible monitors and rehearse persisted checkpoint gossip over one privacy-safe external log entry before any production promotion.",
       "freshness": {"reviewed_at": "2026-11-20", "review_after": "2027-05-20"}
+    },
+    {
+      "id": "TP-EXP-0067", "title": "AEGIS transparency witness state continuity", "state": "COMPLETED",
+      "hypothesis": "Two distinct monitors can prove consecutive append-only checkpoint ratchets from their exact persisted prior state and reject stale substituted non-atomic or forked transitions without promoting a rehearsed record or granting operational authority.",
+      "value": "Closes the gap between one-shot checkpoint agreement and stateful witnessing while preserving a replaceable path to maintained C2SP witness services.",
+      "prior_art": ["C2SP tlog-witness v1.0.0 atomic checkpoint update", "transparency-dev witness transactional persistence", "Armored Witness state isolation", "Sigsum witness cosignatures"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-witness-continuity", "pr": null, "commits": []},
+      "protocol": ["require the exact prior two-monitor quorum result and every authority denial", "bind each monitor transition to its exact prior and current checkpoint digests", "require unchanged origin exact old and new tree sizes and roots and a consecutive state sequence", "verify an RFC 9162-shaped consistency proof from prior root to current root", "require persisted-before-cosignature inside the signed transition", "verify purpose-specific SSHSIG transitions against a protected exact-principal roster", "count each trusted monitor identity once and require two", "reject missing duplicate untrusted substituted stale skipped invalid-proof invalid-signature non-atomic or authority-escalating transitions", "keep durable production state and active runtime validation pending", "deny production deployment runtime network storage and hardware authority"],
+      "fixtures": ["aegis-transparency-witness-continuity-checkride-v1", "tests/test_aegis_transparency_witness_continuity.py"],
+      "success_criteria": ["one exact two-monitor state ratchet verifies", "eleven missing invalid stale substituted forked or authority-escalating paths hold", "each transition binds both checkpoint digests and a valid consistency proof", "cosign-before-persist never passes", "the accepted matrix remains 10/10", "the 27-sample shared-cooling lead remains bound", "independent production monitor count remains zero", "runtime active-record validation remains pending", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["snapshot agreement is treated as state continuity", "a stale old size or substituted prior checkpoint passes", "a cosignature can be returned before state persistence", "a sequence skip or invalid consistency proof passes", "local ephemeral keys are called independent production operators", "a simulation result promotes a runtime active record", "a deprecated distributor or new runtime service is introduced", "storage runtime deployment or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-transparency-witness-continuity-checkride-v1.json", "sha256": "ade826543906db2429e81a874403bb759a407db1483c74f7906dccffdbfca698"}, {"path": "docs/AEGIS_TRANSPARENCY_WITNESS_CONTINUITY.md", "sha256": "41844f95ff86231a6d6c21c2e952418fe6307032852656cc8db8f2434647547e"}],
+      "outcome": {"conclusion": "Twelve deterministic paths verify one exact two-monitor persisted checkpoint ratchet and hold eleven missing duplicate untrusted substituted stale skipped invalid-proof invalid-signature non-atomic or authority-escalating paths while durable production state and every operational authority remain withheld."},
+      "invalidated_assumptions": ["two monitors agreeing on one checkpoint proves either retained prior state", "an old tree size alone identifies the prior checkpoint", "persistence can safely happen after returning a cosignature", "a separate checkpoint distributor remains a recommended architecture", "a rehearsed state ratchet may promote an unvalidated runtime record"],
+      "reproduction": ["pytest -q tests/test_aegis_transparency_witness_continuity.py", "python -m truepanel.holodeck.aegis_transparency_witness_continuity --output /tmp/aegis-witness-continuity.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["two independently operated monitors are commissioned", "durable checkpoint state and crash recovery are provisioned", "a C2SP witness endpoint and privacy-safe external log are selected", "concurrent update and power-loss fault injection are available", "a fresh passive Black Box active record and production custody receipt are available", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Add a crash-safe file or service adapter and deterministic concurrent-update power-loss fault injection, then commission two separately operated C2SP witnesses over one privacy-safe external log entry.",
+      "freshness": {"reviewed_at": "2026-11-21", "review_after": "2027-05-21"}
     }
   ]
 }
