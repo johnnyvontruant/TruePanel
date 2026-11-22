@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.20.1 · refreshed 2026-11-20 · 60 experiment(s)
+Registry version 2026.11.21.1 · refreshed 2026-11-21 · 61 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -483,3 +483,11 @@ Ten deterministic paths verify one exact two-monitor checkpoint quorum and hold 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Commission two separately operated C2SP-compatible monitors and rehearse persisted checkpoint gossip over one privacy-safe external log entry before any production promotion.
 - Revisit when: two independently operated monitors are commissioned; governed monitor public keys and checkpoint persistence are provisioned; a C2SP witness endpoint is selected; privacy-safe production entry contents are approved; a fresh passive Black Box active record and production custody receipt are available; field validation installation or deployment is proposed
+
+## TP-EXP-0067 · AEGIS transparency witness state continuity
+
+Twelve deterministic paths verify one exact two-monitor persisted checkpoint ratchet and hold eleven missing duplicate untrusted substituted stale skipped invalid-proof invalid-signature non-atomic or authority-escalating paths while durable production state and every operational authority remain withheld.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Add a crash-safe file or service adapter and deterministic concurrent-update power-loss fault injection, then commission two separately operated C2SP witnesses over one privacy-safe external log entry.
+- Revisit when: two independently operated monitors are commissioned; durable checkpoint state and crash recovery are provisioned; a C2SP witness endpoint and privacy-safe external log are selected; concurrent update and power-loss fault injection are available; a fresh passive Black Box active record and production custody receipt are available; field validation installation or deployment is proposed

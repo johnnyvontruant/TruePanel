@@ -1,5 +1,20 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-21 witness-state continuity delta
+
+The current follow-up moves the two-monitor quorum from snapshot agreement to
+two signed, consecutive checkpoint ratchets. It requires each monitor to bind
+its exact prior persisted state, current state, and consistency proof, and
+rejects stale old sizes, state substitution, sequence skips, invalid proofs,
+signature substitution, and cosign-before-persist ordering.
+
+The detailed code inspection, license and dependency comparison, rejected
+deprecated distributor, collaboration opportunity, and deterministic results
+are in
+[`AEGIS_TRANSPARENCY_WITNESS_CONTINUITY.md`](AEGIS_TRANSPARENCY_WITNESS_CONTINUITY.md).
+No third-party source, package, binary, service, key, credential, or network
+path was added.
+
 ## 2026-11-20 transparency-monitor quorum delta
 
 The current follow-up requires two distinct rostered monitors to sign one exact
