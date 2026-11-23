@@ -158,6 +158,12 @@ AEGIS can group related evidence into one probable root-cause hypothesis while r
 - verification state;
 - Recovery Coverage Matrix gaps.
 
+The mobile Reliability view also exposes the AEGIS witness assurance chain.
+**Witness Crash Recovery** reports the four deterministic commit boundaries,
+exact-signature replay state, and the active-record gate. Its HoloDeck result
+is explicitly temporary-filesystem simulation; it does not claim production
+disk durability or separately operated witnesses.
+
 Correlation rules are declarative and replaceable. The active policy is shown
 in the Reliability view. A hypothesis must satisfy every independent evidence
 group declared by its rule; downstream symptom alerts may be inhibited only in

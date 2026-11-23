@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.21.1",
-  "updated_at": "2026-11-21",
+  "registry_version": "2026.11.22.1",
+  "updated_at": "2026-11-22",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1173,6 +1173,25 @@
       "revisit_conditions": ["two independently operated monitors are commissioned", "durable checkpoint state and crash recovery are provisioned", "a C2SP witness endpoint and privacy-safe external log are selected", "concurrent update and power-loss fault injection are available", "a fresh passive Black Box active record and production custody receipt are available", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Add a crash-safe file or service adapter and deterministic concurrent-update power-loss fault injection, then commission two separately operated C2SP witnesses over one privacy-safe external log entry.",
       "freshness": {"reviewed_at": "2026-11-21", "review_after": "2027-05-21"}
+    },
+    {
+      "id": "TP-EXP-0068", "title": "AEGIS transparency witness crash recovery", "state": "COMPLETED",
+      "hypothesis": "A content-addressed witness record that atomically binds successor state and the exact recoverable signature can survive commit-boundary crashes and serialize competing updates without rollback publication or operational authority.",
+      "value": "Closes the simulated process-crash gap between persistence-before-cosign policy and a production witness store while preserving a replaceable SQLite or C2SP service boundary.",
+      "prior_art": ["C2SP tlog-witness persistence-before-response rule", "transparency-dev witness SQLite serializable update", "SQLite atomic commit and recovery", "Linux fsync and directory durability", "Armored Witness state isolation"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-witness-crash-recovery", "pr": null, "commits": []},
+      "protocol": ["require reviewed witness-continuity evidence", "serialize each monitor update under an exclusive lock", "compare the complete persisted predecessor identity", "bind successor state transition digest and exact response signature into one content-addressed record", "flush the temporary record atomically replace the committed path and flush its directory before signature release", "discard uncommitted temporary state after recovery", "replay only the exact signature already bound to an identical committed transition", "reject stale forked corrupt symlinked substituted unsigned unverified or authority-escalating state", "inject crashes at four deterministic commit boundaries inside temporary HoloDeck storage", "deny production runtime network deployment hardware and storage authority"],
+      "fixtures": ["aegis-transparency-witness-crash-recovery-checkride-v1", "tests/test_aegis_transparency_witness_crash_recovery.py"],
+      "success_criteria": ["four commit-boundary crashes recover to a complete prior or successor record", "no precommit signature is released", "a committed but unpublished signature is recoverable exactly", "exact retries are idempotent", "stale and competing transitions never roll state back or fork it", "corrupt and symlinked state holds", "the accepted matrix reaches 11/11", "the 27-sample shared-cooling lead remains bound", "independent production monitor count remains zero", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["rename without file and directory sync is called durable", "a signature is regenerated or returned before state durability", "an abandoned temporary record is promoted automatically", "last writer wins over predecessor comparison", "temporary-filesystem simulation is called physical power-loss proof", "local state is called independently operated production witnessing", "a production database service credential or network path is introduced", "runtime deployment storage network or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-transparency-witness-crash-recovery-checkride-v1.json", "sha256": "317519918d42e20c83fa08b0df67456a23ffe0cd137e6d9aaf2bd39c3e1763ce"}, {"path": "docs/AEGIS_TRANSPARENCY_WITNESS_CRASH_RECOVERY.md", "sha256": "0d0365723d09d1e9be69fe322acce5b68701a020e8ba25593c63ec8e74239e4f"}],
+      "outcome": {"conclusion": "Fourteen deterministic paths pass nine clean recovery and rejection contracts and hold five unsafe inputs with zero signature leaks losses rollbacks forks corrupt-state acceptances or authority escalation; production durability and operator independence remain pending."},
+      "invalidated_assumptions": ["atomic rename alone proves durable publication", "a response signature can be reconstructed safely after restart", "an unrenamed temporary record is a committed successor", "one process can resolve concurrent updates without compare-and-swap serialization", "a temporary filesystem fault model proves device-backed power-loss behavior", "a successful crash rehearsal grants production storage authority"],
+      "reproduction": ["pytest -q tests/test_aegis_transparency_witness_crash_recovery.py", "python -m truepanel.holodeck.aegis_transparency_witness_crash_recovery --output /tmp/aegis-witness-crash-recovery.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["two independently operated witnesses are commissioned", "the intended production filesystem and storage controller are selected", "controlled device-backed power-cut testing is authorized", "a C2SP witness endpoint and privacy-safe external log entry are approved", "fresh passive Black Box custody evidence is available", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Commission two isolated C2SP-compatible witness stores and run controlled device-backed power-cut recovery plus checkpoint agreement testing before any active-record promotion.",
+      "freshness": {"reviewed_at": "2026-11-22", "review_after": "2027-05-22"}
     }
   ]
 }
