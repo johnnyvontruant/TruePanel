@@ -1,5 +1,21 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-22 witness crash-recovery delta
+
+The current follow-up adds a replaceable durable-state adapter and deterministic
+fault injection at four commit boundaries. The exact verified transition,
+successor checkpoint, and recoverable response signature are flushed and
+atomically installed before publication; stale concurrent updates and corrupt
+or symlinked state fail closed.
+
+The detailed source inspection, capability and dependency comparison, license
+notes, rejected shortcuts, collaboration opportunity, limitations, and
+measurements are in
+[`AEGIS_TRANSPARENCY_WITNESS_CRASH_RECOVERY.md`](AEGIS_TRANSPARENCY_WITNESS_CRASH_RECOVERY.md).
+The C2SP contract and transparency-dev SQLite implementation are adapted as
+architecture only. No third-party code, package, binary, schema, service, key,
+credential, or runtime dependency was added.
+
 ## 2026-11-21 witness-state continuity delta
 
 The current follow-up moves the two-monitor quorum from snapshot agreement to

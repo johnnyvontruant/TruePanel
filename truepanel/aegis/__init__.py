@@ -88,6 +88,7 @@ from .rfc4998_timestamped_custody import evaluate_timestamped_custody
 from .rfc4998_transparent_custody import evaluate_transparent_custody
 from .transparency_monitor_quorum import evaluate_monitor_quorum
 from .transparency_witness_continuity import evaluate_witness_continuity
+from .transparency_witness_crash_recovery import WitnessDurableStateStore
 from .requalification import (
     classify_platform_transition,
     envelope_sha256,
@@ -298,6 +299,7 @@ __all__ = [
     "evaluate_transparent_custody",
     "evaluate_monitor_quorum",
     "evaluate_witness_continuity",
+    "WitnessDurableStateStore",
     "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",

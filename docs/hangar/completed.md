@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.21.1 · refreshed 2026-11-21 · 61 experiment(s)
+Registry version 2026.11.22.1 · refreshed 2026-11-22 · 62 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -491,3 +491,11 @@ Twelve deterministic paths verify one exact two-monitor persisted checkpoint rat
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Add a crash-safe file or service adapter and deterministic concurrent-update power-loss fault injection, then commission two separately operated C2SP witnesses over one privacy-safe external log entry.
 - Revisit when: two independently operated monitors are commissioned; durable checkpoint state and crash recovery are provisioned; a C2SP witness endpoint and privacy-safe external log are selected; concurrent update and power-loss fault injection are available; a fresh passive Black Box active record and production custody receipt are available; field validation installation or deployment is proposed
+
+## TP-EXP-0068 · AEGIS transparency witness crash recovery
+
+Fourteen deterministic paths pass nine clean recovery and rejection contracts and hold five unsafe inputs with zero signature leaks losses rollbacks forks corrupt-state acceptances or authority escalation; production durability and operator independence remain pending.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Commission two isolated C2SP-compatible witness stores and run controlled device-backed power-cut recovery plus checkpoint agreement testing before any active-record promotion.
+- Revisit when: two independently operated witnesses are commissioned; the intended production filesystem and storage controller are selected; controlled device-backed power-cut testing is authorized; a C2SP witness endpoint and privacy-safe external log entry are approved; fresh passive Black Box custody evidence is available; field validation installation or deployment is proposed
