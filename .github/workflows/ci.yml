@@ -387,3 +387,32 @@ jobs:
           name: aegis-transparency-witness-crash-recovery-checkride
           path: ${{ runner.temp }}/aegis-transparency-witness-crash-recovery-checkride-v1.json
           if-no-files-found: error
+
+  transparency-witness-sqlite-recovery:
+    runs-on: ubuntu-latest
+    needs: transparency-witness-crash-recovery
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download same-run witness crash-recovery evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: aegis-transparency-witness-crash-recovery-checkride
+          path: ${{ runner.temp }}/witness-crash-recovery
+      - name: Rehearse isolated SQLite witness recovery
+        run: |
+          python -m truepanel.holodeck.aegis_transparency_witness_sqlite_recovery \
+            --crash-recovery-evidence "$RUNNER_TEMP/witness-crash-recovery/aegis-transparency-witness-crash-recovery-checkride-v1.json" \
+            --output "$RUNNER_TEMP/aegis-transparency-witness-sqlite-recovery-checkride-v1.json"
+          diff -u docs/evidence/aegis-transparency-witness-sqlite-recovery-checkride-v1.json \
+            "$RUNNER_TEMP/aegis-transparency-witness-sqlite-recovery-checkride-v1.json"
+      - name: Preserve isolated witness-store evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-transparency-witness-sqlite-recovery-checkride
+          path: ${{ runner.temp }}/aegis-transparency-witness-sqlite-recovery-checkride-v1.json
+          if-no-files-found: error

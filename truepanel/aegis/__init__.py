@@ -80,15 +80,6 @@ from .promotion_gate import (
 )
 from .rehearsal import rehearse_recovery_paths
 from .reliability import AegisReliabilityEngine
-from .rfc4998_authenticated_custody import (
-    build_custody_statement,
-    evaluate_authenticated_custody,
-)
-from .rfc4998_timestamped_custody import evaluate_timestamped_custody
-from .rfc4998_transparent_custody import evaluate_transparent_custody
-from .transparency_monitor_quorum import evaluate_monitor_quorum
-from .transparency_witness_continuity import evaluate_witness_continuity
-from .transparency_witness_crash_recovery import WitnessDurableStateStore
 from .requalification import (
     classify_platform_transition,
     envelope_sha256,
@@ -102,6 +93,12 @@ from .review_ceremony import (
     build_review_bundle,
     validate_review_bundle,
 )
+from .rfc4998_authenticated_custody import (
+    build_custody_statement,
+    evaluate_authenticated_custody,
+)
+from .rfc4998_timestamped_custody import evaluate_timestamped_custody
+from .rfc4998_transparent_custody import evaluate_transparent_custody
 from .ssh_verifier import (
     DEFAULT_NAMESPACE,
     OpenSshSignatureVerifier,
@@ -213,6 +210,13 @@ from .temperature_statistical_calibration_contract import (
     pending_temperature_statistical_calibration_contract,
     validate_temperature_statistical_calibration_contract,
 )
+from .transparency_monitor_quorum import evaluate_monitor_quorum
+from .transparency_witness_continuity import evaluate_witness_continuity
+from .transparency_witness_crash_recovery import WitnessDurableStateStore
+from .transparency_witness_sqlite_recovery import (
+    SQLiteWitnessDurableStateStore,
+    evaluate_isolated_witness_stores,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -300,6 +304,8 @@ __all__ = [
     "evaluate_monitor_quorum",
     "evaluate_witness_continuity",
     "WitnessDurableStateStore",
+    "SQLiteWitnessDurableStateStore",
+    "evaluate_isolated_witness_stores",
     "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",
