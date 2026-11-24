@@ -164,6 +164,12 @@ exact-signature replay state, and the active-record gate. Its HoloDeck result
 is explicitly temporary-filesystem simulation; it does not claim production
 disk durability or separately operated witnesses.
 
+The follow-on **Isolated Witness Stores** drawer shows two separately rooted
+SQLite stores using WAL plus full synchronization, four abrupt process-crash
+boundaries, exact recovered checkpoint agreement, and the active-record
+`PENDING` gate. Its warning is explicit: process `SIGKILL` is not power loss,
+and two local files do not prove separate devices or independent operators.
+
 Correlation rules are declarative and replaceable. The active policy is shown
 in the Reliability view. A hypothesis must satisfy every independent evidence
 group declared by its rule; downstream symptom alerts may be inhibited only in

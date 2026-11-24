@@ -1,5 +1,19 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-23 isolated SQLite witness-store delta
+
+The current follow-up replaces exception-only durability evidence with two
+separately rooted SQLite stores and four abrupt child-process `SIGKILL` points.
+It requires WAL plus full synchronization, transactional predecessor comparison,
+integrity checks, distinct monitor identities and paths, exact checkpoint
+agreement, and exact committed-signature recovery.
+
+The detailed source inspection, maturity and license comparison, rejected chaos
+platforms, measurements, and production boundary are in
+[`AEGIS_TRANSPARENCY_WITNESS_SQLITE_RECOVERY.md`](AEGIS_TRANSPARENCY_WITNESS_SQLITE_RECOVERY.md).
+No third-party code, package, binary, service, credential, or network path was
+added.
+
 ## 2026-11-22 witness crash-recovery delta
 
 The current follow-up adds a replaceable durable-state adapter and deterministic

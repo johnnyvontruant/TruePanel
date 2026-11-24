@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.22.1",
-  "updated_at": "2026-11-22",
+  "registry_version": "2026.11.23.1",
+  "updated_at": "2026-11-23",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1192,6 +1192,25 @@
       "revisit_conditions": ["two independently operated witnesses are commissioned", "the intended production filesystem and storage controller are selected", "controlled device-backed power-cut testing is authorized", "a C2SP witness endpoint and privacy-safe external log entry are approved", "fresh passive Black Box custody evidence is available", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Commission two isolated C2SP-compatible witness stores and run controlled device-backed power-cut recovery plus checkpoint agreement testing before any active-record promotion.",
       "freshness": {"reviewed_at": "2026-11-22", "review_after": "2027-05-22"}
+    },
+    {
+      "id": "TP-EXP-0069", "title": "AEGIS isolated SQLite witness recovery", "state": "COMPLETED",
+      "hypothesis": "Two identity-bound SQLite witness stores can recover one exact checkpoint and response signature across abrupt process crashes and reject corrupt split duplicate or authority-escalating state without claiming power-loss validation or production independence.",
+      "value": "Replaces exception-only crash evidence with transactional process-death recovery and exact two-store agreement while preserving a replaceable path to maintained C2SP witness services.",
+      "prior_art": ["SQLite WAL and synchronous FULL durability", "SQLite crash and I/O fault testing", "transparency-dev witness SQLite persistence", "Jepsen history and nemesis model", "Chaos Mesh and LitmusChaos fault injection"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-dual-witness-sqlite-recovery", "pr": null, "commits": []},
+      "protocol": ["require reviewed witness crash-recovery evidence", "bind each SQLite database permanently to one monitor identity", "use distinct protected root directories and database paths", "configure WAL synchronous FULL and a bounded busy timeout", "serialize updates with BEGIN IMMEDIATE", "compare the complete predecessor record digest inside the transaction", "atomically retain successor state transition digest and exact response signature", "kill disposable child processes at four transaction boundaries", "run integrity_check before recovered state enters quorum", "require two distinct identities paths and exact checkpoint and sequence agreement", "reject corrupt split duplicate single-store non-test-crash or authority-escalating paths", "deny production runtime deployment hardware network and storage authority"],
+      "fixtures": ["aegis-transparency-witness-sqlite-recovery-checkride-v1", "tests/test_aegis_transparency_witness_sqlite_recovery.py"],
+      "success_criteria": ["two isolated SQLite stores recover one exact checkpoint and sequence", "four abrupt SIGKILL boundaries recover a complete predecessor or successor", "no precommit signature is released", "a committed but unpublished signature is recovered exactly", "one competing transaction wins and one conflicts", "corrupt split duplicate and single-store paths hold", "the accepted matrix reaches 12/12", "the 27-sample shared-cooling lead remains bound", "physical power-loss validations and independent production operators remain zero", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["two files on one host are called independent operators", "process death is called physical power-loss validation", "synchronous NORMAL or OFF is accepted for witness commits", "a corrupt database or split checkpoint enters quorum", "one path or identity is counted twice", "test crash hooks are reachable without explicit HoloDeck opt-in", "a Kubernetes chaos control plane or new database dependency is embedded", "runtime deployment storage network or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-transparency-witness-sqlite-recovery-checkride-v1.json", "sha256": "1084805c8b4fb5cbf00cf8ad2d7d728fb59d8a473656b7fad94d6a615f87262b"}, {"path": "docs/AEGIS_TRANSPARENCY_WITNESS_SQLITE_RECOVERY.md", "sha256": "25950db9628a0a8291e2287b8ef91730ab61c6d3ebce24a53642419def7c3642"}],
+      "outcome": {"conclusion": "Fourteen deterministic paths pass seven exact recovery contracts and hold seven corrupt split duplicate incomplete test-only or authority-escalating paths; two WAL FULL stores agree after four abrupt process crashes while physical power-loss validation and production independence remain zero."},
+      "invalidated_assumptions": ["an exception exercises the same recovery path as process death", "two database files prove operator independence", "WAL synchronous NORMAL is sufficient for power-loss durability", "a healthy store may outvote a corrupt peer in a two-of-two policy", "a process-crash rehearsal validates device firmware and storage controllers", "a Kubernetes chaos platform is required for bounded local fault injection"],
+      "reproduction": ["pytest -q tests/test_aegis_transparency_witness_sqlite_recovery.py", "python -m truepanel.holodeck.aegis_transparency_witness_sqlite_recovery --output /tmp/aegis-witness-sqlite-recovery.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["two separately governed witness devices are commissioned", "the intended filesystems storage controllers and power-loss behavior are selected", "controlled device-backed power-cut testing is authorized", "a C2SP witness endpoint and privacy-safe external log entry are approved", "fresh passive Black Box custody evidence is available", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Commission two separately governed C2SP-compatible witness devices and run controlled power-cut recovery plus cross-device checkpoint agreement testing before any active-record promotion.",
+      "freshness": {"reviewed_at": "2026-11-23", "review_after": "2027-05-23"}
     }
   ]
 }
