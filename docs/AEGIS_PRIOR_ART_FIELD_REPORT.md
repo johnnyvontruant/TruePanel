@@ -1,5 +1,17 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-24 anchored storage-fault delta
+
+The latest increment adds a content-addressed recovery anchor and a 13-scenario
+deterministic storage-image fault corpus. It adapts SQLite's
+snapshot/damage/atomicity invariant and FoundationDB's deterministic replay
+discipline without incorporating their source or adding a runtime dependency.
+The key discovery is that two-store agreement alone cannot detect a joint
+rollback; the anchor must bind the reviewed checkpoint, sequence, and both
+monitor record digests. See
+[`AEGIS_TRANSPARENCY_WITNESS_STORAGE_FAULTS.md`](AEGIS_TRANSPARENCY_WITNESS_STORAGE_FAULTS.md)
+for inspected source, licensing, rejected paths, and collaboration targets.
+
 ## 2026-11-23 isolated SQLite witness-store delta
 
 The current follow-up replaces exception-only durability evidence with two

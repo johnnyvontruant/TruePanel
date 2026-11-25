@@ -170,6 +170,11 @@ boundaries, exact recovered checkpoint agreement, and the active-record
 `PENDING` gate. Its warning is explicit: process `SIGKILL` is not power loss,
 and two local files do not prove separate devices or independent operators.
 
+The **Anchored Storage Fault Corpus** drawer adds nine deterministic database-
+image faults, exact per-monitor record anchoring, and an explicit hold when both
+stores agree on the same stale rollback. Physical power-cut and independent-
+operator gaps remain visible and blocking.
+
 Correlation rules are declarative and replaceable. The active policy is shown
 in the Reliability view. A hypothesis must satisfy every independent evidence
 group declared by its rule; downstream symptom alerts may be inhibited only in

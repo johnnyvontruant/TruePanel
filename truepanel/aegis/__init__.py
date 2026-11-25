@@ -217,6 +217,22 @@ from .transparency_witness_sqlite_recovery import (
     SQLiteWitnessDurableStateStore,
     evaluate_isolated_witness_stores,
 )
+from .transparency_witness_storage_faults import (
+    ANCHOR_SCHEMA as TRANSPARENCY_WITNESS_RECOVERY_ANCHOR_SCHEMA,
+)
+from .transparency_witness_storage_faults import (
+    SCHEMA as TRANSPARENCY_WITNESS_STORAGE_FAULT_SCHEMA,
+)
+from .transparency_witness_storage_faults import (
+    STATUS_HOLD as TRANSPARENCY_WITNESS_STORAGE_FAULT_HOLD,
+)
+from .transparency_witness_storage_faults import (
+    STATUS_REHEARSED as TRANSPARENCY_WITNESS_STORAGE_FAULT_REHEARSED,
+)
+from .transparency_witness_storage_faults import (
+    create_recovery_anchor,
+    evaluate_anchored_witness_recovery,
+)
 
 __all__ = [
     "ACCEPTANCE_SCHEMA",
@@ -306,6 +322,12 @@ __all__ = [
     "WitnessDurableStateStore",
     "SQLiteWitnessDurableStateStore",
     "evaluate_isolated_witness_stores",
+    "TRANSPARENCY_WITNESS_RECOVERY_ANCHOR_SCHEMA",
+    "TRANSPARENCY_WITNESS_STORAGE_FAULT_SCHEMA",
+    "TRANSPARENCY_WITNESS_STORAGE_FAULT_HOLD",
+    "TRANSPARENCY_WITNESS_STORAGE_FAULT_REHEARSED",
+    "create_recovery_anchor",
+    "evaluate_anchored_witness_recovery",
     "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",
