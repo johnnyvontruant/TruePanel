@@ -1,0 +1,15 @@
+{
+  "hardware_isolated": true,
+  "measurements": {"confidence": 0.95, "coverage_gaps": 0, "coverage_total": 8, "coverage_trusted": 8, "deployments": 0, "duplicate_operator_acceptances": 0, "expired_bundle_acceptances": 0, "hardware_actions": 0, "isolated_threshold_first_match_sample": 46, "lead_samples": 27, "policy_drift_acceptances": 0, "runtime_writes": 0, "scenario_count": 7, "shared_cooling_first_match_sample": 19, "supporting_signal_count": 5, "trusted_thresholds": 1, "unknown_root_acceptances": 0},
+  "scenarios": [
+    {"errors": [], "name": "two-independent-operators", "trusted": true},
+    {"errors": ["TimestampTrustThresholdNotMet"], "name": "one-operator-two-tokens", "trusted": false},
+    {"errors": ["TimestampTrustBundleExpired"], "name": "expired-bundle", "trusted": false},
+    {"errors": ["TimestampTrustThresholdNotMet"], "name": "unknown-root", "trusted": false},
+    {"errors": ["TimestampTrustThresholdNotMet"], "name": "policy-drift", "trusted": false},
+    {"errors": ["TimestampTrustAuthorityEscalation"], "name": "authority-escalation", "trusted": false},
+    {"errors": ["TimestampTrustOperatorDuplicate"], "name": "duplicate-operator", "trusted": false}
+  ],
+  "schema": "truepanel.holodeck-temperature-timestamp-trust-bundle/v1",
+  "simulation": true
+}
