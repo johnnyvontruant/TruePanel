@@ -1,0 +1,42 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "fe1f9a1ef8e542e97218ecd1b665f319cc417ab5f7a1eb1e98060531d8bac58a",
+  "experiment_id": "TP-EXP-0036",
+  "hardware_isolated": true,
+  "invalidated_assumption": "Using the same recording path as intake is sufficient lineage; the detector must reconstruct and bind the exact governed receipt before replay.",
+  "measurements": {
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "correlation_lead_samples": 27,
+    "deployments": 0,
+    "field_validations": 0,
+    "first_isolated_threshold_index": 46,
+    "first_policy_match_index": 19,
+    "hardware_actions": 0,
+    "hold_count": 9,
+    "intake_bypasses_accepted": 0,
+    "labels_accepted": 0,
+    "ready_count": 1,
+    "runtime_writes": 0,
+    "scenario_count": 10,
+    "signer_invocations": 0,
+    "unsafe_ready_count": 0
+  },
+  "production_mutation": false,
+  "scenario": "aegis-intake-bound-detector-result",
+  "scenarios": [
+    {"error_count": 0, "receipt_bound": true, "scenario": "exact-receipt-bound-replay", "status": "INTAKE_BOUND_DETECTOR_RESULT_READY_FOR_CALIBRATION_BINDING"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "missing-receipt", "status": "HOLD"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "tampered-receipt", "status": "HOLD"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "recording-drift", "status": "HOLD"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "label-after-intake", "status": "HOLD"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "unsafe-receipt-permissions", "status": "HOLD"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "symlink-receipt", "status": "HOLD"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "foreign-receipt", "status": "HOLD"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "occupied-output", "status": "HOLD"},
+    {"error_count": 1, "receipt_bound": false, "scenario": "legacy-result-bypass", "status": "HOLD"}
+  ],
+  "schema_version": 1,
+  "simulation": true,
+  "temporary_fixture_removed": true
+}
