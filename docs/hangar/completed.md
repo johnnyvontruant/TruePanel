@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.23.1 · refreshed 2026-11-23 · 63 experiment(s)
+Registry version 2026.11.24.1 · refreshed 2026-11-24 · 64 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -507,3 +507,11 @@ Fourteen deterministic paths pass seven exact recovery contracts and hold seven 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Commission two separately governed C2SP-compatible witness devices and run controlled power-cut recovery plus cross-device checkpoint agreement testing before any active-record promotion.
 - Revisit when: two separately governed witness devices are commissioned; the intended filesystems storage controllers and power-loss behavior are selected; controlled device-backed power-cut testing is authorized; a C2SP witness endpoint and privacy-safe external log entry are approved; fresh passive Black Box custody evidence is available; field validation installation or deployment is proposed
+
+## TP-EXP-0070 · AEGIS anchored witness storage-fault corpus
+
+Thirteen deterministic paths pass two exact anchored recoveries and hold eleven storage-image or policy faults with zero joint rollback split corruption identity substitution anchor tamper or authority acceptances; physical power-cut validation remains zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Hold the recovery anchor outside both separately governed witness devices and run recorded controlled physical power-cut recovery on the intended filesystem and storage-controller stack before active-record promotion.
+- Revisit when: two separately governed witness devices are commissioned; the intended filesystems storage controllers and power-loss behavior are selected; controlled physical power-cut testing is authorized; an external anchor publication channel is approved; a public VFS shim or instrumented SQLite build is selected; field validation installation or deployment is proposed

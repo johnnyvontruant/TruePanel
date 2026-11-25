@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.23.1",
-  "updated_at": "2026-11-23",
+  "registry_version": "2026.11.24.1",
+  "updated_at": "2026-11-24",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1211,6 +1211,25 @@
       "revisit_conditions": ["two separately governed witness devices are commissioned", "the intended filesystems storage controllers and power-loss behavior are selected", "controlled device-backed power-cut testing is authorized", "a C2SP witness endpoint and privacy-safe external log entry are approved", "fresh passive Black Box custody evidence is available", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Commission two separately governed C2SP-compatible witness devices and run controlled power-cut recovery plus cross-device checkpoint agreement testing before any active-record promotion.",
       "freshness": {"reviewed_at": "2026-11-23", "review_after": "2027-05-23"}
+    },
+    {
+      "id": "TP-EXP-0070", "title": "AEGIS anchored witness storage-fault corpus", "state": "COMPLETED",
+      "hypothesis": "A content-addressed recovery anchor can distinguish an exact two-store recovery from joint rollback split generation database damage identity substitution and anchor tampering without claiming physical power-loss validation.",
+      "value": "Closes the matching-stale-store gap and turns deterministic storage-image damage into a reviewable CI contract while preserving the physical-device gate.",
+      "prior_art": ["SQLite crash-test snapshot and damage invariant", "SQLite test VFS counted I/O faults", "FoundationDB deterministic simulation", "Antithesis deterministic simulation testing", "Jepsen nemesis fault operations"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-witness-storage-fault-corpus", "pr": null, "commits": []},
+      "protocol": ["require reviewed dual SQLite witness evidence", "create an anchor only from an exact healthy two-store quorum", "bind checkpoint sequence both monitor record digests and source quorum digest", "verify anchor content digest and every authority denial", "run SQLite integrity identity signature and peer-agreement checks before anchor comparison", "checkpoint disposable database images before mutation", "apply nine named deterministic storage-image faults", "require exact restart and exact image restore positive controls", "reject joint stale rollback split generation corruption missing state swapped images cloned identity anchor tamper and authority escalation", "deny production runtime deployment hardware network and storage authority"],
+      "fixtures": ["aegis-transparency-witness-storage-faults-checkride-v1", "tests/test_aegis_transparency_witness_storage_faults.py"],
+      "success_criteria": ["two exact anchored recoveries pass", "eleven unsafe image or policy paths hold", "two jointly stale stores cannot satisfy a newer anchor", "no corrupt missing split substituted or cloned store is accepted", "the accepted matrix reaches 13/13", "the 27-sample shared-cooling lead remains bound", "physical power-loss validations and independent production operators remain zero", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["peer agreement without an external anchor is called rollback safe", "random unreproducible damage is used as primary evidence", "image mutation is called a physical power cut", "damaged state is guessed or synthesized", "SQLite private test code or a new simulation platform is embedded", "a stale split corrupt missing swapped or cloned image passes", "runtime deployment storage network or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-transparency-witness-storage-faults-checkride-v1.json", "sha256": "be23d6952ccc9c299f027c001f35fac5d7547a4eb331c0cbe19291cd4d3aae0f"}, {"path": "docs/AEGIS_TRANSPARENCY_WITNESS_STORAGE_FAULTS.md", "sha256": "69a92360031d3210e9f0f562231d36fcd56173a8b68a74e32ea83e1cf87bf434"}],
+      "outcome": {"conclusion": "Thirteen deterministic paths pass two exact anchored recoveries and hold eleven storage-image or policy faults with zero joint rollback split corruption identity substitution anchor tamper or authority acceptances; physical power-cut validation remains zero."},
+      "invalidated_assumptions": ["two agreeing stores prove freshness", "process death and WAL FULL cover storage-image damage", "database integrity alone detects a valid but stale restore", "random byte fuzzing is necessary for a useful bounded corpus", "application-layer image faults prove physical device behavior", "a successful fault corpus grants production storage authority"],
+      "reproduction": ["pytest -q tests/test_aegis_transparency_witness_storage_faults.py", "python -m truepanel.holodeck.aegis_transparency_witness_storage_faults --output /tmp/aegis-witness-storage-faults.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["two separately governed witness devices are commissioned", "the intended filesystems storage controllers and power-loss behavior are selected", "controlled physical power-cut testing is authorized", "an external anchor publication channel is approved", "a public VFS shim or instrumented SQLite build is selected", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Hold the recovery anchor outside both separately governed witness devices and run recorded controlled physical power-cut recovery on the intended filesystem and storage-controller stack before active-record promotion.",
+      "freshness": {"reviewed_at": "2026-11-24", "review_after": "2027-05-24"}
     }
   ]
 }
