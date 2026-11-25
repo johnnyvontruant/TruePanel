@@ -1,0 +1,73 @@
+{
+  "hardware_isolated": true,
+  "measurements": {
+    "authority_escalation_acceptances": 0,
+    "confidence": 0.95,
+    "coverage_gaps": 0,
+    "coverage_total": 8,
+    "coverage_trusted": 8,
+    "delayed_witness_acceptances": 0,
+    "deployments": 0,
+    "field_validations": 0,
+    "fixture_private_keys_created": 5,
+    "fixture_private_keys_retained": 0,
+    "hardware_actions": 0,
+    "isolated_threshold_first_match_sample": 46,
+    "lead_samples": 27,
+    "postcompromise_hold_count": 1,
+    "precompromise_valid_count": 1,
+    "runtime_writes": 0,
+    "scenario_count": 7,
+    "shared_cooling_first_match_sample": 19,
+    "supporting_signal_count": 5,
+    "tampered_token_acceptances": 0,
+    "unaffected_valid_count": 1,
+    "untrusted_rotation_acceptances": 0
+  },
+  "scenarios": [
+    {
+      "accepted": true,
+      "errors": [],
+      "name": "before-compromise",
+      "status": "RFC3161_WITNESSED_SIGNATURE_VALID_BEFORE_COMPROMISE"
+    },
+    {
+      "accepted": false,
+      "errors": [],
+      "name": "after-compromise",
+      "status": "HOLD_WITNESSED_SIGNATURE_AT_OR_AFTER_COMPROMISE"
+    },
+    {
+      "accepted": true,
+      "errors": [],
+      "name": "unaffected-reviewer",
+      "status": "RFC3161_WITNESSED_REVIEWER_SIGNATURE_VALID"
+    },
+    {
+      "accepted": false,
+      "errors": ["ReviewerTimestampWitnessNotVerified"],
+      "name": "tampered-token",
+      "status": "HOLD"
+    },
+    {
+      "accepted": false,
+      "errors": ["ReviewerTimestampWitnessDelayExceeded"],
+      "name": "delayed-witness",
+      "status": "HOLD"
+    },
+    {
+      "accepted": false,
+      "errors": ["ReviewerTimestampWitnessPrerequisiteInvalid"],
+      "name": "untrusted-rotation",
+      "status": "HOLD"
+    },
+    {
+      "accepted": false,
+      "errors": ["ReviewerTimestampWitnessPrerequisiteInvalid"],
+      "name": "authority-escalation",
+      "status": "HOLD"
+    }
+  ],
+  "schema": "truepanel.holodeck-temperature-reviewer-timestamp-witness/v1",
+  "simulation": true
+}

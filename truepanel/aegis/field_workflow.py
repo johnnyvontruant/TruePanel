@@ -156,6 +156,9 @@ def ingest_field_recording(
 
     source = Path(recording).resolve()
     raw = source.read_bytes()
+    recording_sha256 = _sha256(raw)
+    if any(item.get("sha256") == recording_sha256 for item in session["cases"]):
+        raise ValueError("duplicate recording digest in field corpus")
     existing_bytes = sum(int(item["byte_count"]) for item in session["cases"])
     if existing_bytes + len(raw) > MAX_CORPUS_BYTES:
         raise ValueError("AEGIS corpus byte limit exceeded")
@@ -172,7 +175,7 @@ def ingest_field_recording(
     case = {
         "case_id": case_id,
         "recording": relative.as_posix(),
-        "sha256": _sha256(raw),
+        "sha256": recording_sha256,
         "byte_count": len(raw),
         "frame_count": len(replay.frames),
         "expected_shared_cooling": bool(expected_shared_cooling),

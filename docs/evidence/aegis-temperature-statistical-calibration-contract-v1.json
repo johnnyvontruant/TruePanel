@@ -1,0 +1,43 @@
+{
+  "control_authority": false,
+  "evidence_sha256": "a18aaf3970d205890af384eaf195a4b2697daa9db71b80b067dea52db98099bd",
+  "experiment_id": "TP-EXP-0037",
+  "hardware_isolated": true,
+  "invalidated_assumption": "Metric names are sufficient protection against calibration bias; sample floors, interval rules, lead-time populations, abstentions, and tuning boundaries must all be locked before authenticated labels are revealed.",
+  "measurements": {
+    "candidate_acceptances": 0,
+    "candidate_installations": 0,
+    "deployments": 0,
+    "field_validations": 0,
+    "hardware_actions": 0,
+    "hold_count": 9,
+    "labels_accepted": 0,
+    "minimum_cohort_cases": 440,
+    "minimum_negative_cases": 400,
+    "minimum_positive_cases": 40,
+    "perfect_sensitivity_wilson_lower": 0.912378,
+    "predeclared_count": 1,
+    "runtime_writes": 0,
+    "scenario_count": 10,
+    "scores_accepted": 0,
+    "unsafe_ready_count": 0,
+    "zero_abstention_rate_wilson_upper": 0.008655,
+    "zero_false_positive_rate_wilson_upper": 0.009512
+  },
+  "production_mutation": false,
+  "scenario": "aegis-predeclared-statistical-calibration-contract",
+  "scenarios": [
+    {"contract_locked": true, "error_count": 0, "scenario": "fixed-policy-before-labels", "status": "STATISTICAL_CALIBRATION_CONTRACT_PREDECLARED"},
+    {"contract_locked": false, "error_count": 1, "scenario": "positive-floor-relaxed", "status": "HOLD"},
+    {"contract_locked": false, "error_count": 1, "scenario": "negative-floor-relaxed", "status": "HOLD"},
+    {"contract_locked": false, "error_count": 1, "scenario": "sensitivity-relaxed", "status": "HOLD"},
+    {"contract_locked": false, "error_count": 1, "scenario": "false-positive-gate-relaxed", "status": "HOLD"},
+    {"contract_locked": false, "error_count": 1, "scenario": "lead-time-removed", "status": "HOLD"},
+    {"contract_locked": false, "error_count": 1, "scenario": "post-label-tuning", "status": "HOLD"},
+    {"contract_locked": false, "error_count": 2, "scenario": "outcome-injection", "status": "HOLD"},
+    {"contract_locked": false, "error_count": 1, "scenario": "unknown-extension", "status": "HOLD"},
+    {"contract_locked": false, "error_count": 1, "scenario": "authority-escalation", "status": "HOLD"}
+  ],
+  "schema_version": 1,
+  "simulation": true
+}
