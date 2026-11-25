@@ -1,0 +1,15 @@
+{
+  "hardware_isolated": true,
+  "measurements": {"confidence": 0.95, "coverage_gaps": 0, "coverage_total": 8, "coverage_trusted": 8, "deployments": 0, "dual_signature_transitions": 1, "fixture_private_keys_created": 2, "fixture_private_keys_retained": 0, "generation_gap_acceptances": 0, "hardware_actions": 0, "hold_count": 6, "incomplete_revocation_acceptances": 0, "isolated_threshold_first_match_sample": 46, "lead_samples": 27, "revocation_objects_archived": 2, "runtime_writes": 0, "scenario_count": 7, "shared_cooling_first_match_sample": 19, "stale_revocation_acceptances": 0, "supporting_signal_count": 5, "trusted_rotations": 1, "unsigned_transition_acceptances": 0},
+  "scenarios": [
+    {"errors": [], "name": "dual-signed-current-revocation", "status": "TIMESTAMP_TRUST_ROTATION_TRUSTED"},
+    {"errors": ["TimestampTrustRotationDualSignatureRequired"], "name": "missing-predecessor", "status": "HOLD"},
+    {"errors": ["TimestampTrustRotationDualSignatureRequired"], "name": "missing-successor", "status": "HOLD"},
+    {"errors": ["TimestampTrustRotationGenerationInvalid"], "name": "generation-gap", "status": "HOLD"},
+    {"errors": ["TimestampTrustRevocationEvidenceIncomplete"], "name": "missing-operator-revocation", "status": "HOLD"},
+    {"errors": ["TimestampTrustRevocationEvidenceStale"], "name": "stale-revocation", "status": "HOLD"},
+    {"errors": ["TimestampTrustRotationStatementMismatch"], "name": "authority-escalation", "status": "HOLD"}
+  ],
+  "schema": "truepanel.holodeck-temperature-timestamp-trust-rotation/v1",
+  "simulation": true
+}
