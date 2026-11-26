@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.24.1",
-  "updated_at": "2026-11-24",
+  "registry_version": "2026.11.25.1",
+  "updated_at": "2026-11-25",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1230,6 +1230,25 @@
       "revisit_conditions": ["two separately governed witness devices are commissioned", "the intended filesystems storage controllers and power-loss behavior are selected", "controlled physical power-cut testing is authorized", "an external anchor publication channel is approved", "a public VFS shim or instrumented SQLite build is selected", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Hold the recovery anchor outside both separately governed witness devices and run recorded controlled physical power-cut recovery on the intended filesystem and storage-controller stack before active-record promotion.",
       "freshness": {"reviewed_at": "2026-11-24", "review_after": "2027-05-24"}
+    },
+    {
+      "id": "TP-EXP-0071", "title": "AEGIS threshold recovery-anchor custody", "state": "COMPLETED",
+      "hypothesis": "Two distinct purpose-bound custodian signatures over one exact digest-bound recovery anchor can prevent silent anchor replacement threshold downgrade identity duplication and cross-purpose replay without claiming production operator independence.",
+      "value": "Closes the self-authenticating-anchor gap with an offline replaceable 2-of-2 policy while keeping the physical operator and device-backed power-cut gates explicit.",
+      "prior_art": ["TUF distinct-key threshold roles", "in-toto digest-bound typed statements", "C2SP witness cosignatures", "Sigstore Rekor separate witness trust domains", "OpenSSH SSHSIG namespaces and allowed signers"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-threshold-anchor-custody", "pr": null, "commits": []},
+      "protocol": ["require reviewed anchored storage-fault evidence", "reverify the exact two-store recovery against its content-addressed anchor", "bind the immutable anchor digest as an in-toto-shaped statement subject", "use a TruePanel predicate and dedicated SSHSIG namespace", "require exactly two distinct governed custodian identities and two distinct public-key fingerprints", "verify detached Ed25519 signatures through a protected allowed-signers snapshot", "reject missing duplicate-identity duplicate-key untrusted invalid substituted wrong-purpose rolled-back threshold-downgraded or authority-escalating evidence", "retain the recovered anchor statement signatures and result digests", "deny production runtime deployment hardware network and storage authority"],
+      "fixtures": ["aegis-transparency-witness-anchor-custody-checkride-v1", "tests/test_aegis_transparency_witness_anchor_custody.py"],
+      "success_criteria": ["two exact order-independent 2-of-2 custody evaluations pass", "ten unsafe custody or policy paths hold", "one identity or key never counts twice", "statement subject and predicate purpose match exactly", "threshold remains fixed at two", "the accepted matrix reaches 15/15", "the 27-sample shared-cooling lead remains bound", "physical operator independence and power-loss validations remain zero", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["a self-digest is called independent authentication", "one signature satisfies the threshold", "duplicate signatures from one identity count twice", "a monitor or unrelated review namespace is reused", "fixture identities are called independent production operators", "a TUF Rekor or DSSE dependency is embedded without operational need", "a physical power cut is claimed from simulation", "runtime deployment storage network or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-transparency-witness-anchor-custody-checkride-v1.json", "sha256": "03c94a00c91c7cd8cdf37719cef9dae5abbe086aaddb2cdcf7daddb69311e602"}, {"path": "docs/AEGIS_TRANSPARENCY_WITNESS_ANCHOR_CUSTODY.md", "sha256": "10718d65858d55e27d2c081bc9cef1060be0b0b11cc07d00686621b875c06c12"}],
+      "outcome": {"conclusion": "Twelve deterministic paths pass two exact order-independent 2-of-2 custody contracts and hold ten identity key signature subject purpose rollback downgrade or authority faults with zero unsafe acceptances; production operator independence and physical power-loss validation remain zero."},
+      "invalidated_assumptions": ["a content hash authenticates itself", "two stores can safely retain their own recovery trust anchor", "signature count equals independent identity count", "a generic signature purpose is safe across workflows", "fixture key separation proves human governance", "threshold policy may be supplied by the evidence under review"],
+      "reproduction": ["pytest -q tests/test_aegis_transparency_witness_anchor_custody.py", "python -m truepanel.holodeck.aegis_transparency_witness_anchor_custody --output /tmp/aegis-witness-anchor-custody.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["two separately governed human custodians are commissioned", "offline key generation rotation revocation and recovery procedures are approved", "an external anchor publication channel is selected", "the intended witness devices filesystems and storage controllers are selected", "controlled physical power-cut testing is authorized", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Commission two separately governed offline custodians, publish the exact signed anchor envelope outside both witness devices, and record controlled physical power-cut recovery on the intended storage stack.",
+      "freshness": {"reviewed_at": "2026-11-25", "review_after": "2027-05-25"}
     }
   ]
 }

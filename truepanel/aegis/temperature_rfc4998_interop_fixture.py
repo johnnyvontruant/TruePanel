@@ -266,6 +266,7 @@ def evaluate_detached_evidence_record(
         "transparency_witness_crash_recovery_contract": "DURABLE_STATE_CRASH_RECOVERY_REHEARSAL_PASSED",
         "transparency_witness_sqlite_recovery_contract": "DUAL_SQLITE_PROCESS_CRASH_RECOVERY_REHEARSAL_PASSED",
         "transparency_witness_storage_fault_contract": "ANCHORED_STORAGE_FAULT_CORPUS_REHEARSAL_PASSED",
+        "transparency_witness_anchor_custody_contract": "PURPOSE_BOUND_2_OF_2_ANCHOR_CUSTODY_REHEARSAL_PASSED",
         "active_record_custody": "PENDING",
         "active_record_custody_time": "PENDING",
         "active_record_transparency": "PENDING",
@@ -274,12 +275,11 @@ def evaluate_detached_evidence_record(
         "active_record_witness_crash_recovery": "PENDING",
         "active_record_witness_sqlite_recovery": "PENDING",
         "active_record_witness_storage_fault_recovery": "PENDING",
+        "active_record_witness_anchor_custody": "PENDING",
         "transparency_profile": "RFC9162-SHAPED-SIGNED-CHECKPOINT",
         "custody_timestamp_profile": "RFC3161-SIGNATURE-COUNTERSIGNATURE",
         "required_custodian": "aegis-preservation-custodian",
-        "custody_signature_namespace": (
-            "truepanel-aegis-rfc4998-custody-v1@truepanel"
-        ),
+        "custody_signature_namespace": ("truepanel-aegis-rfc4998-custody-v1@truepanel"),
         "active_record_receipt_schema": (
             "truepanel.aegis-rfc4998-active-record-receipt/v1"
         ),
@@ -323,6 +323,7 @@ def pending_rfc4998_interoperability_fixture(
         "transparency_witness_crash_recovery_contract": "DURABLE_STATE_CRASH_RECOVERY_REHEARSAL_PASSED",
         "transparency_witness_sqlite_recovery_contract": "DUAL_SQLITE_PROCESS_CRASH_RECOVERY_REHEARSAL_PASSED",
         "transparency_witness_storage_fault_contract": "ANCHORED_STORAGE_FAULT_CORPUS_REHEARSAL_PASSED",
+        "transparency_witness_anchor_custody_contract": "PURPOSE_BOUND_2_OF_2_ANCHOR_CUSTODY_REHEARSAL_PASSED",
         "active_record_custody": "PENDING",
         "active_record_custody_time": "PENDING",
         "active_record_transparency": "PENDING",
@@ -331,12 +332,11 @@ def pending_rfc4998_interoperability_fixture(
         "active_record_witness_crash_recovery": "PENDING",
         "active_record_witness_sqlite_recovery": "PENDING",
         "active_record_witness_storage_fault_recovery": "PENDING",
+        "active_record_witness_anchor_custody": "PENDING",
         "transparency_profile": "RFC9162-SHAPED-SIGNED-CHECKPOINT",
         "custody_timestamp_profile": "RFC3161-SIGNATURE-COUNTERSIGNATURE",
         "required_custodian": "aegis-preservation-custodian",
-        "custody_signature_namespace": (
-            "truepanel-aegis-rfc4998-custody-v1@truepanel"
-        ),
+        "custody_signature_namespace": ("truepanel-aegis-rfc4998-custody-v1@truepanel"),
         "active_record_receipt_schema": (
             "truepanel.aegis-rfc4998-active-record-receipt/v1"
         ),

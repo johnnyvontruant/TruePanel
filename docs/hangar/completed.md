@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.24.1 · refreshed 2026-11-24 · 64 experiment(s)
+Registry version 2026.11.25.1 · refreshed 2026-11-25 · 65 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -515,3 +515,11 @@ Thirteen deterministic paths pass two exact anchored recoveries and hold eleven 
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Hold the recovery anchor outside both separately governed witness devices and run recorded controlled physical power-cut recovery on the intended filesystem and storage-controller stack before active-record promotion.
 - Revisit when: two separately governed witness devices are commissioned; the intended filesystems storage controllers and power-loss behavior are selected; controlled physical power-cut testing is authorized; an external anchor publication channel is approved; a public VFS shim or instrumented SQLite build is selected; field validation installation or deployment is proposed
+
+## TP-EXP-0071 · AEGIS threshold recovery-anchor custody
+
+Twelve deterministic paths pass two exact order-independent 2-of-2 custody contracts and hold ten identity key signature subject purpose rollback downgrade or authority faults with zero unsafe acceptances; production operator independence and physical power-loss validation remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Commission two separately governed offline custodians, publish the exact signed anchor envelope outside both witness devices, and record controlled physical power-cut recovery on the intended storage stack.
+- Revisit when: two separately governed human custodians are commissioned; offline key generation rotation revocation and recovery procedures are approved; an external anchor publication channel is selected; the intended witness devices filesystems and storage controllers are selected; controlled physical power-cut testing is authorized; field validation installation or deployment is proposed

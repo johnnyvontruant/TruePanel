@@ -26,6 +26,7 @@ This directory is the operating manual for the current TruePanel platform.
 - [AEGIS witness crash recovery](AEGIS_TRANSPARENCY_WITNESS_CRASH_RECOVERY.md) for durable checkpoint ordering, replay-safe signatures, deterministic power-loss injection, and production limitations
 - [AEGIS isolated SQLite witness recovery](AEGIS_TRANSPARENCY_WITNESS_SQLITE_RECOVERY.md) for two-store checkpoint agreement, abrupt-process recovery, backend conformance, and the remaining physical power-loss gate
 - [AEGIS anchored witness storage-fault corpus](AEGIS_TRANSPARENCY_WITNESS_STORAGE_FAULTS.md) for external recovery anchoring, deterministic database-image damage, joint-rollback rejection, and the remaining physical power-cut gate
+- [AEGIS threshold recovery-anchor custody](AEGIS_TRANSPARENCY_WITNESS_ANCHOR_CUSTODY.md) for purpose-bound 2-of-2 offline custody, exact anchor-subject binding, threshold-downgrade rejection, and the remaining operator/power-cut gates
 - [AEGIS temperature calibration admission](AEGIS_TEMPERATURE_CALIBRATION_ADMISSION.md) for label-bound, signed, import-only field evidence admission
 - [AEGIS read-only temperature field checkride](AEGIS_TEMPERATURE_FIELD_CHECKRIDE.md) for the authenticated, sanitized replay boundary and prior-art decisions
 - [Project HoloDeck](HOLODECK.md) for the hardware-isolated Digital Twin, fault injection, Black Box replay, invariant checks, and Incident Compiler
