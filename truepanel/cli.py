@@ -32,6 +32,10 @@ from truepanel.host.commands import (
 )
 from truepanel.lab.commands import main as run_stargate_lab
 from truepanel.logging import setup_logging
+from truepanel.modules.commands import (
+    add_module_subcommands,
+    handle_module_command,
+)
 from truepanel.plugins import load_plugins
 from truepanel.plugins.commands import add_plugin_subcommands, handle_plugin_command
 from truepanel.repair import run_repair
@@ -302,6 +306,7 @@ def build_parser():
         ),
     )
     add_plugin_subcommands(subcommands)
+    add_module_subcommands(subcommands)
     add_hardware_subcommands(subcommands)
     add_host_subcommands(subcommands)
     add_holodeck_subcommands(subcommands)
@@ -711,6 +716,9 @@ def main():
 
     if args.doctor or args.command == "doctor":
         raise SystemExit(run_doctor())
+
+    if args.command == "modules":
+        raise SystemExit(handle_module_command(args))
 
     if args.command == "plugins":
         raise SystemExit(handle_plugin_command(args))

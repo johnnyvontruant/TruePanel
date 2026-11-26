@@ -6,8 +6,21 @@ TruePanel follows semantic versioning. Stable release tags use the form `vMAJOR.
 
 ## [Unreleased]
 
+Work toward **TruePanel 2.0.0**: features become installable modules, so a
+new install can start with the core and add only what fits the NAS.
+
 ### Added
 
+- Module catalog (`truepanel/modules/`), the first 2.0 step. Every feature
+  is now described once: what it does, what it adds, what it requires, and
+  its tier (Core, Recommended, Optional, Developer). Core is the LCD Flight
+  Deck, Mission Control, Health & Fault View, Telemetry History, Flight
+  Recorder and the install/maintenance tools. Presets: Essentials,
+  Recommended, Everything. Read-only `truepanel modules list / show /
+  validate`. A new `modules: installed:` list in `truepanel.yaml` records
+  the choice; without it every feature stays installed, so existing
+  installs are unchanged. Removing a module will unhook it rather than
+  delete its code. See `docs/MODULES.md`.
 - Flightdeck skin, phase 1 (`flightdeck-skin.js`). Mission Control is now
   drawn as a hardware instrument panel. Every section is a screwed-in panel,
   every button is a raised key, and annunciators stay dark when normal and
