@@ -1,5 +1,19 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-25 threshold recovery-anchor custody delta
+
+The latest increment wraps the exact recovery anchor in a typed,
+digest-addressed statement and requires purpose-specific SSHSIG verification
+from two distinct governed identities. It adapts TUF's unique-key threshold
+rule and in-toto's subject/predicate separation without importing a framework
+or adding a runtime dependency. Twelve deterministic scenarios prove the exact
+2-of-2 path and fail closed on missing, duplicate identity or key, untrusted, substituted,
+wrong-purpose, rolled-back, threshold-downgraded, or authority-escalating
+evidence. See
+[`AEGIS_TRANSPARENCY_WITNESS_ANCHOR_CUSTODY.md`](AEGIS_TRANSPARENCY_WITNESS_ANCHOR_CUSTODY.md)
+for inspected sources, maturity and license analysis, rejected candidates,
+provenance, collaboration target, and the remaining production gate.
+
 ## 2026-11-24 anchored storage-fault delta
 
 The latest increment adds a content-addressed recovery anchor and a 13-scenario

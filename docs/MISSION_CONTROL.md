@@ -164,6 +164,13 @@ exact-signature replay state, and the active-record gate. Its HoloDeck result
 is explicitly temporary-filesystem simulation; it does not claim production
 disk durability or separately operated witnesses.
 
+The threshold anchor-custody panel adds the next offline verification boundary:
+two distinct governed identities must sign the exact recovery-anchor digest in
+a dedicated purpose namespace. It shows 2-of-2 rehearsal, 15/15 coverage, the
+active-record state, and the safest next action while explicitly distinguishing
+ephemeral fixture identities from independent production custodians and a
+physical power-cut result.
+
 The follow-on **Isolated Witness Stores** drawer shows two separately rooted
 SQLite stores using WAL plus full synchronization, four abrupt process-crash
 boundaries, exact recovered checkpoint agreement, and the active-record

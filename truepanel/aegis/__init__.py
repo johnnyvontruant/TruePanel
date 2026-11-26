@@ -211,6 +211,16 @@ from .temperature_statistical_calibration_contract import (
     validate_temperature_statistical_calibration_contract,
 )
 from .transparency_monitor_quorum import evaluate_monitor_quorum
+from .transparency_witness_anchor_custody import (
+    CUSTODIAN_IDS as TRANSPARENCY_WITNESS_ANCHOR_CUSTODIAN_IDS,
+)
+from .transparency_witness_anchor_custody import (
+    NAMESPACE as TRANSPARENCY_WITNESS_ANCHOR_CUSTODY_NAMESPACE,
+)
+from .transparency_witness_anchor_custody import (
+    build_anchor_custody_statement,
+    evaluate_threshold_anchor_custody,
+)
 from .transparency_witness_continuity import evaluate_witness_continuity
 from .transparency_witness_crash_recovery import WitnessDurableStateStore
 from .transparency_witness_sqlite_recovery import (
@@ -328,6 +338,10 @@ __all__ = [
     "TRANSPARENCY_WITNESS_STORAGE_FAULT_REHEARSED",
     "create_recovery_anchor",
     "evaluate_anchored_witness_recovery",
+    "TRANSPARENCY_WITNESS_ANCHOR_CUSTODIAN_IDS",
+    "TRANSPARENCY_WITNESS_ANCHOR_CUSTODY_NAMESPACE",
+    "build_anchor_custody_statement",
+    "evaluate_threshold_anchor_custody",
     "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",
