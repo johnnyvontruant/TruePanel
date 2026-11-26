@@ -10,6 +10,7 @@ This directory is the operating manual for the current TruePanel platform.
 - [AEGIS Black Box calibration corpus](AEGIS_BLACK_BOX_CORPUS.md) for versioned privacy-safe replay evidence and calibration limits
 - [AEGIS field-evidence gate](AEGIS_FIELD_EVIDENCE_GATE.md) for opt-in admission, uncertainty bounds, and promotion holds
 - [AEGIS Airworthiness](AEGIS_AIRWORTHINESS.md) for the time-bounded acceptance envelope, passive platform witness, requalification, independent approval, staged-byte witness, signatures, and manual final-handoff boundary
+- [Modules](MODULES.md) for choosing which features are installed: tiers, presets, what each module adds, and the `truepanel modules` commands
 - [Installation](INSTALLATION.md) for compatibility checks, native deployment, service activation, configuration, and removal
 - [Upgrade and rollback](UPGRADING.md) for guarded staging, promotion, verification, cleanup, repair, and recovery
 - [1.4.0 release notes](RELEASE_1.4.0.md) for what is in the current stable release

@@ -245,3 +245,19 @@ loadmaster:
       nas_path: /mnt/HDDs/Shows/TV A-M
     - name: TV N-Z
       nas_path: /mnt/HDDs/Shows/TV N-Z
+
+# Modules (TruePanel 2.0, docs/MODULES.md). While this stays commented out,
+# every feature remains installed exactly as before. To choose, uncomment
+# and list the non-core modules you want; `truepanel modules list` shows
+# them all.
+# modules:
+#   installed:
+#     - hardware_control
+#     - guided_recovery
+#     - oracle
+#     - reliability
+#     - lcd_history
+#     - observatory
+#     - cargo_bay
+#     - loadmaster
+#     - vpn_status

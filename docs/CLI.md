@@ -100,6 +100,18 @@ Support bundles exclude hostnames, IP addresses, drive serial numbers, WWIDs, MA
 
 The support-bundle schema is versioned independently and includes the TruePanel version, generation timestamp, privacy declaration, and compatibility report.
 
+## Modules
+
+```bash
+truepanel modules list
+truepanel modules list --developer
+truepanel modules list --json
+truepanel modules show loadmaster
+truepanel modules validate
+```
+
+Module commands describe TruePanel's installable features and show which are installed according to the `modules:` section of `truepanel.yaml`. They are read-only. See [Modules](MODULES.md).
+
 ## Plugins
 
 ```bash
