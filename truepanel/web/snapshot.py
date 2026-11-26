@@ -48,6 +48,8 @@ from truepanel.lifeline import (
     ReplacementCandidateProvider,
     service_profile_for_config,
 )
+from truepanel.modules import ModuleSelection, selection_from_config
+
 from . import snapshot_base as _base
 
 get_fan_status = _base.get_fan_status
@@ -265,12 +267,25 @@ class SnapshotService(_base.SnapshotService):
             )
         )
         self.lifeline_service_profile = service_profile_for_config(self.config)
-        self.cargo_provider = (
-            cargo_provider
-            if cargo_provider is not None
-            else provider_from_config(self.config)
+        self.module_selection = selection_from_config(self.config)
+        self.cargo_provider = None
+        if self.module_selection.is_installed("cargo_bay"):
+            self.cargo_provider = (
+                cargo_provider
+                if cargo_provider is not None
+                else provider_from_config(self.config)
+            )
+        self.vpn_status_provider = (
+            vpn_status_provider
+            if self.module_selection.is_installed("vpn_status")
+            else None
         )
-        self.vpn_status_provider = vpn_status_provider
+
+    def _modules(self) -> ModuleSelection:
+        selection = getattr(self, "module_selection", None)
+        if selection is None:
+            selection = selection_from_config(getattr(self, "config", None))
+        return selection
 
     @staticmethod
     def _cargo_unavailable_payload() -> dict[str, Any]:
@@ -335,7 +350,11 @@ class SnapshotService(_base.SnapshotService):
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         result = dict(payload)
-        result["cargo_bay"] = self._cargo_bay_payload()
+        modules = self._modules()
+        if modules.is_installed("cargo_bay"):
+            result["cargo_bay"] = self._cargo_bay_payload()
+        if not modules.is_installed("vpn_status"):
+            return result
 
         vpn_status_provider = getattr(self, "vpn_status_provider", None)
         if vpn_status_provider is None:

@@ -6,10 +6,12 @@ place, `truepanel/modules/catalog.py`. The terminal installer, the
 `truepanel modules` command and the Mission Control Modules page all read
 from that file.
 
-> **Status (2.0 in progress):** this release adds the catalog and the
-> read-only `truepanel modules` commands. Turning features on and off,
-> the installer menu and the Mission Control Modules page come in the
-> next 2.0 pull requests. Nothing changes on an existing install yet.
+> **Status (2.0 in progress):** the catalog, the read-only
+> `truepanel modules` commands and Mission Control's handling of
+> installed modules are in. The LCD side, `truepanel modules add/remove`,
+> the installer menu and the Mission Control Modules page come in the next
+> 2.0 pull requests. Nothing changes on an existing install until it gets
+> a `modules:` section.
 
 ## Quick reference: How To
 
@@ -31,7 +33,7 @@ Run these from the TruePanel install folder, the same way as other
 | --- | --- |
 | **Core** | Always installed. Can't be removed. |
 | **Recommended** | On in the Recommended preset. Suits most QNAP-on-TrueNAS systems. |
-| **Optional** | Off unless you choose it. Usually needs something outside TruePanel (Sonarr, USB drives, Tailscale). |
+| **Optional** | Off unless you choose it. Usually needs something outside TruePanel (Sonarr, USB drives, a VPN container). |
 | **Developer** | Hidden unless you ask. Tools for building and testing TruePanel. |
 
 ## The modules
@@ -42,7 +44,7 @@ Run these from the TruePanel install folder, the same way as other
 | --- | --- |
 | `flight_deck`: LCD Flight Deck | The front-panel LCD, its buttons, startup screens, themes and night mode |
 | `mission_control`: Mission Control | The browser cockpit on port 8787 and the virtual front panel |
-| `health`: Health & Fault View | Status lights, Master WARNING / CAUTION, and the plain fault view with a guided checklist |
+| `health`: Health & Fault View | Status lights, Master WARNING / CAUTION, the plain fault view with a guided checklist, and Lifeline drive-failure handling |
 | `history`: Telemetry History | 30 days of readings that other features use as evidence |
 | `flight_recorder`: Flight Recorder | A readable log of alerts and actions |
 | `lifecycle`: Install & Maintenance Tools | Compatibility check, doctor, verify, upgrade, rollback, repair |
@@ -52,7 +54,7 @@ Run these from the TruePanel install folder, the same way as other
 | Module | What it gives you | Requires |
 | --- | --- | --- |
 | `hardware_control`: Hardware Control | Fan profiles, drive-bay LEDs, buzzer (each locked until verified on your model) | |
-| `guided_recovery`: Guided Recovery | Pathfinder recovery sessions and Lifeline drive-replacement workflow | |
+| `guided_recovery`: Guided Recovery | Pathfinder recovery sessions that remember where you are | |
 | `oracle`: Drift Detection | Learns normal readings and flags slow drift | |
 | `reliability`: Reliability Intelligence | AEGIS probable cause, SENTINEL Flight Director, Watchtower | `oracle` |
 | `lcd_history`: LCD History Pages | Trend graphs on the LCD | |
@@ -64,7 +66,7 @@ Run these from the TruePanel install folder, the same way as other
 | --- | --- | --- | --- |
 | `cargo_bay`: Cargo Bay | Recent Sonarr/Radarr arrivals and backup status | | Sonarr and/or Radarr |
 | `loadmaster`: Loadmaster | Copy-button USB drive sync | `cargo_bay` | Labelled USB drives, a Copy button |
-| `vpn_status`: VPN Status | Tailscale connection state | | Tailscale |
+| `vpn_status`: Download VPN Status | qBittorrent → Gluetun VPN connection state | | qBittorrent behind Gluetun |
 
 ### Developer
 
@@ -113,6 +115,24 @@ purging always makes a backup first.
 
 A module runs only when it is installed **and** its own setting is on (for
 example `loadmaster.enabled`). Existing settings keep working the same way.
+The installed list is checked where each feature runs, never by rewriting
+your settings, so saving Night Mode from Mission Control can't turn a
+feature off in your file.
+
+### In Mission Control
+
+When a module isn't installed:
+
+- its panels are hidden (hidden rather than removed, so nothing that draws
+  the dashboard breaks);
+- its scripts aren't loaded, and its API routes answer `404` with
+  `"error": "module_not_installed"`;
+- its section is left out of `/api/v1/status`, and its background work
+  doesn't run;
+- `/api/v1/status` includes `"modules": {"legacy": …, "installed": […]}`.
+
+Mission Control reads the installed list when it starts, so restart it
+after changing the list.
 
 ## For maintainers
 

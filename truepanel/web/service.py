@@ -10,6 +10,7 @@ from pathlib import Path
 
 from truepanel.activity.runtime import activity_providers_from_environment
 from truepanel.config.loader import load_config
+from truepanel.modules import selection_from_config
 from truepanel.paths import installation_root
 from truepanel.vpn_status import VpnStatusProvider
 
@@ -123,10 +124,20 @@ def main():
         .from_environment()
     )
 
+    config = load_config(settings.config_path)
+    modules = selection_from_config(config)
     snapshot_service = ObservatorySnapshotService(
-        config=load_config(settings.config_path),
-        activity_providers=activity_providers_from_environment(),
-        vpn_status_provider=VpnStatusProvider(),
+        config=config,
+        activity_providers=(
+            activity_providers_from_environment()
+            if modules.is_installed("observatory")
+            else ()
+        ),
+        vpn_status_provider=(
+            VpnStatusProvider()
+            if modules.is_installed("vpn_status")
+            else None
+        ),
     )
 
     serve(

@@ -177,7 +177,12 @@ def _protected(value: Any, name: str) -> tuple[str, ...]:
 
 
 def load_settings(config: dict[str, Any]) -> Settings | None:
-    """Return settings when Loadmaster is enabled, else ``None``."""
+    """Return settings when Loadmaster is installed and enabled, else ``None``."""
+
+    from truepanel.modules import is_module_enabled
+
+    if not is_module_enabled(config, "loadmaster"):
+        return None
 
     section = config.get("loadmaster")
     if not isinstance(section, dict) or section.get("enabled") is not True:

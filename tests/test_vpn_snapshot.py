@@ -98,4 +98,5 @@ def test_production_service_injects_vpn_provider():
     )
 
     assert "from truepanel.vpn_status import VpnStatusProvider" in source
-    assert "vpn_status_provider=VpnStatusProvider()" in source
+    # The provider is built only when the vpn_status module is installed.
+    assert "VpnStatusProvider()\n            if modules.is_installed(\"vpn_status\")" in source

@@ -167,7 +167,11 @@ class SentinelSnapshotService(_SnapshotService):
         payload = super().status()
         payload = payload if isinstance(payload, dict) else {}
         result = dict(payload)
+        # Topology is core: the fault view uses it to say what a fault
+        # affects. The Flight Director assessment belongs to Reliability.
         result["sentinel_topology"] = self._sentinel_topology_payload()
+        if not self._modules().is_installed("reliability"):
+            return result
 
         try:
             result["sentinel"] = build_sentinel_snapshot(result)

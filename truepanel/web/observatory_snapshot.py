@@ -26,6 +26,8 @@ class ObservatorySnapshotService(SentinelSnapshotService):
     def status(self) -> dict[str, Any]:
         payload = super().status()
         result = dict(payload)
+        if not self._modules().is_installed("observatory"):
+            return result
         result["activity"] = mission_control_activity(
             result,
             providers=self._activity_providers,

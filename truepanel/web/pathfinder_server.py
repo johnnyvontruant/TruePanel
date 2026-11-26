@@ -14,10 +14,10 @@ from http import HTTPStatus
 from urllib.parse import urlparse, parse_qs
 
 from truepanel.flight_logs import recent as recent_flight_logs
-
-from truepanel.aegis import AegisReliabilityEngine
 from truepanel.guidance.checklist import checklists_for_guidance
 from truepanel.guidance.sessions import RecoverySessionStore
+from truepanel.modules import selection_from_config
+from truepanel.modules import web as _modules_web
 
 from . import server as _server
 
@@ -81,8 +81,21 @@ _FONT_NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,80}\.woff2$")
 class MissionControlRequestHandler(_server.MissionControlRequestHandler):
     """Add Pathfinder workflow UI and metadata transitions."""
 
+    def _module_blocked(self, parsed) -> bool:
+        """Answer 404 for a route owned by a module that isn't installed."""
+        module_id = _modules_web.module_for_path(parsed.path)
+        if module_id is None or self.server.module_selection.is_installed(module_id):
+            return False
+        self._json(
+            _modules_web.not_installed_payload(module_id),
+            status=HTTPStatus.NOT_FOUND,
+        )
+        return True
+
     def do_GET(self):
         parsed = urlparse(self.path)
+        if self._module_blocked(parsed):
+            return
         if parsed.path == "/api/v1/flight-logs":
             self._flight_logs(parsed)
             return
@@ -111,6 +124,8 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        if self._module_blocked(parsed):
+            return
         if parsed.path == _RECOVERY_TRANSITION_PATH:
             self._recovery_transition(parsed)
             return
@@ -150,9 +165,10 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
         for marker, tag in inherited:
             if marker not in body:
                 tags += tag
-        if _RECOVERY_MARKER not in body:
+        modules = self.server.module_selection
+        if _RECOVERY_MARKER not in body and modules.is_installed("guided_recovery"):
             tags += _RECOVERY_TAG
-        if _RELIABILITY_MARKER not in body:
+        if _RELIABILITY_MARKER not in body and modules.is_installed("reliability"):
             tags += _RELIABILITY_TAG
         if _FAULT_VIEW_MARKER not in body:
             tags += _FAULT_VIEW_TAG
@@ -163,6 +179,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
         # The skin goes last so its stylesheet lands after every companion's.
         if _FLIGHTDECK_SKIN_MARKER not in body:
             tags += _FLIGHTDECK_SKIN_TAG
+        # Hide panels of modules that aren't installed (empty when all are).
+        if _modules_web.MODULES_MARKER not in body:
+            tags += _modules_web.dashboard_tag(modules)
 
         if tags:
             if b"</body>" in body:
@@ -208,17 +227,21 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
         payload = self.snapshot_service.status()
         payload = {} if not isinstance(payload, dict) else dict(payload)
 
+        modules = self.server.module_selection
         guidance = payload.get("operator_guidance")
         cards = guidance if isinstance(guidance, list) else []
         store = self.server.recovery_session_store
-        cards = store.observe_snapshot(cards, payload)
+        if store is not None:
+            cards = store.observe_snapshot(cards, payload)
         payload["operator_guidance"] = cards
         # Persistent SMART Lifeline and Pathfinder enrich guidance after the
         # core health snapshot first materializes CHECKLIST. Rebuild CHECKLIST
         # from the final guidance cards so both API surfaces describe the same
         # evidence-bound repair session in the same response.
         payload["operator_checklists"] = checklists_for_guidance(cards)
-        payload["pathfinder_recovery"] = store.snapshot()
+        if store is not None:
+            payload["pathfinder_recovery"] = store.snapshot()
+        payload["modules"] = _modules_web.status_payload(modules)
 
         storage = payload.get("storage")
         storage = {} if not isinstance(storage, dict) else dict(storage)
@@ -245,6 +268,9 @@ class MissionControlRequestHandler(_server.MissionControlRequestHandler):
         )
         storage["bay_mirror"] = mirror
         payload["storage"] = storage
+        if self.server.aegis_reliability is None:
+            self._json(payload)
+            return
         try:
             payload["reliability"] = self.server.aegis_reliability.observe(payload)
         except (TypeError, ValueError, ArithmeticError):
@@ -378,6 +404,7 @@ class MissionControlServer(_server.MissionControlServer):
         *,
         recovery_session_store=None,
         aegis_reliability=None,
+        module_selection=None,
         **kwargs,
     ):
         super().__init__(
@@ -385,10 +412,24 @@ class MissionControlServer(_server.MissionControlServer):
             snapshot_service=snapshot_service,
             **kwargs,
         )
-        self.recovery_session_store = (
-            recovery_session_store or RecoverySessionStore()
+        # Installed modules are read once at start-up; adding or removing a
+        # module restarts Mission Control.
+        self.module_selection = module_selection or selection_from_config(
+            getattr(self.snapshot_service, "config", None)
         )
-        self.aegis_reliability = aegis_reliability or AegisReliabilityEngine()
+        self.recovery_session_store = None
+        if self.module_selection.is_installed("guided_recovery"):
+            self.recovery_session_store = (
+                recovery_session_store or RecoverySessionStore()
+            )
+        self.aegis_reliability = None
+        if self.module_selection.is_installed("reliability"):
+            if aegis_reliability is None:
+                # Imported here so AEGIS code never loads when not installed.
+                from truepanel.aegis import AegisReliabilityEngine
+
+                aegis_reliability = AegisReliabilityEngine()
+            self.aegis_reliability = aegis_reliability
         self.RequestHandlerClass = MissionControlRequestHandler
 
 

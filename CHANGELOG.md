@@ -21,6 +21,25 @@ new install can start with the core and add only what fits the NAS.
   the choice; without it every feature stays installed, so existing
   installs are unchanged. Removing a module will unhook it rather than
   delete its code. See `docs/MODULES.md`.
+- Mission Control honours the installed module list. For a module that
+  isn't installed, its API routes and scripts answer 404
+  `module_not_installed`, its companion scripts aren't loaded, its panels
+  are hidden, its section is left out of `/api/v1/status`, and its
+  background work (Sonarr/Radarr polling, VPN container checks, activity
+  providers, AEGIS) doesn't run. AEGIS code is no longer imported unless
+  Reliability Intelligence is installed. `/api/v1/status` now carries a
+  `modules` object listing what's installed. Loadmaster stays off
+  everywhere unless its module is installed. Legacy configurations (no
+  `modules:` section) are unchanged.
+
+### Changed
+
+- Module catalog: Lifeline moves into the core Health & Fault View
+  module, because the fault view and health snapshot use it to name a
+  failed drive and gate its replacement checklist. Guided Recovery is now
+  the Pathfinder workflow alone. The VPN module is renamed Download VPN
+  Status and correctly describes the qBittorrent/Gluetun check it
+  performs.
 - Flightdeck skin, phase 1 (`flightdeck-skin.js`). Mission Control is now
   drawn as a hardware instrument panel. Every section is a screwed-in panel,
   every button is a raised key, and annunciators stay dark when normal and

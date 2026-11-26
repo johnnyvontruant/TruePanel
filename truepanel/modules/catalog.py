@@ -134,8 +134,11 @@ CATALOG: tuple[Module, ...] = (
             "Status lights and Master WARNING / CAUTION",
             "Friendly fault view with a guided checklist",
             "Storage and fan health alerts",
+            "Lifeline drive-failure handling: names the failed drive and its bay",
         ),
-        packages=("health", "guidance"),
+        # Lifeline is core: the fault view and health snapshot depend on it
+        # to name a failed drive and gate its replacement checklist.
+        packages=("health", "guidance", "lifeline", "sentinel.topology"),
         config_keys=(
             "mission_control.storage_health",
             "mission_control.fan_health",
@@ -211,7 +214,7 @@ CATALOG: tuple[Module, ...] = (
         ),
         adds=(
             "Fan profile controls in Mission Control",
-            "Bay LED fault and identify lights",
+            "Bay LED fault lights and Identify Bay",
             "Buzzer tones for warnings and critical alerts",
         ),
         needs=("Hardware that passes the compatibility check",),
@@ -230,15 +233,15 @@ CATALOG: tuple[Module, ...] = (
         version="1.0.0",
         summary="Walks you through fixing a fault and checks that it worked.",
         description=(
-            "Pathfinder tracks each fault from detection through repair "
-            "and verification. Lifeline adds careful, step-by-step "
-            "handling when a drive needs replacing."
+            "Pathfinder turns each fault into a recovery session that "
+            "remembers where you are, from reviewing it through repair "
+            "and verification, so you can pick up where you left off."
         ),
         adds=(
-            "Recovery sessions that remember where you are",
-            "Drive replacement workflow with bay identification",
+            "Recovery command deck in Mission Control",
+            "Recovery sessions that survive restarts",
         ),
-        packages=("guidance.sessions", "lifeline"),
+        packages=("guidance.sessions", "web.pathfinder_server"),
     ),
     Module(
         id="oracle",
@@ -342,16 +345,17 @@ CATALOG: tuple[Module, ...] = (
     ),
     Module(
         id="vpn_status",
-        name="VPN Status",
+        name="Download VPN Status",
         tier=OPTIONAL,
         version="1.0.0",
-        summary="Shows whether Tailscale is connected.",
+        summary="Shows whether the qBittorrent download VPN is connected.",
         description=(
-            "Adds Tailscale connection state to Mission Control's network "
-            "readout, so you can see remote access is up."
+            "Checks the qBittorrent and Gluetun VPN containers and shows "
+            "in the network panel whether downloads are going through "
+            "the VPN."
         ),
         adds=("VPN state in the network panel",),
-        needs=("Tailscale installed on the NAS",),
+        needs=("qBittorrent running behind a Gluetun VPN container",),
         packages=("vpn_status",),
     ),
     # ------------------------------------------------------- developer

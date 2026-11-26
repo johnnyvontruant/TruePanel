@@ -88,7 +88,12 @@ def main(argv: list[str] | None = None) -> int:
         config = {**config, "loadmaster": {**config["loadmaster"], "enabled": True}}
     settings = load_settings(config)
     if settings is None:
-        print("Loadmaster is not enabled (loadmaster.enabled in truepanel.yaml).")
+        from truepanel.modules import is_module_enabled
+
+        if not is_module_enabled(config, "loadmaster"):
+            print("Loadmaster is not installed (see `truepanel modules list`).")
+        else:
+            print("Loadmaster is not enabled (loadmaster.enabled in truepanel.yaml).")
         return 2
 
     if args.command == "status":
