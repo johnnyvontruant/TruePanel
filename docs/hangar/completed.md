@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.25.1 · refreshed 2026-11-25 · 65 experiment(s)
+Registry version 2026.11.26.1 · refreshed 2026-11-26 · 66 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -523,3 +523,11 @@ Twelve deterministic paths pass two exact order-independent 2-of-2 custody contr
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Commission two separately governed offline custodians, publish the exact signed anchor envelope outside both witness devices, and record controlled physical power-cut recovery on the intended storage stack.
 - Revisit when: two separately governed human custodians are commissioned; offline key generation rotation revocation and recovery procedures are approved; an external anchor publication channel is selected; the intended witness devices filesystems and storage controllers are selected; controlled physical power-cut testing is authorized; field validation installation or deployment is proposed
+
+## TP-EXP-0072 · AEGIS dual-threshold custodian-root rotation
+
+Sixteen deterministic paths pass two exact order-independent dual-threshold rotations and hold fourteen quorum key signature subject purpose rollback version downgrade predecessor no-change or authority faults with zero unsafe acceptances; production operator independence and physical power-loss validation remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Commission separately governed hardware-backed custodians, record an N-to-N+1 ceremony and loss/revocation drill, publish every root outside both witness devices, then perform controlled physical power-cut recovery on the intended storage stack.
+- Revisit when: two separately governed current custodians and proposed custodians are commissioned; hardware-backed offline key generation rotation revocation and recovery procedures are approved; an independently mirrored consecutive-root publication channel is selected; a loss or compromise drill is authorized; controlled physical power-cut testing is authorized; field validation installation or deployment is proposed

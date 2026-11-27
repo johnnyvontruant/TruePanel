@@ -1,5 +1,17 @@
 # AEGIS Prior-Art Field Report
 
+## 2026-11-26 custodian-root rotation delta
+
+The newest increment adapts TUF's consecutive root-update rule: the exact
+N-to-N+1 custodian root must satisfy both the currently trusted threshold and
+the proposed threshold, while binding the same recovery-anchor statement.
+Sixteen deterministic scenarios reject missing old/new quorum, duplicate or
+untrusted keys, rollback, version skips, threshold reduction, predecessor or
+subject substitution, wrong purpose, and authority escalation. Sigstore's
+staged keyholder ceremonies inform the operational direction, but no TUF or
+Sigstore code, package, service, key, or network dependency was added. See
+[`AEGIS_TRANSPARENCY_WITNESS_ANCHOR_ROTATION.md`](AEGIS_TRANSPARENCY_WITNESS_ANCHOR_ROTATION.md).
+
 ## 2026-11-25 threshold recovery-anchor custody delta
 
 The latest increment wraps the exact recovery anchor in a typed,
