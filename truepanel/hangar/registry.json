@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "registry_version": "2026.11.25.1",
-  "updated_at": "2026-11-25",
+  "registry_version": "2026.11.26.1",
+  "updated_at": "2026-11-26",
   "states": ["FUTURE", "IN_PROGRESS", "COMPLETED", "FAILED"],
   "experiments": [
     {
@@ -1249,6 +1249,25 @@
       "revisit_conditions": ["two separately governed human custodians are commissioned", "offline key generation rotation revocation and recovery procedures are approved", "an external anchor publication channel is selected", "the intended witness devices filesystems and storage controllers are selected", "controlled physical power-cut testing is authorized", "field validation installation or deployment is proposed"],
       "strongest_follow_up": "Commission two separately governed offline custodians, publish the exact signed anchor envelope outside both witness devices, and record controlled physical power-cut recovery on the intended storage stack.",
       "freshness": {"reviewed_at": "2026-11-25", "review_after": "2027-05-25"}
+    },
+    {
+      "id": "TP-EXP-0072", "title": "AEGIS dual-threshold custodian-root rotation", "state": "COMPLETED",
+      "hypothesis": "A consecutive custodian-root transition approved by both current and proposed 2-of-2 rosters can rotate or revoke offline recovery-anchor keys without allowing a successor trust root to authorize itself.",
+      "value": "Adds auditable trust continuity and proof of successor-key possession while keeping real human ceremony hardware-token revocation publication and power-cut gates explicit.",
+      "prior_art": ["TUF dual-threshold consecutive root updates", "Sigstore staged root-signing ceremonies", "Uptane root-key revocation", "Notary named out-of-band trust stores", "OpenSSH SSHSIG namespaces and allowed signers"],
+      "safety_class": "SIMULATION_ONLY",
+      "development": {"branch": "feature/aegis-anchor-custody-rotation", "pr": null, "commits": []},
+      "protocol": ["require reviewed threshold anchor-custody evidence", "bind current and proposed custodian roots to the same exact anchor-custody statement", "content-address every root and name its exact predecessor", "require proposed version to equal current version plus one", "hold the threshold fixed at two", "require distinct identities and public-key fingerprints in each roster", "verify the exact rotation statement through current and proposed protected allowed-signers snapshots", "require both current 2-of-2 and proposed 2-of-2 approval", "reject missing duplicate untrusted substituted wrong-purpose rolled-back skipped downgraded predecessor-substituted unchanged or authority-escalating evidence", "deny production runtime deployment hardware network and storage authority"],
+      "fixtures": ["aegis-transparency-witness-anchor-rotation-checkride-v1", "tests/test_aegis_transparency_witness_anchor_rotation.py"],
+      "success_criteria": ["two exact order-independent dual-threshold rotations pass", "fourteen unsafe rotation or policy paths hold", "both old and new 2-of-2 thresholds are satisfied", "versions advance exactly one", "the predecessor and exact anchor statement remain bound", "the accepted matrix reaches 18/18", "the 27-sample shared-cooling lead remains bound", "physical operator independence and power-loss validations remain zero", "deployment hardware network storage and runtime authority remain zero"],
+      "abort_criteria": ["a proposed roster authorizes itself without the current threshold", "the current roster rotates keys without successor proof of possession", "a same-version or skipped-version root is accepted", "the threshold is silently reduced", "duplicate keys count as independent custodians", "fixture keys are called production operators", "a TUF Sigstore Uptane or Notary dependency is embedded without operational need", "runtime deployment storage network or hardware authority is granted"],
+      "evidence": [{"path": "docs/evidence/aegis-transparency-witness-anchor-rotation-checkride-v1.json", "sha256": "f7bac77978052501b6ec3de42d9327e40cd61183c650463cdf38013ed4391741"}, {"path": "docs/AEGIS_TRANSPARENCY_WITNESS_ANCHOR_ROTATION.md", "sha256": "83747321e39ae520fee55af1c502add739c3a770a4a28b294fbcd6cf39e7b2ae"}],
+      "outcome": {"conclusion": "Sixteen deterministic paths pass two exact order-independent dual-threshold rotations and hold fourteen quorum key signature subject purpose rollback version downgrade predecessor no-change or authority faults with zero unsafe acceptances; production operator independence and physical power-loss validation remain zero."},
+      "invalidated_assumptions": ["the proposed roster may authorize itself", "current-roster approval alone proves successor key possession", "version labels are descriptive rather than security critical", "threshold policy may change during key replacement", "names prove independent keys", "fixture rotation proves an offline human ceremony"],
+      "reproduction": ["pytest -q tests/test_aegis_transparency_witness_anchor_rotation.py", "python -m truepanel.holodeck.aegis_transparency_witness_anchor_rotation --output /tmp/aegis-witness-anchor-rotation.json", "python -m truepanel.hangar validate --root .", "node --check truepanel/web/static/reliability-view.js"],
+      "revisit_conditions": ["two separately governed current custodians and proposed custodians are commissioned", "hardware-backed offline key generation rotation revocation and recovery procedures are approved", "an independently mirrored consecutive-root publication channel is selected", "a loss or compromise drill is authorized", "controlled physical power-cut testing is authorized", "field validation installation or deployment is proposed"],
+      "strongest_follow_up": "Commission separately governed hardware-backed custodians, record an N-to-N+1 ceremony and loss/revocation drill, publish every root outside both witness devices, then perform controlled physical power-cut recovery on the intended storage stack.",
+      "freshness": {"reviewed_at": "2026-11-26", "review_after": "2027-05-26"}
     }
   ]
 }

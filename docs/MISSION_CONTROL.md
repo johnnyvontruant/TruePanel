@@ -182,6 +182,13 @@ image faults, exact per-monitor record anchoring, and an explicit hold when both
 stores agree on the same stale rollback. Physical power-cut and independent-
 operator gaps remain visible and blocking.
 
+The **Threshold Anchor Custody** drawer requires two purpose-bound signatures
+over the exact recovery anchor. The **Custodian Root Rotation** drawer extends
+that contract with TUF-shaped N-to-N+1 continuity: both the old and new 2-of-2
+rosters must approve the exact successor root. Rollback, skipped versions,
+threshold reduction, duplicate keys, and predecessor substitution remain
+visible holds. Fixture rotation is explicitly not a production key ceremony.
+
 Correlation rules are declarative and replaceable. The active policy is shown
 in the Reliability view. A hypothesis must satisfy every independent evidence
 group declared by its rule; downstream symptom alerts may be inhibited only in

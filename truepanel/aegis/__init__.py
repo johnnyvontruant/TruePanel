@@ -221,6 +221,11 @@ from .transparency_witness_anchor_custody import (
     build_anchor_custody_statement,
     evaluate_threshold_anchor_custody,
 )
+from .transparency_witness_anchor_rotation import (
+    build_custodian_root,
+    build_rotation_statement,
+    evaluate_custodian_root_rotation,
+)
 from .transparency_witness_continuity import evaluate_witness_continuity
 from .transparency_witness_crash_recovery import WitnessDurableStateStore
 from .transparency_witness_sqlite_recovery import (
@@ -341,7 +346,10 @@ __all__ = [
     "TRANSPARENCY_WITNESS_ANCHOR_CUSTODIAN_IDS",
     "TRANSPARENCY_WITNESS_ANCHOR_CUSTODY_NAMESPACE",
     "build_anchor_custody_statement",
+    "build_custodian_root",
+    "build_rotation_statement",
     "evaluate_threshold_anchor_custody",
+    "evaluate_custodian_root_rotation",
     "evaluate_final_handoff",
     "evaluate_successor_envelope",
     "envelope_sha256",
