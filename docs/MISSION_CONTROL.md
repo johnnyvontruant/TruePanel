@@ -188,6 +188,11 @@ that contract with TUF-shaped N-to-N+1 continuity: both the old and new 2-of-2
 rosters must approve the exact successor root. Rollback, skipped versions,
 threshold reduction, duplicate keys, and predecessor substitution remain
 visible holds. Fixture rotation is explicitly not a production key ceremony.
+The **Custodian Compromise Recovery** drawer makes the remaining liveness
+constraint explicit: 2-of-2 tolerates no unavailable key. Its rehearsed safe
+path expands proactively to 2-of-3, then revokes and replaces one compromised
+custodian using only an unaffected quorum. Loss before expansion and any
+post-revocation signature from the compromised key remain blocking holds.
 
 Correlation rules are declarative and replaceable. The active policy is shown
 in the Reliability view. A hypothesis must satisfy every independent evidence

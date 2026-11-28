@@ -503,3 +503,32 @@ jobs:
           name: aegis-transparency-witness-anchor-rotation-checkride
           path: ${{ runner.temp }}/aegis-transparency-witness-anchor-rotation-checkride-v1.json
           if-no-files-found: error
+
+  transparency-witness-custodian-recovery:
+    runs-on: ubuntu-latest
+    needs: transparency-witness-anchor-rotation
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download same-run custodian-root rotation evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: aegis-transparency-witness-anchor-rotation-checkride
+          path: ${{ runner.temp }}/anchor-rotation
+      - name: Rehearse custodian compromise recovery
+        run: |
+          python -m truepanel.holodeck.aegis_transparency_witness_custodian_recovery \
+            --rotation-evidence "$RUNNER_TEMP/anchor-rotation/aegis-transparency-witness-anchor-rotation-checkride-v1.json" \
+            --output "$RUNNER_TEMP/aegis-transparency-witness-custodian-recovery-checkride-v1.json"
+          diff -u docs/evidence/aegis-transparency-witness-custodian-recovery-checkride-v1.json \
+            "$RUNNER_TEMP/aegis-transparency-witness-custodian-recovery-checkride-v1.json"
+      - name: Preserve custodian compromise-recovery evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-transparency-witness-custodian-recovery-checkride
+          path: ${{ runner.temp }}/aegis-transparency-witness-custodian-recovery-checkride-v1.json
+          if-no-files-found: error
