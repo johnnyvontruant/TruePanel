@@ -2,7 +2,7 @@
 
 > Generated from `truepanel/hangar/registry.json`; edit the registry, not this view.
 
-Registry version 2026.11.26.1 · refreshed 2026-11-26 · 66 experiment(s)
+Registry version 2026.11.26.1 · refreshed 2026-11-26 · 67 experiment(s)
 
 ## TP-EXP-0001 · HoloDeck deterministic digital twin
 
@@ -531,3 +531,11 @@ Sixteen deterministic paths pass two exact order-independent dual-threshold rota
 - Safety: `SIMULATION_ONLY`
 - Strongest follow-up: Commission separately governed hardware-backed custodians, record an N-to-N+1 ceremony and loss/revocation drill, publish every root outside both witness devices, then perform controlled physical power-cut recovery on the intended storage stack.
 - Revisit when: two separately governed current custodians and proposed custodians are commissioned; hardware-backed offline key generation rotation revocation and recovery procedures are approved; an independently mirrored consecutive-root publication channel is selected; a loss or compromise drill is authorized; controlled physical power-cut testing is authorized; field validation installation or deployment is proposed
+
+## TP-EXP-0073 · AEGIS custodian compromise recovery
+
+Eighteen deterministic paths pass three proactive expansion and compromise-recovery contracts and hold fifteen premature-loss revoked-signing quorum substitution version predecessor downgrade or authority faults with zero unsafe acceptances; production operator independence and physical power-loss validation remain zero.
+
+- Safety: `SIMULATION_ONLY`
+- Strongest follow-up: Commission at least three separately governed hardware-backed custodians, perform the recorded 2-of-2 to 2-of-3 expansion and loss/revocation drill, mirror every root independently, then perform controlled physical power-cut recovery on the intended storage stack.
+- Revisit when: at least three separately governed hardware-backed custodians are commissioned; a recorded expansion loss and revocation ceremony is authorized; independently mirrored consecutive-root publication is selected; key inventory notification and audit policy is approved; controlled physical power-cut testing is authorized; field validation installation or deployment is proposed
